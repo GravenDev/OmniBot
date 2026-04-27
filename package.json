@@ -1,26 +1,25 @@
 {
   "name": "omni-bot",
   "version": "0.1.0",
-  "description": "",
-  "main": "./dist/index.js",
   "private": true,
+  "description": "",
+  "keywords": [],
+  "license": "GPL-3.0-or-later",
+  "author": "",
+  "type": "module",
+  "main": "./dist/index.js",
   "scripts": {
     "build": "pnpm prisma:generate && tsc",
     "dev": "node --env-file=.env ./bootstrap/validate-env-vars.mjs && tsx src/index.ts",
     "start": "node ./bootstrap/validate-env-vars.mjs && node ./dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "husky || true",
-    "format": "prettier . --write --ignore-unknown && oxlint --fix --fix-suggestions",
+    "format": "oxfmt --write && oxlint --fix --fix-suggestions",
     "prisma:consolidate": "tsx scripts/consolidate-schema.ts",
     "prisma:generate": "pnpm prisma:consolidate && prisma generate --no-hints",
     "prisma:migrate": "pnpm prisma:consolidate && prisma migrate dev",
     "prisma:studio": "pnpm prisma:consolidate && prisma studio --no-hints"
   },
-  "keywords": [],
-  "author": "",
-  "license": "GPL-3.0-or-later",
-  "packageManager": "pnpm@10.22.0",
-  "type": "module",
   "dependencies": {
     "@prisma/client": "6.16.2",
     "discord.js": "^14.21.0",
@@ -34,10 +33,10 @@
     "@types/node": "^22.17.2",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.5",
+    "oxfmt": "^0.46.0",
     "oxlint": "^1.12.0",
-    "prettier": "^3.6.2",
-    "prettier-plugin-organize-imports": "^4.2.0",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
-  }
+  },
+  "packageManager": "pnpm@10.22.0"
 }

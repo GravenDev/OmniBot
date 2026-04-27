@@ -1,8 +1,5 @@
 {
-  "**/*.{js,mjs,cjs,ts,mts,cts}": [
-    "prettier --experimental-cli --check",
-    "oxlint --deny-warnings"
-  ],
-  "**/*.{md,json}": "prettier --experimental-cli --check",
+  "**/*.{js,mjs,cjs,ts,mts,cts}": ["oxfmt --check", "oxlint --deny-warnings"],
+  "**/*.{md,json}": "oxfmt --check",
   "renovate.json": "pnpm --package=renovate dlx renovate-config-validator --strict"
 }

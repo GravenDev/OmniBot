@@ -1,7 +1,6 @@
 import { GatewayIntentBits } from "discord.js";
 import logger from "../../lib/logger.js";
 import { defineModule } from "../../lib/module.js";
-
 // Import des composants du module
 import threadConfigCommand from "./commands/thread-config.command.js";
 import messageCreateListener from "./listeners/message-create.listener.js";
