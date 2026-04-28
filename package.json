@@ -24,8 +24,7 @@
     "@prisma/client": "6.19.3",
     "discord.js": "^14.21.0",
     "prisma": "^6.14.0",
-    "winston": "^3.17.0",
-    "winston-daily-rotate-file": "^5.0.0"
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.0.0",

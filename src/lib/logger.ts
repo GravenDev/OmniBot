@@ -11,16 +11,7 @@ export const loggerMaker = (name?: string) =>
         return `[${timestamp}] ${name ? `[${name}] ` : ""}${level} : ${message}`;
       })
     ),
-    transports: [
-      new winston.transports.Console(),
-      // new winston.transports.File({
-      //   filename: "logs/error.log",
-      //   level: "error",
-      // }),
-      // new winston.transports.File({
-      //   filename: "logs/combined.log",
-      // }),
-    ],
+    transports: [new winston.transports.Console()],
   });
 
 const logger = loggerMaker();
