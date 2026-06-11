@@ -2,36 +2,43 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:recommended"],
   "postUpdateOptions": ["pnpmDedupe"],
+  "minimumReleaseAge": "3 days",
+  "schedule": ["before 9am on Monday"],
+  "prConcurrentLimit": 10,
+  "separateMultipleMajor": true,
+  "platformAutomerge": true,
+  "vulnerabilityAlerts": {
+    "schedule": ["at any time"]
+  },
   "packageRules": [
     {
+      "description": "Automerge oxlint monorepo updates (minor + patch)",
       "extends": ["monorepo:oxlint"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
     },
     {
-      "matchPackageNames": ["oxfmt"],
+      "description": "Automerge safe dev-tooling updates (minor + patch)",
+      "matchPackageNames": ["oxfmt", "@types/*", "lint-staged", "pnpm"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
     },
     {
-      "matchPackageNames": ["@types/*"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true
-    },
-    {
-      "matchPackageNames": ["lint-staged"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true
-    },
-    {
-      "matchPackageNames": ["pnpm"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true
-    },
-    {
+      "description": "Automerge Node.js updates (minor + patch)",
       "matchPackageNames": ["node"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
+    },
+    {
+      "description": "Pin digests for all GitHub Actions",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true
+    },
+    {
+      "description": "Do not pin digests for GitHub Inc. namespaces (actions/*, github/*)",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["actions/*", "github/*"],
+      "pinDigests": false
     }
   ]
 }
