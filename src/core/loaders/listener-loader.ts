@@ -14,7 +14,7 @@ const logger = loggerMaker("listeners");
 export function loadGlobalEvents(client: Client) {
   const coreListeners = coreModule.registry.listeners;
 
-  for (let listener of coreListeners) {
+  for (const listener of coreListeners) {
     client.on(listener.eventType, listener.execute);
   }
 }
@@ -33,7 +33,7 @@ export function loadModuleEvents(client: Client, module: Module) {
     `Loading module listeners | module = ${module.id} | count = ${moduleListeners.length}`
   );
 
-  for (let listener of moduleListeners) {
+  for (const listener of moduleListeners) {
     logger.info(`\tRegistering listener | event = ${listener.eventType}`);
 
     client.on(listener.eventType, (...args) => {
