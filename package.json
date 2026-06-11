@@ -23,7 +23,6 @@
   "dependencies": {
     "@prisma/client": "^6.19.3",
     "discord.js": "^14.21.0",
-    "prisma": "^6.19.3",
     "winston": "^3.17.0"
   },
   "devDependencies": {
@@ -34,6 +33,7 @@
     "lint-staged": "^17.0.0",
     "oxfmt": "^0.54.0",
     "oxlint": "^1.12.0",
+    "prisma": "^6.19.3",
     "tsx": "^4.20.5",
     "typescript": "^5.9.2"
   },
