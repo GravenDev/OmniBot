@@ -1,4 +1,4 @@
-import { MessageFlags } from "discord.js";
+import { MessageFlags, PermissionFlagsBits } from "discord.js";
 import { modules } from "../../index.js";
 import { declareInteractionHandler } from "../../lib/interaction.js";
 import { installModule } from "../loaders/module-installer.js";
@@ -9,6 +9,16 @@ export default declareInteractionHandler({
   customId: "enable-module",
   check: (interaction) => interaction.isButton(),
   async execute(interaction, args) {
+    if (
+      !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
+    ) {
+      await interaction.reply({
+        content: "You do not have permission to manage modules.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
     const moduleId = args[0];
     if (!moduleId) {
       await interaction.reply({
@@ -18,13 +28,19 @@ export default declareInteractionHandler({
       return;
     }
 
+    const module = modules.find((mod) => mod.id === moduleId);
+    if (!module) {
+      await interaction.reply({
+        content: "Module not found. Please try again later.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
     const defer = await interaction.deferUpdate();
 
     try {
-      await installModule(
-        modules.find((mod) => mod.id === moduleId)!,
-        interaction.guild!
-      );
+      await installModule(module, interaction.guild!);
     } catch {
       await interaction.followUp({
         content: "Failed to enable the module. Please try again later.",
