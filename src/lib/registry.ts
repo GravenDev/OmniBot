@@ -117,11 +117,6 @@ export class Registry {
    * @param handler The handler to register.
    * @throws Will throw an error if the handler type is unknown.
    */
-  /**
-   * Registers a handler (command, event listener, or interaction handler) with the module.
-   * @param handler The handler to register.
-   * @throws Will throw an error if the handler type is unknown.
-   */
   register<
     TEventType extends keyof ClientEvents,
     TCompatibleInteraction extends CompatibleInteraction,
