@@ -99,6 +99,12 @@ export const configurationMessage = async <TSchema extends ConfigSchema>(
     container.addSectionComponents(section);
   }
 
+  if (Object.keys(schema).length === 0) {
+    container.addTextDisplayComponents((text) =>
+      text.setContent("-# Ce module n'a aucune configuration disponible.")
+    );
+  }
+
   const components: ContainerBuilder[] = [container];
 
   if (editedField && schema[editedField]) {

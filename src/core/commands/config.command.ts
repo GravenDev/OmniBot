@@ -6,6 +6,7 @@ import {
 import { modules } from "../../index.js";
 import { declareCommand } from "../../lib/command.js";
 import { Colors } from "../../utils/colors.js";
+import coreModule from "../core.module.js";
 import configService from "../services/config.service.js";
 import moduleService from "../services/module.service.js";
 import { configurationMessage } from "../utils/core.messages.js";
@@ -24,7 +25,7 @@ export default declareCommand({
     ),
   async execute(interaction) {
     const moduleId = interaction.options.getString("module", true);
-    const module = modules.find((m) => m.id === moduleId);
+    const module = [...modules, coreModule].find((m) => m.id === moduleId);
 
     if (!module) {
       await interaction.reply({
@@ -35,6 +36,7 @@ export default declareCommand({
               text.setContent(`No module with id  \`${moduleId}\``)
             ),
         ],
+        flags: MessageFlags.IsComponentsV2,
       });
       return;
     }
@@ -44,8 +46,10 @@ export default declareCommand({
       interaction.guildId!
     );
 
+    const components = await configurationMessage(module, configProvider);
+
     await interaction.reply({
-      components: configurationMessage(module, configProvider),
+      components,
       flags: MessageFlags.Ephemeral + MessageFlags.IsComponentsV2,
     });
   },
@@ -61,8 +65,8 @@ export default declareCommand({
     await interaction.respond([
       ...moduleNames,
       {
-        name: "Base",
-        value: "core",
+        name: coreModule.name,
+        value: coreModule.id,
       },
     ]);
   },

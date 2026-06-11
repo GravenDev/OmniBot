@@ -42,7 +42,7 @@ export default declareInteractionHandler({
     );
 
     await interaction.update({
-      components: configurationMessage(module, newConfig),
+      components: await configurationMessage(module, newConfig),
       flags: MessageFlags.IsComponentsV2 + MessageFlags.Ephemeral,
     });
   },

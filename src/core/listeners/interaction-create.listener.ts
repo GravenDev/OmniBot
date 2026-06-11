@@ -73,11 +73,6 @@ async function handleComplete(interaction: AutocompleteInteraction) {
     return;
   }
 
-  const config = await configService.getConfigForModuleIn(
-    coreModule,
-    interaction.guildId!
-  );
-
   if (
     command.module.id === coreModule.id ||
     (
@@ -92,23 +87,23 @@ async function handleComplete(interaction: AutocompleteInteraction) {
       interaction.guildId!
     );
 
-  if (
-    command.module.id === coreModule.id ||
-    (
-      await moduleService.getModuleStateIn(
-        command.module.id,
-        interaction.guild!
-      )
-    ).activated
-  ) {
+    if (
+      command.module.id === coreModule.id ||
+      (
+        await moduleService.getModuleStateIn(
+          command.module.id,
+          interaction.guild!
+        )
+      ).activated
+    ) {
       logger.debug(`Handling autocomplete | name = ${interaction.commandName}`);
-      await command.command.command.complete?.(interaction, config);
-  } else {
-    logger.warn(
-      `Command not enabled | name = ${interaction.command?.name} | module = ${command.module.id}`
-    );
-    await interaction.respond([]);
-  }
+      await command.command.complete?.(interaction, config);
+    } else {
+      logger.warn(
+        `Command not enabled | name = ${interaction.command?.name} | module = ${command.module.id}`
+      );
+      await interaction.respond([]);
+    }
   } else {
     logger.warn(
       `Command not enabled | name = ${interaction.command?.name} | module = ${command.module.id}`

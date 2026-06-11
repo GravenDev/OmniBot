@@ -22,22 +22,22 @@
   "type": "module",
   "dependencies": {
     "@prisma/client": "6.14.0",
-    "discord.js": "^14.21.0",
-    "prisma": "^6.14.0",
-    "winston": "^3.17.0",
+    "discord.js": "^14.26.4",
+    "prisma": "^6.19.3",
+    "winston": "^3.19.0",
     "winston-daily-rotate-file": "^5.0.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
-    "@types/node": "^22.17.2",
-    "dotenv": "^17.2.1",
+    "@types/node": "^22.19.19",
+    "dotenv": "^17.4.2",
     "husky": "^9.1.7",
-    "lint-staged": "^16.1.5",
-    "oxlint": "^1.12.0",
-    "prettier": "^3.6.2",
-    "prettier-plugin-organize-imports": "^4.2.0",
+    "lint-staged": "^16.4.0",
+    "oxlint": "^1.67.0",
+    "prettier": "^3.8.3",
+    "prettier-plugin-organize-imports": "^4.3.0",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   }
 }
