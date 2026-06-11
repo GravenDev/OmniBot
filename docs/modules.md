@@ -127,6 +127,10 @@ onInstall(client, guild, registry);
 - Séparez la logique complexe dans des services
 - Utilisez des sous-dossiers pour organiser commandes et listeners
 
+## Découverte automatique
+
+Les modules sont chargés automatiquement depuis `src/modules/` au démarrage — aucun enregistrement manuel n'est nécessaire en dehors du dossier du module.
+
 ## Prochaines Étapes
 
 Une fois votre module créé, consultez :

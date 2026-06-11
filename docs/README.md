@@ -8,8 +8,10 @@ commandes et listeners pour étendre les fonctionnalités du bot Discord.
 - [**Modules**](modules.md) - Comment créer et structurer un module
 - [**Commandes**](commands.md) - Comment créer des commandes slash
 - [**Listeners**](listeners.md) - Comment écouter et réagir aux événements Discord
+- [**Interactions**](interactions.md) - Comment gérer les boutons, menus et modales
 - [**Services**](services.md) - Comment créer des services pour la logique métier
 - [**Prisma**](prisma.md) - Guide sur l'utilisation de Prisma pour la base de données
+- [**Fonctionnel**](functional.md) - Comportement visible par les utilisateurs Discord
 
 ## Architecture du Projet
 
@@ -23,6 +25,7 @@ Le projet utilise un système de nommage inspiré d'Angular avec des suffixes po
 - `*.module.ts` - Fichiers de modules (ex: `example.module.ts`)
 - `*.command.ts` - Fichiers de commandes Discord (ex: `test.command.ts`)
 - `*.listener.ts` - Fichiers d'événements Discord (ex: `message.listener.ts`)
+- `*.button.ts` / `*.modal.ts` / `*.select.ts` - Handlers d'interactions
 - `*.service.ts` - Fichiers de services (ex: `user.service.ts`)
 - `*.prisma` - Modèles de base de données Prisma (ex: `users.prisma`)
 
