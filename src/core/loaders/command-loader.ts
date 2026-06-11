@@ -72,8 +72,8 @@ export async function installModuleCommandsIn(
     );
   } catch (error) {
     logger.error(
-      `Failed to load commands for module "${module.id}" in guild "${guild.id}" | error = `,
-      error
+      { err: error },
+      `Failed to load commands for module "${module.id}" in guild "${guild.id}"`
     );
   }
 }
@@ -107,8 +107,8 @@ export async function uninstallModuleCommandsIn(
     );
   } catch (error) {
     logger.error(
-      `Failed to uninstall commands for module "${module.id}" in guild "${guild.id}" | error = `,
-      error
+      { err: error },
+      `Failed to uninstall commands for module "${module.id}" in guild "${guild.id}"`
     );
   }
 }

@@ -1,18 +1,20 @@
-import winston from "winston";
+import pino from "pino";
+
+const base = pino({
+  level: "debug",
+  transport: {
+    target: "pino-pretty",
+    options: {
+      colorize: true,
+      translateTime: "yyyy-mm-dd HH:MM:ss",
+      ignore: "pid,hostname",
+      messageFormat: "{if name}[{name}] {end}{msg}",
+    },
+  },
+});
 
 export const loggerMaker = (name?: string) =>
-  winston.createLogger({
-    level: "debug",
-    format: winston.format.combine(
-      winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-      winston.format.errors({ stack: true }),
-      winston.format.colorize({ all: true }),
-      winston.format.printf(({ timestamp, level, message }) => {
-        return `[${timestamp}] ${name ? `[${name}] ` : ""}${level} : ${message}`;
-      })
-    ),
-    transports: [new winston.transports.Console()],
-  });
+  name ? base.child({ name }) : base;
 
 const logger = loggerMaker();
 
