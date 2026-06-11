@@ -45,3 +45,13 @@ client.once(Events.ClientReady, async (readyClient) => {
 });
 
 await client.login(token);
+
+const shutdown = async () => {
+  logger.info("Shutting down...");
+  await client.destroy();
+  await prisma.$disconnect();
+  process.exit(0);
+};
+
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
