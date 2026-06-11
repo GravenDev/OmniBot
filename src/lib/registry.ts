@@ -67,52 +67,6 @@ export class Registry {
   }
 
   /**
-   * Registers a command with the module.
-   * @param command The command to register.
-   * @throws Will throw an error if the command type is invalid.
-   * @deprecated Use `register` method instead.
-   */
-  registerCommand(command: Declared<Command>): void {
-    if (command.type !== DeclarationType.Command) {
-      throw new Error("Invalid command declaration type");
-    }
-
-    this._commands.push(command);
-  }
-
-  /**
-   * Registers an event listener with the module.
-
-   * @param listener The event listener to register.
-   * @throws Will throw an error if the listener type is invalid.
-   * @deprecated Use `register` method instead.
-   */
-  registerEventListener(listener: Declared<EventListener<any>>): void {
-    if (listener.type !== DeclarationType.Listener) {
-      throw new Error("Invalid event listener declaration type");
-    }
-
-    this._listeners.push(listener);
-  }
-
-  /**
-   * Registers an interaction handler with the module.
-   *
-   * @param interactionHandle The interaction handler to register.
-   * @throws Will throw an error if the interaction handler type is invalid.
-   * @deprecated Use `register` method instead.
-   */
-  registerInteractionHandler(
-    interactionHandle: Declared<InteractionHandler<any>>
-  ) {
-    if (interactionHandle.type !== DeclarationType.Interaction) {
-      throw new Error("Invalid interaction handler declaration type");
-    }
-
-    this._interactionHandlers.push(interactionHandle);
-  }
-
-  /**
    * Registers a handler (command, event listener, or interaction handler) with the module.
    * @param handler The handler to register.
    * @throws Will throw an error if the handler type is unknown.
