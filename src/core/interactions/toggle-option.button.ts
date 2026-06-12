@@ -1,6 +1,6 @@
 import { MessageFlags } from "discord.js";
-import { modules } from "../../index.js";
 import { declareInteractionHandler } from "../../lib/interaction.js";
+import { resolveConfigurableModule } from "../config/config-edit.helpers.js";
 import configService from "../services/config.service.js";
 import { configurationMessage } from "../utils/core.messages.js";
 
@@ -8,27 +8,27 @@ export default declareInteractionHandler({
   customId: "toggle-option",
   check: (interaction) => interaction.isButton(),
   async execute(interaction, [moduleId, configKey]) {
-    const module = modules.find((m) => m.id === moduleId)!;
+    const module = resolveConfigurableModule(moduleId);
+
+    if (!module || !configService.isConfigKey(module, configKey)) {
+      await interaction.reply({
+        content: "Configuration option not found.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
     const config = await configService.getConfigForModuleIn(
       module,
       interaction.guildId!
     );
 
-    if (!configService.isConfigKey(module, configKey)) {
-      await interaction.followUp({
-        content: "Configuration option not found.",
-        ephemeral: true,
-      });
-      return;
-    }
-
     const currentValue = config.get(configKey);
 
     if (typeof currentValue !== "boolean") {
-      await interaction.followUp({
+      await interaction.reply({
         content: "This option is not a boolean toggle.",
-        ephemeral: true,
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
