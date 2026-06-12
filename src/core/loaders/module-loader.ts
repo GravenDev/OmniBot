@@ -2,6 +2,7 @@ import * as fs from "fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "path";
 import { DeclarationType, type Declared } from "../../lib/declared.js";
+import { isDevMode } from "../../lib/env.js";
 import { loggerMaker } from "../../lib/logger.js";
 import type { Module } from "../../lib/module.js";
 
@@ -36,11 +37,17 @@ export async function loadModules(basePath: string): Promise<Module[]> {
     const modulePath = path.resolve(moduleFolder, folder);
     const module = await loadModule(modulePath);
 
-    if (module) {
-      modules.push(module);
-    } else {
+    if (!module) {
       logger.warn(`Module not found or invalid | path = ${modulePath}`);
+      continue;
     }
+
+    if (module.devOnly && !isDevMode()) {
+      logger.info(`Skipping dev-only module | id = ${module.id}`);
+      continue;
+    }
+
+    modules.push(module);
   }
 
   logger.info("Finished finding modules");
