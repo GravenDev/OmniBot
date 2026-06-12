@@ -10,15 +10,27 @@ import logger from "../../lib/logger.js";
 import coreModule from "../core.module.js";
 import moduleService from "../services/module.service.js";
 
-async function handleCommand(interaction: ChatInputCommandInteraction) {
-  const command = [...modules, coreModule]
+function findCommand(commandName: string) {
+  return [...modules, coreModule]
     .flatMap((module) =>
-      module.registry.commands.map((cmd) => ({
-        module: module,
-        command: cmd,
+      module.registry.commands.map((cmd) => ({ module, command: cmd }))
+    )
+    .find((entry) => entry.command.data.name === commandName);
+}
+
+function findInteractionHandler(customId: string) {
+  return [...modules, coreModule]
+    .flatMap((module) =>
+      module.registry.interactionHandlers.map((handler) => ({
+        module,
+        handler,
       }))
     )
-    .find((cmd) => cmd.command.data.name === interaction.commandName);
+    .find((entry) => entry.handler.customId === customId);
+}
+
+async function handleCommand(interaction: ChatInputCommandInteraction) {
+  const command = findCommand(interaction.commandName);
 
   if (!command) {
     logger.warn(`Command not found | name = ${interaction.commandName}`);
@@ -51,14 +63,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
 }
 
 async function handleComplete(interaction: AutocompleteInteraction) {
-  const command = [...modules, coreModule]
-    .flatMap((module) =>
-      module.registry.commands.map((cmd) => ({
-        module: module,
-        command: cmd,
-      }))
-    )
-    .find((cmd) => cmd.command.data.name === interaction.commandName);
+  const command = findCommand(interaction.commandName);
 
   if (!command) {
     logger.warn(
@@ -87,7 +92,6 @@ async function handleComplete(interaction: AutocompleteInteraction) {
 }
 
 async function handleInteraction(interaction: CompatibleInteraction) {
-  const allModules = [...modules, coreModule];
   const [id, ...args] = interaction.customId.split(":");
 
   if (!id) {
@@ -97,14 +101,7 @@ async function handleInteraction(interaction: CompatibleInteraction) {
     return;
   }
 
-  const handler = allModules
-    .flatMap((module) =>
-      module.registry.interactionHandlers.map((handler) => ({
-        module: module,
-        handler: handler,
-      }))
-    )
-    .find((handler) => handler.handler.customId === id);
+  const handler = findInteractionHandler(id);
 
   if (!handler) {
     logger.warn(
