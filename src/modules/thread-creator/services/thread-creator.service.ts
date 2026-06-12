@@ -76,7 +76,12 @@ class ThreadCreatorService implements Service {
 
     let threadName = template;
     for (const [key, value] of Object.entries(variables)) {
-      threadName = threadName.replace(new RegExp(`\\{${key}\\}`, "g"), value);
+      // Escape $ to prevent backreference interpretation in the replacement string
+      const safeValue = value.replace(/\$/g, "$$$$");
+      threadName = threadName.replace(
+        new RegExp(`\\{${key}\\}`, "g"),
+        safeValue
+      );
     }
 
     // Limiter à 100 caractères (limite Discord)
