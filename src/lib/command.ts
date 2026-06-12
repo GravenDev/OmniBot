@@ -7,12 +7,13 @@ import type {
   SlashCommandSubcommandGroupBuilder,
   SlashCommandSubcommandsOnlyBuilder,
 } from "discord.js";
+import type { ConfigProvider, ConfigSchema } from "./config.js";
 import { DeclarationType, type Declared } from "./declared.js";
 
 /**
  * Represents a command
  */
-export interface Command {
+export interface Command<ConfigType extends ConfigSchema = {}> {
   /**
    * The command data used to register the command with Discord.
    */
@@ -27,15 +28,23 @@ export interface Command {
    * The function to execute when the command is invoked.
    *
    * @param interaction The interaction that triggered the command.
+   * @param config The configuration for the module that registered the command.
    */
-  execute: (interaction: ChatInputCommandInteraction) => Promise<void>;
+  execute: (
+    interaction: ChatInputCommandInteraction,
+    config: ConfigProvider<ConfigType>
+  ) => Promise<void>;
 
   /**
    * Optional function to handle autocomplete interactions for the command.
    *
    * @param interaction The autocomplete interaction that triggered the command.
+   * @param config The configuration for the module that registered the command.
    */
-  complete?: (interaction: AutocompleteInteraction) => Promise<void>;
+  complete?: (
+    interaction: AutocompleteInteraction,
+    config: ConfigProvider<ConfigType>
+  ) => Promise<void>;
 }
 
 /**
@@ -43,7 +52,9 @@ export interface Command {
  *
  * @param command
  */
-export function declareCommand(command: Command): Declared<Command> {
+export function declareCommand<ConfigType extends ConfigSchema>(
+  command: Command<ConfigType>
+): Declared<Command<ConfigType>> {
   return {
     type: DeclarationType.Command,
     ...command,

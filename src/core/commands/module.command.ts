@@ -5,7 +5,7 @@ import {
 } from "discord.js";
 import { declareCommand } from "../../lib/command.js";
 import moduleService from "../services/module.service.js";
-import { modulesMessage } from "../utils/core-messages.js";
+import { modulesMessage } from "../utils/core.messages.js";
 
 const PERMISSION_ADMINISTRATOR = 0x8;
 
@@ -21,7 +21,6 @@ export default declareCommand({
       flags: MessageFlags.Ephemeral,
     });
 
-    // Guild ID is always defined since the command is a guild-only command
     const modulesState = await moduleService.getAllModulesStateIn(
       interaction.guildId!
     );

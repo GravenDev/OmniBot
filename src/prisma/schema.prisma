@@ -1,4 +1,10 @@
 
+// === Modèles de core/models/config.prisma ===
+model GuildConfiguration {
+  guildId String @id
+  data    Json
+}
+
 // === Modèles de core/models/modules.prisma ===
 model ModuleActivation {
   moduleId String

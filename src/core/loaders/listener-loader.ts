@@ -2,6 +2,7 @@ import { type Client } from "discord.js";
 import { loggerMaker } from "../../lib/logger.js";
 import type { Module } from "../../lib/module.js";
 import coreModule from "../core.module.js";
+import configService from "../services/config.service.js";
 import moduleService from "../services/module.service.js";
 
 const logger = loggerMaker("listeners");
@@ -48,10 +49,14 @@ export function loadModuleEvents(client: Client, module: Module) {
           .then((state) => {
             if (!state.activated) return;
 
-            listener
-              .execute(...args)
-              .catch((err: unknown) =>
-                logger.error({ err }, "Listener execution failed")
+            return configService
+              .getConfigForModuleIn(module, guildId)
+              .then((config) =>
+                listener
+                  .execute(...args, config)
+                  .catch((err: unknown) =>
+                    logger.error({ err }, "Listener execution failed")
+                  )
               );
           })
           .catch((err: unknown) =>
@@ -62,7 +67,7 @@ export function loadModuleEvents(client: Client, module: Module) {
 
       // If no guildId is found, execute the listener directly
       listener
-        .execute(...args)
+        .execute(...args, undefined)
         .catch((err: unknown) =>
           logger.error({ err }, "Listener execution failed")
         );

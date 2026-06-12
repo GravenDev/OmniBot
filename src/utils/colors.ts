@@ -3,4 +3,5 @@ export enum Colors {
   FullRed = 0xff0000,
   Orange = 0xff9900,
   Turquoise = 0x34ace0,
+  Red = 0xd63838,
 }

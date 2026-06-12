@@ -1,5 +1,6 @@
 import type { ClientEvents } from "discord.js";
 import type { Command } from "./command.js";
+import type { ConfigSchema } from "./config.js";
 import { DeclarationType, type Declared } from "./declared.js";
 import type {
   CompatibleInteraction,
@@ -15,20 +16,21 @@ export class Registry {
    * An array of commands declared by the module.
    * @private
    */
-  private readonly _commands: Declared<Command>[];
+  private readonly _commands: Declared<Command<any>>[];
 
   /**
    * An array of event listeners declared by the module.
    * @private
    */
-  private readonly _listeners: Declared<EventListener<any>>[] = [];
+  private readonly _listeners: Declared<EventListener<any, any>>[] = [];
 
   /**
    * An array of interaction handlers declared by the module.
    * @private
    */
-  private readonly _interactionHandlers: Declared<InteractionHandler<any>>[] =
-    [];
+  private readonly _interactionHandlers: Declared<
+    InteractionHandler<any, any>
+  >[] = [];
 
   /**
    * Creates a new instance of the ModuleRegistry.
@@ -74,23 +76,29 @@ export class Registry {
   register<
     TEventType extends keyof ClientEvents,
     TCompatibleInteraction extends CompatibleInteraction,
+    TSchema extends ConfigSchema,
   >(
     handler: Declared<
-      | InteractionHandler<TCompatibleInteraction>
-      | EventListener<TEventType>
-      | Command
+      | InteractionHandler<TCompatibleInteraction, TSchema>
+      | EventListener<TEventType, TSchema>
+      | Command<TSchema>
     >
   ) {
     switch (handler.type) {
       case DeclarationType.Command:
-        this._commands.push(handler as Declared<Command>);
+        this._commands.push(handler as Declared<Command<TSchema>>);
         break;
       case DeclarationType.Listener:
-        this._listeners.push(handler as Declared<EventListener<TEventType>>);
+        this._listeners.push(
+          // Using any here because we can't infer the event type
+          handler as Declared<EventListener<any, any>>
+        );
         break;
       case DeclarationType.Interaction:
         this._interactionHandlers.push(
-          handler as Declared<InteractionHandler<TCompatibleInteraction>>
+          handler as Declared<
+            InteractionHandler<TCompatibleInteraction, TSchema>
+          >
         );
         break;
       default:
