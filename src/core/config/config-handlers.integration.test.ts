@@ -1,0 +1,170 @@
+import type {
+  AnySelectMenuInteraction,
+  ModalSubmitInteraction,
+} from "discord.js";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Declared } from "../../lib/declared.js";
+import type { InteractionHandler } from "../../lib/interaction.js";
+import type { Module } from "../../lib/module.js";
+import type { Registry } from "../../lib/registry.js";
+
+// Mock the persistence boundary so importing the handlers does not boot the bot
+// (config.service.js and config-edit.helpers.js both pull in ../../index.js).
+vi.mock("../services/config.service.js", () => ({
+  default: { isConfigKey: vi.fn() },
+}));
+vi.mock("./config-edit.helpers.js", () => ({
+  resolveConfigurableModule: vi.fn(),
+  saveConfigValue: vi.fn(),
+}));
+
+const { default: configService } =
+  await import("../services/config.service.js");
+const { resolveConfigurableModule, saveConfigValue } =
+  await import("./config-edit.helpers.js");
+const { default: NumberConfigHandler } =
+  await import("./number-config-handler.js");
+const { default: UserConfigHandler } = await import("./user-config-handler.js");
+
+const isConfigKey = vi.mocked(configService.isConfigKey);
+const resolveModule = vi.mocked(resolveConfigurableModule);
+const save = vi.mocked(saveConfigValue);
+
+const fakeModule = { id: "mod" } as unknown as Module;
+
+/**
+ * Drives a handler's `registerEditionInteractionHandlers` with a capturing
+ * registry and returns the single interaction handler it registers.
+ */
+async function captureRegisteredHandler(handler: {
+  registerEditionInteractionHandlers: (registry: Registry) => Promise<void>;
+}) {
+  const registered: Declared<InteractionHandler<never>>[] = [];
+  await handler.registerEditionInteractionHandlers({
+    register: (h: Declared<InteractionHandler<never>>) => registered.push(h),
+  } as unknown as Registry);
+
+  expect(registered).toHaveLength(1);
+  return registered[0]!;
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  resolveModule.mockReturnValue(fakeModule);
+  isConfigKey.mockReturnValue(true);
+  save.mockResolvedValue([]);
+});
+
+describe("NumberConfigHandler modal submit", () => {
+  function fakeModalInteraction(value: string) {
+    return {
+      guildId: "guild-1",
+      fields: { getTextInputValue: () => value },
+      reply: vi.fn(),
+    } as unknown as ModalSubmitInteraction;
+  }
+
+  it("rejects a non-numeric value without saving", async () => {
+    const submit = await captureRegisteredHandler(new NumberConfigHandler());
+    const interaction = fakeModalInteraction("abc");
+
+    await submit.execute(interaction, ["mod", "count"], undefined as never);
+
+    expect(save).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: expect.stringContaining("nombre") })
+    );
+  });
+
+  it("saves a valid number coerced from the text input", async () => {
+    const submit = await captureRegisteredHandler(new NumberConfigHandler());
+    const interaction = fakeModalInteraction("42");
+
+    await submit.execute(interaction, ["mod", "count"], undefined as never);
+
+    expect(save).toHaveBeenCalledWith(fakeModule, "guild-1", "count", 42);
+    expect(interaction.reply).toHaveBeenCalled();
+  });
+
+  it("saves the value 0 (not treated as missing)", async () => {
+    const submit = await captureRegisteredHandler(new NumberConfigHandler());
+    const interaction = fakeModalInteraction("0");
+
+    await submit.execute(interaction, ["mod", "count"], undefined as never);
+
+    expect(save).toHaveBeenCalledWith(fakeModule, "guild-1", "count", 0);
+  });
+
+  it("reports when the module/key cannot be resolved", async () => {
+    resolveModule.mockReturnValue(undefined);
+    const submit = await captureRegisteredHandler(new NumberConfigHandler());
+    const interaction = fakeModalInteraction("42");
+
+    await submit.execute(interaction, ["nope", "count"], undefined as never);
+
+    expect(save).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining("introuvable"),
+      })
+    );
+  });
+});
+
+describe("UserConfigHandler select submit", () => {
+  function fakeSelectInteraction(values: string[]) {
+    return {
+      guildId: "guild-1",
+      values,
+      reply: vi.fn(),
+      update: vi.fn(),
+      isUserSelectMenu: () => true,
+    } as unknown as AnySelectMenuInteraction;
+  }
+
+  it("registers under the set-user-config customId", async () => {
+    const submit = await captureRegisteredHandler(new UserConfigHandler());
+    expect(submit.customId).toBe("set-user-config");
+  });
+
+  it("only matches user select menus", async () => {
+    const submit = await captureRegisteredHandler(new UserConfigHandler());
+
+    expect(submit.check(fakeSelectInteraction([]), undefined as never)).toBe(
+      true
+    );
+    expect(
+      submit.check(
+        { isUserSelectMenu: () => false } as never,
+        undefined as never
+      )
+    ).toBe(false);
+  });
+
+  it("saves the selected id and updates the message in place", async () => {
+    const submit = await captureRegisteredHandler(new UserConfigHandler());
+    const interaction = fakeSelectInteraction(["123456789"]);
+
+    await submit.execute(interaction, ["mod", "owner"], undefined as never);
+
+    expect(save).toHaveBeenCalledWith(
+      fakeModule,
+      "guild-1",
+      "owner",
+      "123456789"
+    );
+    expect(interaction.update).toHaveBeenCalled();
+    expect(interaction.reply).not.toHaveBeenCalled();
+  });
+
+  it("rejects a value that fails validation without saving", async () => {
+    const submit = await captureRegisteredHandler(new UserConfigHandler());
+    const interaction = fakeSelectInteraction(["not-an-id"]);
+
+    await submit.execute(interaction, ["mod", "owner"], undefined as never);
+
+    expect(save).not.toHaveBeenCalled();
+    expect(interaction.update).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalled();
+  });
+});
