@@ -189,27 +189,11 @@ class ConfigService {
 
     if (module.config) {
       for (const [key, configEntry] of Object.entries(module.config)) {
+        // Only materialize a value when the entry declares a default. Entries
+        // without one stay absent (undefined) — never a fabricated "" / 0 /
+        // false / null — so reads reflect the real "not set" state.
         if (configEntry.defaultValue !== undefined) {
           defaultConfig[key] = configEntry.defaultValue;
-        } else {
-          // Provide sensible defaults based on type
-          if (Array.isArray(configEntry.type)) {
-            defaultConfig[key] = [];
-          } else {
-            switch (configEntry.type) {
-              case ConfigType.STRING:
-                defaultConfig[key] = "";
-                break;
-              case ConfigType.NUMBER:
-                defaultConfig[key] = 0;
-                break;
-              case ConfigType.BOOLEAN:
-                defaultConfig[key] = false;
-                break;
-              default:
-                defaultConfig[key] = null;
-            }
-          }
         }
       }
     }

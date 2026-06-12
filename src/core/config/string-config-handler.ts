@@ -41,7 +41,7 @@ export default class StringConfigHandler extends ConfigTypeHandler<ConfigType.ST
             .setCustomId("value")
             .setLabel(`Enter a value (text):`)
             .setStyle(TextInputStyle.Short)
-            .setValue(config.get(key).toString())
+            .setValue((config.get(key) ?? "").toString())
             .setRequired(true)
         )
       );

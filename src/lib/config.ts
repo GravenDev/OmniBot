@@ -85,8 +85,21 @@ export type ConfigEntry<T extends ConfigType> =
 
 export type ConfigSchema = Record<string, ConfigEntry<ConfigType>>;
 
+/**
+ * Resolved type of a config entry's value.
+ *
+ * An entry declaring a `defaultValue` is always present, so its value is never
+ * `undefined`. An entry without a default may be unset (`undefined`). `null` is
+ * reserved for values cleared intentionally.
+ */
+export type ConfigEntryValue<E extends ConfigEntry<ConfigType>> = E extends {
+  defaultValue: unknown;
+}
+  ? ResolveType<E["type"]>
+  : ResolveType<E["type"]> | undefined;
+
 export type ConfigData<TSchema extends ConfigSchema> = {
-  [K in keyof TSchema]: ResolveType<TSchema[K]["type"]>;
+  [K in keyof TSchema]: ConfigEntryValue<TSchema[K]>;
 };
 
 export class ConfigProvider<TSchema extends ConfigSchema> {
@@ -102,9 +115,7 @@ export class ConfigProvider<TSchema extends ConfigSchema> {
     return this.module.config;
   }
 
-  get<TKey extends keyof TSchema>(
-    key: TKey
-  ): ResolveType<TSchema[TKey]["type"]> {
+  get<TKey extends keyof TSchema>(key: TKey): ConfigEntryValue<TSchema[TKey]> {
     return this.data[key];
   }
 }

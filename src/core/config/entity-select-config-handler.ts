@@ -53,7 +53,7 @@ export abstract class EntitySelectConfigHandler<
     key: keyof TSchema
   ): Promise<void> {
     const customId = `${this.selectCustomId}:${module.id}:${String(key)}`;
-    const current = config.get(key) as { id?: string } | null;
+    const current = config.get(key) as { id?: string } | null | undefined;
     const row = this.buildSelectRow(customId, current?.id);
 
     const container = new ContainerBuilder().addActionRowComponents(row);

@@ -9,18 +9,36 @@ Légende statut : [ ] à faire · [x] fait
 
 ## Bugs (à corriger)
 
-### [ ] #1 — Les types d'entité sont typés non-nullables mais valent `null` quand non définis
+### [x] #1 — `config.get` ment sur la nullabilité des valeurs non définies
 
-- **Fichier :** `src/lib/config.ts` (type `ResolveType` / `ConfigProvider.get`)
-- **Problème :** un champ `USER`/`ROLE`/`CHANNEL`/`CATEGORY` non défini a pour
-  valeur par défaut `null` (`config.service.ts`, `createDefaultConfigForModule`,
-  branche `default: null`). Mais `ResolveType<USER>` vaut `User` (non-nullable),
-  donc `config.get("user")` est typé `User` alors qu'il vaut `null` au runtime.
+- **Fichier :** `src/lib/config.ts` (`ConfigData` / `ConfigProvider.get`),
+  `src/core/services/config.service.ts` (`createDefaultConfigForModule`)
+- **Problème :** un champ sans `defaultValue` n'a pas de valeur, mais `config.get`
+  le type comme toujours présent (`ResolveType<T>`). Pour les entités
+  (`USER`/`ROLE`/`CHANNEL`/`CATEGORY`) la valeur réelle est absente ; pour
+  `STRING`/`NUMBER`/`BOOLEAN` le service fabrique de faux défauts (`""`/`0`/`false`)
+  qui masquent l'état « non défini ».
 - **Scénario d'échec :** un module fait `config.get("user").username` → compile
-  sans erreur → `TypeError: Cannot read properties of null` au runtime.
-- **Fix proposé :** faire que `ResolveType` des types d'entité (et plus largement
-  toute valeur sans `defaultValue` garanti) inclue `| null`. Peut révéler des
-  `config.get()` à durcir ailleurs (acceptable, c'est le but).
+  sans erreur → `TypeError` au runtime quand le champ n'a jamais été configuré.
+- **Sémantique cible :**
+  - `undefined` = jamais défini ;
+  - `null` = vidé intentionnellement (action « clear » future) ;
+  - un champ **avec** `defaultValue` est toujours présent → **pas** de `| undefined`.
+- **Fix proposé :**
+  - Typage conditionnel sur la présence de `defaultValue` :
+    ```ts
+    type ConfigEntryValue<E extends ConfigEntry<ConfigType>> = E extends {
+      defaultValue: unknown;
+    }
+      ? ResolveType<E["type"]>
+      : ResolveType<E["type"]> | undefined;
+    ```
+    utilisé par `ConfigData` et `ConfigProvider.get`.
+  - Runtime : `createDefaultConfigForModule` ne pose une valeur que si
+    `defaultValue` est déclaré (sinon clé absente → `undefined`), au lieu de
+    fabriquer `""`/`0`/`false`/`null`.
+  - Garder `(config.get(key) ?? "").toString()` dans les `replyToEditRequest`
+    des handlers string/number (la valeur peut désormais être `undefined`).
 
 ### [ ] #2 — Un champ de type liste affiche un bouton « éditer » mort
 
