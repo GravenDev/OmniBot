@@ -3,7 +3,7 @@ import { modules } from "../../index.js";
 import { declareInteractionHandler } from "../../lib/interaction.js";
 import { uninstallModule } from "../loaders/module-installer.js";
 import moduleService from "../services/module.service.js";
-import { modulesMessage } from "../utils/core-messages.js";
+import { modulesMessage } from "../utils/core.messages.js";
 import { requireAdmin } from "../utils/require-admin.js";
 
 export default declareInteractionHandler({
