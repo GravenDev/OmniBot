@@ -19,7 +19,14 @@
     },
     {
       "description": "Automerge safe dev-tooling updates (minor + patch)",
-      "matchPackageNames": ["oxfmt", "@types/*", "lint-staged", "pnpm"],
+      "matchPackageNames": ["oxfmt", "@types/*", "lint-staged"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
+      "description": "Group pnpm updates across mise.toml and package.json packageManager field into a single PR",
+      "matchPackageNames": ["pnpm"],
+      "groupName": "pnpm",
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
     },
