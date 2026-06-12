@@ -41,6 +41,11 @@ export interface ModuleDeclaration<ConfigType extends ConfigSchema = {}> {
   config?: ConfigType;
 
   /**
+   * When true, the module is only loaded in development mode (see {@link isDevMode}).
+   */
+  devOnly?: boolean;
+
+  /**
    * Called when the module is initialized at startup.
    *
    * @param client The Discord client instance.
