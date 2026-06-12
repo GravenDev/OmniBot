@@ -41,52 +41,19 @@
 
 🟠 Correctness (nouveau)
 
-18. Incohérence d'état dans les boutons enable/disable-module — listener-loader.ts
+18. ~~Incohérence d'état dans les boutons enable/disable-module~~ ✅ _fixed in 9aea689_
 
-Dans enable-module.button.ts et disable-module.button.ts, si `installModule`/`uninstallModule` lève une exception, le followUp d'erreur est bien envoyé MAIS `defer.edit()` est quand même appelé immédiatement après, rafraîchissant l'UI comme si l'opération avait réussi.
+19. ~~Rejets de promesses silencieux dans listener-loader.ts~~ ✅ _fixed in ad80b2e_
 
-```
-try {
-  await installModule(module, interaction.guild!);  // échoue
-} catch {
-  await interaction.followUp({ content: "Failed..." });  // erreur envoyée
-}
-// defer.edit() s'exécute quand même ici → UI rafraîchie = succès affiché
-```
-
-→ Ajouter un `return` dans le bloc catch après le followUp.
-
-19. Rejets de promesses silencieux dans listener-loader.ts
-
-Deux patterns sans `.catch()` :
-
-- `listener.execute(...args).then()` — si un listener throw, l'erreur est avalée silencieusement
-- La chaîne `moduleService.getModuleStateFromGuildIdIn().then(...)` n'a pas non plus de `.catch()`
-
-En Node.js, les unhandledRejection peuvent crasher le process (selon la version) ou passer silencieusement.
-
-20. `$` dans les remplacements regex — thread-creator.service.ts
-
-Dans `generateThreadName`, les valeurs sont injectées comme chaînes de remplacement via `String.replace()`. Si le contenu d'un message utilisateur contient `$&`, `$1`, etc., JavaScript les interprète comme des backreferences dans le remplacement.
-
-```typescript
-threadName = threadName.replace(new RegExp(`\\{${key}\\}`, "g"), value);
-// value = "$&" → insère le pattern matché au lieu de la valeur
-```
-
-→ Fix : `value.replace(/\$/g, "$$$$")` avant injection.
+20. ~~`$` dans les remplacements regex — thread-creator.service.ts~~ ✅ _fixed in 7ae4e27_
 
 ---
 
 🟡 Qualité de code (nouveau)
 
-21. Logique dupliquée dans interaction-create.listener.ts
+21. ~~Logique dupliquée dans interaction-create.listener.ts~~ ✅ _fixed in 64ad497_
 
-Le pattern `flatMap(module => module.registry.commands.map(...)).find(...)` est répété trois fois dans le même fichier (handleCommand, handleComplete, handleInteraction). À extraire en helper privé.
-
-22. Vérification de permission dupliquée entre enable/disable buttons
-
-Les blocs de vérification `memberPermissions?.has(PermissionFlagsBits.Administrator)` sont copiés-collés à l'identique dans enable-module.button.ts et disable-module.button.ts. À extraire en utilitaire partagé.
+22. ~~Vérification de permission dupliquée entre enable/disable buttons~~ ✅ _fixed in ab336c5_
 
 ---
 
@@ -130,15 +97,5 @@ Récapitulatif des actions restantes
 ┌──────────┬────────────────────────────────────────────────────────────────┐
 │ Priorité │ Action │
 ├──────────┼────────────────────────────────────────────────────────────────┤
-│ 🟠 │ Ajouter return dans catch des boutons enable/disable (#18) │
-├──────────┼────────────────────────────────────────────────────────────────┤
-│ 🟠 │ Ajouter .catch() sur les promesses dans listener-loader (#19) │
-├──────────┼────────────────────────────────────────────────────────────────┤
-│ 🟠 │ Fix regex $ dans generateThreadName (#20) │
-├──────────┼────────────────────────────────────────────────────────────────┤
-│ 🟡 │ Dédupliquer module lookup dans interaction-create (#21) │
-├──────────┼────────────────────────────────────────────────────────────────┤
-│ 🟡 │ Dédupliquer permission check dans les boutons (#22) │
-├──────────┼────────────────────────────────────────────────────────────────┤
-│ 🔵 │ Extraire client/modules dans un context.ts (#14) │
+│ 🔵 │ Extraire client/modules dans un context.ts (#14) — délayé │
 └──────────┴────────────────────────────────────────────────────────────────┘
