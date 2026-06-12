@@ -46,6 +46,7 @@ export default declareInteractionHandler({
         content: "Failed to enable the module. Please try again later.",
         flags: MessageFlags.Ephemeral,
       });
+      return;
     }
 
     const modulesState = await moduleService.getAllModulesStateIn(
