@@ -1,9 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 import {
   ConfigProvider,
   ConfigType,
   ConfigValidator,
   getConfigTypeName,
+  type ConfigData,
   type ConfigSchema,
 } from "./config.js";
 import type { Module } from "./module.js";
@@ -110,5 +111,22 @@ describe("ConfigProvider", () => {
     const provider = new ConfigProvider(module, { greeting: "hi", count: 7 });
 
     expect(provider.schema).toBe(schema);
+  });
+
+  it("reads an unset field (no default) as undefined", () => {
+    const provider = new ConfigProvider(module, {
+      count: 5,
+    } as ConfigData<typeof schema>);
+
+    expect(provider.get("greeting")).toBeUndefined();
+  });
+
+  it("types values by the presence of a defaultValue", () => {
+    const provider = new ConfigProvider(module, { greeting: "hi", count: 7 });
+
+    // `count` declares a default → always present.
+    expectTypeOf(provider.get("count")).toEqualTypeOf<number>();
+    // `greeting` has no default → may be unset.
+    expectTypeOf(provider.get("greeting")).toEqualTypeOf<string | undefined>();
   });
 });

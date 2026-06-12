@@ -41,7 +41,7 @@ export default class NumberConfigHandler extends ConfigTypeHandler<ConfigType.NU
           new TextInputBuilder()
             .setCustomId("value")
             .setLabel(`Enter a value (number):`)
-            .setValue(config.get(key).toString())
+            .setValue((config.get(key) ?? "").toString())
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
         )
