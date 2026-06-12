@@ -33,3 +33,5 @@ jobs:
         run: pnpm exec oxfmt --check .
       - name: Run linter
         run: pnpm exec oxlint --deny-warnings
+      - name: Run tests
+        run: pnpm test
