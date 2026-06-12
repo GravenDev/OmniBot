@@ -13,13 +13,16 @@ export enum ConfigType {
 
 export const ConfigValidator: Record<ConfigType, (value: string) => boolean> = {
   STRING: () => true,
-  NUMBER: (value: string) => !isNaN(Number(value)),
+  NUMBER: (value: string) =>
+    value.trim() !== "" && Number.isFinite(Number(value)),
   BOOLEAN: (value: string) =>
     value.toLowerCase() === "true" || value.toLowerCase() === "false",
-  USER: (value: string) => /^<@!?(\d+)>$/.test(value),
-  ROLE: (value: string) => /^<@&(\d+)>$/.test(value),
-  CHANNEL: (value: string) => /^<#(\d+)>$/.test(value),
-  CATEGORY: (value: string) => /^<#(\d+)>$/.test(value),
+  // Entity values may be provided as a mention or as a raw snowflake id,
+  // since select menus return bare ids.
+  USER: (value: string) => /^(?:<@!?\d+>|\d+)$/.test(value),
+  ROLE: (value: string) => /^(?:<@&\d+>|\d+)$/.test(value),
+  CHANNEL: (value: string) => /^(?:<#\d+>|\d+)$/.test(value),
+  CATEGORY: (value: string) => /^(?:<#\d+>|\d+)$/.test(value),
 };
 
 export function getConfigTypeName(

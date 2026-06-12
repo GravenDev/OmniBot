@@ -1,6 +1,6 @@
 import {
   ActionRowBuilder,
-  ContainerBuilder,
+  MessageFlags,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
@@ -8,12 +8,18 @@ import {
 } from "discord.js";
 import {
   ConfigType,
+  ConfigValidator,
   type ConfigProvider,
   type ConfigSchema,
 } from "../../lib/config.js";
 import { declareInteractionHandler } from "../../lib/interaction.js";
 import type { Module } from "../../lib/module.js";
 import type { Registry } from "../../lib/registry.js";
+import configService from "../services/config.service.js";
+import {
+  resolveConfigurableModule,
+  saveConfigValue,
+} from "./config-edit.helpers.js";
 import { ConfigTypeHandler } from "./config-type-handler.js";
 
 export default class NumberConfigHandler extends ConfigTypeHandler<ConfigType.NUMBER> {
@@ -44,13 +50,6 @@ export default class NumberConfigHandler extends ConfigTypeHandler<ConfigType.NU
     await interaction.showModal(modal);
   }
 
-  public override editionSection<TSchema extends ConfigSchema>(
-    _module: Module<TSchema>,
-    _configuration: ConfigProvider<TSchema>,
-    _key: keyof TSchema
-  ): Promise<ContainerBuilder> {
-    throw new Error("Method not implemented.");
-  }
   public override async registerEditionInteractionHandlers(
     registry: Registry
   ): Promise<void> {
@@ -61,5 +60,34 @@ export default class NumberConfigHandler extends ConfigTypeHandler<ConfigType.NU
 const handleModalSubmit = declareInteractionHandler({
   customId: "set-config-number-modal",
   check: (interaction) => interaction.isModalSubmit(),
-  async execute() {},
+  execute: async (interaction, [moduleId, configKey]) => {
+    const module = resolveConfigurableModule(moduleId);
+    if (!module || !configService.isConfigKey(module, configKey)) {
+      await interaction.reply({
+        content: "Configuration introuvable.",
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    const raw = interaction.fields.getTextInputValue("value");
+
+    if (!ConfigValidator[ConfigType.NUMBER](raw)) {
+      await interaction.reply({
+        content: `❌ \`${raw}\` n'est pas un nombre valide.`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
+
+    await interaction.reply({
+      components: await saveConfigValue(
+        module,
+        interaction.guildId!,
+        configKey,
+        Number(raw)
+      ),
+      flags: MessageFlags.Ephemeral + MessageFlags.IsComponentsV2,
+    });
+  },
 });

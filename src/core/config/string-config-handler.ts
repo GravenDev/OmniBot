@@ -1,13 +1,11 @@
 import {
   ActionRowBuilder,
   ButtonInteraction,
-  ContainerBuilder,
   MessageFlags,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import { modules } from "../../index.js";
 import {
   ConfigProvider,
   ConfigType,
@@ -16,9 +14,11 @@ import {
 import { declareInteractionHandler } from "../../lib/interaction.js";
 import type { Module } from "../../lib/module.js";
 import type { Registry } from "../../lib/registry.js";
-import coreModule from "../core.module.js";
 import configService from "../services/config.service.js";
-import { configurationMessage } from "../utils/core.messages.js";
+import {
+  resolveConfigurableModule,
+  saveConfigValue,
+} from "./config-edit.helpers.js";
 import { ConfigTypeHandler } from "./config-type-handler.js";
 
 export default class StringConfigHandler extends ConfigTypeHandler<ConfigType.STRING> {
@@ -49,14 +49,6 @@ export default class StringConfigHandler extends ConfigTypeHandler<ConfigType.ST
     await interaction.showModal(modal);
   }
 
-  public override editionSection<TSchema extends ConfigSchema>(
-    _module: Module<TSchema>,
-    _configuration: ConfigProvider<TSchema>,
-    _key: keyof TSchema
-  ): Promise<ContainerBuilder> {
-    throw new Error("Method not implemented.");
-  }
-
   public override async registerEditionInteractionHandlers(
     registry: Registry
   ): Promise<void> {
@@ -67,36 +59,24 @@ export default class StringConfigHandler extends ConfigTypeHandler<ConfigType.ST
 const handleModalSubmit = declareInteractionHandler({
   customId: "set-string-config-modal",
   check: (interaction) => interaction.isModalSubmit(),
-  execute: async (interaction, args, _config) => {
-    const [moduleId, configKey] = args;
-
-    const module = [...modules, coreModule].find((m) => m.id === moduleId);
-    if (!module) {
+  execute: async (interaction, [moduleId, configKey]) => {
+    const module = resolveConfigurableModule(moduleId);
+    if (!module || !configService.isConfigKey(module, configKey)) {
       await interaction.reply({
-        content: "Module not found.",
-        ephemeral: true,
-      });
-      return;
-    }
-
-    if (!configService.isConfigKey(module, configKey)) {
-      await interaction.reply({
-        content: "Configuration key not found.",
-        ephemeral: true,
+        content: "Configuration introuvable.",
+        flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
     const value = interaction.fields.getTextInputValue("value");
 
-    await configService.updateConfigForModuleIn(module, interaction.guildId!, {
-      [configKey]: value,
-    });
-
     await interaction.reply({
-      components: await configurationMessage(
+      components: await saveConfigValue(
         module,
-        await configService.getConfigForModuleIn(module, interaction.guildId!)
+        interaction.guildId!,
+        configKey,
+        value
       ),
       flags: MessageFlags.Ephemeral + MessageFlags.IsComponentsV2,
     });
