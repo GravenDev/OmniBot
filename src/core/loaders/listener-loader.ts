@@ -48,13 +48,24 @@ export function loadModuleEvents(client: Client, module: Module) {
           .then((state) => {
             if (!state.activated) return;
 
-            listener.execute(...args).then();
-          });
+            listener
+              .execute(...args)
+              .catch((err: unknown) =>
+                logger.error({ err }, "Listener execution failed")
+              );
+          })
+          .catch((err: unknown) =>
+            logger.error({ err }, "Failed to fetch module state")
+          );
         return;
       }
 
       // If no guildId is found, execute the listener directly
-      listener.execute(...args).then();
+      listener
+        .execute(...args)
+        .catch((err: unknown) =>
+          logger.error({ err }, "Listener execution failed")
+        );
     });
   }
 
