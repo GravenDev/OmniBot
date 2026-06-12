@@ -1,23 +1,16 @@
-import { MessageFlags, PermissionFlagsBits } from "discord.js";
+import { MessageFlags } from "discord.js";
 import { modules } from "../../index.js";
 import { declareInteractionHandler } from "../../lib/interaction.js";
 import { uninstallModule } from "../loaders/module-installer.js";
 import moduleService from "../services/module.service.js";
 import { modulesMessage } from "../utils/core-messages.js";
+import { requireAdmin } from "../utils/require-admin.js";
 
 export default declareInteractionHandler({
   customId: "disable-module",
   check: (interaction) => interaction.isButton(),
   async execute(interaction, args) {
-    if (
-      !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
-    ) {
-      await interaction.reply({
-        content: "You do not have permission to manage modules.",
-        flags: MessageFlags.Ephemeral,
-      });
-      return;
-    }
+    if (!(await requireAdmin(interaction))) return;
 
     const moduleId = args[0];
     if (!moduleId) {
