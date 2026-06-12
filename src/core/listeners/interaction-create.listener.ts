@@ -53,7 +53,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
     await command.command.execute(interaction);
   } else {
     logger.warn(
-      `Command not enabled | name = ${interaction.command?.name} | module = ${command.module.id}`
+      `Command not enabled | name = ${interaction.commandName} | module = ${command.module.id}`
     );
     await interaction.reply({
       content: `The command \`${interaction.commandName}\` is not enabled in this guild.`,
@@ -85,7 +85,7 @@ async function handleComplete(interaction: AutocompleteInteraction) {
     await command.command.complete?.(interaction);
   } else {
     logger.warn(
-      `Command not enabled | name = ${interaction.command?.name} | module = ${command.module.id}`
+      `Command not enabled | name = ${interaction.commandName} | module = ${command.module.id}`
     );
     await interaction.respond([]);
   }
