@@ -58,7 +58,10 @@ async function consolidateSchema() {
   for (const file of prismaFiles) {
     try {
       const content = await fs.readFile(file, "utf-8");
-      const relativePath = path.relative(srcDir, file);
+      const relativePath = path
+        .relative(srcDir, file)
+        .split(path.sep)
+        .join("/");
 
       consolidatedContent += `\n// === Modèles de ${relativePath} ===\n`;
 
