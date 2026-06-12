@@ -12,7 +12,7 @@
     "build": "pnpm prisma:generate && tsc",
     "dev": "node --env-file=.env ./bootstrap/validate-env-vars.mjs && tsx src/index.ts",
     "start": "node ./bootstrap/validate-env-vars.mjs && node ./dist/index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest run",
     "prepare": "husky || true",
     "format": "oxfmt --write && oxlint --fix --fix-suggestions",
     "prisma:consolidate": "tsx scripts/consolidate-schema.ts",
@@ -36,7 +36,8 @@
     "oxlint": "^1.12.0",
     "prisma": "^6.19.3",
     "tsx": "^4.20.5",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "vitest": "^4.1.8"
   },
   "packageManager": "pnpm@10.34.2"
 }
