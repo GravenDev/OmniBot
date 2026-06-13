@@ -1,0 +1,20 @@
+# Git hooks, managed by lefthook (replaces husky + lint-staged).
+# Run `lefthook install` after cloning (the `prepare` npm script does this).
+
+pre-commit:
+  parallel: true
+  commands:
+    code:
+      glob: "*.{js,mjs,cjs,ts,mts,cts}"
+      run: pnpm exec oxfmt --check {staged_files} && pnpm exec oxlint --deny-warnings {staged_files}
+    docs:
+      glob: "*.{md,json}"
+      run: pnpm exec oxfmt --check {staged_files}
+    renovate:
+      glob: "renovate.json"
+      run: pnpm --package=renovate dlx renovate-config-validator --strict {staged_files}
+
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm exec commitlint --edit {1}
