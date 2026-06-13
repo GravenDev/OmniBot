@@ -1,5 +1,5 @@
 import { type Client, type Guild, REST, Routes } from "discord.js";
-import { devGuildId } from "../../lib/env.js";
+import { devGuildId, isDevMode } from "../../lib/env.js";
 import { loggerMaker } from "../../lib/logger.js";
 import type { Module } from "../../lib/module.js";
 import type { Version } from "../../lib/version.js";
@@ -241,4 +241,36 @@ export async function checkCommandsForVersionChange(
   logger.info(
     `Finished checking commands for version change in module "${module.id}"`
   );
+}
+
+/**
+ * Single boot-time entry point for command registration and module version
+ * reconciliation. The two modes are intentionally asymmetric, and are grouped
+ * here so the dev↔prod difference is legible in one place rather than scattered
+ * across the boot sequence:
+ *
+ * - **Development**: one bulk registration on the dev guild (core + enabled
+ *   modules) — guild commands propagate instantly. Commands are re-synced
+ *   unconditionally on every boot, so there is no "version changed" gate to
+ *   anchor a version bump to; `activatedVersion` is reconciled separately via
+ *   {@link ModuleService.reconcileActivatedVersions} (purely cosmetic, for the
+ *   `/modules` display).
+ * - **Production**: per module, commands are re-registered only on a version
+ *   change, and {@link checkCommandsForVersionChange} bumps `activatedVersion`
+ *   itself — only after a successful registration, so a failed one retries next
+ *   boot. Core commands are then registered globally.
+ */
+export async function syncCommands(client: Client, modules: Module[]) {
+  if (isDevMode()) {
+    await loadDevGuildCommands(client, modules);
+    for (const module of modules) {
+      await moduleService.reconcileActivatedVersions(module);
+    }
+    return;
+  }
+
+  for (const module of modules) {
+    await checkCommandsForVersionChange(client, module);
+  }
+  await loadGlobalCommands(client);
 }
