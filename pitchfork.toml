@@ -1,0 +1,9 @@
+[daemons.db]
+run = "docker compose up"
+retry = 0
+ready_cmd = "docker compose exec -T pgsql pg_isready -U user -d mydb -q"
+
+[daemons.bot]
+run = "pnpm dev"
+retry = 0
+depends = ["db"]
