@@ -1,9 +1,6 @@
 import type { Message } from "discord.js";
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("../../../lib/database.js", () => ({ default: {} }));
-
-const { default: service } = await import("./thread-creator.service.js");
+import { describe, expect, it } from "vitest";
+import service from "./thread-creator.service.js";
 
 function fakeMessage(content: string, displayName: string): Message {
   return {

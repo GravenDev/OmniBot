@@ -1,34 +1,13 @@
 import { ChannelType, type Message, type TextChannel } from "discord.js";
-import prisma from "../../../lib/database.js";
+import type { ConfigProvider } from "../../../lib/config.js";
 import logger from "../../../lib/logger.js";
 import { declareService, type Service } from "../../../lib/service.js";
-import type { ThreadCreatorConfig } from "../data/thread-creator.js";
+import type { ThreadCreatorConfigSchema } from "../thread-creator.config.js";
 
 class ThreadCreatorService implements Service {
   private rateLimitMap = new Map<string, number>();
   private readonly RATE_LIMIT_WINDOW = 10000; // 10 secondes
   private readonly MAX_THREADS_PER_WINDOW = 5;
-
-  /**
-   * Vérifie si le module est configuré et actif pour ce serveur et ce canal
-   */
-  async isEnabledForChannel(
-    guildId: string,
-    channelId: string
-  ): Promise<boolean> {
-    try {
-      const config = await prisma.threadCreatorConfig.findUnique({
-        where: { guildId },
-      });
-
-      return config?.enabled === true && config.channelId === channelId;
-    } catch (error) {
-      logger.error(
-        `Erreur lors de la vérification de la configuration : ${error}`
-      );
-      return false;
-    }
-  }
 
   /**
    * Vérifie le rate limiting pour éviter de dépasser les limites de l'API Discord
@@ -89,19 +68,22 @@ class ThreadCreatorService implements Service {
   }
 
   /**
-   * Crée un fil de discussion pour le message donné
+   * Crée un fil de discussion pour le message donné, selon la configuration du module.
    */
-  async createThreadForMessage(message: Message): Promise<void> {
+  async createThreadForMessage(
+    message: Message,
+    config: ConfigProvider<ThreadCreatorConfigSchema>
+  ): Promise<void> {
     if (!message.guild) {
       return;
     }
 
     const guildId = message.guild.id;
-    const channelId = message.channel.id;
 
     try {
-      // Vérifier si le module est activé
-      if (!(await this.isEnabledForChannel(guildId, channelId))) {
+      // Le module ne surveille que le canal configuré
+      const watchedChannel = config.get("channel");
+      if (!watchedChannel || watchedChannel.id !== message.channel.id) {
         return;
       }
 
@@ -113,28 +95,18 @@ class ThreadCreatorService implements Service {
         return;
       }
 
-      // Récupérer la configuration
-      const config = await prisma.threadCreatorConfig.findUnique({
-        where: { guildId },
-      });
-
-      if (!config) {
-        logger.warn(`Configuration introuvable pour le serveur ${guildId}`);
-        return;
-      }
-
       // Vérifier que le canal supporte les fils de discussion
       const channel = message.channel as TextChannel;
       if (channel.type !== ChannelType.GuildText) {
         logger.warn(
-          `Le canal ${channelId} ne supporte pas les fils de discussion`
+          `Le canal ${message.channel.id} ne supporte pas les fils de discussion`
         );
         return;
       }
 
       // Générer le nom du fil
       const threadName = this.generateThreadName(
-        config.threadNameTemplate,
+        config.get("threadNameTemplate"),
         message
       );
 
@@ -145,8 +117,9 @@ class ThreadCreatorService implements Service {
       });
 
       // Ajouter le message de bienvenue si configuré
-      if (config.welcomeMessage) {
-        await thread.send(config.welcomeMessage);
+      const welcomeMessage = config.get("welcomeMessage");
+      if (welcomeMessage) {
+        await thread.send(welcomeMessage);
       }
 
       logger.info(
@@ -162,11 +135,11 @@ class ThreadCreatorService implements Service {
           );
         } else if (discordError.code === 160005) {
           logger.warn(
-            `Limite de fils de discussion atteinte dans ${channelId} (${guildId})`
+            `Limite de fils de discussion atteinte dans ${message.channel.id} (${guildId})`
           );
         } else if (discordError.code === 50013) {
           logger.warn(
-            `Permissions insuffisantes pour créer un fil dans ${channelId} (${guildId})`
+            `Permissions insuffisantes pour créer un fil dans ${message.channel.id} (${guildId})`
           );
         } else {
           logger.error(
@@ -178,56 +151,6 @@ class ThreadCreatorService implements Service {
           `Erreur lors de la création du fil pour le message ${message.id}: ${error}`
         );
       }
-    }
-  }
-
-  /**
-   * Met à jour la configuration pour un serveur
-   */
-  async updateConfig(guildId: string, updates: Partial<ThreadCreatorConfig>) {
-    try {
-      // Pour la création, channelId est obligatoire
-      if (!updates.channelId && !(await this.getConfig(guildId))) {
-        throw new Error(
-          "channelId est requis pour créer une nouvelle configuration"
-        );
-      }
-
-      return await prisma.threadCreatorConfig.upsert({
-        where: { guildId },
-        update: updates,
-        create: {
-          guildId,
-          channelId: updates.channelId!,
-          enabled: updates.enabled ?? true,
-          threadNameTemplate:
-            updates.threadNameTemplate ?? "Discussion - {messageAuthor}",
-          ...(updates.welcomeMessage !== undefined && {
-            welcomeMessage: updates.welcomeMessage,
-          }),
-        },
-      });
-    } catch (error) {
-      logger.error(
-        `Erreur lors de la mise à jour de la configuration : ${error}`
-      );
-      throw error;
-    }
-  }
-
-  /**
-   * Récupère la configuration pour un serveur
-   */
-  async getConfig(guildId: string) {
-    try {
-      return await prisma.threadCreatorConfig.findUnique({
-        where: { guildId },
-      });
-    } catch (error) {
-      logger.error(
-        `Erreur lors de la récupération de la configuration : ${error}`
-      );
-      return null;
     }
   }
 }
