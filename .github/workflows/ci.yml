@@ -30,7 +30,7 @@ jobs:
           node-version: ${{ steps.node-version.outputs.version }}
           cache: "pnpm"
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm ci
       - name: Check code format
         run: pnpm exec oxfmt --check .
       - name: Run linter
