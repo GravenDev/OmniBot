@@ -142,3 +142,6 @@ vite.config.ts.timestamp-*
 .idea
 
 /src/generated/prisma
+
+# pitchfork per-developer daemon overrides (pitchfork.toml is committed)
+pitchfork.local.toml

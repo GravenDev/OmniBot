@@ -15,7 +15,15 @@ pnpm prisma:migrate       # create and apply a migration
 pnpm prisma:studio        # open Prisma Studio
 ```
 
-Start the local database: `docker compose up -d` (PostgreSQL 17).
+Run the whole stack in one command with [pitchfork](https://github.com/jdx/pitchfork) (pinned in `mise.toml`, so `mise install` provides it):
+
+```bash
+pitchfork start bot       # starts the db daemon (docker compose, PostgreSQL 17), waits until it accepts connections, then runs the bot (pnpm dev)
+pitchfork logs bot        # tail the bot logs (pitchfork tui for a dashboard)
+pitchfork stop bot db     # stop the bot and the database
+```
+
+Daemons are defined in `pitchfork.toml` (`bot` depends on `db`). Requires Docker running and a `.env` file (the bot's dev script reads it). To start the database alone instead: `docker compose up -d` (PostgreSQL 17).
 
 ## Architecture
 
