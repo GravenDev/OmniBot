@@ -5,7 +5,7 @@ import {
 } from "discord.js";
 import { declareCommand } from "../../lib/command.js";
 import moduleService from "../services/module.service.js";
-import { modulesMessage } from "../utils/core.messages.js";
+import { modulesMessage } from "../utils/core-messages.js";
 
 const PERMISSION_ADMINISTRATOR = 0x8;
 

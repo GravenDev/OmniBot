@@ -9,11 +9,11 @@ import type { Module } from "../../lib/module.js";
 import type { Registry } from "../../lib/registry.js";
 
 // Mock the persistence boundary so importing the handlers does not boot the bot
-// (config.service.js and config-edit.helpers.js both pull in ../../index.js).
+// (config.service.js and config-edit.js both pull in ../../index.js).
 vi.mock("../services/config.service.js", () => ({
   default: { isConfigKey: vi.fn(), updateConfigForModuleIn: vi.fn() },
 }));
-vi.mock("./config-edit.helpers.js", () => ({
+vi.mock("./config-edit.js", () => ({
   resolveConfigurableModule: vi.fn(),
   saveConfigValue: vi.fn(),
   getConfigEntry: vi.fn(),
@@ -24,10 +24,10 @@ vi.mock("./config-edit.helpers.js", () => ({
 const { default: configService } =
   await import("../services/config.service.js");
 const { resolveConfigurableModule, saveConfigValue, isListEntry } =
-  await import("./config-edit.helpers.js");
+  await import("./config-edit.js");
 const { default: NumberConfigHandler } =
-  await import("./number-config-handler.js");
-const { default: UserConfigHandler } = await import("./user-config-handler.js");
+  await import("./number.config-handler.js");
+const { default: UserConfigHandler } = await import("./user.config-handler.js");
 
 const isConfigKey = vi.mocked(configService.isConfigKey);
 const updateConfig = vi.mocked(configService.updateConfigForModuleIn);

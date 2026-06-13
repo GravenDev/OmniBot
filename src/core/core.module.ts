@@ -1,7 +1,7 @@
 import { defineModule } from "../lib/module.js";
 import configCommand from "./commands/config.command.js";
 import moduleCommand from "./commands/module.command.js";
-import configTypeHandlers from "./config/config-type-handlers.js";
+import configTypeHandlers from "./config/config-handler-registry.js";
 import { registerScalarListEditorHandlers } from "./config/scalar-list-editor.js";
 import configureModuleButton from "./interactions/configure-module.button.js";
 import disableModuleButton from "./interactions/disable-module.button.js";

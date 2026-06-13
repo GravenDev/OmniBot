@@ -9,7 +9,7 @@ import { Colors } from "../../utils/colors.js";
 import coreModule from "../core.module.js";
 import configService from "../services/config.service.js";
 import moduleService from "../services/module.service.js";
-import { configurationMessage } from "../utils/core.messages.js";
+import { configurationMessage } from "../utils/core-messages.js";
 
 export default declareCommand({
   data: new SlashCommandBuilder()

@@ -6,7 +6,7 @@ import {
 } from "discord.js";
 import { ConfigType } from "../../lib/config.js";
 import type { CompatibleInteraction } from "../../lib/interaction.js";
-import { EntitySelectConfigHandler } from "./entity-select-config-handler.js";
+import { EntitySelectConfigHandler } from "./entity-select.config-handler.js";
 
 export default class RoleConfigHandler extends EntitySelectConfigHandler<ConfigType.ROLE> {
   protected override readonly selectCustomId = "set-role-config";

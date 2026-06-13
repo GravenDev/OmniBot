@@ -5,8 +5,8 @@ import {
   getConfigEntry,
   isScalarType,
   resolveConfigurableModule,
-} from "../config/config-edit.helpers.js";
-import configHandlers from "../config/config-type-handlers.js";
+} from "../config/config-edit.js";
+import configHandlers from "../config/config-handler-registry.js";
 import { openScalarListEditor } from "../config/scalar-list-editor.js";
 import configService from "../services/config.service.js";
 

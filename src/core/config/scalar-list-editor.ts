@@ -25,7 +25,7 @@ import {
   getConfigEntry,
   refreshSourceConfigMessage,
   resolveConfigurableModule,
-} from "./config-edit.helpers.js";
+} from "./config-edit.js";
 
 /**
  * Editor for scalar list config values (STRING / NUMBER / BOOLEAN lists).

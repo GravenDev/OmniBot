@@ -23,8 +23,8 @@ import {
   isListEntry,
   refreshSourceConfigMessage,
   resolveConfigurableModule,
-} from "./config-edit.helpers.js";
-import { ConfigTypeHandler } from "./config-type-handler.js";
+} from "./config-edit.js";
+import { ConfigTypeHandler } from "./config-handler.js";
 
 /** Maximum entries Discord allows a select menu to return. */
 const MAX_SELECT_VALUES = 25;
