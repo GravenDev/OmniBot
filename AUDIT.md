@@ -81,6 +81,9 @@
 - **#26** — Permission des interactions — défaut _fail-open_ (dette de conception, faible). Le flag `requiresAdmin?: boolean` sur `InteractionHandler` (enforcé par le dispatcher) est **optionnel** : un handler sans flag est public. Sûr aujourd'hui (tous les handlers sont admin et explicitement marqués), mais repose sur l'humain pour ne pas oublier `requiresAdmin: true` sur un futur handler sensible.
   - **Évolution possible (option C, safe-by-construction)** : remplacer le flag optionnel par un champ **requis** type `access: "admin" | "everyone"` (aucun défaut) → le typage force chaque handler à déclarer son niveau d'accès, impossible d'oublier.
   - **Déclencheur** : à faire quand le nombre de handlers grandit, ou dès l'apparition du premier handler volontairement non-admin (le risque d'oubli devient alors réel).
+- **#28** — CI : remplacer le grep de version Node par `jdx/mise-action`. `ci.yml` fait `pnpm/action-setup` + `grep '^node = ' .mise.toml` + `setup-node` ; maintenant que `.mise.toml` est la source de vérité (node + pnpm + pitchfork), `mise install` via l'action officielle ferait tout en une étape, sans grep fragile. (Caveat : installerait aussi pitchfork en CI — bénin.)
+- **#29** — Branch protection `master` avec `lint` + `build` en _required status checks_ (réglage GitHub, hors repo). Prérequis pour que l'auto-merge Renovate (`platformAutomerge`) attende réellement la CI ; sans ça il pourrait fusionner sans gate.
+- **#30** — `pnpm dev` ne fait pas de hot-reload alors que `CLAUDE.md` annonce « tsx watch » : le script est `node --import tsx src/index.ts` (sans `watch`). À réconcilier (passer le script en `tsx watch`, ou corriger la doc).
 
 ---
 
@@ -99,9 +102,12 @@
 
 Récapitulatif des actions restantes
 
-| Priorité | Action                                                    |
-| -------- | --------------------------------------------------------- |
-| 🔵       | Extraire client/modules dans un context.ts (#14) — délayé |
-| 🟣       | Ergonomie des imports : alias + .js (#24)                 |
-| 🟣       | Accès interactions : champ requis (option C, #26) — évol. |
-| 🟠       | Enum >25 options : warn + doc (#27)                       |
+| Priorité | Action                                                     |
+| -------- | ---------------------------------------------------------- |
+| 🔵       | Extraire client/modules dans un context.ts (#14) — délayé  |
+| 🟣       | Ergonomie des imports : alias + .js (#24)                  |
+| 🟣       | Accès interactions : champ requis (option C, #26) — évol.  |
+| 🟠       | Enum >25 options : warn + doc (#27)                        |
+| 🟣       | CI : `jdx/mise-action` au lieu du grep (#28)               |
+| 🔵       | Branch protection : `lint`+`build` required (#29) — GitHub |
+| 🟣       | `pnpm dev` : hot-reload vs doc (#30)                       |
