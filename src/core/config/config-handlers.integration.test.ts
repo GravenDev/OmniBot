@@ -16,11 +16,13 @@ vi.mock("../services/config.service.js", () => ({
 vi.mock("./config-edit.helpers.js", () => ({
   resolveConfigurableModule: vi.fn(),
   saveConfigValue: vi.fn(),
+  getConfigEntry: vi.fn(),
+  isListEntry: vi.fn(),
 }));
 
 const { default: configService } =
   await import("../services/config.service.js");
-const { resolveConfigurableModule, saveConfigValue } =
+const { resolveConfigurableModule, saveConfigValue, isListEntry } =
   await import("./config-edit.helpers.js");
 const { default: NumberConfigHandler } =
   await import("./number-config-handler.js");
@@ -29,6 +31,7 @@ const { default: UserConfigHandler } = await import("./user-config-handler.js");
 const isConfigKey = vi.mocked(configService.isConfigKey);
 const resolveModule = vi.mocked(resolveConfigurableModule);
 const save = vi.mocked(saveConfigValue);
+const isList = vi.mocked(isListEntry);
 
 const fakeModule = { id: "mod" } as unknown as Module;
 
@@ -53,6 +56,7 @@ beforeEach(() => {
   resolveModule.mockReturnValue(fakeModule);
   isConfigKey.mockReturnValue(true);
   save.mockResolvedValue([]);
+  isList.mockReturnValue(false);
 });
 
 describe("NumberConfigHandler modal submit", () => {
@@ -155,6 +159,29 @@ describe("UserConfigHandler select submit", () => {
     );
     expect(interaction.update).toHaveBeenCalled();
     expect(interaction.reply).not.toHaveBeenCalled();
+  });
+
+  it("stores the full array for a list field", async () => {
+    isList.mockReturnValue(true);
+    const submit = await captureRegisteredHandler(new UserConfigHandler());
+    const interaction = fakeSelectInteraction(["111", "222"]);
+
+    await submit.execute(interaction, ["mod", "admins"], undefined as never);
+
+    expect(save).toHaveBeenCalledWith(fakeModule, "guild-1", "admins", [
+      "111",
+      "222",
+    ]);
+  });
+
+  it("stores an empty array when a list selection is cleared", async () => {
+    isList.mockReturnValue(true);
+    const submit = await captureRegisteredHandler(new UserConfigHandler());
+    const interaction = fakeSelectInteraction([]);
+
+    await submit.execute(interaction, ["mod", "admins"], undefined as never);
+
+    expect(save).toHaveBeenCalledWith(fakeModule, "guild-1", "admins", []);
   });
 
   it("rejects a value that fails validation without saving", async () => {

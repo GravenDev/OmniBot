@@ -6,9 +6,10 @@ import { defineModule } from "../../lib/module.js";
  * Development-only module exercising every configuration field type.
  *
  * It declares no commands or listeners — its sole purpose is to give
- * `/config test-config` a schema covering all {@link ConfigType} values so the
- * configuration UI (modals, toggle, entity select menus) can be exercised
- * end-to-end on a real Discord server. Loaded only in dev mode.
+ * `/config test-config` a schema covering every {@link ConfigType}, scalar and
+ * list, so the configuration UI (modals, toggle, entity select menus, multi-
+ * selects and the scalar list editor) can be exercised end-to-end on a real
+ * Discord server. Loaded only in dev mode.
  */
 export default defineModule({
   id: "test-config",
@@ -57,6 +58,33 @@ export default defineModule({
       name: "Catégorie",
       description: "Une catégorie Discord.",
       type: ConfigType.CATEGORY,
+    },
+    textList: {
+      name: "Liste de textes",
+      description: "Une liste de chaînes (éditeur ajouter/supprimer).",
+      type: [ConfigType.STRING],
+      defaultValue: ["alpha", "beta"],
+    },
+    numberList: {
+      name: "Liste de nombres",
+      description: "Une liste de nombres (éditeur ajouter/supprimer).",
+      type: [ConfigType.NUMBER],
+    },
+    boolList: {
+      name: "Liste de booléens",
+      description: "Une liste de booléens (éditeur ajouter/supprimer).",
+      type: [ConfigType.BOOLEAN],
+      defaultValue: [true, false],
+    },
+    roleList: {
+      name: "Liste de rôles",
+      description: "Plusieurs rôles Discord (multi-select).",
+      type: [ConfigType.ROLE],
+    },
+    channelList: {
+      name: "Liste de salons",
+      description: "Plusieurs salons Discord (multi-select).",
+      type: [ConfigType.CHANNEL],
     },
   },
 

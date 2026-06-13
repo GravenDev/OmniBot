@@ -48,6 +48,17 @@ export const modulesMessage = (
   return container;
 };
 
+/** Human-readable rendering of a config value (handles lists and unset values). */
+function displayValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.length > 0 ? value.map(String).join(", ") : "—";
+  }
+  if (value === null || value === undefined) {
+    return "—";
+  }
+  return String(value);
+}
+
 export const configurationMessage = <TSchema extends ConfigSchema>(
   module: Module<TSchema>,
   config: ConfigProvider<TSchema>
@@ -68,7 +79,7 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
     const section = new SectionBuilder();
     section.addTextDisplayComponents((text) =>
       text.setContent(
-        `-# ${getConfigTypeName(option.type)}\n**⚙️  ${option.name}**\n> ${option.description}\nCurrent: \`${value}\`\n\n`
+        `-# ${getConfigTypeName(option.type)}\n**⚙️  ${option.name}**\n> ${option.description}\nCurrent: \`${displayValue(value)}\`\n\n`
       )
     );
 
