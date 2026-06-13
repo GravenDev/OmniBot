@@ -18,21 +18,25 @@ export default class ChannelConfigHandler extends EntitySelectConfigHandler<Conf
 
   protected override buildSelectRow(
     customId: string,
-    currentId: string | undefined
+    currentIds: string[],
+    minValues: number,
+    maxValues: number
   ): ActionRowBuilder<MessageActionRowComponentBuilder> {
     const menu = new ChannelSelectMenuBuilder()
       .setCustomId(customId)
-      .setPlaceholder("Sélectionnez un salon")
+      .setPlaceholder(
+        maxValues > 1 ? "Sélectionnez des salons" : "Sélectionnez un salon"
+      )
       .setChannelTypes(
         ChannelType.GuildText,
         ChannelType.GuildAnnouncement,
         ChannelType.GuildVoice
       )
-      .setMinValues(1)
-      .setMaxValues(1);
+      .setMinValues(minValues)
+      .setMaxValues(maxValues);
 
-    if (currentId) {
-      menu.setDefaultChannels(currentId);
+    if (currentIds.length > 0) {
+      menu.setDefaultChannels(...currentIds);
     }
 
     return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(

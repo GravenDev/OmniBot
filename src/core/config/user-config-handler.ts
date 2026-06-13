@@ -17,16 +17,22 @@ export default class UserConfigHandler extends EntitySelectConfigHandler<ConfigT
 
   protected override buildSelectRow(
     customId: string,
-    currentId: string | undefined
+    currentIds: string[],
+    minValues: number,
+    maxValues: number
   ): ActionRowBuilder<MessageActionRowComponentBuilder> {
     const menu = new UserSelectMenuBuilder()
       .setCustomId(customId)
-      .setPlaceholder("Sélectionnez un utilisateur")
-      .setMinValues(1)
-      .setMaxValues(1);
+      .setPlaceholder(
+        maxValues > 1
+          ? "Sélectionnez des utilisateurs"
+          : "Sélectionnez un utilisateur"
+      )
+      .setMinValues(minValues)
+      .setMaxValues(maxValues);
 
-    if (currentId) {
-      menu.setDefaultUsers(currentId);
+    if (currentIds.length > 0) {
+      menu.setDefaultUsers(...currentIds);
     }
 
     return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(

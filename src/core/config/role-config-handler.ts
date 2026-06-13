@@ -17,16 +17,20 @@ export default class RoleConfigHandler extends EntitySelectConfigHandler<ConfigT
 
   protected override buildSelectRow(
     customId: string,
-    currentId: string | undefined
+    currentIds: string[],
+    minValues: number,
+    maxValues: number
   ): ActionRowBuilder<MessageActionRowComponentBuilder> {
     const menu = new RoleSelectMenuBuilder()
       .setCustomId(customId)
-      .setPlaceholder("Sélectionnez un rôle")
-      .setMinValues(1)
-      .setMaxValues(1);
+      .setPlaceholder(
+        maxValues > 1 ? "Sélectionnez des rôles" : "Sélectionnez un rôle"
+      )
+      .setMinValues(minValues)
+      .setMaxValues(maxValues);
 
-    if (currentId) {
-      menu.setDefaultRoles(currentId);
+    if (currentIds.length > 0) {
+      menu.setDefaultRoles(...currentIds);
     }
 
     return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(

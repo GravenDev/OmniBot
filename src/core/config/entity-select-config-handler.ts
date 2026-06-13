@@ -19,10 +19,23 @@ import type { Module } from "../../lib/module.js";
 import type { Registry } from "../../lib/registry.js";
 import configService from "../services/config.service.js";
 import {
+  getConfigEntry,
+  isListEntry,
   resolveConfigurableModule,
   saveConfigValue,
 } from "./config-edit.helpers.js";
 import { ConfigTypeHandler } from "./config-type-handler.js";
+
+/** Maximum entries Discord allows a select menu to return. */
+const MAX_SELECT_VALUES = 25;
+
+/** Extracts entity ids from a (possibly list) deserialized config value. */
+function currentEntityIds(value: unknown): string[] {
+  const entities = Array.isArray(value) ? value : value ? [value] : [];
+  return entities
+    .map((entity) => (entity as { id?: string }).id)
+    .filter((id): id is string => Boolean(id));
+}
 
 /**
  * Base handler for Discord entity config types (user, role, channel, category)
@@ -35,10 +48,12 @@ export abstract class EntitySelectConfigHandler<
   /** customId prefix routing the select submission back to this handler. */
   protected abstract readonly selectCustomId: string;
 
-  /** Builds the select menu action row, pre-selecting the current value. */
+  /** Builds the select menu action row, pre-selecting the current value(s). */
   protected abstract buildSelectRow(
     customId: string,
-    currentId: string | undefined
+    currentIds: string[],
+    minValues: number,
+    maxValues: number
   ): ActionRowBuilder<MessageActionRowComponentBuilder>;
 
   /** Narrows an interaction to the select menu kind handled here. */
@@ -53,8 +68,15 @@ export abstract class EntitySelectConfigHandler<
     key: keyof TSchema
   ): Promise<void> {
     const customId = `${this.selectCustomId}:${module.id}:${String(key)}`;
-    const current = config.get(key) as { id?: string } | null | undefined;
-    const row = this.buildSelectRow(customId, current?.id);
+    const isList = isListEntry(getConfigEntry(module, key as string));
+    const currentIds = currentEntityIds(config.get(key));
+
+    const row = this.buildSelectRow(
+      customId,
+      currentIds,
+      isList ? 0 : 1,
+      isList ? MAX_SELECT_VALUES : 1
+    );
 
     const container = new ContainerBuilder().addActionRowComponents(row);
 
@@ -85,14 +107,17 @@ export abstract class EntitySelectConfigHandler<
             return;
           }
 
-          const value = interaction.values[0] ?? null;
-          if (value !== null && !validate(value)) {
+          const ids = interaction.values;
+          if (!ids.every((id) => validate(id))) {
             await interaction.reply({
               content: "Valeur sélectionnée invalide.",
               flags: MessageFlags.Ephemeral,
             });
             return;
           }
+
+          const isList = isListEntry(getConfigEntry(module, configKey));
+          const value = isList ? ids : (ids[0] ?? null);
 
           await interaction.update({
             components: await saveConfigValue(
