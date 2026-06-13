@@ -110,8 +110,12 @@ export interface EnumListConfigEntry<Values extends string = string> {
 }
 
 export type ConfigEntry<T extends ConfigType> =
-  | SimpleConfigEntry<T>
-  | ListConfigEntry<T>
+  // ENUM is excluded from the scalar/entity variants so a `type: ConfigType.ENUM`
+  // entry can only satisfy the enum shapes below — which require `options`.
+  // Without this, `{ type: ENUM }` would match SimpleConfigEntry and compile
+  // without options, then fail at runtime building an empty select menu.
+  | SimpleConfigEntry<Exclude<T, ConfigType.ENUM>>
+  | ListConfigEntry<Exclude<T, ConfigType.ENUM>>
   | EnumConfigEntry
   | EnumListConfigEntry;
 

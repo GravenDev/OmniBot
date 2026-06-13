@@ -7,6 +7,7 @@ import {
 import { ConfigType } from "../../lib/config.js";
 import type { CompatibleInteraction } from "../../lib/interaction.js";
 import { EntitySelectConfigHandler } from "./entity-select.config-handler.js";
+import type { SelectRowContext } from "./select.config-handler.js";
 
 export default class RoleConfigHandler extends EntitySelectConfigHandler<ConfigType.ROLE> {
   protected override readonly selectCustomId = "set-role-config";
@@ -15,12 +16,12 @@ export default class RoleConfigHandler extends EntitySelectConfigHandler<ConfigT
     super(ConfigType.ROLE);
   }
 
-  protected override buildSelectRow(
-    customId: string,
-    currentIds: string[],
-    minValues: number,
-    maxValues: number
-  ): ActionRowBuilder<MessageActionRowComponentBuilder> {
+  protected override buildSelectRow({
+    customId,
+    current,
+    minValues,
+    maxValues,
+  }: SelectRowContext): ActionRowBuilder<MessageActionRowComponentBuilder> {
     const menu = new RoleSelectMenuBuilder()
       .setCustomId(customId)
       .setPlaceholder(
@@ -29,8 +30,8 @@ export default class RoleConfigHandler extends EntitySelectConfigHandler<ConfigT
       .setMinValues(minValues)
       .setMaxValues(maxValues);
 
-    if (currentIds.length > 0) {
-      menu.setDefaultRoles(...currentIds);
+    if (current.length > 0) {
+      menu.setDefaultRoles(...current);
     }
 
     return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
