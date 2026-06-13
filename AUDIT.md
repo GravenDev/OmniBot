@@ -89,7 +89,7 @@
 - Toolchain moderne : oxlint + oxfmt (Rust-based) → rapide et peu verbeux
 - TypeScript strict : noUncheckedIndexedAccess, exactOptionalPropertyTypes, verbatimModuleSyntax — configuration exemplaire
 - Renovate configuré avec automerge, minimumReleaseAge, platformAutomerge, digest pinning GitHub Actions
-- mise.toml pour épingler Node.js et pnpm — reproductibilité garantie
+- .mise.toml pour épingler Node.js et pnpm — reproductibilité garantie
 - Validation des vars d'env au démarrage propre et failfast
 - Architecture modulaire bien pensée (Registry, Module, Declared) — extensible
 - lefthook + commitlint — hooks git et convention de commits enforced

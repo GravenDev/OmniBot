@@ -15,7 +15,7 @@ pnpm prisma:migrate       # create and apply a migration
 pnpm prisma:studio        # open Prisma Studio
 ```
 
-Run the whole stack in one command with [pitchfork](https://github.com/jdx/pitchfork) (pinned in `mise.toml`, so `mise install` provides it):
+Run the whole stack in one command with [pitchfork](https://github.com/jdx/pitchfork) (pinned in `.mise.toml`, so `mise install` provides it):
 
 ```bash
 pitchfork start bot       # starts the db daemon (docker compose, PostgreSQL 17), waits until it accepts connections, then runs the bot (pnpm dev)
@@ -51,4 +51,4 @@ See [`docs/`](docs/README.md) for the full developer guide:
 Copy `.env.example` to `.env`:
 
 - `DISCORD_TOKEN` — bot token from Discord Developer Portal
-- `DATABASE_URL` — PostgreSQL connection string (default matches `compose.yml`)
+- `DATABASE_URL` — PostgreSQL connection string (default matches `compose.yaml`)
