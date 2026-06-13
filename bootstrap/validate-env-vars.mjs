@@ -9,6 +9,11 @@ const REQUIRED_ENV_VARS = {
   DATABASE_URL: {
     sensitive: true,
   },
+  // Required only in development: the guild where core commands are registered
+  // instantly instead of globally (see command-loader).
+  ...(process.env.NODE_ENV === "development"
+    ? { DEV_GUILD_ID: { sensitive: false } }
+    : {}),
 };
 
 // --- Functions ---

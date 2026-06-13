@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { isDevMode } from "./env.js";
+import { devGuildId, isDevMode } from "./env.js";
 
 describe("isDevMode", () => {
   const original = process.env["NODE_ENV"];
@@ -31,5 +31,27 @@ describe("isDevMode", () => {
 
   it("is false when NODE_ENV is unset", () => {
     expect(isDevMode()).toBe(false);
+  });
+});
+
+describe("devGuildId", () => {
+  const original = process.env["DEV_GUILD_ID"];
+
+  afterEach(() => {
+    if (original === undefined) {
+      delete process.env["DEV_GUILD_ID"];
+    } else {
+      process.env["DEV_GUILD_ID"] = original;
+    }
+  });
+
+  it("returns the DEV_GUILD_ID value", () => {
+    process.env["DEV_GUILD_ID"] = "123456789";
+    expect(devGuildId()).toBe("123456789");
+  });
+
+  it("returns undefined when DEV_GUILD_ID is unset", () => {
+    delete process.env["DEV_GUILD_ID"];
+    expect(devGuildId()).toBeUndefined();
   });
 });

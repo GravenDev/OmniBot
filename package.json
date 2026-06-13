@@ -10,7 +10,7 @@
   "main": "./dist/index.js",
   "scripts": {
     "build": "pnpm prisma:generate && tsc",
-    "dev": "node --env-file=.env ./bootstrap/validate-env-vars.mjs && NODE_ENV=development tsx src/index.ts",
+    "dev": "NODE_ENV=development node --env-file=.env ./bootstrap/validate-env-vars.mjs && NODE_ENV=development node --env-file=.env --import tsx src/index.ts",
     "start": "node ./bootstrap/validate-env-vars.mjs && node ./dist/index.js",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
