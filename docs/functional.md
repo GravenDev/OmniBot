@@ -50,23 +50,17 @@ Dès qu'un message est posté dans le salon configuré :
 - Limite de fils atteinte sur le salon
 - Permissions insuffisantes
 
-### `/thread-config setup` — Configurer le module
+### Configuration — `/config thread-creator`
 
-**Permission requise :** Gérer les salons
+Depuis la v2.0.0, le module utilise le système de configuration générique. Il n'a
+plus de commande dédiée : la configuration se fait via `/config thread-creator`
+(réservé aux administrateurs) et l'activation/désactivation via `/modules`.
 
-| Paramètre           | Type          | Obligatoire | Description                                   |
-| ------------------- | ------------- | ----------- | --------------------------------------------- |
-| `canal`             | Salon textuel | Oui         | Salon à surveiller                            |
-| `message-bienvenue` | Texte         | Non         | Message posté automatiquement dans chaque fil |
-| `nom-template`      | Texte         | Non         | Template du nom des fils                      |
-| `actif`             | Booléen       | Non         | Activer ou désactiver la création automatique |
+| Champ                | Type  | Description                                                                                  |
+| -------------------- | ----- | -------------------------------------------------------------------------------------------- |
+| `channel`            | Salon | Salon à surveiller. Tant qu'il n'est pas défini, rien n'est surveillé.                       |
+| `welcomeMessage`     | Texte | Message posté automatiquement dans chaque fil créé.                                          |
+| `threadNameTemplate` | Texte | Template du nom des fils — variables : `{messageAuthor}`, `{messageContent}`, `{timestamp}`. |
 
-### `/thread-config status` — Voir la configuration actuelle
-
-**Permission requise :** Gérer les salons  
-Affiche la configuration active : salon surveillé, statut, message de bienvenue, template, date de création. Réponse éphémère.
-
-### `/thread-config disable` — Désactiver sans supprimer la configuration
-
-**Permission requise :** Gérer les salons  
-Désactive la création automatique de fils sans effacer la configuration existante.
+Il n'y a plus de flag `actif` : désactiver le module via `/modules` arrête la
+surveillance sans effacer la configuration.

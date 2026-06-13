@@ -26,4 +26,4 @@ L'issue #37 (configurer plusieurs salons par serveur) dépend de cette file : sa
 
 ## Impact sur le schéma
 
-Aucun changement de schéma nécessaire pour la file (en mémoire). Le multi-salons (#37) nécessitera une migration : la table `ThreadCreatorConfig` passera d'une entrée par serveur à une entrée par couple `(guildId, channelId)`.
+Aucun changement de schéma nécessaire pour la file (en mémoire). Depuis la v2.0.0, le module n'a plus de table dédiée : sa configuration vit dans le système générique (`GuildConfiguration`, blob JSON par serveur). Le multi-salons (#37) se traitera donc au niveau du schéma de config du module (champ `channel` unique → liste de salons, type `ListOf<CHANNEL>`), sans migration de table.

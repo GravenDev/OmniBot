@@ -175,5 +175,11 @@ select pour les entités, à l'ajout dans l'éditeur pour les scalaires).
 ## Hors périmètre / suites possibles
 
 - Notification des modules sur changement de configuration (hook `onConfigChange`).
-- Migration du module Thread Creator (table `ThreadCreatorConfig` dédiée) vers ce
-  système générique, une fois la lib stabilisée.
+
+## Migrations réalisées
+
+- **Thread Creator** (v2.0.0) : migré de sa table dédiée `ThreadCreatorConfig`
+  vers ce système générique (clean cut, sans reprise de données). La commande
+  `/thread-config` et le flag `enabled` ont été supprimés — la configuration se
+  fait via `/config thread-creator` et l'activation via `/modules`. La table
+  `thread_creator_configs` a été supprimée (migration `drop_thread_creator_config`).

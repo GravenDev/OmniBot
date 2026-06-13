@@ -15,27 +15,3 @@ model ModuleActivation {
 
   @@id([moduleId, guildId])
 }
-
-// === Modèles de modules/thread-creator/models/thread-creator-config.prisma ===
-model ThreadCreatorConfig {
-  // Configuration par serveur
-  guildId String @id
-
-  // Canal où surveiller les messages
-  channelId String
-
-  // Message automatique à poster dans le fil
-  welcomeMessage String @default("💬 Utilisez ce fil pour discuter de ce sujet !")
-
-  // Nom automatique du fil (template avec variables)
-  threadNameTemplate String @default("Discussion - {messageAuthor}")
-
-  // Activer/désactiver le module
-  enabled Boolean @default(true)
-
-  // Horodatage
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("thread_creator_configs")
-}
