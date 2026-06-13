@@ -1,18 +1,12 @@
 import { Client, Events } from "discord.js";
 import coreModule from "./core/core.module.js";
-import {
-  checkCommandsForVersionChange,
-  loadDevGuildCommands,
-  loadGlobalCommands,
-} from "./core/loaders/command-loader.js";
+import { syncCommands } from "./core/loaders/command-loader.js";
 import {
   loadGlobalEvents,
   loadModuleEvents,
 } from "./core/loaders/listener-loader.js";
 import { loadModules } from "./core/loaders/module-loader.js";
-import moduleService from "./core/services/module.service.js";
 import prisma, { Prisma } from "./lib/database.js";
-import { isDevMode } from "./lib/env.js";
 import logger from "./lib/logger.js";
 import sql = Prisma.sql;
 
@@ -42,20 +36,7 @@ client.once(Events.ClientReady, async (readyClient) => {
 
   coreModule.onLoad(readyClient, coreModule.registry);
 
-  if (isDevMode()) {
-    // One bulk registration on the dev guild: core + enabled modules (instant).
-    await loadDevGuildCommands(readyClient, modules);
-    // Dev skips the version-gated command path, so reconcile the stored
-    // activation version here to keep /modules from reporting a stale version.
-    for (const module of modules) {
-      await moduleService.reconcileActivatedVersions(module);
-    }
-  } else {
-    for (const module of modules) {
-      await checkCommandsForVersionChange(readyClient, module);
-    }
-    await loadGlobalCommands(readyClient);
-  }
+  await syncCommands(readyClient, modules);
 
   loadGlobalEvents(readyClient);
 });
