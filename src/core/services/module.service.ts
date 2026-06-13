@@ -134,6 +134,32 @@ class ModuleService implements Service {
     return activation;
   }
 
+  /**
+   * Aligns the stored `activatedVersion` of every guild on which `module` is
+   * enabled with the module's live `version`, without touching commands.
+   *
+   * Dev-only on purpose — it does NOT supersede the production version bump.
+   * In production, `checkCommandsForVersionChange` bumps `activatedVersion`
+   * per guild, in its loop, only *after* re-registering that guild's commands
+   * succeeds: the version advances only once the command set is confirmed
+   * registered, so a failed registration leaves the guild "behind" and retries
+   * next boot. Dev re-syncs every command unconditionally on each boot (guild
+   * commands, instant), so there is no "registration succeeded" moment to anchor
+   * the bump to and `activatedVersion` is purely cosmetic (the `/modules`
+   * display). Hence this unconditional reconciliation, kept separate rather than
+   * unified, to preserve production's retry-on-failure semantics.
+   */
+  async reconcileActivatedVersions(module: Module) {
+    const guildInfos = await this.getGuildsWhereVersionDoesNotMatch(
+      module,
+      module.version
+    );
+
+    for (const { guildId } of guildInfos) {
+      await this.updateModuleActivation(module.id, guildId, module.version);
+    }
+  }
+
   async updateModuleActivation(
     moduleId: string,
     guildId: string,
