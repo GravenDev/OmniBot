@@ -47,6 +47,11 @@
 
 20. ~~`$` dans les remplacements regex — thread-creator.service.ts~~ ✅ _fixed in 7ae4e27_
 
+21. Enum >25 options — troncature silencieuse. `EnumConfigHandler.buildSelectRow` borne les options à 25 (limite Discord d'un select) via `.slice(0, 25)`, sans log ni indication visuelle. Conséquences : les options 26+ sont non sélectionnables ; une valeur stockée au-delà de l'index 25 reste valide en base et s'affiche dans le panneau mais n'est plus re-sélectionnable dans l'éditeur ; et l'auteur du module n'a aucun retour que son enum est plafonné.
+    - **Fix minimal** : `logger.warn` au moment du `slice` + documenter la limite de 25 dans `docs/specs/module-config.md`.
+    - **Fix complet (si besoin réel)** : paginer le select lui-même (plusieurs menus / flux « plus d'options ») — disproportionné tant qu'aucun module n'a >25 choix.
+    - **Déclencheur** : dès qu'un module déclare réellement un enum de plus de 25 options.
+
 ---
 
 🟡 Qualité de code (nouveau)
@@ -116,3 +121,4 @@ Récapitulatif des actions restantes
 | 🔵       | Extraire client/modules dans un context.ts (#14) — délayé |
 | 🟣       | Ergonomie des imports : alias + .js (#24)                 |
 | 🟣       | Accès interactions : champ requis (option C, #26) — évol. |
+| 🟠       | Enum >25 options : warn + doc (#27)                       |
