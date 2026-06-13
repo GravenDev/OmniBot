@@ -1,4 +1,5 @@
 import { type Client, type Guild, REST, Routes } from "discord.js";
+import { devGuildId } from "../../lib/env.js";
 import { loggerMaker } from "../../lib/logger.js";
 import type { Module } from "../../lib/module.js";
 import type { Version } from "../../lib/version.js";
@@ -9,11 +10,13 @@ import { compareVersions } from "../utils/version-parser.js";
 const logger = loggerMaker("commands");
 
 /**
- * Loads global commands from the core registry and registers them with Discord.
+ * Registers the core commands globally (production). Global commands can take
+ * up to ~1h to propagate; for fast iteration in development use
+ * {@link loadDevGuildCommands} instead.
  *
  * @param client The Discord client instance used to register the commands.
  */
-export function loadGlobalCommands(client: Client) {
+export async function loadGlobalCommands(client: Client) {
   logger.info("Loading global commands");
 
   const coreCommands = coreModule.registry.commands.map((command) =>
@@ -21,21 +24,78 @@ export function loadGlobalCommands(client: Client) {
   );
 
   const rest = new REST().setToken(client.token!);
-  rest
-    .put(Routes.applicationCommands(client.user!.id), {
+  try {
+    await rest.put(Routes.applicationCommands(client.user!.id), {
       body: coreCommands,
-    })
-    .then(() => {
-      coreCommands.forEach((command) => {
-        logger.info(`\tRegistering command | name = ${command.name}`);
-      });
-      logger.info(
-        `Successfully loaded global commands | count = ${coreCommands.length}`
-      );
-    })
-    .catch((error) => {
-      logger.error(`Failed to load commands | error = ${error}`);
     });
+    coreCommands.forEach((command) => {
+      logger.info(`\tRegistering command | name = ${command.name}`);
+    });
+    logger.info(
+      `Successfully loaded global commands | count = ${coreCommands.length}`
+    );
+  } catch (error) {
+    logger.error(`Failed to load commands | error = ${error}`);
+  }
+}
+
+/**
+ * Registers commands on the dev guild in a single bulk overwrite: the core
+ * commands plus the commands of every module enabled on that guild.
+ *
+ * Guild commands propagate instantly, which makes iteration fast. A single PUT
+ * is used (rather than a global PUT for core + per-module POSTs) because mixing
+ * a destructive bulk PUT with additive POSTs on the same guild scope would let
+ * the PUT wipe the POSTed module commands.
+ */
+export async function loadDevGuildCommands(client: Client, modules: Module[]) {
+  const guildId = devGuildId();
+  if (!guildId) {
+    logger.error(
+      "DEV_GUILD_ID is required in development mode to register commands"
+    );
+    return;
+  }
+
+  const commands = coreModule.registry.commands.map((command) =>
+    command.data.toJSON()
+  );
+
+  for (const module of modules) {
+    if (module.registry.commands.length === 0) {
+      continue;
+    }
+
+    const state = await moduleService.getModuleStateFromGuildIdIn(
+      module.id,
+      guildId
+    );
+    if (!state.activated) {
+      logger.info(
+        `Skipping commands for disabled module on dev guild | module = ${module.id}`
+      );
+      continue;
+    }
+
+    commands.push(
+      ...module.registry.commands.map((command) => command.data.toJSON())
+    );
+  }
+
+  const rest = new REST().setToken(client.token!);
+  try {
+    await rest.put(Routes.applicationGuildCommands(client.user!.id, guildId), {
+      body: commands,
+    });
+    commands.forEach((command) => {
+      logger.info(`\tRegistering command | name = ${command.name}`);
+    });
+    logger.info(
+      `Successfully loaded dev guild commands | guildId = ${guildId} | count = ${commands.length}`
+    );
+  } catch (error) {
+    logger.error(`Failed to load dev guild commands | error = ${error}`);
+  }
 }
 
 export async function installModuleCommandsIn(

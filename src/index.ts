@@ -2,6 +2,7 @@ import { Client, Events } from "discord.js";
 import coreModule from "./core/core.module.js";
 import {
   checkCommandsForVersionChange,
+  loadDevGuildCommands,
   loadGlobalCommands,
 } from "./core/loaders/command-loader.js";
 import {
@@ -10,6 +11,7 @@ import {
 } from "./core/loaders/listener-loader.js";
 import { loadModules } from "./core/loaders/module-loader.js";
 import prisma, { Prisma } from "./lib/database.js";
+import { isDevMode } from "./lib/env.js";
 import logger from "./lib/logger.js";
 import sql = Prisma.sql;
 
@@ -35,12 +37,20 @@ client.once(Events.ClientReady, async (readyClient) => {
   for (const module of modules) {
     module.onLoad(readyClient, module.registry);
     loadModuleEvents(readyClient, module);
-    await checkCommandsForVersionChange(readyClient, module);
   }
 
   coreModule.onLoad(readyClient, coreModule.registry);
 
-  loadGlobalCommands(readyClient);
+  if (isDevMode()) {
+    // One bulk registration on the dev guild: core + enabled modules (instant).
+    await loadDevGuildCommands(readyClient, modules);
+  } else {
+    for (const module of modules) {
+      await checkCommandsForVersionChange(readyClient, module);
+    }
+    await loadGlobalCommands(readyClient);
+  }
+
   loadGlobalEvents(readyClient);
 });
 

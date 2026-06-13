@@ -81,12 +81,14 @@ Heuristique sur la shape des args Discord.js. Si la structure d'un event change,
 
 🟣 Confort de développement (DX)
 
-23. Commandes du core enregistrées en global → propagation jusqu'à ~1 h, pénible pour itérer. En `isDevMode()`, les enregistrer en **guild** (`Routes.applicationGuildCommands(appId, guildId)` pour chaque guild de `client.guilds.cache`) → visible immédiatement ; comportement global conservé en prod. Cf. `command-loader.ts` (`loadGlobalCommands`).
+23. ~~Commandes du core enregistrées en global (~1 h de propagation, pénible en dev)~~ ✅ _fait : en `isDevMode()`, enregistrement sur `DEV_GUILD_ID` (instantané) ; global conservé en prod_
 
 24. Imports verbeux/fragiles : suffixe `.js` obligatoire (résolution `NodeNext`/ESM) et remontée `../../..`.
     - Alias sans outil : privilégier les **subpath imports** natifs de Node (`"imports": { "#lib/*": "./dist/lib/*.js" }` dans `package.json`) → aucun build supplémentaire. Alternative : `paths` tsconfig + `tsc-alias`.
     - Suppression du `.js` : nécessite un bundler (esbuild/tsup) ou `moduleResolution: "Bundler"` + loader — impacte le pipeline, à arbitrer séparément.
     - Valider `tsx` (dev), `tsc` (build) et `vitest` (tests) avec la solution retenue.
+
+25. ~~Gate de version inadapté en dev pour les commandes de module~~ ✅ _fait : en `isDevMode()`, `loadDevGuildCommands` enregistre core + commandes des modules activés en un seul PUT sur la dev guild à chaque boot (sans bump de version) ; gate par version conservé en prod_
 
 ---
 
@@ -108,5 +110,4 @@ Récapitulatif des actions restantes
 | Priorité | Action                                                    |
 | -------- | --------------------------------------------------------- |
 | 🔵       | Extraire client/modules dans un context.ts (#14) — délayé |
-| 🟣       | Commandes guild en mode dev (#23)                         |
 | 🟣       | Ergonomie des imports : alias + .js (#24)                 |
