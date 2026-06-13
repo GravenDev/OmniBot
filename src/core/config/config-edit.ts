@@ -10,7 +10,10 @@ import { loggerMaker } from "../../lib/logger.js";
 import type { Module } from "../../lib/module.js";
 import coreModule from "../core.module.js";
 import configService from "../services/config.service.js";
-import { configurationMessage } from "../utils/core-messages.js";
+import {
+  configPageOfKey,
+  configurationMessage,
+} from "../utils/core-messages.js";
 
 const logger = loggerMaker("config");
 
@@ -64,7 +67,7 @@ export async function saveConfigValue(
     [key]: value,
   });
 
-  return configurationMessage(module, updated);
+  return configurationMessage(module, updated, configPageOfKey(module, key));
 }
 
 /**
@@ -73,12 +76,14 @@ export async function saveConfigValue(
  *
  * Used by the ephemeral list/select editors, whose own interactions can only
  * update their ephemeral message — this propagates the change back to the
- * original public config panel so it stays in sync.
+ * original public config panel so it stays in sync. The panel is re-rendered on
+ * the page containing the edited `key`, not page 0.
  */
 export async function refreshSourceConfigMessage(
   interaction: CompatibleInteraction,
   module: Module,
-  sourceMessageId: string | undefined
+  sourceMessageId: string | undefined,
+  key: string
 ): Promise<void> {
   if (!sourceMessageId || !interaction.channelId) {
     return;
@@ -101,7 +106,11 @@ export async function refreshSourceConfigMessage(
 
     const message = await channel.messages.fetch(sourceMessageId);
     await message.edit({
-      components: configurationMessage(module, provider),
+      components: configurationMessage(
+        module,
+        provider,
+        configPageOfKey(module, key)
+      ),
       flags: MessageFlags.IsComponentsV2,
     });
   } catch (err) {

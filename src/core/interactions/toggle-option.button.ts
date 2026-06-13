@@ -2,7 +2,10 @@ import { MessageFlags } from "discord.js";
 import { declareInteractionHandler } from "../../lib/interaction.js";
 import { resolveConfigurableModule } from "../config/config-edit.js";
 import configService from "../services/config.service.js";
-import { configurationMessage } from "../utils/core-messages.js";
+import {
+  configPageOfKey,
+  configurationMessage,
+} from "../utils/core-messages.js";
 
 export default declareInteractionHandler({
   customId: "toggle-option",
@@ -43,7 +46,11 @@ export default declareInteractionHandler({
     );
 
     await interaction.update({
-      components: await configurationMessage(module, newConfig),
+      components: await configurationMessage(
+        module,
+        newConfig,
+        configPageOfKey(module, configKey)
+      ),
       flags: MessageFlags.IsComponentsV2,
     });
   },

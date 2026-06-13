@@ -18,15 +18,22 @@ via une interface Discord interactive.
 
 ## Types de champs supportés
 
-| Type       | Saisie                  | Stockage (JSON) | Lecture (désérialisé) |
-| ---------- | ----------------------- | --------------- | --------------------- |
-| `STRING`   | Modal (texte)           | `string`        | `string`              |
-| `NUMBER`   | Modal (texte → nombre)  | `number`        | `number`              |
-| `BOOLEAN`  | Bouton toggle           | `boolean`       | `boolean`             |
-| `USER`     | Select menu utilisateur | `string` (id)   | `User`                |
-| `ROLE`     | Select menu rôle        | `string` (id)   | `Role`                |
-| `CHANNEL`  | Select menu salon       | `string` (id)   | `Channel`             |
-| `CATEGORY` | Select menu catégorie   | `string` (id)   | `CategoryChannel`     |
+| Type       | Saisie                   | Stockage (JSON)  | Lecture (désérialisé) |
+| ---------- | ------------------------ | ---------------- | --------------------- |
+| `STRING`   | Modal (texte)            | `string`         | `string`              |
+| `NUMBER`   | Modal (texte → nombre)   | `number`         | `number`              |
+| `BOOLEAN`  | Bouton toggle            | `boolean`        | `boolean`             |
+| `USER`     | Select menu utilisateur  | `string` (id)    | `User`                |
+| `ROLE`     | Select menu rôle         | `string` (id)    | `Role`                |
+| `CHANNEL`  | Select menu salon        | `string` (id)    | `Channel`             |
+| `CATEGORY` | Select menu catégorie    | `string` (id)    | `CategoryChannel`     |
+| `ENUM`     | Select menu (choix fixe) | `string` (choix) | union littérale¹      |
+
+¹ `ENUM` représente un choix parmi un ensemble fixe déclaré sur l'entrée via
+`options`. La valeur stockée et lue est l'une de ces options (un `string`). Si
+`options` est déclaré `as const`, `config.get(...)` est typé comme l'**union
+littérale** des valeurs (`"light" | "dark"`), sinon `string`. Voir
+[Type `ENUM`](#type-enum-choix-fixe).
 
 ### Listes (`ListOf<T>`)
 
@@ -35,6 +42,9 @@ valeur lue est alors un tableau (`X[]`). L'édition dépend du type de base :
 
 - **Entités** (`USER`/`ROLE`/`CHANNEL`/`CATEGORY`) → **multi-select** natif
   (jusqu'à 25 éléments, pré-sélection des valeurs courantes).
+- **`ENUM`** (`[ConfigType.ENUM]`) → **multi-select** sur les `options` déclarées
+  (min 0 pour autoriser le vidage, max = nombre d'options) ; pré-sélection des
+  valeurs courantes.
 - **Scalaires** (`STRING`/`NUMBER`) → **éditeur dédié** : un message listant
   chaque élément avec un bouton _Supprimer_, plus un bouton _Ajouter_ qui ouvre
   une modale validée par le type.
@@ -76,6 +86,34 @@ champ **sans** défaut peut être `undefined` (jamais défini). `null` est rése
 une valeur effacée intentionnellement. Voir `ConfigEntryValue` dans
 `src/lib/config.ts`.
 
+### Type `ENUM` (choix fixe)
+
+Un champ `ENUM` déclare un ensemble fixe de valeurs autorisées via `options` :
+
+```ts
+config: {
+  logLevel: {
+    name: "Niveau de log",
+    description: "Verbosité des logs",
+    type: ConfigType.ENUM,
+    options: ["debug", "info", "warn", "error"] as const, // `as const` → union littérale
+    defaultValue: "info",
+  },
+  // Liste : plusieurs choix parmi le même ensemble (multi-select)
+  enabledFeatures: {
+    name: "Fonctionnalités",
+    description: "Modules optionnels activés",
+    type: [ConfigType.ENUM],
+    options: ["welcome", "logs", "automod"] as const,
+  },
+}
+```
+
+- `options` est **obligatoire** sur une entrée `ENUM` (le type l'exige).
+- `as const` fait que `config.get("logLevel")` est typé `"debug" | "info" |
+"warn" | "error"` (l'union littérale) ; sans `as const`, c'est `string`.
+- La valeur est stockée telle quelle (un `string`) ; aucune désérialisation.
+
 Le `ConfigProvider` est injecté automatiquement dans `execute`/`complete`/`check`
 des commandes, listeners et interaction handlers (voir
 `interaction-create.listener.ts`, `listener-loader.ts`).
@@ -113,6 +151,22 @@ model GuildConfiguration {
   d'édition selon le type :
   - bouton **toggle** pour les booléens (`toggle-option`) ;
   - bouton **éditer** pour tous les autres types (`configure-module`).
+- **Pagination** : chaque champ coûte 3 composants (section + texte + bouton) et
+  Discord plafonne un message à **40 composants**. Le panneau affiche donc
+  `CONFIG_FIELDS_PER_PAGE` champs par page (10) avec une barre _◀ Précédent /
+  Suivant ▶_ (`config-page:<moduleId>:<page>`) qui ré-affiche le panneau en place.
+  La barre n'apparaît qu'au-delà d'une page. Après une édition, le panneau se
+  ré-affiche sur la **page contenant le champ modifié** : cette page est
+  **déduite** de la position de la clé dans le schéma (`configPageOfKey`), donc
+  aucun `page` n'est threadé dans les `customId` (contrairement à
+  `sourceMessageId`). Comme un admin ne peut cliquer que sur la page affichée, la
+  page déduite est toujours celle qu'il regardait.
+- **Limitation multi-admin** (assumée) : le panneau étant **un seul message
+  public partagé**, sa page courante est un état **global**, pas par-utilisateur.
+  Deux admins ne peuvent pas naviguer indépendamment, et l'action de l'un
+  re-rend le message pour tous. C'est purement cosmétique (la persistance est
+  toujours correcte) et rare ; le seul vrai correctif serait un panneau ephemeral
+  par-utilisateur, écarté par choix (panneau public, voir #7).
 
 ### Flux d'édition
 
@@ -122,6 +176,8 @@ Le bouton `configure-module:<moduleId>:<clé>` ouvre l'éditeur adapté au type
 - `STRING`/`NUMBER` (scalaire) : **modal** texte ;
 - `USER`/`ROLE`/`CHANNEL`/`CATEGORY` (scalaire ou liste) : **select menu** natif
   (mono ou multi selon liste), ephemeral, V2 ;
+- `ENUM` (scalaire ou liste) : **string select menu** rempli avec les `options`
+  de l'entrée (mono ou multi selon liste), ephemeral, V2 (`enum.config-handler.ts`) ;
 - listes scalaires (`STRING`/`NUMBER`/`BOOLEAN`) : **éditeur ajouter/supprimer**
   (`scalar-list-editor.ts`).
 
@@ -157,10 +213,13 @@ via `ConfigTypeHandler.validate(value)` :
 - `BOOLEAN` : `"true"` / `"false"` ;
 - `USER`/`ROLE`/`CHANNEL`/`CATEGORY` : mention **ou** identifiant brut (snowflake) —
   les select menus renvoyant des ids bruts ;
-- `STRING` : toujours valide.
+- `STRING` : toujours valide ;
+- `ENUM` : le prédicat générique accepte tout (il n'a pas accès aux `options`) ;
+  l'appartenance à `options` est vérifiée par `EnumConfigHandler`, qui rejette
+  toute valeur soumise hors de l'ensemble déclaré.
 
 Pour les listes, chaque élément est validé individuellement (par valeur du
-select pour les entités, à l'ajout dans l'éditeur pour les scalaires).
+select pour les entités et les enums, à l'ajout dans l'éditeur pour les scalaires).
 
 ## Travail réalisé
 
@@ -171,6 +230,10 @@ select pour les entités, à l'ajout dans l'éditeur pour les scalaires).
 - [x] Tests (lib + handlers : modal, select, éditeur de liste).
 - [x] Édition des listes : multi-select pour les entités, éditeur
       ajouter/supprimer pour les scalaires.
+- [x] Type `ENUM` (choix fixe parmi `options`), scalaire et liste, édité via
+      string select menu, avec typage en union littérale.
+- [x] Pagination du panneau `/config` (10 champs/page) pour respecter le plafond
+      de 40 composants de Discord.
 
 ## Hors périmètre / suites possibles
 
