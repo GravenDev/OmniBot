@@ -3,6 +3,7 @@ import type {
   ModalSubmitInteraction,
 } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { ConfigType } from "../../lib/config.js";
 import type { Declared } from "../../lib/declared.js";
 import type { InteractionHandler } from "../../lib/interaction.js";
 import type { Module } from "../../lib/module.js";
@@ -23,17 +24,23 @@ vi.mock("./config-edit.js", () => ({
 
 const { default: configService } =
   await import("../services/config.service.js");
-const { resolveConfigurableModule, saveConfigValue, isListEntry } =
-  await import("./config-edit.js");
+const {
+  resolveConfigurableModule,
+  saveConfigValue,
+  isListEntry,
+  getConfigEntry,
+} = await import("./config-edit.js");
 const { default: NumberConfigHandler } =
   await import("./number.config-handler.js");
 const { default: UserConfigHandler } = await import("./user.config-handler.js");
+const { default: EnumConfigHandler } = await import("./enum.config-handler.js");
 
 const isConfigKey = vi.mocked(configService.isConfigKey);
 const updateConfig = vi.mocked(configService.updateConfigForModuleIn);
 const resolveModule = vi.mocked(resolveConfigurableModule);
 const save = vi.mocked(saveConfigValue);
 const isList = vi.mocked(isListEntry);
+const configEntry = vi.mocked(getConfigEntry);
 
 const fakeModule = { id: "mod" } as unknown as Module;
 
@@ -223,5 +230,94 @@ describe("UserConfigHandler select submit", () => {
   it("declares that it requires admin", async () => {
     const submit = await captureRegisteredHandler(new UserConfigHandler());
     expect(submit.requiresAdmin).toBe(true);
+  });
+});
+
+describe("EnumConfigHandler select submit", () => {
+  function fakeSelectInteraction(values: string[]) {
+    return {
+      guildId: "guild-1",
+      values,
+      reply: vi.fn(),
+      update: vi.fn(),
+      isStringSelectMenu: () => true,
+    } as unknown as AnySelectMenuInteraction;
+  }
+
+  beforeEach(() => {
+    // The handler reads the entry's declared options to validate the selection.
+    configEntry.mockReturnValue({
+      name: "Mode",
+      description: "",
+      type: ConfigType.ENUM,
+      options: ["light", "dark"],
+    });
+  });
+
+  it("registers under the set-enum-config customId, requiring admin", async () => {
+    const submit = await captureRegisteredHandler(new EnumConfigHandler());
+    expect(submit.customId).toBe("set-enum-config");
+    expect(submit.requiresAdmin).toBe(true);
+  });
+
+  it("only matches string select menus", async () => {
+    const submit = await captureRegisteredHandler(new EnumConfigHandler());
+
+    expect(submit.check(fakeSelectInteraction([]), undefined as never)).toBe(
+      true
+    );
+    expect(
+      submit.check(
+        { isStringSelectMenu: () => false } as never,
+        undefined as never
+      )
+    ).toBe(false);
+  });
+
+  it("saves the chosen option (single) and updates in place", async () => {
+    const submit = await captureRegisteredHandler(new EnumConfigHandler());
+    const interaction = fakeSelectInteraction(["dark"]);
+
+    await submit.execute(
+      interaction,
+      ["mod", "mode", "src"],
+      undefined as never
+    );
+
+    expect(updateConfig).toHaveBeenCalledWith(fakeModule, "guild-1", {
+      mode: "dark",
+    });
+    expect(interaction.update).toHaveBeenCalled();
+  });
+
+  it("stores the full array for a list field", async () => {
+    isList.mockReturnValue(true);
+    const submit = await captureRegisteredHandler(new EnumConfigHandler());
+    const interaction = fakeSelectInteraction(["light", "dark"]);
+
+    await submit.execute(
+      interaction,
+      ["mod", "modes", "src"],
+      undefined as never
+    );
+
+    expect(updateConfig).toHaveBeenCalledWith(fakeModule, "guild-1", {
+      modes: ["light", "dark"],
+    });
+  });
+
+  it("rejects a value outside the declared options without saving", async () => {
+    const submit = await captureRegisteredHandler(new EnumConfigHandler());
+    const interaction = fakeSelectInteraction(["neon"]);
+
+    await submit.execute(
+      interaction,
+      ["mod", "mode", "src"],
+      undefined as never
+    );
+
+    expect(updateConfig).not.toHaveBeenCalled();
+    expect(interaction.update).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalled();
   });
 });

@@ -195,7 +195,12 @@ const addListItem = declareInteractionHandler({
         ),
         flags: MessageFlags.IsComponentsV2,
       });
-      await refreshSourceConfigMessage(interaction, module, sourceMessageId);
+      await refreshSourceConfigMessage(
+        interaction,
+        module,
+        sourceMessageId,
+        key
+      );
       return;
     }
 
@@ -254,7 +259,7 @@ const toggleListItem = declareInteractionHandler({
       ),
       flags: MessageFlags.IsComponentsV2,
     });
-    await refreshSourceConfigMessage(interaction, module, sourceMessageId);
+    await refreshSourceConfigMessage(interaction, module, sourceMessageId, key);
   },
 });
 
@@ -311,7 +316,7 @@ const addListItemModal = declareInteractionHandler({
         flags: MessageFlags.Ephemeral + MessageFlags.IsComponentsV2,
       });
     }
-    await refreshSourceConfigMessage(interaction, module, sourceMessageId);
+    await refreshSourceConfigMessage(interaction, module, sourceMessageId, key);
   },
 });
 
@@ -353,7 +358,7 @@ const removeListItem = declareInteractionHandler({
       ),
       flags: MessageFlags.IsComponentsV2,
     });
-    await refreshSourceConfigMessage(interaction, module, sourceMessageId);
+    await refreshSourceConfigMessage(interaction, module, sourceMessageId, key);
   },
 });
 

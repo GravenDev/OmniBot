@@ -9,6 +9,7 @@ export enum ConfigType {
   CATEGORY = "CATEGORY",
   CHANNEL = "CHANNEL",
   ROLE = "ROLE",
+  ENUM = "ENUM",
 }
 
 export const ConfigValidator: Record<ConfigType, (value: string) => boolean> = {
@@ -23,6 +24,9 @@ export const ConfigValidator: Record<ConfigType, (value: string) => boolean> = {
   ROLE: (value: string) => /^(?:<@&\d+>|\d+)$/.test(value),
   CHANNEL: (value: string) => /^(?:<#\d+>|\d+)$/.test(value),
   CATEGORY: (value: string) => /^(?:<#\d+>|\d+)$/.test(value),
+  // Membership against the field's declared `options` is enforced by the enum
+  // handler (which has access to the entry); this generic predicate cannot.
+  ENUM: () => true,
 };
 
 export function getConfigTypeName(
@@ -44,6 +48,7 @@ export const configTypeNames: Record<ConfigType, string> = {
   ROLE: "role",
   CHANNEL: "channel",
   CATEGORY: "category",
+  ENUM: "choice",
 };
 
 export type ListOf<T extends ConfigType> = [T];
@@ -56,6 +61,9 @@ export interface TypeMap {
   [ConfigType.ROLE]: Role;
   [ConfigType.CHANNEL]: Channel;
   [ConfigType.CATEGORY]: CategoryChannel;
+  // Fallback when an enum entry declares no literal `options` (`as const`);
+  // ConfigEntryValue narrows to the literal union when options are present.
+  [ConfigType.ENUM]: string;
 }
 
 export type ResolveType<T extends ConfigType | ListOf<ConfigType>> =
@@ -79,11 +87,62 @@ interface ListConfigEntry<T extends ConfigType> {
   defaultValue?: ResolveType<ListOf<T>>;
 }
 
+/**
+ * Config entry whose value is one of a fixed set of string `options`, edited
+ * through a single-choice select menu. Declare `options` `as const` to have
+ * `config.get(...)` typed as the literal union of allowed values.
+ */
+export interface EnumConfigEntry<Values extends string = string> {
+  name: string;
+  description: string;
+  type: ConfigType.ENUM;
+  options: readonly Values[];
+  defaultValue?: Values;
+}
+
+/** List variant of {@link EnumConfigEntry}: any subset of `options` (multi-select). */
+export interface EnumListConfigEntry<Values extends string = string> {
+  name: string;
+  description: string;
+  type: ListOf<ConfigType.ENUM>;
+  options: readonly Values[];
+  defaultValue?: Values[];
+}
+
 export type ConfigEntry<T extends ConfigType> =
   | SimpleConfigEntry<T>
-  | ListConfigEntry<T>;
+  | ListConfigEntry<T>
+  | EnumConfigEntry
+  | EnumListConfigEntry;
 
 export type ConfigSchema = Record<string, ConfigEntry<ConfigType>>;
+
+/**
+ * Whether a config entry is an enum (single or list) — i.e. one whose value is
+ * drawn from a declared `options` set. Narrows to the option-carrying entry
+ * shapes so callers can read `entry.options`.
+ */
+export function isEnumEntry(
+  entry: ConfigEntry<ConfigType> | undefined
+): entry is EnumConfigEntry | EnumListConfigEntry {
+  if (!entry) return false;
+  const base = Array.isArray(entry.type) ? entry.type[0] : entry.type;
+  return base === ConfigType.ENUM;
+}
+
+/**
+ * Resolved value type of an entry, before factoring in default presence. Enum
+ * entries narrow to the literal union of their `options`; everything else maps
+ * through {@link ResolveType}.
+ */
+type ResolvedEntryValue<E extends ConfigEntry<ConfigType>> = E extends {
+  type: ConfigType.ENUM;
+  options: readonly (infer V)[];
+}
+  ? V
+  : E extends { type: ListOf<ConfigType.ENUM>; options: readonly (infer V)[] }
+    ? V[]
+    : ResolveType<E["type"]>;
 
 /**
  * Resolved type of a config entry's value.
@@ -95,8 +154,8 @@ export type ConfigSchema = Record<string, ConfigEntry<ConfigType>>;
 export type ConfigEntryValue<E extends ConfigEntry<ConfigType>> = E extends {
   defaultValue: unknown;
 }
-  ? ResolveType<E["type"]>
-  : ResolveType<E["type"]> | undefined;
+  ? ResolvedEntryValue<E>
+  : ResolvedEntryValue<E> | undefined;
 
 export type ConfigData<TSchema extends ConfigSchema> = {
   [K in keyof TSchema]: ConfigEntryValue<TSchema[K]>;

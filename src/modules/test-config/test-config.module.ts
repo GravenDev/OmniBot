@@ -86,6 +86,19 @@ export default defineModule({
       description: "Plusieurs salons Discord (multi-select).",
       type: [ConfigType.CHANNEL],
     },
+    choice: {
+      name: "Choix",
+      description: "Une valeur parmi un ensemble fixe (select mono-choix).",
+      type: ConfigType.ENUM,
+      options: ["faible", "moyen", "élevé"] as const,
+      defaultValue: "moyen",
+    },
+    choiceList: {
+      name: "Choix multiples",
+      description: "Plusieurs valeurs parmi un ensemble fixe (multi-select).",
+      type: [ConfigType.ENUM],
+      options: ["nord", "sud", "est", "ouest"] as const,
+    },
   },
 
   onLoad() {

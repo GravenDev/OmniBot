@@ -156,7 +156,8 @@ export abstract class EntitySelectConfigHandler<
           await refreshSourceConfigMessage(
             interaction,
             module,
-            sourceMessageId
+            sourceMessageId,
+            configKey
           );
         },
       })
