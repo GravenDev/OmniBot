@@ -28,8 +28,19 @@ via une interface Discord interactive.
 | `CHANNEL`  | Select menu salon       | `string` (id)   | `Channel`             |
 | `CATEGORY` | Select menu catégorie   | `string` (id)   | `CategoryChannel`     |
 
-Les listes (`ListOf<T>`) sont prévues par le typage (`ResolveType`) ; l'édition de
-listes via l'UI est hors périmètre de cette itération.
+### Listes (`ListOf<T>`)
+
+N'importe quel type peut être déclaré en **liste** via `type: [ConfigType.X]`. La
+valeur lue est alors un tableau (`X[]`). L'édition dépend du type de base :
+
+- **Entités** (`USER`/`ROLE`/`CHANNEL`/`CATEGORY`) → **multi-select** natif
+  (jusqu'à 25 éléments, pré-sélection des valeurs courantes).
+- **Scalaires** (`STRING`/`NUMBER`) → **éditeur dédié** : un message listant
+  chaque élément avec un bouton _Supprimer_, plus un bouton _Ajouter_ qui ouvre
+  une modale validée par le type.
+- **Booléens en liste** (`[BOOLEAN]`) → même éditeur, mais chaque élément est un
+  **toggle** (bascule vrai/faux en place) ; _Ajouter_ insère directement un
+  `false` (pas de modale).
 
 ## API pour les modules
 
@@ -55,10 +66,15 @@ Lecture des valeurs (désérialisées) côté composants du module :
 
 ```ts
 async execute(interaction, config) {
-  const channel = config.get("logChannel"); // Channel | null
-  const max = config.get("maxWarnings");     // number
+  const channel = config.get("logChannel"); // Channel | undefined (pas de défaut)
+  const max = config.get("maxWarnings");     // number (a un defaultValue)
 }
 ```
+
+Typage des valeurs : un champ **avec** `defaultValue` est toujours présent ; un
+champ **sans** défaut peut être `undefined` (jamais défini). `null` est réservé à
+une valeur effacée intentionnellement. Voir `ConfigEntryValue` dans
+`src/lib/config.ts`.
 
 Le `ConfigProvider` est injecté automatiquement dans `execute`/`complete`/`check`
 des commandes, listeners et interaction handlers (voir
@@ -95,13 +111,19 @@ model GuildConfiguration {
 
 ### Flux d'édition
 
-1. `configure-module:<moduleId>:<clé>` →
-   `ConfigTypeHandler.replyToEditRequest` ouvre l'éditeur adapté :
-   - `STRING`/`NUMBER` : **modal** texte ;
-   - `USER`/`ROLE`/`CHANNEL`/`CATEGORY` : **select menu** natif (ephemeral, V2).
-2. La soumission (modal submit ou select) est routée vers le handler du type, qui
-   **valide**, **persiste** via `ConfigService.updateConfigForModuleIn`, puis
-   **réaffiche** la configuration à jour.
+Le bouton `configure-module:<moduleId>:<clé>` ouvre l'éditeur adapté au type
+(`configure-module.button.ts` route selon scalaire/entité et selon liste) :
+
+- `STRING`/`NUMBER` (scalaire) : **modal** texte ;
+- `USER`/`ROLE`/`CHANNEL`/`CATEGORY` (scalaire ou liste) : **select menu** natif
+  (mono ou multi selon liste), ephemeral, V2 ;
+- listes scalaires (`STRING`/`NUMBER`/`BOOLEAN`) : **éditeur ajouter/supprimer**
+  (`scalar-list-editor.ts`).
+
+La soumission (modal submit, select, ou ajout/suppression) **valide**, **persiste**
+via `ConfigService.updateConfigForModuleIn`, puis **réaffiche** la vue à jour
+(config principale pour les scalaires/entités, éditeur de liste pour les listes
+scalaires).
 
 ## Validation
 
@@ -114,17 +136,21 @@ via `ConfigTypeHandler.validate(value)` :
   les select menus renvoyant des ids bruts ;
 - `STRING` : toujours valide.
 
-## Travail restant (cette itération)
+Pour les listes, chaque élément est validé individuellement (par valeur du
+select pour les entités, à l'ajout dans l'éditeur pour les scalaires).
 
-- [x] Implémenter la soumission du modal `NUMBER` (parsing + validation + sauvegarde).
-- [x] Implémenter les handlers `USER`, `ROLE`, `CHANNEL`, `CATEGORY` (select menus).
-- [x] Accepter les ids bruts dans les validateurs d'entités.
-- [x] Supprimer le code mort `editionSection` / `editedField`.
-- [x] Tests unitaires sur la lib (`ConfigValidator`, `getConfigTypeName`, `ConfigProvider`).
+## Travail réalisé
+
+- [x] Soumission du modal `NUMBER` (parsing + validation + sauvegarde).
+- [x] Handlers `USER`/`ROLE`/`CHANNEL`/`CATEGORY` (select menus).
+- [x] Ids bruts acceptés dans les validateurs d'entités.
+- [x] Suppression du code mort `editionSection` / `editedField`.
+- [x] Tests (lib + handlers : modal, select, éditeur de liste).
+- [x] Édition des listes : multi-select pour les entités, éditeur
+      ajouter/supprimer pour les scalaires.
 
 ## Hors périmètre / suites possibles
 
-- Édition d'options de type **liste** via l'UI.
 - Notification des modules sur changement de configuration (hook `onConfigChange`).
 - Migration du module Thread Creator (table `ThreadCreatorConfig` dédiée) vers ce
   système générique, une fois la lib stabilisée.
