@@ -40,19 +40,17 @@ Légende statut : [ ] à faire · [x] fait
   - Garder `(config.get(key) ?? "").toString()` dans les `replyToEditRequest`
     des handlers string/number (la valeur peut désormais être `undefined`).
 
-### [ ] #2 — Un champ de type liste affiche un bouton « éditer » mort
+### [x] #2 — Un champ de type liste affiche un bouton « éditer » mort
 
-- **Fichiers :** `src/core/utils/core.messages.ts` (~l.77),
-  `src/core/interactions/configure-module.button.ts` (l.29)
-- **Problème :** `configurationMessage` pose un bouton `configure-module` pour
+- **Fichiers :** `src/core/utils/core.messages.ts`,
+  `src/core/interactions/configure-module.button.ts`
+- **Problème :** `configurationMessage` posait un bouton `configure-module` pour
   tout type `!= BOOLEAN`, donc aussi pour un type tableau (`ListOf<T>`). Au clic,
-  `configure-module.button` fait `if (Array.isArray(schemaDef.type)) return;`
+  `configure-module.button` faisait `if (Array.isArray(schemaDef.type)) return;`
   → no-op silencieux.
-- **Scénario d'échec :** l'admin clique « éditer » sur un champ liste, rien ne se
-  passe, aucun retour.
-- **Fix proposé :** soit ne pas afficher de bouton d'édition pour les types liste
-  dans `configurationMessage`, soit répondre « édition de liste non encore
-  supportée » dans `configure-module.button`.
+- **Fait :** l'édition des listes est désormais implémentée — `configure-module`
+  route les listes d'entités vers le multi-select et les listes scalaires vers
+  l'éditeur ajouter/supprimer (`scalar-list-editor.ts`). Plus de bouton mort.
 
 ---
 
