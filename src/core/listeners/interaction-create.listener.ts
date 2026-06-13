@@ -10,6 +10,7 @@ import logger from "../../lib/logger.js";
 import coreModule from "../core.module.js";
 import configService from "../services/config.service.js";
 import moduleService from "../services/module.service.js";
+import { requireAdmin } from "../utils/require-admin.js";
 
 function findCommand(commandName: string) {
   return [...modules, coreModule]
@@ -136,6 +137,10 @@ async function handleInteraction(interaction: CompatibleInteraction) {
     return;
   }
 
+  logger.debug(
+    `Interaction handler found | customId = ${interaction.customId} | module = ${handler.module.id}`
+  );
+
   if (
     handler.module.id === coreModule.id ||
     (
@@ -152,7 +157,21 @@ async function handleInteraction(interaction: CompatibleInteraction) {
 
     if (!handler.handler.check(interaction, config)) return;
 
-    await handler.handler.execute(interaction, args, config);
+    if (handler.handler.requiresAdmin && !(await requireAdmin(interaction))) {
+      return;
+    }
+
+    try {
+      logger.debug(
+        `Executing interaction | customId = ${interaction.customId}`
+      );
+      await handler.handler.execute(interaction, args, config);
+    } catch (err) {
+      logger.error(
+        { err },
+        `Interaction handler failed | customId = ${interaction.customId}`
+      );
+    }
   }
 }
 

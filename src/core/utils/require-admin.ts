@@ -1,11 +1,8 @@
-import {
-  type ButtonInteraction,
-  MessageFlags,
-  PermissionFlagsBits,
-} from "discord.js";
+import { MessageFlags, PermissionFlagsBits } from "discord.js";
+import type { CompatibleInteraction } from "../../lib/interaction.js";
 
 export async function requireAdmin(
-  interaction: ButtonInteraction
+  interaction: CompatibleInteraction
 ): Promise<boolean> {
   if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
     await interaction.reply({

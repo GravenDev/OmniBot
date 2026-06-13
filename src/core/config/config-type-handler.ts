@@ -15,7 +15,8 @@ export abstract class ConfigTypeHandler<Type extends ConfigType> {
     interaction: ButtonInteraction,
     module: Module<TSchema>,
     configuration: ConfigProvider<TSchema>,
-    key: keyof TSchema
+    key: keyof TSchema,
+    sourceMessageId: string
   ): Promise<void>;
 
   public abstract registerEditionInteractionHandlers(

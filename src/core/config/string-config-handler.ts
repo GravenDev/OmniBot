@@ -30,7 +30,10 @@ export default class StringConfigHandler extends ConfigTypeHandler<ConfigType.ST
     interaction: ButtonInteraction,
     module: Module<TSchema>,
     config: ConfigProvider<TSchema>,
-    key: string
+    key: string,
+    // The modal updates the public config message in place via isFromMessage,
+    // so it does not need the source message id.
+    _sourceMessageId: string
   ): Promise<void> {
     const modal = new ModalBuilder()
       .setCustomId(`set-string-config-modal:${module.id}:${key}`)
@@ -58,6 +61,7 @@ export default class StringConfigHandler extends ConfigTypeHandler<ConfigType.ST
 
 const handleModalSubmit = declareInteractionHandler({
   customId: "set-string-config-modal",
+  requiresAdmin: true,
   check: (interaction) => interaction.isModalSubmit(),
   execute: async (interaction, [moduleId, configKey]) => {
     const module = resolveConfigurableModule(moduleId);
@@ -71,14 +75,24 @@ const handleModalSubmit = declareInteractionHandler({
 
     const value = interaction.fields.getTextInputValue("value");
 
-    await interaction.reply({
-      components: await saveConfigValue(
-        module,
-        interaction.guildId!,
-        configKey,
-        value
-      ),
-      flags: MessageFlags.Ephemeral + MessageFlags.IsComponentsV2,
-    });
+    const components = await saveConfigValue(
+      module,
+      interaction.guildId!,
+      configKey,
+      value
+    );
+
+    // Edit the config message in place rather than posting a new embed.
+    if (interaction.isFromMessage()) {
+      await interaction.update({
+        components,
+        flags: MessageFlags.IsComponentsV2,
+      });
+    } else {
+      await interaction.reply({
+        components,
+        flags: MessageFlags.Ephemeral + MessageFlags.IsComponentsV2,
+      });
+    }
   },
 });

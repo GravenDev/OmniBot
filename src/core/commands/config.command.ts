@@ -48,9 +48,10 @@ export default declareCommand({
 
     const components = await configurationMessage(module, configProvider);
 
+    // Public on purpose: a server-wide setting change should be visible to all.
     await interaction.reply({
       components,
-      flags: MessageFlags.Ephemeral + MessageFlags.IsComponentsV2,
+      flags: MessageFlags.IsComponentsV2,
     });
   },
   async complete(interaction) {

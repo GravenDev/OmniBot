@@ -14,6 +14,13 @@ export interface InteractionHandler<
   ConfigType extends ConfigSchema = {},
 > {
   customId: string;
+
+  /**
+   * When true, the interaction is only executed for guild administrators; the
+   * permission check is enforced centrally by the interaction dispatcher.
+   */
+  requiresAdmin?: boolean;
+
   check: (
     interaction: CompatibleInteraction,
     config: ConfigProvider<ConfigType>

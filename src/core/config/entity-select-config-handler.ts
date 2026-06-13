@@ -21,8 +21,8 @@ import configService from "../services/config.service.js";
 import {
   getConfigEntry,
   isListEntry,
+  refreshSourceConfigMessage,
   resolveConfigurableModule,
-  saveConfigValue,
 } from "./config-edit.helpers.js";
 import { ConfigTypeHandler } from "./config-type-handler.js";
 
@@ -61,16 +61,15 @@ export abstract class EntitySelectConfigHandler<
     interaction: CompatibleInteraction
   ): interaction is AnySelectMenuInteraction;
 
-  public override async replyToEditRequest<TSchema extends ConfigSchema>(
-    interaction: ButtonInteraction,
-    module: Module<TSchema>,
-    config: ConfigProvider<TSchema>,
-    key: keyof TSchema
-  ): Promise<void> {
-    const customId = `${this.selectCustomId}:${module.id}:${String(key)}`;
-    const isList = isListEntry(getConfigEntry(module, key as string));
-    const currentIds = currentEntityIds(config.get(key));
-
+  /** Builds the ephemeral select-menu editor container, pre-filled with current ids. */
+  private buildEditorContainer(
+    module: Module,
+    key: string,
+    currentIds: string[],
+    sourceMessageId: string
+  ): ContainerBuilder {
+    const customId = `${this.selectCustomId}:${module.id}:${key}:${sourceMessageId}`;
+    const isList = isListEntry(getConfigEntry(module, key));
     const row = this.buildSelectRow(
       customId,
       currentIds,
@@ -78,7 +77,22 @@ export abstract class EntitySelectConfigHandler<
       isList ? MAX_SELECT_VALUES : 1
     );
 
-    const container = new ContainerBuilder().addActionRowComponents(row);
+    return new ContainerBuilder().addActionRowComponents(row);
+  }
+
+  public override async replyToEditRequest<TSchema extends ConfigSchema>(
+    interaction: ButtonInteraction,
+    module: Module<TSchema>,
+    config: ConfigProvider<TSchema>,
+    key: keyof TSchema,
+    sourceMessageId: string
+  ): Promise<void> {
+    const container = this.buildEditorContainer(
+      module,
+      String(key),
+      currentEntityIds(config.get(key)),
+      sourceMessageId
+    );
 
     await interaction.reply({
       components: [container],
@@ -91,13 +105,18 @@ export abstract class EntitySelectConfigHandler<
   ): Promise<void> {
     const isMatchingSelect = this.isMatchingSelect.bind(this);
     const validate = this.validate.bind(this);
+    const buildEditorContainer = this.buildEditorContainer.bind(this);
 
     registry.register(
       declareInteractionHandler<AnySelectMenuInteraction>({
         customId: this.selectCustomId,
+        requiresAdmin: true,
         check: (interaction): interaction is AnySelectMenuInteraction =>
           isMatchingSelect(interaction),
-        execute: async (interaction, [moduleId, configKey]) => {
+        execute: async (
+          interaction,
+          [moduleId, configKey, sourceMessageId]
+        ) => {
           const module = resolveConfigurableModule(moduleId);
           if (!module || !configService.isConfigKey(module, configKey)) {
             await interaction.reply({
@@ -119,15 +138,26 @@ export abstract class EntitySelectConfigHandler<
           const isList = isListEntry(getConfigEntry(module, configKey));
           const value = isList ? ids : (ids[0] ?? null);
 
+          await configService.updateConfigForModuleIn(
+            module,
+            interaction.guildId!,
+            { [configKey]: value }
+          );
+
+          // Keep the (ephemeral) select open with the new selection, and refresh
+          // the public config message — never render a config view here, so its
+          // edit buttons can't point at an ephemeral (uneditable) message.
           await interaction.update({
-            components: await saveConfigValue(
-              module,
-              interaction.guildId!,
-              configKey,
-              value
-            ),
+            components: [
+              buildEditorContainer(module, configKey, ids, sourceMessageId!),
+            ],
             flags: MessageFlags.IsComponentsV2,
           });
+          await refreshSourceConfigMessage(
+            interaction,
+            module,
+            sourceMessageId
+          );
         },
       })
     );

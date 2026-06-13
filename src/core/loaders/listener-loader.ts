@@ -16,7 +16,13 @@ export function loadGlobalEvents(client: Client) {
   const coreListeners = coreModule.registry.listeners;
 
   for (const listener of coreListeners) {
-    client.on(listener.eventType, listener.execute);
+    client.on(listener.eventType, (...args) =>
+      listener
+        .execute(...args, undefined)
+        .catch((err: unknown) =>
+          logger.error({ err }, "Global listener execution failed")
+        )
+    );
   }
 }
 

@@ -4,14 +4,12 @@ import { declareInteractionHandler } from "../../lib/interaction.js";
 import { installModule } from "../loaders/module-installer.js";
 import moduleService from "../services/module.service.js";
 import { modulesMessage } from "../utils/core.messages.js";
-import { requireAdmin } from "../utils/require-admin.js";
 
 export default declareInteractionHandler({
   customId: "enable-module",
+  requiresAdmin: true,
   check: (interaction) => interaction.isButton(),
   async execute(interaction, args) {
-    if (!(await requireAdmin(interaction))) return;
-
     const moduleId = args[0];
     if (!moduleId) {
       await interaction.reply({

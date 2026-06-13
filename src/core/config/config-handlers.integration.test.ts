@@ -11,13 +11,14 @@ import type { Registry } from "../../lib/registry.js";
 // Mock the persistence boundary so importing the handlers does not boot the bot
 // (config.service.js and config-edit.helpers.js both pull in ../../index.js).
 vi.mock("../services/config.service.js", () => ({
-  default: { isConfigKey: vi.fn() },
+  default: { isConfigKey: vi.fn(), updateConfigForModuleIn: vi.fn() },
 }));
 vi.mock("./config-edit.helpers.js", () => ({
   resolveConfigurableModule: vi.fn(),
   saveConfigValue: vi.fn(),
   getConfigEntry: vi.fn(),
   isListEntry: vi.fn(),
+  refreshSourceConfigMessage: vi.fn(),
 }));
 
 const { default: configService } =
@@ -29,6 +30,7 @@ const { default: NumberConfigHandler } =
 const { default: UserConfigHandler } = await import("./user-config-handler.js");
 
 const isConfigKey = vi.mocked(configService.isConfigKey);
+const updateConfig = vi.mocked(configService.updateConfigForModuleIn);
 const resolveModule = vi.mocked(resolveConfigurableModule);
 const save = vi.mocked(saveConfigValue);
 const isList = vi.mocked(isListEntry);
@@ -56,6 +58,7 @@ beforeEach(() => {
   resolveModule.mockReturnValue(fakeModule);
   isConfigKey.mockReturnValue(true);
   save.mockResolvedValue([]);
+  updateConfig.mockResolvedValue({} as never);
   isList.mockReturnValue(false);
 });
 
@@ -64,9 +67,16 @@ describe("NumberConfigHandler modal submit", () => {
     return {
       guildId: "guild-1",
       fields: { getTextInputValue: () => value },
+      isFromMessage: () => true,
+      update: vi.fn(),
       reply: vi.fn(),
     } as unknown as ModalSubmitInteraction;
   }
+
+  it("declares that it requires admin", async () => {
+    const submit = await captureRegisteredHandler(new NumberConfigHandler());
+    expect(submit.requiresAdmin).toBe(true);
+  });
 
   it("rejects a non-numeric value without saving", async () => {
     const submit = await captureRegisteredHandler(new NumberConfigHandler());
@@ -87,7 +97,8 @@ describe("NumberConfigHandler modal submit", () => {
     await submit.execute(interaction, ["mod", "count"], undefined as never);
 
     expect(save).toHaveBeenCalledWith(fakeModule, "guild-1", "count", 42);
-    expect(interaction.reply).toHaveBeenCalled();
+    expect(interaction.update).toHaveBeenCalled();
+    expect(interaction.reply).not.toHaveBeenCalled();
   });
 
   it("saves the value 0 (not treated as missing)", async () => {
@@ -149,14 +160,15 @@ describe("UserConfigHandler select submit", () => {
     const submit = await captureRegisteredHandler(new UserConfigHandler());
     const interaction = fakeSelectInteraction(["123456789"]);
 
-    await submit.execute(interaction, ["mod", "owner"], undefined as never);
-
-    expect(save).toHaveBeenCalledWith(
-      fakeModule,
-      "guild-1",
-      "owner",
-      "123456789"
+    await submit.execute(
+      interaction,
+      ["mod", "owner", "src"],
+      undefined as never
     );
+
+    expect(updateConfig).toHaveBeenCalledWith(fakeModule, "guild-1", {
+      owner: "123456789",
+    });
     expect(interaction.update).toHaveBeenCalled();
     expect(interaction.reply).not.toHaveBeenCalled();
   });
@@ -166,12 +178,15 @@ describe("UserConfigHandler select submit", () => {
     const submit = await captureRegisteredHandler(new UserConfigHandler());
     const interaction = fakeSelectInteraction(["111", "222"]);
 
-    await submit.execute(interaction, ["mod", "admins"], undefined as never);
+    await submit.execute(
+      interaction,
+      ["mod", "admins", "src"],
+      undefined as never
+    );
 
-    expect(save).toHaveBeenCalledWith(fakeModule, "guild-1", "admins", [
-      "111",
-      "222",
-    ]);
+    expect(updateConfig).toHaveBeenCalledWith(fakeModule, "guild-1", {
+      admins: ["111", "222"],
+    });
   });
 
   it("stores an empty array when a list selection is cleared", async () => {
@@ -179,19 +194,34 @@ describe("UserConfigHandler select submit", () => {
     const submit = await captureRegisteredHandler(new UserConfigHandler());
     const interaction = fakeSelectInteraction([]);
 
-    await submit.execute(interaction, ["mod", "admins"], undefined as never);
+    await submit.execute(
+      interaction,
+      ["mod", "admins", "src"],
+      undefined as never
+    );
 
-    expect(save).toHaveBeenCalledWith(fakeModule, "guild-1", "admins", []);
+    expect(updateConfig).toHaveBeenCalledWith(fakeModule, "guild-1", {
+      admins: [],
+    });
   });
 
   it("rejects a value that fails validation without saving", async () => {
     const submit = await captureRegisteredHandler(new UserConfigHandler());
     const interaction = fakeSelectInteraction(["not-an-id"]);
 
-    await submit.execute(interaction, ["mod", "owner"], undefined as never);
+    await submit.execute(
+      interaction,
+      ["mod", "owner", "src"],
+      undefined as never
+    );
 
-    expect(save).not.toHaveBeenCalled();
+    expect(updateConfig).not.toHaveBeenCalled();
     expect(interaction.update).not.toHaveBeenCalled();
     expect(interaction.reply).toHaveBeenCalled();
+  });
+
+  it("declares that it requires admin", async () => {
+    const submit = await captureRegisteredHandler(new UserConfigHandler());
+    expect(submit.requiresAdmin).toBe(true);
   });
 });

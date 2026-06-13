@@ -103,9 +103,14 @@ model GuildConfiguration {
 ### Commande `/config <module>`
 
 - Option `module` requise, avec autocomplétion (modules activés + core).
-- Réservée aux administrateurs (`PermissionFlagsBits`).
-- Affiche un conteneur Components V2 listant chaque option : nom, description,
-  type, valeur courante, et un accessoire d'édition selon le type :
+- Réservée aux administrateurs (`setDefaultMemberPermissions`).
+- Réponse **publique** (Components V2) : une modification impactant tout le
+  serveur ne doit pas être cachée. Comme le message est public, les
+  interactions d'édition sont réservées aux admins via le flag déclaratif
+  `requiresAdmin` (sur `InteractionHandler`), enforcé centralement par le
+  dispatcher d'interactions.
+- Liste chaque option : nom, description, type, valeur courante, et un accessoire
+  d'édition selon le type :
   - bouton **toggle** pour les booléens (`toggle-option`) ;
   - bouton **éditer** pour tous les autres types (`configure-module`).
 
@@ -121,9 +126,27 @@ Le bouton `configure-module:<moduleId>:<clé>` ouvre l'éditeur adapté au type
   (`scalar-list-editor.ts`).
 
 La soumission (modal submit, select, ou ajout/suppression) **valide**, **persiste**
-via `ConfigService.updateConfigForModuleIn`, puis **réaffiche** la vue à jour
-(config principale pour les scalaires/entités, éditeur de liste pour les listes
-scalaires).
+via `ConfigService.updateConfigForModuleIn`, puis **réaffiche** le message public.
+
+- Les éditions directes (modale `STRING`/`NUMBER`, toggle booléen) éditent le
+  message de config **public en place** (`interaction.update`), sans nouvel embed.
+- Les select menus d'entité et l'éditeur de listes scalaires sont des messages
+  **ephemeral** séparés (visibles du seul admin). Après chaque modification ils
+  rafraîchissent le message public d'origine via
+  `refreshSourceConfigMessage` : l'id du message public est threadé dans les
+  `customId` des composants de l'éditeur, et le service ré-édite ce message
+  (`channel.messages.fetch(id).edit(...)`).
+- **Invariant** : aucune vue config (`configurationMessage`) n'est jamais rendue
+  sur un message ephemeral — sinon ses boutons « Éditer » pointeraient vers un
+  message ephemeral non éditable par id. Le submit d'un select d'entité re-rend
+  donc **le select** (avec la sélection à jour), pas une vue config.
+
+### Affichage des valeurs
+
+`renderCurrentValue` (dans `core.messages.ts`) rend les **entités** sous forme de
+mentions **hors backticks** (Discord les affiche en `@rôle` / `#salon`) et les
+**scalaires** entre backticks. Les listes sont jointes ; une valeur absente
+s'affiche `—`.
 
 ## Validation
 

@@ -12,6 +12,7 @@ import configService from "../services/config.service.js";
 
 export default declareInteractionHandler({
   customId: "configure-module",
+  requiresAdmin: true,
   check: (interaction) => interaction.isButton(),
   async execute(interaction, [moduleId, configKey]) {
     const module = resolveConfigurableModule(moduleId);
@@ -41,7 +42,8 @@ export default declareInteractionHandler({
         interaction,
         module,
         configKey,
-        (config.get(configKey) as unknown[] | undefined) ?? []
+        (config.get(configKey) as unknown[] | undefined) ?? [],
+        interaction.message.id
       );
       return;
     }
@@ -50,7 +52,8 @@ export default declareInteractionHandler({
       interaction,
       module,
       config,
-      configKey
+      configKey,
+      interaction.message.id
     );
   },
 });

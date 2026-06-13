@@ -96,31 +96,41 @@ Légende statut : [ ] à faire · [x] fait
 
 ## Améliorations UX (feature config)
 
-### [ ] #6 — Éditer/remplacer le message de config existant après soumission de modale
+### [x] #6 — Éditer/remplacer le message de config existant après soumission de modale
 
 - **Fichiers :** `src/core/config/string-config-handler.ts`,
   `number-config-handler.ts` (soumission de modale)
-- **Problème :** après soumission d'une modale, on fait `interaction.reply(...)`
-  → un **nouvel** embed de configuration est envoyé, en doublon du message
-  `/config` d'origine. Perturbant. (Les select menus d'entité font déjà
-  `interaction.update`, qui remplace en place — c'est le bon comportement.)
-- **Fix proposé :** sur la soumission de modale, utiliser `interaction.update(...)`
-  pour remplacer le message d'origine. La `ModalSubmitInteraction` issue d'un
-  composant expose `.update()` quand `isFromMessage()` est vrai (notre cas : la
-  modale est ouverte depuis un bouton du message de config). Uniformiser
-  `saveConfigValue` côté rendu pour que tous les handlers éditent en place.
+- **Problème :** après soumission d'une modale, on faisait `interaction.reply(...)`
+  → un **nouvel** embed de configuration en doublon du message `/config`.
+- **Fait :** la soumission de modale fait `interaction.update(...)` (via le garde
+  `isFromMessage()`) → le message de config est édité **en place**, plus de
+  doublon. Les toggles et select menus éditent déjà en place.
 
-### [ ] #7 — Rendre la configuration visible de tous (non-ephemeral)
+### [x] #7 — Rendre la configuration visible de tous (non-ephemeral)
 
-- **Fichiers :** `src/core/commands/config.command.ts`, tous les handlers/boutons
-  qui répondent avec `MessageFlags.Ephemeral`
+- **Fichiers :** `src/core/commands/config.command.ts`,
+  `configure-module.button.ts`, `toggle-option.button.ts`
 - **Problème :** modifier des paramètres qui impactent tout le serveur ne devrait
-  pas être caché. Actuellement `/config` et les éditions sont ephemeral.
-- **Fix proposé :** retirer `MessageFlags.Ephemeral` du message de config et de
-  ses mises à jour, pour que la modification soit visible de tous. À combiner
-  avec #6 (édition en place) pour un flux cohérent. Attention : revérifier le
-  flux des select menus d'entité (le message du select devra aussi être public
-  et cohérent en flags V2).
+  pas être caché ; mais rendre le message public expose ses boutons d'édition à
+  tous, or les handlers d'édition ne vérifiaient pas les permissions
+  (contrairement à enable/disable) → **escalade** (n'importe qui pourrait éditer).
+- **Fait :** `/config` est désormais **public**. La vérification de permission
+  est **centralisée** : un flag déclaratif `requiresAdmin` sur
+  `InteractionHandler`, enforcé une seule fois par le dispatcher
+  (`interaction-create.listener`) avant d'exécuter le handler. Tous les handlers
+  d'édition config + les boutons enable/disable portent `requiresAdmin: true` ;
+  plus aucun appel `requireAdmin` inline (future-proof : un nouveau handler
+  sensible n'a qu'à poser le flag). `requireAdmin` accepte toute
+  `CompatibleInteraction`. Les éditeurs entité/liste restent ephemeral ; les
+  toggles/modales éditent le message public en place.
+- **Refresh du message public :** les éditeurs entité/liste restent ephemeral
+  mais rafraîchissent le message public d'origine après chaque modification
+  (`refreshSourceConfigMessage` : id du message public threadé dans les `customId`,
+  puis `channel.messages.fetch(id).edit(...)`). Invariant associé : aucune vue
+  config n'est rendue sur un message ephemeral (le submit d'un select re-rend le
+  select), sinon ses boutons « Éditer » pointeraient vers un message non éditable.
+- **Affichage :** les entités s'affichent en mentions rendues (`@rôle`, `#salon`)
+  via `renderCurrentValue` (hors backticks ; scalaires entre backticks).
 
 ---
 

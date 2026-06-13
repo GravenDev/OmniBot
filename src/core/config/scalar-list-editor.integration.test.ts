@@ -16,6 +16,7 @@ vi.mock("../services/config.service.js", () => ({
 vi.mock("./config-edit.helpers.js", () => ({
   resolveConfigurableModule: vi.fn(),
   getConfigEntry: vi.fn(),
+  refreshSourceConfigMessage: vi.fn(),
 }));
 
 const { registerScalarListEditorHandlers } =
@@ -69,11 +70,23 @@ describe("add-list-item-modal", () => {
     } as never;
   }
 
+  it("declares that every list editor handler requires admin", () => {
+    const all = handlers();
+    expect(all["add-list-item"]!.requiresAdmin).toBe(true);
+    expect(all["add-list-item-modal"]!.requiresAdmin).toBe(true);
+    expect(all["remove-list-item"]!.requiresAdmin).toBe(true);
+    expect(all["toggle-list-item"]!.requiresAdmin).toBe(true);
+  });
+
   it("appends a parsed, validated value to the list", async () => {
     currentValues([1, 2]);
     const submit = handlers()["add-list-item-modal"]!;
 
-    await submit.execute(fakeModal("3"), ["mod", "count"], undefined as never);
+    await submit.execute(
+      fakeModal("3"),
+      ["mod", "count", "src"],
+      undefined as never
+    );
 
     expect(updateConfig).toHaveBeenCalledWith(fakeModule, "guild-1", {
       count: [1, 2, 3],
@@ -85,7 +98,11 @@ describe("add-list-item-modal", () => {
     const submit = handlers()["add-list-item-modal"]!;
     const interaction = fakeModal("abc");
 
-    await submit.execute(interaction, ["mod", "count"], undefined as never);
+    await submit.execute(
+      interaction,
+      ["mod", "count", "src"],
+      undefined as never
+    );
 
     expect(updateConfig).not.toHaveBeenCalled();
     expect(interaction.reply).toHaveBeenCalled();
@@ -107,7 +124,7 @@ describe("remove-list-item", () => {
 
     await remove.execute(
       fakeButton(),
-      ["mod", "count", "1"],
+      ["mod", "count", "src", "1"],
       undefined as never
     );
 
@@ -122,7 +139,7 @@ describe("remove-list-item", () => {
 
     await remove.execute(
       fakeButton(),
-      ["mod", "count", "5"],
+      ["mod", "count", "src", "5"],
       undefined as never
     );
 
@@ -155,7 +172,7 @@ describe("boolean lists", () => {
     const interaction = fakeButton();
     const add = handlers()["add-list-item"]!;
 
-    await add.execute(interaction, ["mod", "flags"], undefined as never);
+    await add.execute(interaction, ["mod", "flags", "src"], undefined as never);
 
     expect(updateConfig).toHaveBeenCalledWith(fakeModule, "guild-1", {
       flags: [true, false],
@@ -170,7 +187,7 @@ describe("boolean lists", () => {
 
     await toggle.execute(
       fakeButton(),
-      ["mod", "flags", "0"],
+      ["mod", "flags", "src", "0"],
       undefined as never
     );
 
