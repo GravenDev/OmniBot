@@ -60,14 +60,15 @@ Légende statut : [ ] à faire · [x] fait
   divergence dev/prod. (Recouvre aussi la répétition de
   `registry.commands.map(c => c.data.toJSON())`, présente à 3-4 endroits.)
 
-### [ ] #5 — `index.ts` connaît les deux flux d'enregistrement (altitude)
+### [x] #5 — `index.ts` connaît les deux flux d'enregistrement (altitude)
 
 - **Fichier :** `src/index.ts` (handler `ClientReady`)
 - **Problème :** le caller encode en détail dev (agrégat) vs prod (version-gate +
   global). Toute évolution future doit choisir « dev / prod / les deux » et
   toucher `index.ts`.
-- **Fix :** un point d'entrée unique `registerCommands(client, modules)`
-  dispatchant en interne, laissant `index.ts` agnostique.
+- **Fait :** point d'entrée unique `syncCommands(client, modules)` dans
+  `command-loader.ts` qui possède l'aiguillage dev/prod ; `index.ts` l'appelle en
+  une ligne (6888918).
 
 ### [ ] #6 — Littéral `"development"` dupliqué
 
