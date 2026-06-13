@@ -23,6 +23,7 @@ import { Colors } from "../../utils/colors.js";
 import configService from "../services/config.service.js";
 import {
   getConfigEntry,
+  refreshSourceConfigMessage,
   resolveConfigurableModule,
 } from "./config-edit.helpers.js";
 
@@ -63,11 +64,18 @@ function parseScalar(raw: string, type: ConfigType): string | number | boolean {
   }
 }
 
-/** Builds the list editor message components for the current values. */
+/**
+ * Builds the list editor message components for the current values.
+ *
+ * `sourceMessageId` is the id of the public `/config` message that opened this
+ * editor; it is threaded through the buttons' customIds so each edit can refresh
+ * that message.
+ */
 export function scalarListEditorMessage(
   module: Module,
   key: string,
-  values: unknown[]
+  values: unknown[],
+  sourceMessageId: string
 ): ContainerBuilder[] {
   const entry = getConfigEntry(module, key);
   const container = new ContainerBuilder().setAccentColor(Colors.Turquoise);
@@ -81,6 +89,7 @@ export function scalarListEditorMessage(
   container.addSeparatorComponents((separator) => separator.setDivider(true));
 
   const type = entry ? baseType(entry) : ConfigType.STRING;
+  const idSuffix = `${module.id}:${key}:${sourceMessageId}`;
 
   if (values.length === 0) {
     container.addTextDisplayComponents((text) =>
@@ -91,11 +100,11 @@ export function scalarListEditorMessage(
     values.forEach((value, index) => {
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
-          .setCustomId(`toggle-list-item:${module.id}:${key}:${index}`)
+          .setCustomId(`toggle-list-item:${idSuffix}:${index}`)
           .setLabel(`Élément ${index + 1} : ${value ? "vrai" : "faux"}`)
           .setStyle(value ? ButtonStyle.Success : ButtonStyle.Danger),
         new ButtonBuilder()
-          .setCustomId(`remove-list-item:${module.id}:${key}:${index}`)
+          .setCustomId(`remove-list-item:${idSuffix}:${index}`)
           .setLabel("Supprimer")
           .setStyle(ButtonStyle.Secondary)
       );
@@ -109,7 +118,7 @@ export function scalarListEditorMessage(
         )
         .setButtonAccessory((button) =>
           button
-            .setCustomId(`remove-list-item:${module.id}:${key}:${index}`)
+            .setCustomId(`remove-list-item:${idSuffix}:${index}`)
             .setLabel("Supprimer")
             .setStyle(ButtonStyle.Danger)
         );
@@ -119,7 +128,7 @@ export function scalarListEditorMessage(
 
   const addRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
-      .setCustomId(`add-list-item:${module.id}:${key}`)
+      .setCustomId(`add-list-item:${idSuffix}`)
       .setLabel("Ajouter")
       .setStyle(ButtonStyle.Success)
   );
@@ -133,18 +142,20 @@ export async function openScalarListEditor(
   interaction: ButtonInteraction,
   module: Module,
   key: string,
-  values: unknown[]
+  values: unknown[],
+  sourceMessageId: string
 ): Promise<void> {
   await interaction.reply({
-    components: scalarListEditorMessage(module, key, values),
+    components: scalarListEditorMessage(module, key, values, sourceMessageId),
     flags: MessageFlags.Ephemeral + MessageFlags.IsComponentsV2,
   });
 }
 
 const addListItem = declareInteractionHandler({
   customId: "add-list-item",
+  requiresAdmin: true,
   check: (interaction) => interaction.isButton(),
-  execute: async (interaction, [moduleId, key]) => {
+  execute: async (interaction, [moduleId, key, sourceMessageId]) => {
     const module = resolveConfigurableModule(moduleId);
     if (!module || !configService.isConfigKey(module, key)) {
       await interaction.reply({
@@ -176,14 +187,20 @@ const addListItem = declareInteractionHandler({
       );
 
       await interaction.update({
-        components: scalarListEditorMessage(module, key, values),
+        components: scalarListEditorMessage(
+          module,
+          key,
+          values,
+          sourceMessageId!
+        ),
         flags: MessageFlags.IsComponentsV2,
       });
+      await refreshSourceConfigMessage(interaction, module, sourceMessageId);
       return;
     }
 
     const modal = new ModalBuilder()
-      .setCustomId(`add-list-item-modal:${module.id}:${key}`)
+      .setCustomId(`add-list-item-modal:${module.id}:${key}:${sourceMessageId}`)
       .setTitle(`Ajouter — ${entry.name}`)
       .addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(
@@ -201,8 +218,9 @@ const addListItem = declareInteractionHandler({
 
 const toggleListItem = declareInteractionHandler({
   customId: "toggle-list-item",
+  requiresAdmin: true,
   check: (interaction) => interaction.isButton(),
-  execute: async (interaction, [moduleId, key, indexRaw]) => {
+  execute: async (interaction, [moduleId, key, sourceMessageId, indexRaw]) => {
     const module = resolveConfigurableModule(moduleId);
     if (!module || !configService.isConfigKey(module, key)) {
       await interaction.reply({
@@ -228,16 +246,23 @@ const toggleListItem = declareInteractionHandler({
     });
 
     await interaction.update({
-      components: scalarListEditorMessage(module, key, values),
+      components: scalarListEditorMessage(
+        module,
+        key,
+        values,
+        sourceMessageId!
+      ),
       flags: MessageFlags.IsComponentsV2,
     });
+    await refreshSourceConfigMessage(interaction, module, sourceMessageId);
   },
 });
 
 const addListItemModal = declareInteractionHandler({
   customId: "add-list-item-modal",
+  requiresAdmin: true,
   check: (interaction) => interaction.isModalSubmit(),
-  execute: async (interaction, [moduleId, key]) => {
+  execute: async (interaction, [moduleId, key, sourceMessageId]) => {
     const module = resolveConfigurableModule(moduleId);
     if (!module || !configService.isConfigKey(module, key)) {
       await interaction.reply({
@@ -269,7 +294,12 @@ const addListItemModal = declareInteractionHandler({
       [key]: values,
     });
 
-    const components = scalarListEditorMessage(module, key, values);
+    const components = scalarListEditorMessage(
+      module,
+      key,
+      values,
+      sourceMessageId!
+    );
     if (interaction.isFromMessage()) {
       await interaction.update({
         components,
@@ -281,13 +311,15 @@ const addListItemModal = declareInteractionHandler({
         flags: MessageFlags.Ephemeral + MessageFlags.IsComponentsV2,
       });
     }
+    await refreshSourceConfigMessage(interaction, module, sourceMessageId);
   },
 });
 
 const removeListItem = declareInteractionHandler({
   customId: "remove-list-item",
+  requiresAdmin: true,
   check: (interaction) => interaction.isButton(),
-  execute: async (interaction, [moduleId, key, indexRaw]) => {
+  execute: async (interaction, [moduleId, key, sourceMessageId, indexRaw]) => {
     const module = resolveConfigurableModule(moduleId);
     if (!module || !configService.isConfigKey(module, key)) {
       await interaction.reply({
@@ -313,9 +345,15 @@ const removeListItem = declareInteractionHandler({
     });
 
     await interaction.update({
-      components: scalarListEditorMessage(module, key, values),
+      components: scalarListEditorMessage(
+        module,
+        key,
+        values,
+        sourceMessageId!
+      ),
       flags: MessageFlags.IsComponentsV2,
     });
+    await refreshSourceConfigMessage(interaction, module, sourceMessageId);
   },
 });
 

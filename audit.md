@@ -90,6 +90,10 @@ Heuristique sur la shape des args Discord.js. Si la structure d'un event change,
 
 25. ~~Gate de version inadapté en dev pour les commandes de module~~ ✅ _fait : en `isDevMode()`, `loadDevGuildCommands` enregistre core + commandes des modules activés en un seul PUT sur la dev guild à chaque boot (sans bump de version) ; gate par version conservé en prod_
 
+26. Permission des interactions — défaut _fail-open_ (dette de conception, faible). Le flag `requiresAdmin?: boolean` sur `InteractionHandler` (enforcé par le dispatcher) est **optionnel** : un handler sans flag est public. Sûr aujourd'hui (tous les handlers sont admin et explicitement marqués), mais repose sur l'humain pour ne pas oublier `requiresAdmin: true` sur un futur handler sensible.
+    - **Évolution possible (option C, safe-by-construction)** : remplacer le flag optionnel par un champ **requis** type `access: "admin" | "everyone"` (aucun défaut) → le typage force chaque handler à déclarer son niveau d'accès, impossible d'oublier.
+    - **Déclencheur** : à faire quand le nombre de handlers grandit, ou dès l'apparition du premier handler volontairement non-admin (le risque d'oubli devient alors réel).
+
 ---
 
 🟢 Points positifs
@@ -111,3 +115,4 @@ Récapitulatif des actions restantes
 | -------- | --------------------------------------------------------- |
 | 🔵       | Extraire client/modules dans un context.ts (#14) — délayé |
 | 🟣       | Ergonomie des imports : alias + .js (#24)                 |
+| 🟣       | Accès interactions : champ requis (option C, #26) — évol. |

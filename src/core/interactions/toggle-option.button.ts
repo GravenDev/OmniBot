@@ -6,6 +6,7 @@ import { configurationMessage } from "../utils/core.messages.js";
 
 export default declareInteractionHandler({
   customId: "toggle-option",
+  requiresAdmin: true,
   check: (interaction) => interaction.isButton(),
   async execute(interaction, [moduleId, configKey]) {
     const module = resolveConfigurableModule(moduleId);
@@ -43,7 +44,7 @@ export default declareInteractionHandler({
 
     await interaction.update({
       components: await configurationMessage(module, newConfig),
-      flags: MessageFlags.IsComponentsV2 + MessageFlags.Ephemeral,
+      flags: MessageFlags.IsComponentsV2,
     });
   },
 });

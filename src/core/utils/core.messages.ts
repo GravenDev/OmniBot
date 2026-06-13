@@ -4,6 +4,7 @@ import {
   getConfigTypeName,
   type ConfigProvider,
   type ConfigSchema,
+  type ListOf,
 } from "../../lib/config.js";
 import type { Module } from "../../lib/module.js";
 import { Colors } from "../../utils/colors.js";
@@ -48,15 +49,35 @@ export const modulesMessage = (
   return container;
 };
 
-/** Human-readable rendering of a config value (handles lists and unset values). */
-function displayValue(value: unknown): string {
-  if (Array.isArray(value)) {
-    return value.length > 0 ? value.map(String).join(", ") : "—";
-  }
-  if (value === null || value === undefined) {
+/**
+ * Renders a config value for display.
+ *
+ * Entity values (user/role/channel/category) stringify to mentions
+ * (`<@&id>`, `<#id>`, …) which Discord only renders as names **outside** code
+ * formatting, so they are shown bare; scalars stay in backticks. Lists are
+ * joined; unset values show `—`.
+ */
+function renderCurrentValue(
+  type: ConfigType | ListOf<ConfigType>,
+  value: unknown
+): string {
+  const items = (Array.isArray(value) ? value : [value]).filter(
+    (item) => item !== null && item !== undefined
+  );
+  if (items.length === 0) {
     return "—";
   }
-  return String(value);
+
+  const baseType = Array.isArray(type) ? type[0] : type;
+  const isEntity =
+    baseType === ConfigType.USER ||
+    baseType === ConfigType.ROLE ||
+    baseType === ConfigType.CHANNEL ||
+    baseType === ConfigType.CATEGORY;
+
+  return items
+    .map((item) => (isEntity ? String(item) : `\`${String(item)}\``))
+    .join(", ");
 }
 
 export const configurationMessage = <TSchema extends ConfigSchema>(
@@ -79,7 +100,7 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
     const section = new SectionBuilder();
     section.addTextDisplayComponents((text) =>
       text.setContent(
-        `-# ${getConfigTypeName(option.type)}\n**⚙️  ${option.name}**\n> ${option.description}\nCurrent: \`${displayValue(value)}\`\n\n`
+        `-# ${getConfigTypeName(option.type)}\n**⚙️  ${option.name}**\n> ${option.description}\nCurrent: ${renderCurrentValue(option.type, value)}\n\n`
       )
     );
 
