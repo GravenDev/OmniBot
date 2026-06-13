@@ -1,9 +1,14 @@
 import type {
   AnySelectMenuInteraction,
+  ButtonInteraction,
   ModalSubmitInteraction,
 } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ConfigType } from "../../lib/config.js";
+import {
+  ConfigType,
+  type ConfigProvider,
+  type ConfigSchema,
+} from "../../lib/config.js";
 import type { Declared } from "../../lib/declared.js";
 import type { InteractionHandler } from "../../lib/interaction.js";
 import type { Module } from "../../lib/module.js";
@@ -319,5 +324,35 @@ describe("EnumConfigHandler select submit", () => {
     expect(updateConfig).not.toHaveBeenCalled();
     expect(interaction.update).not.toHaveBeenCalled();
     expect(interaction.reply).toHaveBeenCalled();
+  });
+
+  it("refuses to open the editor when the enum declares no options", async () => {
+    // An enum field with an empty options array would otherwise build an empty
+    // select menu and crash; the handler must reply with a message instead.
+    configEntry.mockReturnValue({
+      name: "Mode",
+      description: "",
+      type: ConfigType.ENUM,
+      options: [],
+    });
+    const handler = new EnumConfigHandler();
+    const interaction = {
+      reply: vi.fn(),
+    } as unknown as ButtonInteraction;
+    const config = {
+      get: () => undefined,
+    } as unknown as ConfigProvider<ConfigSchema>;
+
+    await handler.replyToEditRequest(
+      interaction,
+      fakeModule,
+      config,
+      "mode",
+      "src"
+    );
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: expect.stringContaining("option") })
+    );
   });
 });

@@ -6,6 +6,7 @@ import {
   getConfigTypeName,
   isEnumEntry,
   type ConfigData,
+  type ConfigEntry,
   type ConfigSchema,
 } from "./config.js";
 import type { Module } from "./module.js";
@@ -183,6 +184,27 @@ describe("ConfigProvider", () => {
     expectTypeOf(provider.get("tags")).toEqualTypeOf<
       ("a" | "b" | "c")[] | undefined
     >();
+  });
+});
+
+describe("ConfigEntry enum typing", () => {
+  it("requires `options` on an enum entry (regression for the missing-options hole)", () => {
+    const valid: ConfigEntry<ConfigType> = {
+      name: "x",
+      description: "y",
+      type: ConfigType.ENUM,
+      options: ["a", "b"],
+    };
+
+    // @ts-expect-error — an ENUM entry without `options` must not type-check
+    const invalid: ConfigEntry<ConfigType> = {
+      name: "x",
+      description: "y",
+      type: ConfigType.ENUM,
+    };
+
+    expect(valid.type).toBe(ConfigType.ENUM);
+    expect(invalid.type).toBe(ConfigType.ENUM);
   });
 });
 

@@ -8,6 +8,7 @@ import {
 import { ConfigType } from "../../lib/config.js";
 import type { CompatibleInteraction } from "../../lib/interaction.js";
 import { EntitySelectConfigHandler } from "./entity-select.config-handler.js";
+import type { SelectRowContext } from "./select.config-handler.js";
 
 export default class CategoryConfigHandler extends EntitySelectConfigHandler<ConfigType.CATEGORY> {
   protected override readonly selectCustomId = "set-category-config";
@@ -16,12 +17,12 @@ export default class CategoryConfigHandler extends EntitySelectConfigHandler<Con
     super(ConfigType.CATEGORY);
   }
 
-  protected override buildSelectRow(
-    customId: string,
-    currentIds: string[],
-    minValues: number,
-    maxValues: number
-  ): ActionRowBuilder<MessageActionRowComponentBuilder> {
+  protected override buildSelectRow({
+    customId,
+    current,
+    minValues,
+    maxValues,
+  }: SelectRowContext): ActionRowBuilder<MessageActionRowComponentBuilder> {
     const menu = new ChannelSelectMenuBuilder()
       .setCustomId(customId)
       .setPlaceholder(
@@ -33,8 +34,8 @@ export default class CategoryConfigHandler extends EntitySelectConfigHandler<Con
       .setMinValues(minValues)
       .setMaxValues(maxValues);
 
-    if (currentIds.length > 0) {
-      menu.setDefaultChannels(...currentIds);
+    if (current.length > 0) {
+      menu.setDefaultChannels(...current);
     }
 
     return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
