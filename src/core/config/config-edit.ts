@@ -10,7 +10,7 @@ import { loggerMaker } from "../../lib/logger.js";
 import type { Module } from "../../lib/module.js";
 import coreModule from "../core.module.js";
 import configService from "../services/config.service.js";
-import { configurationMessage } from "../utils/core.messages.js";
+import { configurationMessage } from "../utils/core-messages.js";
 
 const logger = loggerMaker("config");
 

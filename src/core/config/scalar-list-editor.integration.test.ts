@@ -13,7 +13,7 @@ vi.mock("../services/config.service.js", () => ({
     updateConfigForModuleIn: vi.fn(),
   },
 }));
-vi.mock("./config-edit.helpers.js", () => ({
+vi.mock("./config-edit.js", () => ({
   resolveConfigurableModule: vi.fn(),
   getConfigEntry: vi.fn(),
   refreshSourceConfigMessage: vi.fn(),
@@ -24,7 +24,7 @@ const { registerScalarListEditorHandlers } =
 const { default: configService } =
   await import("../services/config.service.js");
 const { resolveConfigurableModule, getConfigEntry } =
-  await import("./config-edit.helpers.js");
+  await import("./config-edit.js");
 
 const isConfigKey = vi.mocked(configService.isConfigKey);
 const getConfig = vi.mocked(configService.getConfigForModuleIn);

@@ -1,50 +1,47 @@
 import {
   ActionRowBuilder,
-  ButtonInteraction,
   MessageFlags,
   ModalBuilder,
   TextInputBuilder,
   TextInputStyle,
+  type ButtonInteraction,
 } from "discord.js";
 import {
-  ConfigProvider,
   ConfigType,
+  ConfigValidator,
+  type ConfigProvider,
   type ConfigSchema,
 } from "../../lib/config.js";
 import { declareInteractionHandler } from "../../lib/interaction.js";
 import type { Module } from "../../lib/module.js";
 import type { Registry } from "../../lib/registry.js";
 import configService from "../services/config.service.js";
-import {
-  resolveConfigurableModule,
-  saveConfigValue,
-} from "./config-edit.helpers.js";
-import { ConfigTypeHandler } from "./config-type-handler.js";
+import { resolveConfigurableModule, saveConfigValue } from "./config-edit.js";
+import { ConfigTypeHandler } from "./config-handler.js";
 
-export default class StringConfigHandler extends ConfigTypeHandler<ConfigType.STRING> {
+export default class NumberConfigHandler extends ConfigTypeHandler<ConfigType.NUMBER> {
   constructor() {
-    super(ConfigType.STRING);
+    super(ConfigType.NUMBER);
   }
 
   public override async replyToEditRequest<TSchema extends ConfigSchema>(
     interaction: ButtonInteraction,
     module: Module<TSchema>,
     config: ConfigProvider<TSchema>,
-    key: string,
-    // The modal updates the public config message in place via isFromMessage,
-    // so it does not need the source message id.
+    key: keyof TSchema,
+    // The modal updates the public config message in place via isFromMessage.
     _sourceMessageId: string
   ): Promise<void> {
     const modal = new ModalBuilder()
-      .setCustomId(`set-string-config-modal:${module.id}:${key}`)
-      .setTitle(`Set ${key}`)
+      .setCustomId(`set-config-number-modal:${module.id}:${key.toString()}`)
+      .setTitle(`Set ${key.toString()}`)
       .addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(
           new TextInputBuilder()
             .setCustomId("value")
-            .setLabel(`Enter a value (text):`)
-            .setStyle(TextInputStyle.Short)
+            .setLabel(`Enter a value (number):`)
             .setValue((config.get(key) ?? "").toString())
+            .setStyle(TextInputStyle.Short)
             .setRequired(true)
         )
       );
@@ -60,7 +57,7 @@ export default class StringConfigHandler extends ConfigTypeHandler<ConfigType.ST
 }
 
 const handleModalSubmit = declareInteractionHandler({
-  customId: "set-string-config-modal",
+  customId: "set-config-number-modal",
   requiresAdmin: true,
   check: (interaction) => interaction.isModalSubmit(),
   execute: async (interaction, [moduleId, configKey]) => {
@@ -73,13 +70,21 @@ const handleModalSubmit = declareInteractionHandler({
       return;
     }
 
-    const value = interaction.fields.getTextInputValue("value");
+    const raw = interaction.fields.getTextInputValue("value");
+
+    if (!ConfigValidator[ConfigType.NUMBER](raw)) {
+      await interaction.reply({
+        content: `❌ \`${raw}\` n'est pas un nombre valide.`,
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
+    }
 
     const components = await saveConfigValue(
       module,
       interaction.guildId!,
       configKey,
-      value
+      Number(raw)
     );
 
     // Edit the config message in place rather than posting a new embed.
