@@ -18,7 +18,7 @@
       "automerge": true
     },
     {
-      "description": "Group pnpm updates across mise.toml and package.json packageManager field into a single PR",
+      "description": "Group pnpm updates across .mise.toml and package.json packageManager field into a single PR",
       "matchPackageNames": ["pnpm"],
       "groupName": "pnpm",
       "matchUpdateTypes": ["minor", "patch"],

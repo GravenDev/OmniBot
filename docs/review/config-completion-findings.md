@@ -135,4 +135,4 @@ Légende statut : [ ] à faire · [x] fait
 ---
 
 > Tâches transverses au projet (commandes guild en dev, ergonomie des imports)
-> déplacées dans `audit.md`.
+> déplacées dans `AUDIT.md`.
