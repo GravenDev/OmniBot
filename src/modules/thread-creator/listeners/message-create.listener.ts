@@ -34,7 +34,7 @@ export default declareEventListener<"messageCreate", ThreadCreatorConfigSchema>(
       }
 
       try {
-        await threadCreatorService.createThreadForMessage(message, config);
+        threadCreatorService.scheduleThreadForMessage(message, config);
       } catch (error) {
         logger.error(
           `Erreur dans le listener messageCreate du ThreadCreator : ${error}`

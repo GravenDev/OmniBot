@@ -40,7 +40,7 @@ Dès qu'un message est posté dans le salon configuré :
 **Limites :**
 
 - Noms de fils tronqués à 100 caractères (limite Discord)
-- Rate limit : 5 fils max par fenêtre de 10 secondes par serveur — les messages supplémentaires sont ignorés silencieusement
+- Rate limit : 5 fils max par fenêtre de 10 secondes par serveur — les créations excédentaires sont **mises en file d'attente** (FIFO, par serveur) et traitées dès que la fenêtre se libère, au lieu d'être ignorées. File en mémoire : perdue au redémarrage.
 - Messages de bots ignorés
 - Ne fonctionne pas dans les fils, salons vocaux, forum ou annonces
 
@@ -56,11 +56,11 @@ Depuis la v2.0.0, le module utilise le système de configuration générique. Il
 plus de commande dédiée : la configuration se fait via `/config thread-creator`
 (réservé aux administrateurs) et l'activation/désactivation via `/modules`.
 
-| Champ                | Type  | Description                                                                                  |
-| -------------------- | ----- | -------------------------------------------------------------------------------------------- |
-| `channel`            | Salon | Salon à surveiller. Tant qu'il n'est pas défini, rien n'est surveillé.                       |
-| `welcomeMessage`     | Texte | Message posté automatiquement dans chaque fil créé.                                          |
-| `threadNameTemplate` | Texte | Template du nom des fils — variables : `{messageAuthor}`, `{messageContent}`, `{timestamp}`. |
+| Champ                | Type           | Description                                                                                  |
+| -------------------- | -------------- | -------------------------------------------------------------------------------------------- |
+| `channels`           | Salons (liste) | Salons à surveiller (un ou plusieurs, multi-select). Liste vide = rien n'est surveillé.      |
+| `welcomeMessage`     | Texte          | Message posté automatiquement dans chaque fil créé.                                          |
+| `threadNameTemplate` | Texte          | Template du nom des fils — variables : `{messageAuthor}`, `{messageContent}`, `{timestamp}`. |
 
 Il n'y a plus de flag `actif` : désactiver le module via `/modules` arrête la
 surveillance sans effacer la configuration.

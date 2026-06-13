@@ -3,14 +3,15 @@ import { ConfigType, type ConfigSchema } from "../../lib/config.js";
 /**
  * Configuration schema for the Thread Creator module, edited via `/config
  * thread-creator`. Whether the module runs at all is governed by module
- * activation (`/modules`), so there is no separate "enabled" flag; an unset
- * `channel` simply means nothing is watched yet.
+ * activation (`/modules`); an empty `channels` list simply means nothing is
+ * watched yet.
  */
 export const threadCreatorConfigSchema = {
-  channel: {
-    name: "Canal surveillé",
-    description: "Canal où surveiller les nouveaux messages.",
-    type: ConfigType.CHANNEL,
+  channels: {
+    name: "Salons surveillés",
+    description:
+      "Salons où surveiller les nouveaux messages (un fil est créé sous chaque message).",
+    type: [ConfigType.CHANNEL],
   },
   welcomeMessage: {
     name: "Message de bienvenue",
