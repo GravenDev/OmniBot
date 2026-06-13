@@ -12,14 +12,8 @@
   },
   "packageRules": [
     {
-      "description": "Automerge oxlint monorepo updates (minor + patch)",
-      "extends": ["monorepo:oxlint"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "automerge": true
-    },
-    {
-      "description": "Automerge safe dev-tooling updates (minor + patch)",
-      "matchPackageNames": ["oxfmt", "@types/*", "lint-staged"],
+      "description": "Automerge devDependency updates (minor + patch). CI (lint + build + tests) is the merge gate; majors stay manual for review.",
+      "matchDepTypes": ["devDependencies"],
       "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
     },
