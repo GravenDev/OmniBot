@@ -25,9 +25,20 @@ export default declareCommand({
 
 ```typescript
 interface Command {
-  data: SlashCommandBuilder | SlashCommandSubcommandBuilder;
-  execute: (interaction, config: ConfigProvider) => Promise<void>;
-  complete?: (interaction, config: ConfigProvider) => Promise<void>;
+  data:
+    | SlashCommandBuilder
+    | SlashCommandSubcommandBuilder
+    | SlashCommandSubcommandGroupBuilder
+    | SlashCommandSubcommandsOnlyBuilder
+    | SlashCommandOptionsOnlyBuilder;
+  execute: (
+    interaction: ChatInputCommandInteraction,
+    config: ConfigProvider
+  ) => Promise<void>;
+  complete?: (
+    interaction: AutocompleteInteraction,
+    config: ConfigProvider
+  ) => Promise<void>;
 }
 ```
 

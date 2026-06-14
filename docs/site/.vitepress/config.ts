@@ -55,7 +55,7 @@ export default defineConfig({
               ],
             },
             {
-              text: "Legal",
+              text: "Juridique",
               items: [
                 { text: "Confidentialité", link: "/fr/legal/privacy" },
                 { text: "CGU", link: "/fr/legal/terms" },

@@ -26,8 +26,15 @@ src/modules/mon-module/
 interface InteractionHandler {
   customId: string; // Préfixe pour la correspondance custom ID
   requiresAdmin?: boolean; // Restreindre aux administrateurs
-  check: (interaction, config?) => interaction is TypeSpecifique;
-  execute: (interaction, args: string[], config) => Promise<void>;
+  check: (
+    interaction: CompatibleInteraction,
+    config: ConfigProvider
+  ) => interaction is TypeSpecifique;
+  execute: (
+    interaction: TypeSpecifique,
+    args: string[],
+    config: ConfigProvider
+  ) => Promise<void>;
 }
 ```
 

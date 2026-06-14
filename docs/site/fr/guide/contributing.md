@@ -15,7 +15,7 @@ git checkout -b feat/ma-fonctionnalite
 
 ## Conventional Commits
 
-Les messages de commit doivent suivre le format [Conventional Commits](https://www.conventionalcommits.org/). Ceci est imposé par **commitlint** via un hook lefthook pre-commit.
+Les messages de commit doivent suivre le format [Conventional Commits](https://www.conventionalcommits.org/). Ceci est imposé par **commitlint** via un hook lefthook commit-msg.
 
 ```
 type(scope): description

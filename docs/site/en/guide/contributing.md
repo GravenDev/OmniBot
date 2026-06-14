@@ -15,7 +15,7 @@ git checkout -b feat/my-feature
 
 ## Conventional Commits
 
-Commit messages must follow the [Conventional Commits](https://www.conventionalcommits.org/) format. This is enforced by **commitlint** via a lefthook pre-commit hook.
+Commit messages must follow the [Conventional Commits](https://www.conventionalcommits.org/) format. This is enforced by **commitlint** via a lefthook commit-msg hook.
 
 ```
 type(scope): description
