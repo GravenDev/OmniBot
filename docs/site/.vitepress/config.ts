@@ -8,19 +8,7 @@ export default defineConfig({
   title: "OmniBot",
   description: "Documentation du bot Discord modulaire OmniBot",
 
-  srcExclude: [
-    "README.md",
-    "functional.md",
-    "modules.md",
-    "commands.md",
-    "listeners.md",
-    "interactions.md",
-    "services.md",
-    "prisma.md",
-    "specs/**",
-    "review/**",
-    "_internal/**",
-  ],
+  srcExclude: ["README.md"],
 
   cleanUrls: true,
 

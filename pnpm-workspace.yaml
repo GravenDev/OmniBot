@@ -1,6 +1,6 @@
 packages:
   - "."
-  - "docs"
+  - "docs/site"
 
 allowBuilds:
   '@prisma/client': true

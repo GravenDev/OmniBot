@@ -28,11 +28,12 @@ Dès qu'un message est posté dans le salon configuré :
 2. Si un message de bienvenue est configuré, le bot le poste dans le fil
 
 **Variables disponibles dans le template de nom :**
-| Variable | Valeur |
-|---|---|
-| `{messageAuthor}` | Nom d'affichage ou pseudo de l'auteur |
-| `{messageContent}` | 50 premiers caractères du message |
-| `{timestamp}` | Heure au format `JJ/MM HH:MM` (locale française) |
+
+| Variable           | Valeur                                           |
+| ------------------ | ------------------------------------------------ |
+| `{messageAuthor}`  | Nom d'affichage ou pseudo de l'auteur            |
+| `{messageContent}` | 50 premiers caractères du message                |
+| `{timestamp}`      | Heure au format `JJ/MM HH:MM` (locale française) |
 
 **Template par défaut :** `Discussion - {messageAuthor}`  
 **Message de bienvenue par défaut :** `💬 Utilisez ce fil pour discuter de ce sujet !`

@@ -26,6 +26,7 @@ Légende statut : [ ] à faire · [x] fait
   - un champ **avec** `defaultValue` est toujours présent → **pas** de `| undefined`.
 - **Fix proposé :**
   - Typage conditionnel sur la présence de `defaultValue` :
+
     ```ts
     type ConfigEntryValue<E extends ConfigEntry<ConfigType>> = E extends {
       defaultValue: unknown;
@@ -33,7 +34,9 @@ Légende statut : [ ] à faire · [x] fait
       ? ResolveType<E["type"]>
       : ResolveType<E["type"]> | undefined;
     ```
+
     utilisé par `ConfigData` et `ConfigProvider.get`.
+
   - Runtime : `createDefaultConfigForModule` ne pose une valeur que si
     `defaultValue` est déclaré (sinon clé absente → `undefined`), au lieu de
     fabriquer `""`/`0`/`false`/`null`.
