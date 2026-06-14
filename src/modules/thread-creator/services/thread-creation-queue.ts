@@ -1,5 +1,5 @@
 import type { Message } from "discord.js";
-import logger from "../../../lib/logger.js";
+import logger from "#lib/logger.js";
 
 /** Pacing window and cap — mirrors Discord's thread-creation rate limit. */
 const RATE_LIMIT_WINDOW_MS = 10_000;

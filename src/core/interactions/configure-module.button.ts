@@ -1,14 +1,14 @@
 import { MessageFlags } from "discord.js";
-import { ConfigType } from "../../lib/config.js";
-import { declareInteractionHandler } from "../../lib/interaction.js";
 import {
   getConfigEntry,
   isScalarType,
   resolveConfigurableModule,
-} from "../config/config-edit.js";
-import configHandlers from "../config/config-handler-registry.js";
-import { openScalarListEditor } from "../config/scalar-list-editor.js";
-import configService from "../services/config.service.js";
+} from "#core/config/config-edit.js";
+import configHandlers from "#core/config/config-handler-registry.js";
+import { openScalarListEditor } from "#core/config/scalar-list-editor.js";
+import configService from "#core/services/config.service.js";
+import { ConfigType } from "#lib/config.js";
+import { declareInteractionHandler } from "#lib/interaction.js";
 
 export default declareInteractionHandler({
   customId: "configure-module",

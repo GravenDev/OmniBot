@@ -1,9 +1,9 @@
 import { MessageFlags } from "discord.js";
-import { modules } from "../../index.js";
-import { declareInteractionHandler } from "../../lib/interaction.js";
-import { uninstallModule } from "../loaders/module-installer.js";
-import moduleService from "../services/module.service.js";
-import { modulesMessage } from "../utils/core-messages.js";
+import { uninstallModule } from "#core/loaders/module-installer.js";
+import moduleService from "#core/services/module.service.js";
+import { modulesMessage } from "#core/utils/core-messages.js";
+import { modules } from "#index.js";
+import { declareInteractionHandler } from "#lib/interaction.js";
 
 export default declareInteractionHandler({
   customId: "disable-module",

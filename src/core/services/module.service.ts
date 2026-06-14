@@ -1,8 +1,8 @@
 import type { Guild } from "discord.js";
-import { client, modules } from "../../index.js";
-import prisma from "../../lib/database.js";
-import type { Module } from "../../lib/module.js";
-import { declareService, type Service } from "../../lib/service.js";
+import { client, modules } from "#index.js";
+import prisma from "#lib/database.js";
+import type { Module } from "#lib/module.js";
+import { declareService, type Service } from "#lib/service.js";
 
 class ModuleService implements Service {
   getAllModules() {

@@ -1,4 +1,4 @@
-import { defineModule } from "../lib/module.js";
+import { defineModule } from "#lib/module.js";
 import configCommand from "./commands/config.command.js";
 import moduleCommand from "./commands/module.command.js";
 import configTypeHandlers from "./config/config-handler-registry.js";

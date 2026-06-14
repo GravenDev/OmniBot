@@ -1,11 +1,11 @@
 import { type Client, type Guild, REST, Routes } from "discord.js";
-import { devGuildId, isDevMode } from "../../lib/env.js";
-import { loggerMaker } from "../../lib/logger.js";
-import type { Module } from "../../lib/module.js";
-import type { Version } from "../../lib/version.js";
-import coreModule from "../core.module.js";
-import moduleService from "../services/module.service.js";
-import { compareVersions } from "../utils/version-parser.js";
+import coreModule from "#core/core.module.js";
+import moduleService from "#core/services/module.service.js";
+import { compareVersions } from "#core/utils/version-parser.js";
+import { devGuildId, isDevMode } from "#lib/env.js";
+import { loggerMaker } from "#lib/logger.js";
+import type { Module } from "#lib/module.js";
+import type { Version } from "#lib/version.js";
 
 const logger = loggerMaker("commands");
 

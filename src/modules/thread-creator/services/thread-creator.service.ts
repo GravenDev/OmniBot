@@ -1,7 +1,7 @@
 import type { Message } from "discord.js";
-import type { ConfigProvider } from "../../../lib/config.js";
-import { declareService, type Service } from "../../../lib/service.js";
-import type { ThreadCreatorConfigSchema } from "../thread-creator.config.js";
+import type { ConfigProvider } from "#lib/config.js";
+import { declareService, type Service } from "#lib/service.js";
+import type { ThreadCreatorConfigSchema } from "#modules/thread-creator/thread-creator.config.js";
 import { ThreadCreationQueue } from "./thread-creation-queue.js";
 
 class ThreadCreatorService implements Service {

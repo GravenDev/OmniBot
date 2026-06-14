@@ -73,10 +73,8 @@
 🟣 Confort de développement (DX)
 
 - **#23** — ~~Commandes du core enregistrées en global (~1 h de propagation, pénible en dev)~~ ✅ _fait : en `isDevMode()`, enregistrement sur `DEV_GUILD_ID` (instantané) ; global conservé en prod_
-- **#24** — Imports verbeux/fragiles : suffixe `.js` obligatoire (résolution `NodeNext`/ESM) et remontée `../../..`.
-  - Alias sans outil : privilégier les **subpath imports** natifs de Node (`"imports": { "#lib/*": "./dist/lib/*.js" }` dans `package.json`) → aucun build supplémentaire. Alternative : `paths` tsconfig + `tsc-alias`.
-  - Suppression du `.js` : nécessite un bundler (esbuild/tsup) ou `moduleResolution: "Bundler"` + loader — impacte le pipeline, à arbitrer séparément.
-  - Valider `tsx` (dev), `tsc` (build) et `vitest` (tests) avec la solution retenue.
+- **#24** — ~~Imports verbeux/fragiles : remontée `../../..`~~ ✅ _fait : subpath imports natifs `#*` (`package.json` "imports" → `./src` en dev/test/typecheck via la condition `development` ; `./dist` en prod par défaut). Aucune dep, aucune étape de build (Node résout `#*` au runtime, tsc/tsx/vitest via conditions). Les remontées `../` sont réécrites en `#…` ; les `./` même-dossier restent relatifs._
+  - **Reste hors périmètre** : la suppression du suffixe `.js` (NodeNext l'impose) nécessiterait un bundler ou `moduleResolution: "Bundler"` — non poursuivi.
 - **#25** — ~~Gate de version inadapté en dev pour les commandes de module~~ ✅ _fait : en `isDevMode()`, `loadDevGuildCommands` enregistre core + commandes des modules activés en un seul PUT sur la dev guild à chaque boot (sans bump de version) ; gate par version conservé en prod_
 - **#26** — Permission des interactions — défaut _fail-open_ (dette de conception, faible). Le flag `requiresAdmin?: boolean` sur `InteractionHandler` (enforcé par le dispatcher) est **optionnel** : un handler sans flag est public. Sûr aujourd'hui (tous les handlers sont admin et explicitement marqués), mais repose sur l'humain pour ne pas oublier `requiresAdmin: true` sur un futur handler sensible.
   - **Évolution possible (option C, safe-by-construction)** : remplacer le flag optionnel par un champ **requis** type `access: "admin" | "everyone"` (aucun défaut) → le typage force chaque handler à déclarer son niveau d'accès, impossible d'oublier.
@@ -105,7 +103,6 @@ Récapitulatif des actions restantes
 | Priorité | Action                                                     |
 | -------- | ---------------------------------------------------------- |
 | 🔵       | Extraire client/modules dans un context.ts (#14) — délayé  |
-| 🟣       | Ergonomie des imports : alias + .js (#24)                  |
 | 🟣       | Accès interactions : champ requis (option C, #26) — évol.  |
 | 🟠       | Enum >25 options : warn + doc (#27)                        |
 | 🟣       | CI : `jdx/mise-action` au lieu du grep (#28)               |

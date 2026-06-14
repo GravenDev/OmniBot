@@ -6,16 +6,16 @@ import {
   TextInputStyle,
   type ButtonInteraction,
 } from "discord.js";
+import configService from "#core/services/config.service.js";
 import {
   ConfigType,
   ConfigValidator,
   type ConfigProvider,
   type ConfigSchema,
-} from "../../lib/config.js";
-import { declareInteractionHandler } from "../../lib/interaction.js";
-import type { Module } from "../../lib/module.js";
-import type { Registry } from "../../lib/registry.js";
-import configService from "../services/config.service.js";
+} from "#lib/config.js";
+import { declareInteractionHandler } from "#lib/interaction.js";
+import type { Module } from "#lib/module.js";
+import type { Registry } from "#lib/registry.js";
 import { resolveConfigurableModule, saveConfigValue } from "./config-edit.js";
 import { ConfigTypeHandler } from "./config-handler.js";
 

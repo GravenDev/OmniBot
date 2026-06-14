@@ -46,6 +46,7 @@ See [`docs/`](docs/README.md) for the full developer guide:
 
 - Never edit `src/prisma/schema.prisma` directly — edit the module's own `*.prisma` file and run `pnpm prisma:consolidate`.
 - Run `pnpm prisma:generate` before building after any schema change.
+- Import across directories with `#…` subpath imports (e.g. `#lib/config.js`, `#core/…`), not deep relative paths (`../../…`); keep same-directory imports relative (`./x.js`). Always keep the `.js` extension (NodeNext).
 
 ## Environment
 

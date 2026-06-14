@@ -4,8 +4,8 @@ import {
   ConfigType,
   type ConfigData,
   type ConfigSchema,
-} from "../../lib/config.js";
-import type { Module } from "../../lib/module.js";
+} from "#lib/config.js";
+import type { Module } from "#lib/module.js";
 import {
   CONFIG_FIELDS_PER_PAGE,
   configPageOfKey,

@@ -1,19 +1,19 @@
 import { MessageFlags } from "discord.js";
-import { modules } from "../../index.js";
+import coreModule from "#core/core.module.js";
+import configService from "#core/services/config.service.js";
+import {
+  configPageOfKey,
+  configurationMessage,
+} from "#core/utils/core-messages.js";
+import { modules } from "#index.js";
 import {
   ConfigType,
   type ConfigEntry,
   type ConfigSchema,
-} from "../../lib/config.js";
-import type { CompatibleInteraction } from "../../lib/interaction.js";
-import { loggerMaker } from "../../lib/logger.js";
-import type { Module } from "../../lib/module.js";
-import coreModule from "../core.module.js";
-import configService from "../services/config.service.js";
-import {
-  configPageOfKey,
-  configurationMessage,
-} from "../utils/core-messages.js";
+} from "#lib/config.js";
+import type { CompatibleInteraction } from "#lib/interaction.js";
+import { loggerMaker } from "#lib/logger.js";
+import type { Module } from "#lib/module.js";
 
 const logger = loggerMaker("config");
 

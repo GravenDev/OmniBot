@@ -6,18 +6,14 @@ import {
   type ButtonInteraction,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
-import type {
-  ConfigProvider,
-  ConfigSchema,
-  ConfigType,
-} from "../../lib/config.js";
+import configService from "#core/services/config.service.js";
+import type { ConfigProvider, ConfigSchema, ConfigType } from "#lib/config.js";
 import {
   declareInteractionHandler,
   type CompatibleInteraction,
-} from "../../lib/interaction.js";
-import type { Module } from "../../lib/module.js";
-import type { Registry } from "../../lib/registry.js";
-import configService from "../services/config.service.js";
+} from "#lib/interaction.js";
+import type { Module } from "#lib/module.js";
+import type { Registry } from "#lib/registry.js";
 import {
   getConfigEntry,
   isListEntry,

@@ -5,16 +5,16 @@ import {
   ContainerBuilder,
   SectionBuilder,
 } from "discord.js";
+import type moduleService from "#core/services/module.service.js";
 import {
   ConfigType,
   getConfigTypeName,
   type ConfigProvider,
   type ConfigSchema,
   type ListOf,
-} from "../../lib/config.js";
-import type { Module } from "../../lib/module.js";
-import { Colors } from "../../utils/colors.js";
-import type moduleService from "../services/module.service.js";
+} from "#lib/config.js";
+import type { Module } from "#lib/module.js";
+import { Colors } from "#utils/colors.js";
 
 export const modulesMessage = (
   modulesState: Awaited<ReturnType<typeof moduleService.getAllModulesStateIn>>

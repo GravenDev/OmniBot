@@ -10,6 +10,9 @@
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
     "module": "nodenext",
+    // Resolve the `#*` subpath imports (package.json "imports") to ./src in
+    // dev/test/typecheck; prod (no condition) falls back to ./dist.
+    "customConditions": ["development"],
     "target": "esnext",
     "lib": ["esnext"],
     "types": ["node"],

@@ -1,9 +1,9 @@
 import { type Client } from "discord.js";
-import { loggerMaker } from "../../lib/logger.js";
-import type { Module } from "../../lib/module.js";
-import coreModule from "../core.module.js";
-import configService from "../services/config.service.js";
-import moduleService from "../services/module.service.js";
+import coreModule from "#core/core.module.js";
+import configService from "#core/services/config.service.js";
+import moduleService from "#core/services/module.service.js";
+import { loggerMaker } from "#lib/logger.js";
+import type { Module } from "#lib/module.js";
 
 const logger = loggerMaker("listeners");
 

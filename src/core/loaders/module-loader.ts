@@ -1,10 +1,10 @@
 import * as fs from "fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "path";
-import { DeclarationType, type Declared } from "../../lib/declared.js";
-import { isDevMode } from "../../lib/env.js";
-import { loggerMaker } from "../../lib/logger.js";
-import type { Module } from "../../lib/module.js";
+import { DeclarationType, type Declared } from "#lib/declared.js";
+import { isDevMode } from "#lib/env.js";
+import { loggerMaker } from "#lib/logger.js";
+import type { Module } from "#lib/module.js";
 
 const logger = loggerMaker("modules");
 

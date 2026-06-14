@@ -1,8 +1,8 @@
 import { MessageFlags } from "discord.js";
-import { declareInteractionHandler } from "../../lib/interaction.js";
-import { resolveConfigurableModule } from "../config/config-edit.js";
-import configService from "../services/config.service.js";
-import { configurationMessage } from "../utils/core-messages.js";
+import { resolveConfigurableModule } from "#core/config/config-edit.js";
+import configService from "#core/services/config.service.js";
+import { configurationMessage } from "#core/utils/core-messages.js";
+import { declareInteractionHandler } from "#lib/interaction.js";
 
 /**
  * Navigates between pages of the `/config` panel. The target page is encoded in

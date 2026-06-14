@@ -6,15 +6,11 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import {
-  ConfigProvider,
-  ConfigType,
-  type ConfigSchema,
-} from "../../lib/config.js";
-import { declareInteractionHandler } from "../../lib/interaction.js";
-import type { Module } from "../../lib/module.js";
-import type { Registry } from "../../lib/registry.js";
-import configService from "../services/config.service.js";
+import configService from "#core/services/config.service.js";
+import { ConfigProvider, ConfigType, type ConfigSchema } from "#lib/config.js";
+import { declareInteractionHandler } from "#lib/interaction.js";
+import type { Module } from "#lib/module.js";
+import type { Registry } from "#lib/registry.js";
 import { resolveConfigurableModule, saveConfigValue } from "./config-edit.js";
 import { ConfigTypeHandler } from "./config-handler.js";
 
