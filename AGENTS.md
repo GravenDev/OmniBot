@@ -6,7 +6,7 @@ orientation for humans).
 ## Commands
 
 ```bash
-pnpm dev                  # run with hot-reload (tsx watch)
+pnpm dev                  # run the bot with tsx
 pnpm build                # prisma:generate + tsc
 pnpm format               # oxfmt + oxlint --fix
 
