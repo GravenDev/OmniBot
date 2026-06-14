@@ -15,7 +15,7 @@
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
-    "prepare": "lefthook install || true",
+    "prepare": "lefthook install -f || true",
     "format": "oxfmt --write && oxlint --fix --fix-suggestions",
     "prisma:consolidate": "tsx scripts/consolidate-schema.ts",
     "prisma:generate": "pnpm prisma:consolidate && prisma generate --no-hints",
