@@ -31,16 +31,16 @@ export default defineConfig({
   },
 
   locales: {
-    root: {
+    fr: {
       label: "Français",
       lang: "fr",
-      link: "/",
+      link: "/fr/",
       title: "OmniBot",
       description: "Documentation du bot Discord modulaire OmniBot",
       themeConfig: {
         nav: [
+          { text: "Accueil", link: "/" },
           { text: "Guide", link: "/fr/guide/getting-started" },
-          { text: "Modules", link: "/fr/guide/creating-a-module" },
         ],
         sidebar: {
           "/fr/guide/": [
@@ -85,7 +85,7 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: "Guide", link: "/en/guide/getting-started" },
-          { text: "Modules", link: "/en/guide/creating-a-module" },
+          { text: "Home", link: "/" },
         ],
         sidebar: {
           "/en/guide/": [
