@@ -14,6 +14,10 @@ pnpm prisma:consolidate   # merge *.prisma module files → src/prisma/schema.pr
 pnpm prisma:generate      # generate Prisma client (required before build)
 pnpm prisma:migrate       # create and apply a migration
 pnpm prisma:studio        # open Prisma Studio
+
+# Documentation (in docs/)
+pnpm --filter omnibot-docs dev    # start VitePress dev server
+pnpm --filter omnibot-docs build  # build static site
 ```
 
 Run the whole stack in one command with [pitchfork](https://github.com/jdx/pitchfork) (pinned in `.mise.toml`, so `mise install` provides it):
@@ -41,6 +45,8 @@ See [`docs/`](docs/README.md) for the full developer guide:
 | Services                   | [docs/services.md](docs/services.md)         |
 | Prisma multi-file schema   | [docs/prisma.md](docs/prisma.md)             |
 | Functional behavior        | [docs/functional.md](docs/functional.md)     |
+
+The docs are also published as a VitePress site at [`docs/`](docs/) — run `pnpm --filter docs dev` to preview.
 
 ## Key rules
 
