@@ -1,6 +1,10 @@
 import { defineConfig } from "vitepress";
 
-const base = process.env["DOCS_BASE"] ?? "/OmniBot/";
+// VitePress requires `base` to start and end with a slash; normalize whatever
+// DOCS_BASE provides so an override like `/OmniBot` doesn't break routing/assets.
+const rawBase = process.env["DOCS_BASE"] ?? "/OmniBot/";
+const trimmed = rawBase.replace(/^\/+|\/+$/g, "");
+const base = trimmed ? `/${trimmed}/` : "/";
 
 export default defineConfig({
   base,
@@ -27,7 +31,7 @@ export default defineConfig({
       description: "Documentation du bot Discord modulaire OmniBot",
       themeConfig: {
         nav: [
-          { text: "Accueil", link: "/" },
+          { text: "Accueil", link: "/fr/" },
           { text: "Guide", link: "/fr/guide/getting-started" },
         ],
         sidebar: {
@@ -73,7 +77,7 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: "Guide", link: "/en/guide/getting-started" },
-          { text: "Home", link: "/" },
+          { text: "Home", link: "/en/" },
         ],
         sidebar: {
           "/en/guide/": [
