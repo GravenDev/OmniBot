@@ -1,5 +1,5 @@
 import { MessageFlags, PermissionFlagsBits } from "discord.js";
-import type { CompatibleInteraction } from "../../lib/interaction.js";
+import type { CompatibleInteraction } from "#lib/interaction.js";
 
 export async function requireAdmin(
   interaction: CompatibleInteraction

@@ -8,9 +8,15 @@
   "author": "",
   "type": "module",
   "main": "./dist/index.js",
+  "imports": {
+    "#*": {
+      "development": "./src/*",
+      "default": "./dist/*"
+    }
+  },
   "scripts": {
     "build": "pnpm prisma:generate && tsc",
-    "dev": "NODE_ENV=development node --env-file=.env ./bootstrap/validate-env-vars.mjs && NODE_ENV=development node --env-file=.env --import tsx src/index.ts",
+    "dev": "NODE_ENV=development node --env-file=.env ./bootstrap/validate-env-vars.mjs && NODE_ENV=development node --conditions=development --env-file=.env --import tsx src/index.ts",
     "start": "node ./bootstrap/validate-env-vars.mjs && node ./dist/index.js",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",

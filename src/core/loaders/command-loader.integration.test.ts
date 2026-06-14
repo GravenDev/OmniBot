@@ -1,10 +1,10 @@
 import { type Client, Routes, SlashCommandBuilder } from "discord.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Module } from "../../lib/module.js";
+import type { Module } from "#lib/module.js";
 
 // Avoid booting the bot / Prisma when importing the command loader's module graph.
-vi.mock("../../index.js", () => ({ modules: [], client: {} }));
-vi.mock("../../lib/database.js", () => ({ default: {}, Prisma: {} }));
+vi.mock("#index.js", () => ({ modules: [], client: {} }));
+vi.mock("#lib/database.js", () => ({ default: {}, Prisma: {} }));
 
 // Capture REST calls without any network I/O.
 const { restPut } = vi.hoisted(() => ({ restPut: vi.fn() }));
@@ -19,12 +19,12 @@ vi.mock("discord.js", async (importOriginal) => {
   return { ...actual, REST: FakeREST };
 });
 
-vi.mock("../services/module.service.js", () => ({
+vi.mock("#core/services/module.service.js", () => ({
   default: { getModuleStateFromGuildIdIn: vi.fn() },
 }));
 
 // Core module with a single known command so we can assert it is always included.
-vi.mock("../core.module.js", () => ({
+vi.mock("#core/core.module.js", () => ({
   default: {
     id: "core",
     registry: {
@@ -35,7 +35,7 @@ vi.mock("../core.module.js", () => ({
 
 const { loadDevGuildCommands } = await import("./command-loader.js");
 const { default: moduleService } =
-  await import("../services/module.service.js");
+  await import("#core/services/module.service.js");
 
 const getState = vi.mocked(moduleService.getModuleStateFromGuildIdIn);
 

@@ -1,15 +1,15 @@
 import type { JsonValue } from "@prisma/client/runtime/client";
-import { client, modules } from "../../index.js";
+import coreModule from "#core/core.module.js";
+import { client, modules } from "#index.js";
 import {
   ConfigProvider,
   ConfigType,
   type ConfigData,
   type ConfigSchema,
-} from "../../lib/config.js";
-import database from "../../lib/database.js";
-import type { Module } from "../../lib/module.js";
-import { declareService } from "../../lib/service.js";
-import coreModule from "../core.module.js";
+} from "#lib/config.js";
+import database from "#lib/database.js";
+import type { Module } from "#lib/module.js";
+import { declareService } from "#lib/service.js";
 
 const configCache = new Map<string, Record<string, ConfigData<ConfigSchema>>>();
 

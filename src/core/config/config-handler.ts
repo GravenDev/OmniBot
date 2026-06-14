@@ -4,9 +4,9 @@ import {
   type ConfigProvider,
   type ConfigSchema,
   type ConfigType,
-} from "../../lib/config.js";
-import type { Module } from "../../lib/module.js";
-import type { Registry } from "../../lib/registry.js";
+} from "#lib/config.js";
+import type { Module } from "#lib/module.js";
+import type { Registry } from "#lib/registry.js";
 
 export abstract class ConfigTypeHandler<Type extends ConfigType> {
   protected constructor(private type: Type) {}

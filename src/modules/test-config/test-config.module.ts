@@ -1,6 +1,6 @@
-import { ConfigType } from "../../lib/config.js";
-import logger from "../../lib/logger.js";
-import { defineModule } from "../../lib/module.js";
+import { ConfigType } from "#lib/config.js";
+import logger from "#lib/logger.js";
+import { defineModule } from "#lib/module.js";
 
 /**
  * Development-only module exercising every configuration field type.

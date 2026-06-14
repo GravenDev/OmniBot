@@ -4,8 +4,8 @@ import {
   type AnySelectMenuInteraction,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
-import { ConfigType } from "../../lib/config.js";
-import type { CompatibleInteraction } from "../../lib/interaction.js";
+import { ConfigType } from "#lib/config.js";
+import type { CompatibleInteraction } from "#lib/interaction.js";
 import { EntitySelectConfigHandler } from "./entity-select.config-handler.js";
 import type { SelectRowContext } from "./select.config-handler.js";
 

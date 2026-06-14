@@ -1,4 +1,4 @@
-import { ConfigType } from "../../lib/config.js";
+import { ConfigType } from "#lib/config.js";
 import CategoryConfigHandler from "./category.config-handler.js";
 import ChannelConfigHandler from "./channel.config-handler.js";
 import type { ConfigTypeHandler } from "./config-handler.js";

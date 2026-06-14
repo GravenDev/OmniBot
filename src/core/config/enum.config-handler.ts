@@ -4,9 +4,9 @@ import {
   type AnySelectMenuInteraction,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
-import { ConfigType, isEnumEntry } from "../../lib/config.js";
-import type { CompatibleInteraction } from "../../lib/interaction.js";
-import type { Module } from "../../lib/module.js";
+import { ConfigType, isEnumEntry } from "#lib/config.js";
+import type { CompatibleInteraction } from "#lib/interaction.js";
+import type { Module } from "#lib/module.js";
 import { getConfigEntry } from "./config-edit.js";
 import {
   MAX_SELECT_VALUES,

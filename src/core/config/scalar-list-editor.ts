@@ -10,17 +10,17 @@ import {
   TextInputStyle,
   type ButtonInteraction,
 } from "discord.js";
+import configService from "#core/services/config.service.js";
 import {
   ConfigType,
   ConfigValidator,
   getConfigTypeName,
   type ListOf,
-} from "../../lib/config.js";
-import { declareInteractionHandler } from "../../lib/interaction.js";
-import type { Module } from "../../lib/module.js";
-import type { Registry } from "../../lib/registry.js";
-import { Colors } from "../../utils/colors.js";
-import configService from "../services/config.service.js";
+} from "#lib/config.js";
+import { declareInteractionHandler } from "#lib/interaction.js";
+import type { Module } from "#lib/module.js";
+import type { Registry } from "#lib/registry.js";
+import { Colors } from "#utils/colors.js";
 import {
   getConfigEntry,
   refreshSourceConfigMessage,

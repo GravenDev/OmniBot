@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { Version } from "../../lib/version.js";
+import type { Version } from "#lib/version.js";
 import parseVersion, { compareVersions } from "./version-parser.js";
 
 const v = (s: string) => s as Version;

@@ -1,4 +1,4 @@
-import { ConfigType, type ConfigSchema } from "../../lib/config.js";
+import { ConfigType, type ConfigSchema } from "#lib/config.js";
 
 /**
  * Configuration schema for the Thread Creator module, edited via `/config

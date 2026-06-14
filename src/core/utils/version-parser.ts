@@ -1,4 +1,4 @@
-import type { Version } from "../../lib/version.js";
+import type { Version } from "#lib/version.js";
 
 export default function parseVersion(version: Version): {
   major: number;

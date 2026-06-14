@@ -8,15 +8,15 @@ import {
   ConfigType,
   type ConfigProvider,
   type ConfigSchema,
-} from "../../lib/config.js";
-import type { Declared } from "../../lib/declared.js";
-import type { InteractionHandler } from "../../lib/interaction.js";
-import type { Module } from "../../lib/module.js";
-import type { Registry } from "../../lib/registry.js";
+} from "#lib/config.js";
+import type { Declared } from "#lib/declared.js";
+import type { InteractionHandler } from "#lib/interaction.js";
+import type { Module } from "#lib/module.js";
+import type { Registry } from "#lib/registry.js";
 
 // Mock the persistence boundary so importing the handlers does not boot the bot
 // (config.service.js and config-edit.js both pull in ../../index.js).
-vi.mock("../services/config.service.js", () => ({
+vi.mock("#core/services/config.service.js", () => ({
   default: { isConfigKey: vi.fn(), updateConfigForModuleIn: vi.fn() },
 }));
 vi.mock("./config-edit.js", () => ({
@@ -28,7 +28,7 @@ vi.mock("./config-edit.js", () => ({
 }));
 
 const { default: configService } =
-  await import("../services/config.service.js");
+  await import("#core/services/config.service.js");
 const {
   resolveConfigurableModule,
   saveConfigValue,

@@ -1,11 +1,11 @@
 import { MessageFlags } from "discord.js";
-import { declareInteractionHandler } from "../../lib/interaction.js";
-import { resolveConfigurableModule } from "../config/config-edit.js";
-import configService from "../services/config.service.js";
+import { resolveConfigurableModule } from "#core/config/config-edit.js";
+import configService from "#core/services/config.service.js";
 import {
   configPageOfKey,
   configurationMessage,
-} from "../utils/core-messages.js";
+} from "#core/utils/core-messages.js";
+import { declareInteractionHandler } from "#lib/interaction.js";
 
 export default declareInteractionHandler({
   customId: "toggle-option",

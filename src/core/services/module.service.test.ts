@@ -1,15 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Module } from "../../lib/module.js";
+import type { Module } from "#lib/module.js";
 
 // The service pulls `client`/`modules` from the bot entrypoint and the Prisma
 // client; stub both so importing it never boots the bot or hits a database.
-vi.mock("../../index.js", () => ({ modules: [], client: {} }));
+vi.mock("#index.js", () => ({ modules: [], client: {} }));
 
 const { findMany, update } = vi.hoisted(() => ({
   findMany: vi.fn(),
   update: vi.fn(),
 }));
-vi.mock("../../lib/database.js", () => ({
+vi.mock("#lib/database.js", () => ({
   default: { moduleActivation: { findMany, update } },
   Prisma: {},
 }));

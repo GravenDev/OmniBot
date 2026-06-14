@@ -1,4 +1,4 @@
-import type { ConfigType } from "../../lib/config.js";
+import type { ConfigType } from "#lib/config.js";
 import { SelectConfigHandler } from "./select.config-handler.js";
 
 /** Extracts entity ids from a (possibly list) deserialized config value. */

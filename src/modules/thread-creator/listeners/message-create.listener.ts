@@ -1,8 +1,8 @@
 import { ChannelType, type Message } from "discord.js";
-import { declareEventListener } from "../../../lib/listener.js";
-import logger from "../../../lib/logger.js";
-import threadCreatorService from "../services/thread-creator.service.js";
-import type { ThreadCreatorConfigSchema } from "../thread-creator.config.js";
+import { declareEventListener } from "#lib/listener.js";
+import logger from "#lib/logger.js";
+import threadCreatorService from "#modules/thread-creator/services/thread-creator.service.js";
+import type { ThreadCreatorConfigSchema } from "#modules/thread-creator/thread-creator.config.js";
 
 export default declareEventListener<"messageCreate", ThreadCreatorConfigSchema>(
   {
