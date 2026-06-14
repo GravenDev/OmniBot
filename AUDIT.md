@@ -1,4 +1,4 @@
-🔍 Audit OmniBot
+# 🔍 Audit OmniBot
 
 > Les items portent un ID stable `**#N**` (référencé par les commits, ex.
 > « fixed in #26 »). Ils sont en **puces** à dessein : oxfmt renumérote les listes
@@ -79,9 +79,15 @@
 - **#26** — Permission des interactions — défaut _fail-open_ (dette de conception, faible). Le flag `requiresAdmin?: boolean` sur `InteractionHandler` (enforcé par le dispatcher) est **optionnel** : un handler sans flag est public. Sûr aujourd'hui (tous les handlers sont admin et explicitement marqués), mais repose sur l'humain pour ne pas oublier `requiresAdmin: true` sur un futur handler sensible.
   - **Évolution possible (option C, safe-by-construction)** : remplacer le flag optionnel par un champ **requis** type `access: "admin" | "everyone"` (aucun défaut) → le typage force chaque handler à déclarer son niveau d'accès, impossible d'oublier.
   - **Déclencheur** : à faire quand le nombre de handlers grandit, ou dès l'apparition du premier handler volontairement non-admin (le risque d'oubli devient alors réel).
-- **#28** — CI : remplacer le grep de version Node par `jdx/mise-action`. `ci.yml` fait `pnpm/action-setup` + `grep '^node = ' .mise.toml` + `setup-node` ; maintenant que `.mise.toml` est la source de vérité (node + pnpm + pitchfork), `mise install` via l'action officielle ferait tout en une étape, sans grep fragile. (Caveat : installerait aussi pitchfork en CI — bénin.)
+- **#28** — ~~CI : remplacer le grep de version Node par `jdx/mise-action`~~ 🚫 _non retenu (décidé)_. L'idée : `mise install` en une étape à la place de `pnpm/action-setup` + `grep '^node = ' .mise.toml` + `setup-node`. **Raisons du refus** : (1) perte du cache pnpm automatique fourni par `setup-node` (`cache: pnpm`) — il faudrait le re-câbler à la main (cf. #32) ; (2) `mise install` installerait aussi des outils inutiles en CI (pitchfork…) ; (3) le grep actuel, bien que peu élégant, est explicite et fonctionne. Le ratio bénéfice/inconvénient n'est pas favorable. (`docs.yml` garde `mise-action` car le build docs est peu fréquent et non sensible à ces points.)
 - **#29** — Branch protection `master` avec `lint` + `build` en _required status checks_ (réglage GitHub, hors repo). Prérequis pour que l'auto-merge Renovate (`platformAutomerge`) attende réellement la CI ; sans ça il pourrait fusionner sans gate.
 - **#30** — `pnpm dev` ne fait pas de hot-reload alors que `CLAUDE.md` annonce « tsx watch » : le script est `node --import tsx src/index.ts` (sans `watch`). À réconcilier (passer le script en `tsx watch`, ou corriger la doc).
+- **#31** — Docs VitePress : logo manquant. Le hero de `docs/site/index.md` référençait `/logo.svg`, absent de `docs/site/public/` (image 404 sur le site publié). La référence `image:` a été retirée temporairement. À rétablir une fois qu'un logo existe : ajouter `docs/site/public/logo.svg` puis remettre le bloc `image: { src: /logo.svg, alt: OmniBot }` dans le frontmatter du hero.
+- **#32** — CI docs : pas de cache du store pnpm. `docs.yml` utilise `jdx/mise-action` (qui ne cache que les outils, pas le store pnpm), contrairement à `ci.yml` qui bénéficie de `cache: pnpm` via `setup-node`. Le workflow ne tournant que sur changements de `docs/`, le ROI est faible — délayé. À traiter si le build docs devient lent : ajouter un `actions/cache` sur `pnpm store path` (clé sur `hashFiles('pnpm-lock.yaml')`), ou activer le cache pnpm de `mise-action`.
+- **#33** — Docs VitePress : la home racine `docs/site/index.md` est entièrement en français (hero + features) alors que des index dédiés `fr/` et `en/` existent. Les boutons d'action couvrent déjà le choix de langue, donc impact faible. À neutraliser/bilinguiser si souhaité.
+- **#34** — CI : `permissions: contents: read` est répété à l'identique dans les jobs `lint` et `build` de `ci.yml`. Pourrait remonter au niveau workflow (top-level) pour éviter la duplication. Cosmétique / moindre privilège.
+- **#35** — CI (_incertain_) : le bloc de setup (checkout + `pnpm/action-setup` + lecture version Node + `setup-node`) est dupliqué à l'identique entre `lint` et `build`. Factorisation possible **via ancres YAML** (privilégié), mais les ancres ne savent pas concaténer une séquence de steps + des steps supplémentaires ; l'alternative propre est une **composite action** `.github/actions/setup` — dont la complexité induite reste à valider pour seulement 2 jobs.
+- **#36** — CI (_incertain_) : incohérence d'install entre `lint` (`pnpm ci`) et `build` (`pnpm install --frozen-lockfile`). Uniformiser, mais **vérifié** : sans filtre, `pnpm ci` comme `pnpm install` font un (clean-)install de **tout le workspace**, vitepress (dép. d'`omnibot-docs`) compris — inutile pour linter/builder/tester le bot. Le vrai gain serait de **scoper l'install CI au paquet du bot** (filtre excluant `docs/site`) plutôt que de choisir `ci` vs `install`. `pnpm ci` n'aide pas sur ce point (il ignore `--filter`, cf. essais docs).
 
 ---
 
@@ -105,6 +111,11 @@ Récapitulatif des actions restantes
 | 🔵       | Extraire client/modules dans un context.ts (#14) — délayé  |
 | 🟣       | Accès interactions : champ requis (option C, #26) — évol.  |
 | 🟠       | Enum >25 options : warn + doc (#27)                        |
-| 🟣       | CI : `jdx/mise-action` au lieu du grep (#28)               |
 | 🔵       | Branch protection : `lint`+`build` required (#29) — GitHub |
 | 🟣       | `pnpm dev` : hot-reload vs doc (#30)                       |
+| 🟢       | Docs : ajouter un logo + rétablir le hero image (#31)      |
+| 🟢       | CI docs : cache du store pnpm (#32) — délayé               |
+| 🟢       | Docs : home racine FR-only vs index fr/en (#33)            |
+| 🟢       | CI : `permissions` au niveau workflow (#34)                |
+| 🟢       | CI : factoriser le setup dupliqué (#35) — incertain        |
+| 🟢       | CI : uniformiser/scoper l'install (#36) — incertain        |

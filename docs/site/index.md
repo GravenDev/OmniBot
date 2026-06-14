@@ -5,9 +5,6 @@ hero:
   name: OmniBot
   text: Bot Discord modulaire
   tagline: Un bot Discord modulaire, extensible et configurable.
-  image:
-    src: /logo.svg
-    alt: OmniBot
   actions:
     - theme: brand
       text: Documentation
