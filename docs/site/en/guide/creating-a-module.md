@@ -1,146 +1,160 @@
 # Creating a Module
 
-A module in OmniBot is a self-contained functional unit that can be installed and uninstalled per Discord guild. Each module can contain commands, event listeners, interactions, and its own data.
+A module in OmniBot is a self-contained functional unit that can be installed and uninstalled per Discord server. Each module can contain commands, event listeners, interaction handlers, services, configuration, and database models.
 
-## Module structure
+## Module Structure
 
 ```
 src/modules/my-module/
 ├── my-module.module.ts          # Main module definition
-├── commands/                    # Module commands
-│   └── my-command.command.ts
+├── commands/                    # Slash commands
+│   └── greet.command.ts
 ├── listeners/                   # Event listeners
-│   └── my-listener.listener.ts
-├── interactions/                # Interaction handlers (buttons, etc.)
-│   └── my-button.button.ts
-├── services/                    # Business services
+│   └── message-create.listener.ts
+├── interactions/                # Button, modal, select handlers
+│   ├── confirm.button.ts
+│   └── feedback.modal.ts
+├── services/                    # Business logic
 │   └── my-service.service.ts
-└── models/                      # Prisma models (optional)
+└── models/                      # Prisma schemas (optional)
     └── my-model.prisma
 ```
 
-## Creating a module
+## Step-by-Step: Creating a "Greeter" Module
 
-### 1. Define the main module file
+### 1. Create the directory and main file
 
 ```typescript
-// src/modules/my-module/my-module.module.ts
+// src/modules/greeter/greeter.module.ts
 
-import { GatewayIntentBits } from "discord.js";
 import { defineModule } from "#lib/module.js";
 import logger from "#lib/logger.js";
 
 export default defineModule({
-  id: "my-module",
-  name: "My Module",
-  description: "Description of my custom module.",
+  id: "greeter",
+  name: "Greeter",
+  description: "Welcomes new members and says hello.",
   version: "1.0.0",
-  author: "Your Name", // Optional
+  author: "You",
 
-  // Discord intents required by the module
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-  ],
-
-  // Called at bot startup
   onLoad(_client, registry) {
-    // Register commands, listeners, and interactions
-    // registry.register(myCommand);
-    // registry.register(myListener);
-    // registry.register(myInteraction);
-
-    logger.info("My module loaded successfully");
+    logger.info("Greeter module loaded");
   },
 
-  // Called when the module is installed on a guild
   onInstall(_client, guild) {
-    logger.info(`My module installed on ${guild.name}`);
+    logger.info(`Greeter installed on ${guild.name}`);
   },
 
-  // Called when the module is uninstalled from a guild
   onUninstall(_client, guild) {
-    logger.info(`My module uninstalled from ${guild.name}`);
+    logger.info(`Greeter uninstalled from ${guild.name}`);
   },
 });
 ```
 
-### 2. Lifecycle hooks
+### 2. Add a slash command
 
-A module exposes three hooks:
+```typescript
+// src/modules/greeter/commands/hello.command.ts
 
-| Hook          | When                 | Usage                                      |
-| ------------- | -------------------- | ------------------------------------------ |
-| `onLoad`      | Bot startup          | Register commands, listeners, interactions |
-| `onInstall`   | Guild installation   | Create roles, initialize data              |
-| `onUninstall` | Guild uninstallation | Clean up data, remove configurations       |
+import { SlashCommandBuilder } from "discord.js";
+import { declareCommand } from "#lib/command.js";
 
-### 3. ModuleDeclaration interface
+export default declareCommand({
+  data: new SlashCommandBuilder()
+    .setName("hello")
+    .setDescription("Says hello!"),
+
+  async execute(interaction) {
+    await interaction.reply(`Hello, ${interaction.user.username}!`);
+  },
+});
+```
+
+### 3. Register the command in the module
+
+```typescript
+// src/modules/greeter/greeter.module.ts
+import helloCommand from "./commands/hello.command.js";
+
+export default defineModule({
+  // ... id, name, etc.
+
+  onLoad(_client, registry) {
+    registry.register(helloCommand);
+    logger.info("Greeter module loaded");
+  },
+  // ...
+});
+```
+
+### 4. Run and test
+
+Start the bot (see [Getting Started](./getting-started)), install the Greeter module via `/modules`, then run `/hello`.
+
+## ModuleDeclaration API
 
 ```typescript
 interface ModuleDeclaration {
-  id: string; // Unique identifier (kebab-case)
-  name: string; // Display name
-  description: string; // Description
-  version: string; // Semver version (e.g. "1.0.0")
-  author?: string; // Author (optional)
-  intents?: GatewayIntentBits[]; // Required Discord intents
+  id: string; // Unique kebab-case identifier
+  name: string; // Display name shown in UI
+  description: string; // Description shown in UI
+  version: Version; // Semver "x.y.z"
+  author?: string; // Optional author name
+  intents?: GatewayIntentBits[]; // Discord gateway intents
   devOnly?: boolean; // Only loaded in dev mode
-  config?: ConfigSchema; // Configuration schema (see Configuration)
+  config?: ConfigSchema; // Configuration schema
 
-  onLoad: (client, registry) => void;
-  onInstall: (client, guild, registry) => void;
-  onUninstall: (client, guild, registry) => void;
+  onLoad: (client: Client, registry: Registry) => void;
+  onInstall: (client: Client, guild: Guild, registry: Registry) => void;
+  onUninstall: (client: Client, guild: Guild, registry: Registry) => void;
 }
 ```
 
-## Best practices
+### Lifecycle Hooks
 
-### Naming conventions
+| Hook          | When                       | Typical Use                                                          |
+| ------------- | -------------------------- | -------------------------------------------------------------------- |
+| `onLoad`      | Bot startup                | Register commands, listeners, interactions via `registry.register()` |
+| `onInstall`   | Module enabled on a guild  | Create roles, send welcome messages, initialize data                 |
+| `onUninstall` | Module disabled on a guild | Clean up data, remove roles, delete configurations                   |
 
-- **Module ID**: kebab-case (`my-super-module`)
-- **File name**: `{id}.module.ts`
-- **Directory**: same as module ID
+### Intent Management
 
-### Intent management
-
-Only declare the intents your module actually needs. See the [Discord documentation](https://discord.com/developers/docs/events/gateway#list-of-intents) for which intents are required.
-
-### Error handling
+Only declare the intents your module actually needs. Required intents must also be enabled in the Discord Developer Portal under Bot > Privileged Gateway Intents.
 
 ```typescript
-onInstall(_client, guild) {
-  try {
-    // Installation logic
-  } catch (error) {
-    logger.error(`Installation error: ${error.message}`);
-  }
-}
+intents: [
+  GatewayIntentBits.Guilds,
+  GatewayIntentBits.GuildMessages,
+  GatewayIntentBits.MessageContent,
+],
 ```
 
-### File organization
+## How Auto-Discovery Works
 
-- Keep the main module file lightweight
-- Move complex logic to services
-- Use subdirectories to organize commands, listeners, and interactions
+The module loader (`src/core/loaders/module-loader.ts`) scans `src/modules/` at startup:
 
-## Auto-discovery
+1. Lists each subdirectory
+2. Finds a `*.module.ts` file inside
+3. Imports it dynamically
+4. Checks the export has `type: DeclarationType.Module`
+5. Returns the `Module` object
 
-Modules are automatically loaded from `src/modules/` at startup. The loader (`module-loader.ts`):
+**Dev-only modules** (with `devOnly: true`) are skipped when `NODE_ENV` is not `"development"`. Use this for test or debug modules.
 
-1. Iterates over each subdirectory in `src/modules/`
-2. Looks for a `*.module.ts` (or `*.module.js`) file
-3. Imports the module and validates it exposes a `Module`-typed default export
-4. Skips modules marked `devOnly: true` in production
+## Best Practices
 
-No manual registration is needed.
+- **Keep `onLoad` lean** — register artifacts and log, move logic to services
+- **Use kebab-case** for module IDs and folder names
+- **Handle errors in lifecycle hooks** — use try/catch in `onInstall`/`onUninstall`
+- **Keep files organized** — one artifact per file, use subdirectories
+- **Declare only needed intents** — minimize privileged intent usage
 
-## Next steps
+## Next Steps
 
-- [Commands](./commands) — Add slash commands to your module
+- [Commands](./commands) — Add slash commands with options and autocomplete
 - [Listeners](./listeners) — React to Discord events
-- [Interactions](./interactions) — Buttons, modals, and select menus
-- [Configuration](./configuration) — Declare a configuration schema
+- [Interactions](./interactions) — Buttons, select menus, and modals
+- [Configuration](./configuration) — Declare a typed configuration schema
 - [Services](./services) — Organize business logic
-- [Database](./database) — Use Prisma with your module
+- [Database](./database) — Persist data with Prisma

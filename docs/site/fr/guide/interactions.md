@@ -1,13 +1,11 @@
 # Interactions
 
-Les interactions Discord permettent à votre module de réagir aux actions des utilisateurs sur des composants d'interface : boutons, menus déroulants et modales.
+Les interactions Discord permettent à votre module de réagir aux actions des utilisateurs sur les composants d'interface : boutons, menus de sélection (chaîne, utilisateur, rôle, salon) et modales.
 
-## Types d'interactions supportées
+## Types pris en charge
 
-OmniBot supporte deux types d'interactions :
-
-- **Message Component Interactions** : boutons, menus déroulants (select menus)
-- **Modal Submit Interactions** : soumissions de formulaires modaux
+- **Message Component Interactions** : boutons, menus de sélection
+- **Modal Submit Interactions** : soumissions de formulaires
 
 ## Structure des fichiers
 
@@ -17,45 +15,79 @@ src/modules/mon-module/
 ├── commands/
 │   └── ma-commande.command.ts
 └── interactions/
-    ├── mon-bouton.button.ts
-    ├── mon-menu.select.ts
-    └── ma-modale.modal.ts
+    ├── confirmer.button.ts
+    ├── select-role.select.ts
+    └── retour.modal.ts
 ```
 
-## API
+## API InteractionHandler
 
 ```typescript
-interface InteractionHandler<Interaction, ConfigType> {
-  customId: string; // Identifiant unique
-  requiresAdmin?: boolean; // Réservé aux admins
-  check: (
-    interaction,
-    config // Garde de type
-  ) => interaction is Interaction;
-  execute: (
-    interaction,
-    args: string[],
-    config // Fonction d'exécution
-  ) => Promise<void>;
+interface InteractionHandler {
+  customId: string; // Préfixe pour la correspondance custom ID
+  requiresAdmin?: boolean; // Restreindre aux administrateurs
+  check: (interaction, config?) => interaction is TypeSpecifique;
+  execute: (interaction, args: string[], config) => Promise<void>;
 }
 ```
 
-Le paramètre `config` est un `ConfigProvider` qui donne accès à la configuration du module (voir [Configuration](./configuration)).
+| Champ           | Requis | Description                                                                                              |
+| --------------- | ------ | -------------------------------------------------------------------------------------------------------- |
+| `customId`      | Oui    | Préfixe unique — comparé au début du `customId` de l'interaction                                         |
+| `requiresAdmin` | Non    | Si `true`, seuls les utilisateurs avec la permission `Administrateur` peuvent utiliser cette interaction |
+| `check`         | Oui    | Garde de type — affine le type d'interaction pour `execute`                                              |
+| `execute`       | Oui    | Appelé quand l'interaction est déclenchée                                                                |
 
-Le paramètre `requiresAdmin` permet de réserver l'interaction aux administrateurs du serveur. La vérification est faite centralement par le système — aucun code supplémentaire n'est nécessaire.
+Le paramètre `config` est un `ConfigProvider` donnant accès à la configuration du module.
 
-## Création d'une interaction
+## Custom ID avec arguments
+
+Le système supporte le passage d'arguments via le `customId` en utilisant `:` comme séparateur :
+
+```
+customId:arg1:arg2:arg3
+```
+
+Le dispatcher divise le `customId` de l'interaction sur `:`, utilise le premier segment pour la correspondance du gestionnaire, et passe les segments restants comme tableau `args`.
+
+### Exemple : Bouton avec arguments
+
+```typescript
+// Commande qui crée le bouton
+const button = new ButtonBuilder()
+  .setCustomId(`confirmer-action:supprimer:${userId}`)
+  .setLabel("Confirmer")
+  .setStyle(ButtonStyle.Danger);
+```
+
+```typescript
+// Gestionnaire d'interaction
+export default declareInteractionHandler({
+  customId: "confirmer-action",
+  check: (interaction): interaction is ButtonInteraction =>
+    interaction.isButton(),
+
+  async execute(interaction, [action, cibleId]) {
+    await interaction.reply({
+      content: `Action "${action}" confirmée pour l'utilisateur ${cibleId}`,
+      flags: MessageFlags.Ephemeral,
+    });
+  },
+});
+```
+
+## Créer des interactions
 
 ### Bouton
 
 ```typescript
-// src/modules/mon-module/interactions/confirm.button.ts
+// src/modules/salut/interactions/confirmer.button.ts
 
 import { MessageFlags } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 
 export default declareInteractionHandler({
-  customId: "confirm-action",
+  customId: "confirmer-action",
   check: (interaction) => interaction.isButton(),
 
   async execute(interaction, [actionId, userId]) {
@@ -67,96 +99,106 @@ export default declareInteractionHandler({
 });
 ```
 
-### Menu déroulant
+### Menu de sélection
 
 ```typescript
-// src/modules/mon-module/interactions/role-select.select.ts
+// src/modules/salut/interactions/select-role.select.ts
 
 import { declareInteractionHandler } from "#lib/interaction.js";
 
 export default declareInteractionHandler({
-  customId: "role-select",
+  customId: "select-role",
   check: (interaction) => interaction.isStringSelectMenu(),
 
-  async execute(interaction, [targetUserId]) {
-    const selectedRoles = interaction.values;
-
+  async execute(interaction, [userIdCible]) {
+    const rolesSelectionnes = interaction.values;
     await interaction.reply({
-      content: `Rôles ${selectedRoles.join(", ")} attribués à <@${targetUserId}>`,
-      ephemeral: true,
+      content: `Rôles ${rolesSelectionnes.join(", ")} attribués à <@${userIdCible}>`,
+      flags: MessageFlags.Ephemeral,
     });
   },
 });
 ```
 
-### Modal
+### Modale
 
 ```typescript
-// src/modules/mon-module/interactions/feedback.modal.ts
+// src/modules/salut/interactions/retour.modal.ts
 
 import { declareInteractionHandler } from "#lib/interaction.js";
 
 export default declareInteractionHandler({
-  customId: "feedback-modal",
+  customId: "retour-modal",
   check: (interaction) => interaction.isModalSubmit(),
 
-  async execute(interaction, [category]) {
-    const feedback = interaction.fields.getTextInputValue("feedback-input");
-
+  async execute(interaction, [categorie]) {
+    const retour = interaction.fields.getTextInputValue("retour-input");
     await interaction.reply({
       content: "Merci pour votre retour !",
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   },
 });
 ```
 
-## Système de Custom ID avec arguments
+## Restriction administrateur
 
-Le système permet de passer des arguments via le `customId` en utilisant le séparateur `:` :
-
-```
-customId:arg1:arg2:arg3
-```
-
-### Utilisation dans une commande
+Définissez `requiresAdmin: true` pour restreindre une interaction aux administrateurs du serveur :
 
 ```typescript
-import { ButtonBuilder, ButtonStyle } from "discord.js";
+export default declareInteractionHandler({
+  customId: "action-dangereuse",
+  requiresAdmin: true,
+  check: (interaction) => interaction.isButton(),
 
-const button = new ButtonBuilder()
-  .setCustomId(`confirm-action:delete:${userId}`)
-  .setLabel("Confirmer")
-  .setStyle(ButtonStyle.Danger);
+  async execute(interaction, args) {
+    // Seuls les administrateurs peuvent arriver ici
+    await interaction.reply({ content: "Action effectuée !", ephemeral: true });
+  },
+});
 ```
 
-Les arguments sont automatiquement extraits et passés au handler sous forme de tableau (`args`).
+La vérification est effectuée **centralement** par le dispatcher d'interactions — pas besoin de vérifications de permission en ligne dans votre gestionnaire.
 
-## Enregistrement dans le module
+## Enregistrement
 
 ```typescript
-// src/modules/mon-module/mon-module.module.ts
-import confirmButton from "./interactions/confirm.button.js";
-import roleSelect from "./interactions/role-select.select.js";
+// src/modules/salut/salut.module.ts
+import confirmerBouton from "./interactions/confirmer.button.js";
+import selectRole from "./interactions/select-role.select.js";
 
 export default defineModule({
   onLoad(_client, registry) {
-    registry.register(confirmButton);
-    registry.register(roleSelect);
+    registry.register(confirmerBouton);
+    registry.register(selectRole);
   },
 });
 ```
 
-## Gestion automatique de l'activation
+## Gestion de l'activation
 
-Le système gère automatiquement l'activation et la désactivation des interactions :
+Les interactions sont automatiquement liées à l'activation du module. Quand un module est désactivé sur un serveur, ses gestionnaires d'interactions ne font rien — le dispatcher les ignore. Aucun code supplémentaire nécessaire.
 
-- Les interactions ne fonctionnent que si le module est activé sur le serveur
-- Aucun code supplémentaire nécessaire pour vérifier l'état du module
-- Messages d'erreur automatiques si le module est désactivé
-- Les interactions marquées `requiresAdmin: true` sont protégées automatiquement
+## Rafraîchissement du message de configuration
+
+Lors de l'édition de la configuration via des menus de sélection éphémères, le message de configuration source (public) doit être mis à jour. Le système utilise `refreshSourceConfigMessage()` qui transmet l'ID du message source dans les arguments `customId` et réédite le message public après chaque modification.
 
 ## Bonnes pratiques
+
+### Types de réponse
+
+```typescript
+// Réponse instantanée
+await interaction.reply({ content: "Terminé !", ephemeral: true });
+
+// Réponse différée (pour les opérations > 3 secondes)
+await interaction.deferReply({ ephemeral: true });
+await operationLongue();
+await interaction.editReply({ content: "Fini !" });
+
+// Mettre à jour le message source (pour les composants de message)
+await interaction.update({ content: "Mis à jour", components: [] });
+```
 
 ### Validation des arguments
 
@@ -169,39 +211,25 @@ async execute(interaction, [userId, action]) {
     });
     return;
   }
+  // Continuer avec les arguments validés
 }
 ```
 
 ### Gestion des erreurs
 
 ```typescript
-async execute(interaction, [targetId]) {
+async execute(interaction, [cibleId]) {
   try {
-    await performRiskyOperation(targetId);
-    await interaction.reply({ content: "Opération réussie !", ephemeral: true });
+    await effectuerOperationRisquee(cibleId);
+    await interaction.reply({ content: "Succès !", ephemeral: true });
   } catch (error) {
-    logger.error("Erreur:", error);
+    logger.error("Erreur :", error);
     await interaction.reply({
-      content: "Une erreur s'est produite.",
+      content: "Une erreur est survenue. Veuillez réessayer.",
       ephemeral: true,
     });
   }
 }
-```
-
-### Types de réponses
-
-```typescript
-// Action instantanée
-await interaction.reply({ content: "Fait !", ephemeral: true });
-
-// Action longue
-await interaction.deferReply({ ephemeral: true });
-await longOperation();
-await interaction.editReply({ content: "Terminé !" });
-
-// Mise à jour du message (boutons)
-await interaction.update({ content: "Mis à jour", components: [] });
 ```
 
 ## Prochaines étapes

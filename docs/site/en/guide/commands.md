@@ -1,66 +1,160 @@
 # Commands
 
-This guide explains how to create Discord slash commands in your modules. Commands are only available when the module is enabled on the guild.
+This guide explains how to create Discord slash commands in your modules. Commands are only available when the module is enabled on the server where they're used.
 
-## Creating a command
+## Creating a Command
 
 ```typescript
-// src/modules/my-module/commands/test.command.ts
+// src/modules/greeter/commands/hello.command.ts
 
 import { SlashCommandBuilder } from "discord.js";
 import { declareCommand } from "#lib/command.js";
 
 export default declareCommand({
   data: new SlashCommandBuilder()
-    .setName("test")
-    .setDescription("A test command"),
+    .setName("hello")
+    .setDescription("Says hello!"),
 
   async execute(interaction) {
-    await interaction.reply("Test!");
+    await interaction.reply(`Hello, ${interaction.user.username}!`);
   },
 });
 ```
 
-## Command interface
+### Command Interface
 
 ```typescript
 interface Command {
-  data: SlashCommandBuilder; // Command configuration
-  execute: (
-    // Execution function (required)
-    interaction,
-    config
-  ) => Promise<void>;
-  complete?: (
-    // Autocomplete (optional)
-    interaction,
-    config
-  ) => Promise<void>;
+  data: SlashCommandBuilder | SlashCommandSubcommandBuilder;
+  execute: (interaction, config: ConfigProvider) => Promise<void>;
+  complete?: (interaction, config: ConfigProvider) => Promise<void>;
 }
 ```
 
-The `config` parameter is a `ConfigProvider` giving access to the module's configuration (see [Configuration](./configuration)).
+| Field      | Required | Description                                               |
+| ---------- | -------- | --------------------------------------------------------- |
+| `data`     | Yes      | The slash command definition (name, description, options) |
+| `execute`  | Yes      | Called when a user runs the command                       |
+| `complete` | No       | Called when a user types in an autocomplete option        |
 
-## Registering in the module
+### Config Access
+
+The `config` parameter is a `ConfigProvider` that gives access to the module's configuration (see [Configuration](./configuration)). It's always injected — even for modules without a config schema.
 
 ```typescript
-// src/modules/my-module/my-module.module.ts
-import testCommand from "./commands/test.command.js";
+async execute(interaction, config) {
+  const channel = config.get("logChannel");
+  const max = config.get("maxWarnings");
+  // ...
+}
+```
 
-export default defineModule({
-  onLoad(_client, registry) {
-    registry.register(testCommand);
+## Options & Subcommands
+
+### Basic Options
+
+```typescript
+data: new SlashCommandBuilder()
+  .setName("greet")
+  .setDescription("Greet someone")
+  .addUserOption((option) =>
+    option.setName("target").setDescription("Who to greet").setRequired(true)
+  )
+  .addStringOption((option) =>
+    option.setName("message").setDescription("Custom message").setMaxLength(200)
+  );
+```
+
+### Autocomplete
+
+```typescript
+export default declareCommand({
+  data: new SlashCommandBuilder()
+    .setName("color")
+    .setDescription("Pick a color")
+    .addStringOption((option) =>
+      option
+        .setName("color")
+        .setDescription("Choose a color")
+        .setAutocomplete(true)
+        .setRequired(true)
+    ),
+
+  async execute(interaction, config) {
+    const color = interaction.options.getString("color", true);
+    await interaction.reply(`You picked ${color}!`);
+  },
+
+  async complete(interaction, config) {
+    const colors = ["red", "green", "blue", "yellow", "purple"];
+    const input = interaction.options.getFocused().toLowerCase();
+    const filtered = colors.filter((c) => c.startsWith(input));
+    await interaction.respond(filtered.map((c) => ({ name: c, value: c })));
   },
 });
 ```
 
-## Registration & propagation
+### Subcommands
 
-| Commands                         | Production                                        | Development (`NODE_ENV=development`)                                 |
-| -------------------------------- | ------------------------------------------------- | -------------------------------------------------------------------- |
-| **core** (`/config`, `/modules`) | Global (~1 h propagation)                         | Registered on `DEV_GUILD_ID` — **instant**                           |
-| **module**                       | Per guild, (re)installed on module `version` bump | Re-synced **at every startup** on `DEV_GUILD_ID` for enabled modules |
+```typescript
+const builder = new SlashCommandBuilder()
+  .setName("config")
+  .setDescription("Configuration commands")
+  .addSubcommand((sub) =>
+    sub.setName("view").setDescription("View configuration")
+  )
+  .addSubcommand((sub) =>
+    sub
+      .setName("set")
+      .setDescription("Set a value")
+      .addStringOption((opt) =>
+        opt.setName("key").setDescription("Config key").setRequired(true)
+      )
+      .addStringOption((opt) =>
+        opt.setName("value").setDescription("Config value").setRequired(true)
+      )
+  );
+```
 
-In production, version gating prevents re-pushing module commands to all guilds on every startup. In development, all commands are registered in a single PUT on the dev guild for instant updates.
+## Registration & Propagation
+
+### In the Module
+
+```typescript
+// src/modules/greeter/greeter.module.ts
+import helloCommand from "./commands/hello.command.js";
+
+export default defineModule({
+  onLoad(_client, registry) {
+    registry.register(helloCommand);
+  },
+});
+```
+
+### Dev vs Production
+
+| Aspect              | Development (`NODE_ENV=development`)                          | Production                                   |
+| ------------------- | ------------------------------------------------------------- | -------------------------------------------- |
+| **Core commands**   | Registered on `DEV_GUILD_ID` (instant)                        | Global (~1h propagation)                     |
+| **Module commands** | Re-synced every startup on `DEV_GUILD_ID` for enabled modules | Registered per guild, only on version change |
+| **Propagation**     | Instant (single PUT)                                          | Delayed (global) or on-demand (per guild)    |
+
+The version gating system in production uses the `activatedVersion` field in the `ModuleActivation` database record. Commands are re-registered on a guild only when the module's declared version differs from the stored version. This avoids unnecessary API calls on every restart.
 
 > `DEV_GUILD_ID` is **required** in development mode. See `.env.example`.
+
+## Core Commands
+
+OmniBot provides two built-in commands in the **Core** module (always active, non-uninstallable):
+
+| Command            | Permission    | Description                                            |
+| ------------------ | ------------- | ------------------------------------------------------ |
+| `/modules`         | Administrator | Lists all modules with enable/disable buttons          |
+| `/config <module>` | Administrator | Opens the interactive configuration panel for a module |
+
+## Best Practices
+
+- **Use reply, deferReply, or editReply** appropriately — defer for operations that take longer than 3 seconds
+- **Use ephemeral replies** for user-specific responses (`flags: MessageFlags.Ephemeral`)
+- **Handle errors** — wrap risky operations in try/catch and reply with a user-friendly message
+- **Validate option values** — use the builder's built-in validation (min/max length, min/max value, etc.)
