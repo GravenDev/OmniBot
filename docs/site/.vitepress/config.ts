@@ -40,6 +40,7 @@ export default defineConfig({
               text: "Guide",
               items: [
                 { text: "Pour commencer", link: "/fr/guide/getting-started" },
+                { text: "Architecture", link: "/fr/guide/architecture" },
                 {
                   text: "Créer un module",
                   link: "/fr/guide/creating-a-module",
@@ -50,6 +51,14 @@ export default defineConfig({
                 { text: "Configuration", link: "/fr/guide/configuration" },
                 { text: "Services", link: "/fr/guide/services" },
                 { text: "Base de données", link: "/fr/guide/database" },
+                { text: "Contribuer", link: "/fr/guide/contributing" },
+              ],
+            },
+            {
+              text: "Legal",
+              items: [
+                { text: "Confidentialité", link: "/fr/legal/privacy" },
+                { text: "CGU", link: "/fr/legal/terms" },
               ],
             },
           ],
@@ -85,6 +94,7 @@ export default defineConfig({
               text: "Guide",
               items: [
                 { text: "Getting Started", link: "/en/guide/getting-started" },
+                { text: "Architecture", link: "/en/guide/architecture" },
                 {
                   text: "Creating a Module",
                   link: "/en/guide/creating-a-module",
@@ -95,6 +105,14 @@ export default defineConfig({
                 { text: "Configuration", link: "/en/guide/configuration" },
                 { text: "Services", link: "/en/guide/services" },
                 { text: "Database", link: "/en/guide/database" },
+                { text: "Contributing", link: "/en/guide/contributing" },
+              ],
+            },
+            {
+              text: "Legal",
+              items: [
+                { text: "Privacy", link: "/en/legal/privacy" },
+                { text: "Terms", link: "/en/legal/terms" },
               ],
             },
           ],
