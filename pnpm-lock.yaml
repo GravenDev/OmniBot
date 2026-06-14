@@ -4,10 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-overrides:
-  ajv@>=7.0.0-alpha.0 <8.18.0: '>=8.18.0'
-  js-yaml@>=4.0.0 <4.1.1: '>=4.1.1'
-
 importers:
 
   .:
