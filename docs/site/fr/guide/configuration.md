@@ -1,8 +1,8 @@
 # Configuration
 
-OmniBot fournit un système de configuration typée pour les modules. Chaque module peut déclarer un schéma de configuration qui est automatiquement exposé via une interface interactive Discord accessible aux administrateurs.
+OmniBot fournit un système de configuration typé pour les modules. Chaque module peut déclarer un schéma de configuration qui est automatiquement exposé via une interface Discord interactive, accessible aux administrateurs via `/config <module>`.
 
-## Déclarer un schéma de configuration
+## Déclarer un schéma
 
 Un module déclare son schéma dans `defineModule()` via la propriété `config` :
 
@@ -19,18 +19,18 @@ export default defineModule({
   version: "1.0.0",
 
   config: {
-    logChannel: {
+    canalLog: {
       name: "Salon de logs",
       description: "Salon où poster les logs",
       type: ConfigType.CHANNEL,
     },
-    maxWarnings: {
+    avertissementsMax: {
       name: "Avertissements max",
       description: "Nombre d'avertissements avant sanction",
       type: ConfigType.NUMBER,
       defaultValue: 3,
     },
-    logLevel: {
+    niveauLog: {
       name: "Niveau de log",
       description: "Verbosité des logs",
       type: ConfigType.ENUM,
@@ -45,43 +45,50 @@ export default defineModule({
 });
 ```
 
-## Types de champs supportés
+## Types de champs
 
-| Type       | Saisie                   | Stockage (JSON)  | Lecture           |
-| ---------- | ------------------------ | ---------------- | ----------------- |
-| `STRING`   | Modal (texte)            | `string`         | `string`          |
-| `NUMBER`   | Modal (texte → nombre)   | `number`         | `number`          |
-| `BOOLEAN`  | Bouton toggle            | `boolean`        | `boolean`         |
-| `USER`     | Select menu utilisateur  | `string` (id)    | `User`            |
-| `ROLE`     | Select menu rôle         | `string` (id)    | `Role`            |
-| `CHANNEL`  | Select menu salon        | `string` (id)    | `Channel`         |
-| `CATEGORY` | Select menu catégorie    | `string` (id)    | `CategoryChannel` |
-| `ENUM`     | Select menu (choix fixe) | `string` (choix) | Union littérale   |
+### Types supportés
 
-## Listes
+| Type       | Saisie                          | Stockage (JSON)  | Lecture (désérialisé) |
+| ---------- | ------------------------------- | ---------------- | --------------------- |
+| `STRING`   | Modale (saisie texte)           | `string`         | `string`              |
+| `NUMBER`   | Modale (texte → nombre)         | `number`         | `number`              |
+| `BOOLEAN`  | Bouton toggle                   | `boolean`        | `boolean`             |
+| `USER`     | Menu de sélection utilisateur   | `string` (id)    | `User`                |
+| `ROLE`     | Menu de sélection rôle          | `string` (id)    | `Role`                |
+| `CHANNEL`  | Menu de sélection salon         | `string` (id)    | `Channel`             |
+| `CATEGORY` | Menu de sélection catégorie     | `string` (id)    | `CategoryChannel`     |
+| `ENUM`     | Menu de sélection (choix fixes) | `string` (choix) | Union littérale       |
+
+### Listes
 
 N'importe quel type peut être déclaré en **liste** via `type: [ConfigType.X]` :
 
 ```typescript
 config: {
-  channels: {
+  salons: {
     name: "Salons surveillés",
-    description: "Salons à surveiller (un ou plusieurs)",
+    description: "Salons à surveiller",
     type: [ConfigType.CHANNEL],    // Liste de salons
   },
-  warnings: {
-    name: "Avertissements",
-    description: "Liste d'avertissements",
+  scores: {
+    name: "Scores",
+    description: "Liste des meilleurs scores",
     type: [ConfigType.NUMBER],     // Liste de nombres
   },
 }
 ```
 
-Le type retourné par `config.get("channels")` est alors `Channel[]`.
+L'édition des listes dépend du type d'élément :
 
-## Type ENUM (choix fixe)
+- **Entités** (`USER`, `ROLE`, `CHANNEL`, `CATEGORY`) : menus multi-sélection natifs
+- **ENUM** : menu multi-sélection avec les options déclarées
+- **Scalaires** (`STRING`, `NUMBER`) : éditeur dédié ajouter/supprimer
+- **`BOOLEAN`** : éditeur ajouter/supprimer avec boutons toggle
 
-Le type `ENUM` permet de restreindre un champ à un ensemble fixe de valeurs :
+### Type ENUM (choix fixes)
+
+Le type `ENUM` restreint un champ à un ensemble fixe de valeurs :
 
 ```typescript
 config: {
@@ -92,62 +99,94 @@ config: {
     options: ["clair", "sombre", "auto"] as const,
     defaultValue: "auto",
   },
-  features: {
+  fonctionnalites: {
     name: "Fonctionnalités",
     description: "Fonctionnalités activées",
-    type: [ConfigType.ENUM],        // Liste multi-choix
-    options: ["welcome", "logs", "automod"] as const,
+    type: [ConfigType.ENUM],
+    options: ["accueil", "logs", "automod"] as const,
   },
 }
 ```
 
-- `options` est **obligatoire** sur une entrée `ENUM`
-- L'utilisation de `as const` donne un typage précis : `config.get("theme")` retourne `"clair" | "sombre" | "auto"`
+- `options` est **requis** sur les entrées `ENUM` (imposé par le système de types)
+- `as const` permet un typage précis : `config.get("theme")` retourne `"clair" | "sombre" | "auto"`
 - Sans `as const`, le type retourné est `string`
 
 ## Valeurs par défaut
 
-- Un champ **avec** `defaultValue` est toujours présent (`T`)
-- Un champ **sans** `defaultValue` peut être `undefined` (`T | undefined`)
-- Les entités Discord sont automatiquement désérialisées (du stockage par id vers l'objet Discord)
+- Un champ **avec** `defaultValue` est toujours présent — le type est `T` (jamais `undefined`)
+- Un champ **sans** `defaultValue` peut être `T | undefined` (jamais défini par l'administrateur)
+- Les champs d'entités sans valeur par défaut retournent `undefined` (pas une valeur factice)
 
-## Accès à la configuration
+C'est une distinction importante — vérifiez toujours `undefined` pour les champs sans valeur par défaut.
 
-La configuration est accessible via le paramètre `config` dans les commandes, écouteurs et interactions :
+## Accéder à la configuration
+
+Le paramètre `config` est passé automatiquement aux commandes, écouteurs et interactions :
 
 ```typescript
-// Dans une commande
-async execute(interaction, config) {
-  const channel = config.get("logChannel");   // Channel | undefined
-  const max = config.get("maxWarnings");      // number (a un defaultValue)
-  const level = config.get("logLevel");       // "debug" | "info" | "warn" | "error"
+async function handler(interaction, config) {
+  const salon = config.get("canalLog"); // Channel | undefined
+  const max = config.get("avertissementsMax"); // number (toujours présent)
+  const niveau = config.get("niveauLog"); // "debug" | "info" | "warn" | "error"
+
+  // Utilisation avec valeur par défaut
+  const securise = config.get("canalLog") ?? salonParDefaut;
 }
 ```
 
 ## Interface administrateur
 
-La commande `/config <module>` (réservée aux administrateurs) affiche un panneau de configuration interactif avec :
+### Commande `/config <module>`
 
-- La liste de tous les champs configurables, leur type et valeur courante
-- Des boutons d'édition adaptés à chaque type (modal, toggle, select menu)
-- Une pagination automatique si le module a plus de 10 champs configurables
-- Barre de navigation si plusieurs pages
+- **Admin uniquement** (permission `Administrateur` requise)
+- **Réponse publique** — la configuration est visible par tous (transparence)
+- **Autocomplétion** sur le nom du module (cœur + modules activés)
 
-Les modifications sont persistées et prennent effet immédiatement.
+Le panneau affiche :
+
+- Tous les champs configurables avec leur type, description et valeur courante
+- Des boutons d'édition adaptés à chaque type (toggle, modale, menu de sélection)
+- Une pagination quand il y a plus de 10 champs (limite des 40 composants Discord)
+
+### Flux d'édition
+
+| Type de champ                         | Type d'éditeur                       | Persistance     | Mise à jour de l'interface          |
+| ------------------------------------- | ------------------------------------ | --------------- | ----------------------------------- |
+| `STRING`                              | Modale (saisie texte)                | À la soumission | Message public mis à jour sur place |
+| `NUMBER`                              | Modale (saisie nombre)               | À la soumission | Message public mis à jour sur place |
+| `BOOLEAN`                             | Bouton toggle                        | Au clic         | Message public mis à jour sur place |
+| `USER`, `ROLE`, `CHANNEL`, `CATEGORY` | Menu select entité (éphémère)        | À la sélection  | Message public rafraîchi            |
+| `ENUM`                                | Menu select chaîne (éphémère)        | À la sélection  | Message public rafraîchi            |
+| Liste de scalaires                    | Éditeur ajouter/supprimer (éphémère) | À l'action      | Message public rafraîchi            |
+
+**Éditeurs éphémères** (menus de sélection, éditeurs de listes) : ils rafraîchissent le message de configuration public après chaque modification en utilisant `refreshSourceConfigMessage()`. L'ID du message source est transmis via le `customId` des composants éphémères.
+
+## Persistance
+
+La configuration est stockée sous forme d'un blob JSON par serveur dans la table `GuildConfiguration` :
+
+```prisma
+model GuildConfiguration {
+  guildId String @id
+  data    Json   // Record<moduleId, { key: value }>
+}
+```
+
+- Les IDs d'entités (utilisateur, rôle, salon) sont stockées sous forme de chaînes et **désérialisées** en objets Discord à la lecture
+- Un cache en mémoire (`configCache`) évite les lectures base de données à chaque interaction
+- Le cache est invalidé à chaque écriture
 
 ## Bonnes pratiques
 
-### Nommage des champs
-
-- **Clé** : camelCase (`logChannel`, `maxWarnings`)
-- **name** : lisible, affiché dans l'interface (`Salon de logs`)
-- **description** : explique le rôle du champ
-
-### Validation
-
-La validation est automatique selon le type déclaré. Pour `ENUM`, seules les valeurs listées dans `options` sont acceptées.
+- **Utilisez le camelCase pour les clés**, un `name` lisible et une `description` claire
+- **Fournissez `defaultValue`** pour les champs qui doivent toujours avoir une valeur
+- **Gardez les schémas ciblés** — trop de champs rend le panneau d'administration difficile à utiliser
+- **Utilisez `as const`** sur les options ENUM pour des unions littérales type-safe
+- **Vérifiez `undefined`** pour les champs sans valeur par défaut
 
 ## Prochaines étapes
 
 - [Services](./services) pour organiser la logique métier
-- [Base de données](./database) pour des données persistantes avancées
+- [Base de données](./database) pour les données persistantes avancées
+- [Commandes](./commands) pour créer des commandes slash

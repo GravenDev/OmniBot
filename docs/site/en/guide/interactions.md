@@ -1,15 +1,13 @@
 # Interactions
 
-Discord interactions allow your module to react to user actions on UI components: buttons, select menus, and modals.
+Discord interactions allow your module to react to user actions on UI components: buttons, select menus (string, user, role, channel), and modals.
 
-## Supported interaction types
-
-OmniBot supports two types of interactions:
+## Supported Types
 
 - **Message Component Interactions**: buttons, select menus
 - **Modal Submit Interactions**: form submissions
 
-## File structure
+## File Structure
 
 ```
 src/modules/my-module/
@@ -17,39 +15,73 @@ src/modules/my-module/
 ├── commands/
 │   └── my-command.command.ts
 └── interactions/
-    ├── my-button.button.ts
-    ├── my-menu.select.ts
-    └── my-modal.modal.ts
+    ├── confirm.button.ts
+    ├── role-select.select.ts
+    └── feedback.modal.ts
 ```
 
-## API
+## InteractionHandler API
 
 ```typescript
-interface InteractionHandler<Interaction, ConfigType> {
-  customId: string; // Unique identifier
-  requiresAdmin?: boolean; // Admin-only
-  check: (
-    interaction,
-    config // Type guard
-  ) => interaction is Interaction;
-  execute: (
-    interaction,
-    args: string[],
-    config // Execution function
-  ) => Promise<void>;
+interface InteractionHandler {
+  customId: string; // Prefix for custom ID matching
+  requiresAdmin?: boolean; // Restrict to administrators
+  check: (interaction, config?) => interaction is SpecificType;
+  execute: (interaction, args: string[], config) => Promise<void>;
 }
 ```
 
-The `config` parameter is a `ConfigProvider` giving access to the module's configuration (see [Configuration](./configuration)).
+| Field           | Required | Description                                                                    |
+| --------------- | -------- | ------------------------------------------------------------------------------ |
+| `customId`      | Yes      | Unique prefix — matched against the start of the interaction's `customId`      |
+| `requiresAdmin` | No       | If `true`, only users with `Administrator` permission can use this interaction |
+| `check`         | Yes      | Type guard — narrows the interaction type for `execute`                        |
+| `execute`       | Yes      | Called when the interaction is triggered                                       |
 
-The `requiresAdmin` flag restricts the interaction to guild administrators. The check is enforced centrally by the system — no additional code needed.
+The `config` parameter is a `ConfigProvider` giving access to the module's configuration.
 
-## Creating an interaction
+## Custom ID with Arguments
+
+The system supports passing arguments through the `customId` using `:` as a separator:
+
+```
+customId:arg1:arg2:arg3
+```
+
+The dispatcher splits the interaction's `customId` on `:`, uses the first segment for handler matching, and passes the remaining segments as the `args` array.
+
+### Example: Button with Args
+
+```typescript
+// Command that creates the button
+const button = new ButtonBuilder()
+  .setCustomId(`confirm-action:delete:${userId}`)
+  .setLabel("Confirm")
+  .setStyle(ButtonStyle.Danger);
+```
+
+```typescript
+// Interaction handler
+export default declareInteractionHandler({
+  customId: "confirm-action",
+  check: (interaction): interaction is ButtonInteraction =>
+    interaction.isButton(),
+
+  async execute(interaction, [action, targetId]) {
+    await interaction.reply({
+      content: `Action "${action}" confirmed for user ${targetId}`,
+      flags: MessageFlags.Ephemeral,
+    });
+  },
+});
+```
+
+## Creating Interactions
 
 ### Button
 
 ```typescript
-// src/modules/my-module/interactions/confirm.button.ts
+// src/modules/greeter/interactions/confirm.button.ts
 
 import { MessageFlags } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
@@ -67,10 +99,10 @@ export default declareInteractionHandler({
 });
 ```
 
-### Select menu
+### Select Menu
 
 ```typescript
-// src/modules/my-module/interactions/role-select.select.ts
+// src/modules/greeter/interactions/role-select.select.ts
 
 import { declareInteractionHandler } from "#lib/interaction.js";
 
@@ -80,10 +112,9 @@ export default declareInteractionHandler({
 
   async execute(interaction, [targetUserId]) {
     const selectedRoles = interaction.values;
-
     await interaction.reply({
       content: `Roles ${selectedRoles.join(", ")} assigned to <@${targetUserId}>`,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   },
 });
@@ -92,7 +123,7 @@ export default declareInteractionHandler({
 ### Modal
 
 ```typescript
-// src/modules/my-module/interactions/feedback.modal.ts
+// src/modules/greeter/interactions/feedback.modal.ts
 
 import { declareInteractionHandler } from "#lib/interaction.js";
 
@@ -102,40 +133,37 @@ export default declareInteractionHandler({
 
   async execute(interaction, [category]) {
     const feedback = interaction.fields.getTextInputValue("feedback-input");
-
     await interaction.reply({
       content: "Thank you for your feedback!",
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
   },
 });
 ```
 
-## Custom ID with arguments
+## Admin Gating
 
-The system supports passing arguments through the `customId` using `:` as separator:
-
-```
-customId:arg1:arg2:arg3
-```
-
-### Usage in a command
+Set `requiresAdmin: true` to restrict an interaction to server administrators:
 
 ```typescript
-import { ButtonBuilder, ButtonStyle } from "discord.js";
+export default declareInteractionHandler({
+  customId: "dangerous-action",
+  requiresAdmin: true,
+  check: (interaction) => interaction.isButton(),
 
-const button = new ButtonBuilder()
-  .setCustomId(`confirm-action:delete:${userId}`)
-  .setLabel("Confirm")
-  .setStyle(ButtonStyle.Danger);
+  async execute(interaction, args) {
+    // Only admins can reach this point
+    await interaction.reply({ content: "Action performed!", ephemeral: true });
+  },
+});
 ```
 
-Arguments are automatically extracted and passed to the handler as an array (`args`).
+The check is enforced **centrally** by the interaction dispatcher — no need for inline permission checks in your handler.
 
-## Registering in the module
+## Registration
 
 ```typescript
-// src/modules/my-module/my-module.module.ts
+// src/modules/greeter/greeter.module.ts
 import confirmButton from "./interactions/confirm.button.js";
 import roleSelect from "./interactions/role-select.select.js";
 
@@ -147,18 +175,32 @@ export default defineModule({
 });
 ```
 
-## Automatic activation management
+## Activation Management
 
-The system handles interaction activation/deactivation automatically:
+Interactions are automatically tied to module activation. When a module is disabled on a guild, its interaction handlers are no-op — the dispatcher skips them. No extra code needed.
 
-- Interactions only work when the module is enabled on the guild
-- No extra code needed to check module state
-- Automatic error messages if the module is disabled
-- Interactions marked `requiresAdmin: true` are auto-protected
+## Config Message Refresh
 
-## Best practices
+When editing configuration via ephemeral select menus, the source config message (public) needs to be updated. The system uses `refreshSourceConfigMessage()` which threads the source message ID through `customId` arguments and re-edits the public message after each change.
 
-### Argument validation
+## Best Practices
+
+### Response Types
+
+```typescript
+// Instant reply
+await interaction.reply({ content: "Done!", ephemeral: true });
+
+// Deferred reply (for operations > 3 seconds)
+await interaction.deferReply({ ephemeral: true });
+await longOperation();
+await interaction.editReply({ content: "Finished!" });
+
+// Update the source message (for message components)
+await interaction.update({ content: "Updated", components: [] });
+```
+
+### Argument Validation
 
 ```typescript
 async execute(interaction, [userId, action]) {
@@ -169,10 +211,11 @@ async execute(interaction, [userId, action]) {
     });
     return;
   }
+  // Proceed with validated args
 }
 ```
 
-### Error handling
+### Error Handling
 
 ```typescript
 async execute(interaction, [targetId]) {
@@ -189,22 +232,7 @@ async execute(interaction, [targetId]) {
 }
 ```
 
-### Response types
-
-```typescript
-// Instant action
-await interaction.reply({ content: "Done!", ephemeral: true });
-
-// Long running action
-await interaction.deferReply({ ephemeral: true });
-await longOperation();
-await interaction.editReply({ content: "Finished!" });
-
-// Update message (buttons)
-await interaction.update({ content: "Updated", components: [] });
-```
-
-## Next steps
+## Next Steps
 
 - [Configuration](./configuration) for managing module settings
 - [Commands](./commands) for creating slash commands

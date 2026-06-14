@@ -1,8 +1,8 @@
 # Configuration
 
-OmniBot provides a typed configuration system for modules. Each module can declare a configuration schema that is automatically exposed through an interactive Discord interface accessible to administrators.
+OmniBot provides a typed configuration system for modules. Each module can declare a configuration schema that is automatically exposed through an interactive Discord interface, accessible to administrators via `/config <module>`.
 
-## Declaring a configuration schema
+## Declaring a Schema
 
 A module declares its schema in `defineModule()` via the `config` property:
 
@@ -45,20 +45,22 @@ export default defineModule({
 });
 ```
 
-## Supported field types
+## Field Types
 
-| Type       | Input                 | Storage (JSON)    | Read              |
-| ---------- | --------------------- | ----------------- | ----------------- |
-| `STRING`   | Modal (text)          | `string`          | `string`          |
-| `NUMBER`   | Modal (text → number) | `number`          | `number`          |
-| `BOOLEAN`  | Toggle button         | `boolean`         | `boolean`         |
-| `USER`     | User select menu      | `string` (id)     | `User`            |
-| `ROLE`     | Role select menu      | `string` (id)     | `Role`            |
-| `CHANNEL`  | Channel select menu   | `string` (id)     | `Channel`         |
-| `CATEGORY` | Category select menu  | `string` (id)     | `CategoryChannel` |
-| `ENUM`     | Select menu (choices) | `string` (choice) | Literal union     |
+### Supported Types
 
-## Lists
+| Type       | Input                       | Storage (JSON)    | Read (deserialized) |
+| ---------- | --------------------------- | ----------------- | ------------------- |
+| `STRING`   | Modal (text input)          | `string`          | `string`            |
+| `NUMBER`   | Modal (text → number)       | `number`          | `number`            |
+| `BOOLEAN`  | Toggle button               | `boolean`         | `boolean`           |
+| `USER`     | User select menu            | `string` (id)     | `User`              |
+| `ROLE`     | Role select menu            | `string` (id)     | `Role`              |
+| `CHANNEL`  | Channel select menu         | `string` (id)     | `Channel`           |
+| `CATEGORY` | Category select menu        | `string` (id)     | `CategoryChannel`   |
+| `ENUM`     | Select menu (fixed choices) | `string` (choice) | Literal union       |
+
+### Lists
 
 Any type can be declared as a **list** using `type: [ConfigType.X]`:
 
@@ -66,20 +68,25 @@ Any type can be declared as a **list** using `type: [ConfigType.X]`:
 config: {
   channels: {
     name: "Monitored channels",
-    description: "Channels to monitor (one or more)",
-    type: [ConfigType.CHANNEL],    // Channel list
+    description: "Channels to monitor",
+    type: [ConfigType.CHANNEL],    // List of channels
   },
-  warnings: {
-    name: "Warnings",
-    description: "List of warnings",
-    type: [ConfigType.NUMBER],     // Number list
+  scores: {
+    name: "Scores",
+    description: "High scores list",
+    type: [ConfigType.NUMBER],     // List of numbers
   },
 }
 ```
 
-The returned type of `config.get("channels")` is `Channel[]`.
+List editing depends on the element type:
 
-## ENUM type (fixed choices)
+- **Entities** (`USER`, `ROLE`, `CHANNEL`, `CATEGORY`): native multi-select menus
+- **ENUM**: multi-select menu with the declared options
+- **Scalars** (`STRING`, `NUMBER`): dedicated add/remove editor
+- **`BOOLEAN`**: add/remove editor with toggle buttons
+
+### ENUM Type (Fixed Choices)
 
 The `ENUM` type restricts a field to a fixed set of values:
 
@@ -95,59 +102,91 @@ config: {
   features: {
     name: "Features",
     description: "Enabled features",
-    type: [ConfigType.ENUM],        // Multi-select list
+    type: [ConfigType.ENUM],
     options: ["welcome", "logs", "automod"] as const,
   },
 }
 ```
 
-- `options` is **required** on an `ENUM` entry
+- `options` is **required** on `ENUM` entries (enforced by the type system)
 - Using `as const` gives precise typing: `config.get("theme")` returns `"light" | "dark" | "auto"`
 - Without `as const`, the returned type is `string`
 
-## Default values
+## Default Values
 
-- A field **with** `defaultValue` is always present (`T`)
-- A field **without** `defaultValue` may be `undefined` (`T | undefined`)
-- Discord entities are automatically deserialized (stored as id, read as Discord objects)
+- A field **with** `defaultValue` is always present — the type is `T` (never `undefined`)
+- A field **without** `defaultValue` may be `T | undefined` (never set by the admin)
+- Entity fields without defaults return `undefined` (not a fake value)
 
-## Accessing configuration
+This is an important distinction — always check for `undefined` when accessing fields without defaults.
 
-Configuration is accessible via the `config` parameter in commands, listeners, and interactions:
+## Accessing Configuration
+
+The `config` parameter is passed automatically to commands, listeners, and interactions:
 
 ```typescript
-// In a command
-async execute(interaction, config) {
-  const channel = config.get("logChannel");   // Channel | undefined
-  const max = config.get("maxWarnings");      // number (has defaultValue)
-  const level = config.get("logLevel");       // "debug" | "info" | "warn" | "error"
+async function handler(interaction, config) {
+  const channel = config.get("logChannel"); // Channel | undefined
+  const max = config.get("maxWarnings"); // number (always present)
+  const level = config.get("logLevel"); // "debug" | "info" | "warn" | "error"
+
+  // Use with default
+  const safe = config.get("logChannel") ?? someDefaultChannel;
 }
 ```
 
-## Admin interface
+## Admin Interface
 
-The `/config <module>` command (admin-only) displays an interactive configuration panel featuring:
+### `/config <module>` Command
 
-- All configurable fields with their type and current value
-- Edit buttons adapted to each type (modal, toggle, select menu)
-- Automatic pagination if the module has more than 10 fields
-- Navigation bar when multiple pages
+- **Admin only** (`Administrator` permission required)
+- **Public response** — configuration is visible to everyone (transparency)
+- **Autocomplete** on module name (core + enabled modules)
 
-Changes are persisted and take effect immediately.
+The panel displays:
 
-## Best practices
+- All configurable fields with their type, description, and current value
+- Edit buttons adapted to each type (button toggle, modal, select menu)
+- Pagination when there are more than 10 fields (Discord's 40-component limit)
 
-### Field naming
+### Editing Flow
 
-- **Key**: camelCase (`logChannel`, `maxWarnings`)
-- **name**: human-readable, shown in the UI (`Log channel`)
-- **description**: explains the field's purpose
+| Field Type                            | Editor Type                    | Persistence | UI Update                       |
+| ------------------------------------- | ------------------------------ | ----------- | ------------------------------- |
+| `STRING`                              | Modal (text input)             | On submit   | Public message updated in place |
+| `NUMBER`                              | Modal (number input)           | On submit   | Public message updated in place |
+| `BOOLEAN`                             | Toggle button                  | On click    | Public message updated in place |
+| `USER`, `ROLE`, `CHANNEL`, `CATEGORY` | Entity select menu (ephemeral) | On select   | Public message refreshed        |
+| `ENUM`                                | String select menu (ephemeral) | On select   | Public message refreshed        |
+| List of scalars                       | Add/remove editor (ephemeral)  | On action   | Public message refreshed        |
 
-### Validation
+**Ephemeral editors** (select menus, list editors) refresh the public config message after each change using `refreshSourceConfigMessage()`. The source message ID is threaded through the `customId` of the ephemeral components.
 
-Validation is automatic based on the declared type. For `ENUM`, only values listed in `options` are accepted.
+## Persistence
 
-## Next steps
+Configuration is stored as a single JSON blob per guild in the `GuildConfiguration` table:
+
+```prisma
+model GuildConfiguration {
+  guildId String @id
+  data    Json   // Record<moduleId, { key: value }>
+}
+```
+
+- Entity IDs (user, role, channel) are stored as strings and **deserialized** to Discord objects at read time
+- An in-memory cache (`configCache`) avoids database reads on every interaction
+- The cache is invalidated on every write
+
+## Best Practices
+
+- **Use camelCase for keys**, human-readable `name` and clear `description`
+- **Provide `defaultValue`** for fields that should always have a value
+- **Keep schemas focused** — too many fields makes the admin panel unwieldy
+- **Use `as const`** on ENUM options for type-safe literal unions
+- **Check for `undefined`** when accessing fields without defaults
+
+## Next Steps
 
 - [Services](./services) for organizing business logic
 - [Database](./database) for advanced persistent data
+- [Commands](./commands) for creating slash commands
