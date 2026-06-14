@@ -25,12 +25,18 @@ src/modules/my-module/
 ## API
 
 ```typescript
-interface InteractionHandler {
-  customId: string;                              // Unique identifier
-  requiresAdmin?: boolean;                       // Admin-only
-  check: (interaction) => interaction is T;       // Type check
-  execute: (interaction, args[], config?)          // Execution function
-    => Promise<void>;
+interface InteractionHandler<Interaction, ConfigType> {
+  customId: string; // Unique identifier
+  requiresAdmin?: boolean; // Admin-only
+  check: (
+    interaction,
+    config // Type guard
+  ) => interaction is Interaction;
+  execute: (
+    interaction,
+    args: string[],
+    config // Execution function
+  ) => Promise<void>;
 }
 ```
 

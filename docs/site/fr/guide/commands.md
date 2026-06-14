@@ -27,12 +27,14 @@ export default declareCommand({
 interface Command {
   data: SlashCommandBuilder; // Configuration de la commande
   execute: (
+    // Fonction d'exécution (obligatoire)
     interaction,
-    config? // Fonction d'exécution (obligatoire)
+    config
   ) => Promise<void>;
   complete?: (
+    // Autocomplétion (optionnelle)
     interaction,
-    config? // Autocomplétion (optionnelle)
+    config
   ) => Promise<void>;
 }
 ```
