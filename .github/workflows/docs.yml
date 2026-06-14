@@ -3,41 +3,49 @@ name: Deploy docs to GitHub Pages
 on:
   push:
     branches: [master]
-    paths:
+    paths: &doc-paths
       - "docs/**"
       - ".github/workflows/docs.yml"
+  pull_request:
+    paths: *doc-paths
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
-  group: pages
-  cancel-in-progress: false
+  group: pages-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: jdx/mise-action@v2
+      - uses: jdx/mise-action@dba19683ed58901619b14f395a24841710cb4925 # v4.1.0
 
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --filter omnibot-docs
 
       - run: pnpm --filter omnibot-docs build
         env:
           DOCS_BASE: /OmniBot/
 
-      - uses: actions/upload-pages-artifact@v3
+      - if: &deploy-condition github.event_name == 'push' && github.ref == 'refs/heads/master'
+        uses: actions/upload-pages-artifact@v5
         with:
-          path: docs/.vitepress/dist
+          path: docs/site/.vitepress/dist
 
   deploy:
     needs: build
+    if: *deploy-condition
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v5
         id: deployment
