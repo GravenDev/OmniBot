@@ -34,19 +34,19 @@ Daemons are defined in `pitchfork.toml` (`bot` depends on `db`). Requires Docker
 
 OmniBot is a modular Discord bot. The core loads modules dynamically — **no registration needed outside the module directory**, modules are auto-discovered at startup. Each module is a self-contained plugin installed/uninstalled per guild.
 
-See [`docs/`](docs/README.md) for the full developer guide:
+See [`docs/site/`](docs/site/README.md) for the full developer guide:
 
-| Topic                      | Doc                                          |
-| -------------------------- | -------------------------------------------- |
-| Creating a module          | [docs/modules.md](docs/modules.md)           |
-| Slash commands             | [docs/commands.md](docs/commands.md)         |
-| Event listeners            | [docs/listeners.md](docs/listeners.md)       |
-| Buttons / modals / selects | [docs/interactions.md](docs/interactions.md) |
-| Services                   | [docs/services.md](docs/services.md)         |
-| Prisma multi-file schema   | [docs/prisma.md](docs/prisma.md)             |
-| Functional behavior        | [docs/functional.md](docs/functional.md)     |
+| Topic                      | Doc                                                                                |
+| -------------------------- | ---------------------------------------------------------------------------------- |
+| Creating a module          | [docs/site/en/guide/creating-a-module.md](docs/site/en/guide/creating-a-module.md) |
+| Slash commands             | [docs/site/en/guide/commands.md](docs/site/en/guide/commands.md)                   |
+| Event listeners            | [docs/site/en/guide/listeners.md](docs/site/en/guide/listeners.md)                 |
+| Buttons / modals / selects | [docs/site/en/guide/interactions.md](docs/site/en/guide/interactions.md)           |
+| Services                   | [docs/site/en/guide/services.md](docs/site/en/guide/services.md)                   |
+| Prisma / database          | [docs/site/en/guide/database.md](docs/site/en/guide/database.md)                   |
+| Functional behavior        | [docs/functional.md](docs/functional.md)                                           |
 
-The docs are also published as a VitePress site at [`docs/`](docs/) — run `pnpm --filter docs dev` to preview.
+The docs are also published as a VitePress site (sources in `docs/site/`) — run `pnpm --filter omnibot-docs dev` to preview.
 
 ## Key rules
 
