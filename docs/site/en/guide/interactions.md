@@ -26,8 +26,15 @@ src/modules/my-module/
 interface InteractionHandler {
   customId: string; // Prefix for custom ID matching
   requiresAdmin?: boolean; // Restrict to administrators
-  check: (interaction, config?) => interaction is SpecificType;
-  execute: (interaction, args: string[], config) => Promise<void>;
+  check: (
+    interaction: CompatibleInteraction,
+    config: ConfigProvider
+  ) => interaction is SpecificType;
+  execute: (
+    interaction: SpecificType,
+    args: string[],
+    config: ConfigProvider
+  ) => Promise<void>;
 }
 ```
 
