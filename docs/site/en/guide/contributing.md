@@ -128,9 +128,9 @@ pnpm test -- --watch         # Watch mode
 
 ## Finding Tasks
 
-- **[AUDIT.md](../../../AUDIT.md)** — tracks tech debt, known issues, and follow-ups
+- **[AUDIT.md](https://github.com/GravenDev/OmniBot/blob/master/AUDIT.md)** — tracks tech debt, known issues, and follow-ups
 - **[GitHub Issues](https://github.com/GravenDev/OmniBot/issues)** — feature requests and bug reports
-- **[Review docs](../../../docs/review/)** — code review findings with actionable items
+- **[Review docs](https://github.com/GravenDev/OmniBot/tree/master/docs/review)** — code review findings with actionable items
 
 ## Need Help?
 

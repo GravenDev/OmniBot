@@ -128,9 +128,9 @@ pnpm test -- --watch         # Mode watch
 
 ## Trouver des tâches
 
-- **[AUDIT.md](../../../AUDIT.md)** — suit la dette technique, les problèmes connus et les suivis
+- **[AUDIT.md](https://github.com/GravenDev/OmniBot/blob/master/AUDIT.md)** — suit la dette technique, les problèmes connus et les suivis
 - **[GitHub Issues](https://github.com/GravenDev/OmniBot/issues)** — demandes de fonctionnalités et rapports de bugs
-- **[Documents de review](../../../docs/review/)** — résultats de revue de code avec éléments actionnables
+- **[Documents de review](https://github.com/GravenDev/OmniBot/tree/master/docs/review)** — résultats de revue de code avec éléments actionnables
 
 ## Besoin d'aide ?
 
