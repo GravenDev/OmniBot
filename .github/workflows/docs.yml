@@ -2,7 +2,7 @@ name: Deploy docs to GitHub Pages
 
 on:
   push:
-    branches: [master]
+    branches: [master, vitepress-docs]
     paths:
       - "docs/**"
       - ".github/workflows/docs.yml"
@@ -37,6 +37,7 @@ jobs:
 
   deploy:
     needs: build
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
