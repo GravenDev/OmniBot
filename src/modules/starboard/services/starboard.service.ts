@@ -1,4 +1,7 @@
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   EmbedBuilder,
   type Message,
   type MessageReaction,
@@ -55,12 +58,13 @@ class StarboardService implements Service {
   ) {
     const embed = new EmbedBuilder()
       .setAuthor({
-        name: message.author.tag,
+        name:
+          message.member?.displayName ??
+          message.author.globalName ??
+          message.author.username,
         iconURL: message.author.displayAvatarURL(),
       })
-      .setDescription(
-        `${message.content || ""}\n\n[Aller au message](${message.url})`
-      )
+      .setDescription(message.content || null)
       .setColor(EMBED_COLORS[config.get("embedColor")]!)
       .setTimestamp(message.createdAt);
 
@@ -76,14 +80,22 @@ class StarboardService implements Service {
     return embed;
   }
 
+  private buildGoToMessageButton(message: Message) {
+    return new ActionRowBuilder<ButtonBuilder>().addComponents(
+      new ButtonBuilder()
+        .setStyle(ButtonStyle.Link)
+        .setURL(message.url)
+        .setLabel("Aller au message")
+    );
+  }
+
   async handleReactionChange(
     reaction: MessageReaction | PartialMessageReaction,
     user: User | PartialUser,
     config: ConfigProvider<StarboardConfigSchema>
   ): Promise<void> {
     try {
-      if (reaction.partial) return;
-      if (user.partial) return;
+      if (reaction.partial || user.partial) return;
 
       const message = await reaction.message.fetch();
       const guild = message.guild;
@@ -160,9 +172,17 @@ class StarboardService implements Service {
       config
     );
 
+    const goToButton = this.buildGoToMessageButton(message);
+
     const starboardMessage = await (channel as TextChannel).send({
       embeds: [starboardEmbed, ...message.embeds],
+      components: [goToButton],
     });
+
+    const firstEmoji = config.get("reactionEmojis")[0];
+    if (firstEmoji) {
+      await starboardMessage.react(firstEmoji).catch(() => {});
+    }
 
     await prisma.starboardEntry.create({
       data: {
@@ -177,9 +197,7 @@ class StarboardService implements Service {
   }
 
   private async updateStarboardEntry(
-    entry: {
-      id: string;
-    },
+    entry: { id: string },
     newCount: number
   ): Promise<void> {
     await prisma.starboardEntry.update({
