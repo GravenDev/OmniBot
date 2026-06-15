@@ -125,7 +125,7 @@ class StarboardService implements Service {
     if (imageAttachments.size > 0) {
       container.addMediaGalleryComponents((gallery) =>
         gallery.addItems(
-          ...imageAttachments.map((a) => ({ media: { url: a.url } }))
+          ...imageAttachments.map((a) => ({ media: { url: a.url } })).values()
         )
       );
     }
