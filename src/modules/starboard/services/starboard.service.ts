@@ -101,8 +101,14 @@ class StarboardService implements Service {
       EMBED_COLORS[config.get("embedColor")]!
     );
 
-    container.addTextDisplayComponents((text) =>
-      text.setContent(`### ${authorName}\n<t:${timestamp}:R>`)
+    container.addSectionComponents((section) =>
+      section
+        .addTextDisplayComponents((text) =>
+          text.setContent(`### ${authorName}\n-# <t:${timestamp}:R>`)
+        )
+        .setThumbnailAccessory((thumbnail) =>
+          thumbnail.setURL(message.author.displayAvatarURL())
+        )
     );
 
     container.addSeparatorComponents((separator) => separator.setDivider(true));
@@ -113,10 +119,14 @@ class StarboardService implements Service {
       );
     }
 
-    const firstAttachment = message.attachments.first();
-    if (firstAttachment && firstAttachment.contentType?.startsWith("image/")) {
-      container.addTextDisplayComponents((text) =>
-        text.setContent(`[🖼️ Image](${firstAttachment.url})`)
+    const imageAttachments = message.attachments.filter((a) =>
+      a.contentType?.startsWith("image/")
+    );
+    if (imageAttachments.size > 0) {
+      container.addMediaGalleryComponents((gallery) =>
+        gallery.addItems(
+          ...imageAttachments.map((a) => ({ media: { url: a.url } }))
+        )
       );
     }
 
@@ -129,7 +139,7 @@ class StarboardService implements Service {
     container.addSectionComponents((section) =>
       section
         .addTextDisplayComponents((text) =>
-          text.setContent(`-# ${metrics.totalUniqueUsers} unique`)
+          text.setContent(`-# ${metrics.totalUniqueUsers} total`)
         )
         .setButtonAccessory((button) =>
           button
@@ -236,7 +246,6 @@ class StarboardService implements Service {
 
     const starboardMessage = await (channel as TextChannel).send({
       components: [container],
-      embeds: [...message.embeds],
       flags: MessageFlags.IsComponentsV2,
     });
 
@@ -289,7 +298,6 @@ class StarboardService implements Service {
     );
     await starboardMessage.edit({
       components: [container],
-      embeds: [...originalMessage.embeds],
       flags: MessageFlags.IsComponentsV2,
     });
 
