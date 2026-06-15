@@ -1,8 +1,7 @@
 import {
-  ActionRowBuilder,
-  ButtonBuilder,
   ButtonStyle,
-  EmbedBuilder,
+  ContainerBuilder,
+  MessageFlags,
   type Guild,
   type Message,
   type MessageReaction,
@@ -83,50 +82,64 @@ class StarboardService implements Service {
     return { emojis, totalUniqueUsers: uniqueUsers.size };
   }
 
-  private buildStarboardEmbed(
-    message: Message,
-    metrics: ReactionMetrics,
-    config: ConfigProvider<StarboardConfigSchema>
-  ) {
-    const description = message.content
-      ? `${message.content}\n\n${this.buildReactionLine(metrics)}`
-      : this.buildReactionLine(metrics);
-
-    const embed = new EmbedBuilder()
-      .setAuthor({
-        name:
-          message.member?.displayName ??
-          message.author.globalName ??
-          message.author.username,
-        iconURL: message.author.displayAvatarURL(),
-      })
-      .setDescription(description)
-      .setColor(EMBED_COLORS[config.get("embedColor")]!)
-      .setTimestamp(message.createdAt);
-
-    const firstAttachment = message.attachments.first();
-    if (firstAttachment && firstAttachment.contentType?.startsWith("image/")) {
-      embed.setThumbnail(firstAttachment.url);
-    }
-
-    embed.setFooter({
-      text: `${metrics.totalUniqueUsers} unique`,
-    });
-
-    return embed;
-  }
-
   private buildReactionLine(metrics: ReactionMetrics): string {
     return metrics.emojis.map((m) => `${m.emoji} **${m.count}**`).join(" | ");
   }
 
-  private buildGoToMessageButton(message: Message) {
-    return new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setStyle(ButtonStyle.Link)
-        .setURL(message.url)
-        .setLabel("Aller au message")
+  private buildStarboardContainer(
+    message: Message,
+    metrics: ReactionMetrics,
+    config: ConfigProvider<StarboardConfigSchema>
+  ): ContainerBuilder {
+    const authorName =
+      message.member?.displayName ??
+      message.author.globalName ??
+      message.author.username;
+    const timestamp = Math.floor(message.createdAt.getTime() / 1000);
+
+    const container = new ContainerBuilder().setAccentColor(
+      EMBED_COLORS[config.get("embedColor")]!
     );
+
+    container.addTextDisplayComponents((text) =>
+      text.setContent(`### ${authorName}\n<t:${timestamp}:R>`)
+    );
+
+    container.addSeparatorComponents((separator) => separator.setDivider(true));
+
+    if (message.content) {
+      container.addTextDisplayComponents((text) =>
+        text.setContent(message.content)
+      );
+    }
+
+    const firstAttachment = message.attachments.first();
+    if (firstAttachment && firstAttachment.contentType?.startsWith("image/")) {
+      container.addTextDisplayComponents((text) =>
+        text.setContent(`[🖼️ Image](${firstAttachment.url})`)
+      );
+    }
+
+    container.addTextDisplayComponents((text) =>
+      text.setContent(this.buildReactionLine(metrics))
+    );
+
+    container.addSeparatorComponents((separator) => separator.setDivider(true));
+
+    container.addSectionComponents((section) =>
+      section
+        .addTextDisplayComponents((text) =>
+          text.setContent(`-# ${metrics.totalUniqueUsers} unique`)
+        )
+        .setButtonAccessory((button) =>
+          button
+            .setStyle(ButtonStyle.Link)
+            .setURL(message.url)
+            .setLabel("Aller au message")
+        )
+    );
+
+    return container;
   }
 
   async handleReactionChange(
@@ -219,12 +232,12 @@ class StarboardService implements Service {
     if (!channel?.isTextBased()) return;
     if (!("send" in channel)) return;
 
-    const starboardEmbed = this.buildStarboardEmbed(message, metrics, config);
-    const goToButton = this.buildGoToMessageButton(message);
+    const container = this.buildStarboardContainer(message, metrics, config);
 
     const starboardMessage = await (channel as TextChannel).send({
-      embeds: [starboardEmbed, ...message.embeds],
-      components: [goToButton],
+      components: [container],
+      embeds: [...message.embeds],
+      flags: MessageFlags.IsComponentsV2,
     });
 
     for (const metric of metrics.emojis) {
@@ -269,13 +282,15 @@ class StarboardService implements Service {
       return;
     }
 
-    const starboardEmbed = this.buildStarboardEmbed(
+    const container = this.buildStarboardContainer(
       originalMessage,
       metrics,
       config
     );
     await starboardMessage.edit({
-      embeds: [starboardEmbed, ...originalMessage.embeds],
+      components: [container],
+      embeds: [...originalMessage.embeds],
+      flags: MessageFlags.IsComponentsV2,
     });
 
     const currentReactions = starboardMessage.reactions.cache;
