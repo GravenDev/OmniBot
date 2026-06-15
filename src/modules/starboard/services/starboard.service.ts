@@ -81,6 +81,10 @@ class StarboardService implements Service {
     metrics: ReactionMetrics,
     config: ConfigProvider<StarboardConfigSchema>
   ) {
+    const description = message.content
+      ? `${message.content}\n\n${this.buildReactionLine(metrics)}`
+      : this.buildReactionLine(metrics);
+
     const embed = new EmbedBuilder()
       .setAuthor({
         name:
@@ -89,7 +93,7 @@ class StarboardService implements Service {
           message.author.username,
         iconURL: message.author.displayAvatarURL(),
       })
-      .setDescription(message.content || null)
+      .setDescription(description)
       .setColor(EMBED_COLORS[config.get("embedColor")]!)
       .setTimestamp(message.createdAt);
 
@@ -98,19 +102,15 @@ class StarboardService implements Service {
       embed.setThumbnail(firstAttachment.url);
     }
 
-    for (const metric of metrics.emojis) {
-      embed.addFields({
-        name: metric.emoji,
-        value: `× **${metric.count}**`,
-        inline: true,
-      });
-    }
-
     embed.setFooter({
       text: `${metrics.totalUniqueUsers} unique`,
     });
 
     return embed;
+  }
+
+  private buildReactionLine(metrics: ReactionMetrics): string {
+    return metrics.emojis.map((m) => `${m.emoji} **${m.count}**`).join(" | ");
   }
 
   private buildGoToMessageButton(message: Message) {
