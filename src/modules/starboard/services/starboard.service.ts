@@ -52,6 +52,13 @@ class StarboardService implements Service {
     });
   }
 
+  private formatEmoji(emoji: MessageReaction["emoji"]): string {
+    if (emoji.id) {
+      return `<${emoji.animated ? "a" : ""}:${emoji.name}:${emoji.id}>`;
+    }
+    return emoji.name!;
+  }
+
   private async computeReactionMetrics(
     message: Message,
     configuredEmojis: string[]
@@ -63,7 +70,7 @@ class StarboardService implements Service {
       if (!this.matchEmoji(reaction.emoji, configuredEmojis)) continue;
 
       emojis.push({
-        emoji: reaction.emoji.toString(),
+        emoji: this.formatEmoji(reaction.emoji),
         count: reaction.count,
       });
 
