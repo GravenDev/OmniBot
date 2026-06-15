@@ -3,6 +3,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   EmbedBuilder,
+  type Guild,
   type Message,
   type MessageReaction,
   type PartialMessageReaction,
@@ -15,6 +16,16 @@ import prisma from "#lib/database.js";
 import logger from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
 import type { StarboardConfigSchema } from "#modules/starboard/starboard.config.js";
+
+interface ReactionMetric {
+  emoji: string;
+  count: number;
+}
+
+interface ReactionMetrics {
+  emojis: ReactionMetric[];
+  totalUniqueUsers: number;
+}
 
 const EMBED_COLORS: Record<string, number> = {
   default: 0x2b2d31,
@@ -41,19 +52,33 @@ class StarboardService implements Service {
     });
   }
 
-  computeStarCount(message: Message, configuredEmojis: string[]): number {
-    let total = 0;
+  private async computeReactionMetrics(
+    message: Message,
+    configuredEmojis: string[]
+  ): Promise<ReactionMetrics> {
+    const emojis: ReactionMetric[] = [];
+    const uniqueUsers = new Set<string>();
+
     for (const [, reaction] of message.reactions.cache) {
-      if (this.matchEmoji(reaction.emoji, configuredEmojis)) {
-        total += reaction.count;
+      if (!this.matchEmoji(reaction.emoji, configuredEmojis)) continue;
+
+      emojis.push({
+        emoji: reaction.emoji.toString(),
+        count: reaction.count,
+      });
+
+      const users = await reaction.users.fetch();
+      for (const userId of users.keys()) {
+        uniqueUsers.add(userId);
       }
     }
-    return total;
+
+    return { emojis, totalUniqueUsers: uniqueUsers.size };
   }
 
   private buildStarboardEmbed(
     message: Message,
-    reactionCount: number,
+    metrics: ReactionMetrics,
     config: ConfigProvider<StarboardConfigSchema>
   ) {
     const embed = new EmbedBuilder()
@@ -73,8 +98,16 @@ class StarboardService implements Service {
       embed.setThumbnail(firstAttachment.url);
     }
 
+    for (const metric of metrics.emojis) {
+      embed.addFields({
+        name: metric.emoji,
+        value: `× **${metric.count}**`,
+        inline: true,
+      });
+    }
+
     embed.setFooter({
-      text: `${reactionCount} ⭐`,
+      text: `${metrics.totalUniqueUsers} unique`,
     });
 
     return embed;
@@ -121,7 +154,10 @@ class StarboardService implements Service {
         return;
       }
 
-      const totalStars = this.computeStarCount(message, configuredEmojis);
+      const metrics = await this.computeReactionMetrics(
+        message,
+        configuredEmojis
+      );
       const threshold = config.get("reactionCount");
 
       const existingEntry = await prisma.starboardEntry.findUnique({
@@ -134,15 +170,25 @@ class StarboardService implements Service {
       });
 
       if (existingEntry) {
-        if (totalStars >= threshold) {
-          await this.updateStarboardEntry(existingEntry, totalStars);
+        if (metrics.totalUniqueUsers >= threshold) {
+          await this.updateStarboardEntry(
+            existingEntry,
+            message,
+            metrics,
+            config
+          );
         } else if (config.get("belowThresholdBehavior") === "remove") {
-          await this.removeStarboardEntry(existingEntry);
+          await this.removeStarboardEntry(existingEntry, guild);
         } else {
-          await this.updateStarboardEntry(existingEntry, totalStars);
+          await this.updateStarboardEntry(
+            existingEntry,
+            message,
+            metrics,
+            config
+          );
         }
-      } else if (totalStars >= threshold) {
-        await this.createStarboardEntry(message, totalStars, config);
+      } else if (metrics.totalUniqueUsers >= threshold) {
+        await this.createStarboardEntry(message, metrics, config);
       }
     } catch (error) {
       logger.error(
@@ -153,7 +199,7 @@ class StarboardService implements Service {
 
   private async createStarboardEntry(
     message: Message,
-    reactionCount: number,
+    metrics: ReactionMetrics,
     config: ConfigProvider<StarboardConfigSchema>
   ): Promise<void> {
     const starboardChannel = config.get("starboardChannel");
@@ -166,12 +212,7 @@ class StarboardService implements Service {
     if (!channel?.isTextBased()) return;
     if (!("send" in channel)) return;
 
-    const starboardEmbed = this.buildStarboardEmbed(
-      message,
-      reactionCount,
-      config
-    );
-
+    const starboardEmbed = this.buildStarboardEmbed(message, metrics, config);
     const goToButton = this.buildGoToMessageButton(message);
 
     const starboardMessage = await (channel as TextChannel).send({
@@ -179,9 +220,8 @@ class StarboardService implements Service {
       components: [goToButton],
     });
 
-    const firstEmoji = config.get("reactionEmojis")[0];
-    if (firstEmoji) {
-      await starboardMessage.react(firstEmoji).catch(() => {});
+    for (const metric of metrics.emojis) {
+      await starboardMessage.react(metric.emoji).catch(() => {});
     }
 
     await prisma.starboardEntry.create({
@@ -191,22 +231,93 @@ class StarboardService implements Service {
         originalChannelId: message.channel.id,
         starboardMessageId: starboardMessage.id,
         starboardChannelId: starboardChannel.id,
-        reactionCount,
+        reactionCount: metrics.totalUniqueUsers,
+        reactions: metrics.emojis as any,
       },
     });
   }
 
   private async updateStarboardEntry(
-    entry: { id: string },
-    newCount: number
+    entry: {
+      id: string;
+      starboardMessageId: string;
+      starboardChannelId: string;
+    },
+    originalMessage: Message,
+    metrics: ReactionMetrics,
+    config: ConfigProvider<StarboardConfigSchema>
   ): Promise<void> {
+    const guild = originalMessage.guild;
+    if (!guild) return;
+
+    const channel = await guild.channels.fetch(entry.starboardChannelId);
+    if (!channel?.isTextBased()) return;
+
+    let starboardMessage: Message;
+    try {
+      starboardMessage = await (channel as TextChannel).messages.fetch(
+        entry.starboardMessageId
+      );
+    } catch {
+      return;
+    }
+
+    const starboardEmbed = this.buildStarboardEmbed(
+      originalMessage,
+      metrics,
+      config
+    );
+    await starboardMessage.edit({
+      embeds: [starboardEmbed, ...originalMessage.embeds],
+    });
+
+    const currentReactions = starboardMessage.reactions.cache;
+    for (const metric of metrics.emojis) {
+      if (!currentReactions.has(metric.emoji)) {
+        await starboardMessage.react(metric.emoji).catch(() => {});
+      }
+    }
+
+    for (const [, reaction] of currentReactions) {
+      const emojiString = reaction.emoji.toString();
+      if (!metrics.emojis.some((m) => m.emoji === emojiString)) {
+        await reaction.remove().catch(() => {});
+      }
+    }
+
     await prisma.starboardEntry.update({
       where: { id: entry.id },
-      data: { reactionCount: newCount },
+      data: {
+        reactionCount: metrics.totalUniqueUsers,
+        reactions: metrics.emojis as any,
+      },
     });
   }
 
-  private async removeStarboardEntry(entry: { id: string }): Promise<void> {
+  private async removeStarboardEntry(
+    entry: {
+      starboardMessageId: string;
+      starboardChannelId: string;
+      id: string;
+    },
+    guild: Guild
+  ): Promise<void> {
+    try {
+      const channel = await guild.channels.fetch(entry.starboardChannelId);
+      if (channel?.isTextBased()) {
+        try {
+          const msg = await (channel as TextChannel).messages.fetch(
+            entry.starboardMessageId
+          );
+          await msg.delete();
+        } catch {
+          // message already deleted or inaccessible
+        }
+      }
+    } catch {
+      // channel inaccessible
+    }
+
     await prisma.starboardEntry.delete({
       where: { id: entry.id },
     });
