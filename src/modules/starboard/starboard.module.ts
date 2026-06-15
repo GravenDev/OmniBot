@@ -15,7 +15,11 @@ export default defineModule({
 
   config: starboardConfigSchema,
 
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessageReactions],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.MessageContent,
+  ],
 
   onLoad(_client, registry) {
     registry.register(messageReactionAddListener);
