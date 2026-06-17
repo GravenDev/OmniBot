@@ -11,17 +11,21 @@ Au démarrage du bot (`src/index.ts`), la séquence suivante est exécutée :
    └─ prisma.$queryRaw`SELECT 1`
    └─ sort avec une erreur si la DB est indisponible
 
-2. Découverte des modules
+2. Initialisation i18n
+   └─ initI18n() — initialise le moteur i18next avec support de la locale de repli
+   └─ loadModuleI18n("core") — charge les fichiers de traduction du cœur (en.json, fr.json)
+
+3. Découverte des modules
    └─ loadModules("./modules")
    └─ parcourt chaque sous-dossier de src/modules/
    └─ importe le fichier *.module.ts
    └─ ignore les modules devOnly en production
 
-3. Agrégation des intentions
+4. Agrégation des intentions
    └─ collecte les GatewayIntentBits de tous les modules
    └─ crée le client Discord avec l'union de toutes les intentions
 
-4. Gestionnaire ClientReady (asynchrone)
+5. Gestionnaire ClientReady (asynchrone)
    ├─ Pour chaque module :
    │   ├─ module.onLoad(client, registry)
    │   └─ loadModuleEvents(client, module)
@@ -31,10 +35,10 @@ Au démarrage du bot (`src/index.ts`), la séquence suivante est exécutée :
    │   └─ Mode prod : commandes guild versionnées + commandes globales du cœur
    └─ loadGlobalEvents(client)
 
-5. Connexion
+6. Connexion
    └─ client.login(token)
 
-6. Gestionnaires d'arrêt
+7. Gestionnaires d'arrêt
    └─ SIGTERM / SIGINT → client.destroy() + prisma.$disconnect()
 ```
 
@@ -122,7 +126,8 @@ Le système de configuration comporte plusieurs couches :
 2. **Stockage** — Toutes les configurations sont stockées dans un blob JSON par serveur dans la table `GuildConfiguration`
 3. **Cache** — `ConfigService` maintient un cache en mémoire (`configCache`) pour éviter les lectures base de données à chaque interaction
 4. **Désérialisation** — Les IDs d'entités (utilisateur, rôle, salon) sont stockés sous forme de chaînes et résolus en objets Discord à la lecture
-5. **Interface admin** — `/config <module>` affiche un panneau interactif avec des contrôles d'édition par champ
+5. **Localisation** — Les noms et descriptions des champs sont résolus depuis les fichiers i18n du module (avec repli sur les valeurs par défaut en anglais dans le schéma TypeScript)
+6. **Interface admin** — `/config <module>` affiche un panneau interactif avec des contrôles d'édition par champ
 
 ## Couche service
 

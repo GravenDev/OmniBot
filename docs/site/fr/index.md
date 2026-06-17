@@ -26,4 +26,7 @@ features:
   - icon: 🎛️
     title: Configuration typée
     details: Déclarez un schéma de configuration et obtenez une UI interactive.
+  - icon: 🌐
+    title: Internationalisation
+    details: Traduisez l'interface de votre module en plusieurs langues avec des fichiers i18n par module.
 ---

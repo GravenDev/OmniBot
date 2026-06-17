@@ -195,6 +195,21 @@ Les interactions sont automatiquement liées à l'activation du module. Quand un
 
 Lors de l'édition de la configuration via des menus de sélection éphémères, le message de configuration source (public) doit être mis à jour. Le système utilise `refreshSourceConfigMessage()` qui transmet l'ID du message source dans les arguments `customId` et réédite le message public après chaque modification.
 
+## Localisation
+
+Les réponses d'interactions peuvent utiliser `config.t()` pour des chaînes localisées. Fournissez les traductions dans les fichiers `i18n/` de votre module :
+
+```typescript
+async execute(interaction, [actionId, userId]) {
+  await interaction.reply({
+    content: config.t("actionConfirmee", { action: actionId, user: userId }),
+    flags: MessageFlags.Ephemeral,
+  });
+}
+```
+
+La locale du serveur est configurée via `/config core > locale`. Voir [Configuration → Localisation](./configuration#localisation) pour les détails.
+
 ## Bonnes pratiques
 
 ### Types de réponse
