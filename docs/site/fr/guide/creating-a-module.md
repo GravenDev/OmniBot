@@ -7,6 +7,9 @@ Un module dans OmniBot est une unité fonctionnelle autonome qui peut être inst
 ```
 src/modules/mon-module/
 ├── mon-module.module.ts          # Définition principale du module
+├── i18n/                         # Fichiers de traduction
+│   ├── en.json
+│   └── fr.json
 ├── commands/                     # Commandes slash
 │   └── saluer.command.ts
 ├── listeners/                    # Écouteurs d'événements
@@ -141,6 +144,57 @@ Le chargeur de modules (`src/core/loaders/module-loader.ts`) parcourt `src/modul
 5. Retourne l'objet `Module`
 
 **Modules devOnly** (avec `devOnly: true`) sont ignorés quand `NODE_ENV` n'est pas `"development"`. Utilisez ceci pour les modules de test ou de débogage.
+
+## Internationalisation
+
+Les modules peuvent fournir des traductions pour leurs chaînes d'interface (nom, description, champs de configuration et messages du bot) via des fichiers de locale par module.
+
+### Ajouter des traductions
+
+Créez un dossier `i18n/` dans votre module avec un fichier JSON par locale :
+
+```
+src/modules/mon-module/
+├── mon-module.module.ts
+├── i18n/
+│   ├── en.json
+│   └── fr.json
+└── commands/
+    └── ...
+```
+
+Le chargeur de modules découvre automatiquement ces fichiers au démarrage et les enregistre dans i18next.
+
+### Format des fichiers de traduction
+
+Chaque fichier contient des paires clé-valeur. Le `name`, `description` et les champs de configuration du module sont automatiquement résolus depuis ces fichiers, remplaçant les valeurs par défaut TypeScript quand la locale correspondante est active :
+
+```json
+{
+  "module.name": "Mon Module",
+  "module.description": "Fait des choses géniales.",
+  "config.monChamp.name": "Mon Champ",
+  "config.monChamp.description": "Description de mon champ.",
+  "salutation": "Bonjour {{name}} !"
+}
+```
+
+### Utiliser les traductions dans le code
+
+Le `ConfigProvider` injecté dans les commandes, écouteurs et interactions expose une méthode `t()` :
+
+```typescript
+async execute(interaction, config) {
+  const salutation = config.t("salutation", { name: interaction.user.username });
+  await interaction.reply(salutation);
+}
+```
+
+Les clés sont d'abord cherchées dans le namespace du module, puis dans celui du cœur. Les libellés communs (`config.previous`, `config.next`, `config.toggle.enable`, etc.) sont fournis par le namespace cœur — pas besoin de les redéfinir dans chaque module.
+
+### Sélection de la locale
+
+La locale du serveur est configurée via les paramètres du module Cœur (`/config core > locale`). Quand un fichier de locale n'existe pas pour la langue sélectionnée, le système utilise l'anglais par défaut.
 
 ## Bonnes pratiques
 

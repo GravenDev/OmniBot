@@ -172,6 +172,28 @@ OmniBot fournit deux commandes intégrées dans le module **Cœur** (toujours ac
 | `/modules`         | Administrateur | Liste tous les modules avec boutons d'activation/désactivation |
 | `/config <module>` | Administrateur | Ouvre le panneau de configuration interactif d'un module       |
 
+## Localisation
+
+Les noms et descriptions des commandes slash peuvent être traduits par locale en utilisant les méthodes de localisation intégrées de Discord :
+
+```typescript
+data: new SlashCommandBuilder()
+  .setName("hello")
+  .setDescription("Says hello!")
+  .setNameLocalizations({ fr: "bonjour" })
+  .setDescriptionLocalizations({ fr: "Dit bonjour !" }),
+```
+
+Pour les chaînes spécifiques au module dans les réponses de commandes, utilisez `config.t()` pour chercher les traductions dans vos fichiers i18n :
+
+```typescript
+async execute(interaction, config) {
+  await interaction.reply(config.t("salutation", { user: interaction.user.username }));
+}
+```
+
+La locale du serveur est configurée via `/config core > locale`. Voir [Configuration → Localisation](./configuration#localisation) pour les détails sur la mise en place des fichiers de traduction.
+
 ## Bonnes pratiques
 
 - **Utilisez reply, deferReply ou editReply** de manière appropriée — différée pour les opérations de plus de 3 secondes

@@ -177,6 +177,50 @@ model GuildConfiguration {
 - Un cache en mémoire (`configCache`) évite les lectures base de données à chaque interaction
 - Le cache est invalidé à chaque écriture
 
+## Localisation
+
+Les noms et descriptions des champs de configuration peuvent être traduits par locale via des fichiers i18n. Le système résout automatiquement les valeurs localisées en fonction de la locale configurée du serveur (`/config core > locale`).
+
+### Traductions au niveau du module
+
+Créez un dossier `i18n/` dans votre module avec un fichier JSON par locale :
+
+```json
+// i18n/fr.json
+{
+  "config.monChamp.name": "Mon Champ",
+  "config.monChamp.description": "Description de mon champ."
+}
+
+// i18n/en.json
+{
+  "config.monChamp.name": "My Field",
+  "config.monChamp.description": "Description of my field."
+}
+```
+
+Les valeurs `name` et `description` dans le schéma TypeScript servent de valeurs par défaut en anglais — pas besoin de les dupliquer dans `en.json`.
+
+### Utiliser config.t() pour les messages
+
+Le `ConfigProvider` injecté dans les commandes, écouteurs et interactions expose une méthode `t()` pour les chaînes localisées :
+
+```typescript
+async execute(interaction, config) {
+  const message = config.t("messageBienvenue", { user: interaction.user.username });
+  await interaction.reply(message);
+}
+```
+
+### Repli de namespace
+
+Les clés sont résolues dans cet ordre :
+
+1. Le namespace du module (ex. `thread-creator:messageBienvenue`)
+2. Le namespace cœur (`core:messageBienvenue`)
+
+Cela signifie que les chaînes d'interface communes comme `config.previous`, `config.next`, `config.toggle.enable` et les noms de types (`type.text`, `type.number`, etc.) sont fournies par le namespace cœur — vous n'avez à traduire que les chaînes spécifiques à votre module.
+
 ## Bonnes pratiques
 
 - **Utilisez le camelCase pour les clés**, un `name` lisible et une `description` claire

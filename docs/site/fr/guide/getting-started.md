@@ -4,7 +4,7 @@ Bienvenue sur OmniBot ! Ce guide vous aidera à configurer le bot pour le dével
 
 ## Qu'est-ce qu'OmniBot ?
 
-OmniBot est un **bot Discord modulaire** développé pour la communauté [Graven - Développement](https://discord.gg/graven). Chaque fonctionnalité est un **module** autonome qui est auto-découvert au démarrage et peut être installé ou désinstallé **par serveur Discord** via `/modules`. Les modules déclarent leurs propres commandes slash, écouteurs d'événements, gestionnaires d'interactions et un schéma de configuration typé éditable en direct avec `/config <module>`.
+OmniBot est un **bot Discord modulaire** développé pour la communauté [Graven - Développement](https://discord.gg/graven). Chaque fonctionnalité est un **module** autonome qui est auto-découvert au démarrage et peut être installé ou désinstallé **par serveur Discord** via `/modules`. Les modules déclarent leurs propres commandes slash, écouteurs d'événements, gestionnaires d'interactions et un schéma de configuration typé éditable en direct avec `/config <module>`. L'interface entière est traduisible — chaque module peut inclure ses propres fichiers de locale.
 
 Le système central relie le tout — ajouter une fonctionnalité signifie créer un module, sans jamais toucher au bootstrap.
 
@@ -98,7 +98,9 @@ src/
 │   └── utils/                  #   Garde de permission, parseur de version, messages
 ├── modules/                    # Modules fonctionnels (un dossier par module)
 │   ├── thread-creator/         #   Module exemple : création automatique de fils
+│   │   └── i18n/               #     Traductions du module (en.json, fr.json)
 │   └── test-config/            #   Dev uniquement : teste tous les types de config
+│       └── i18n/               #     Traductions du module (en.json, fr.json)
 ├── lib/                        # Contrats partagés exposés aux modules
 │   ├── module.ts               #   defineModule()
 │   ├── command.ts              #   declareCommand()
@@ -134,6 +136,7 @@ Les fichiers utilisent des suffixes pour identifier leur rôle :
 | `*.select.ts`   | Gestionnaire de menu de sélection                       |
 | `*.service.ts`  | Service métier (ex. `file-attente.service.ts`)          |
 | `*.prisma`      | Définition de modèle Prisma                             |
+| `i18n/*.json`   | Fichiers de traduction (ex. `en.json`, `fr.json`)       |
 
 ---
 

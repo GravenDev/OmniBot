@@ -85,6 +85,19 @@ export default defineModule({
 
 De plus, les **intentions privilégiées** (`GuildMembers`, `GuildPresences`, `MessageContent`) doivent être activées dans le Discord Developer Portal sous Bot > Privileged Gateway Intents.
 
+## Localisation
+
+Les réponses des écouteurs peuvent utiliser `config.t()` pour des chaînes localisées. Fournissez les traductions dans les fichiers `i18n/` de votre module :
+
+```typescript
+async execute(message, config) {
+  if (!config) return;
+  await message.reply(config.t("messageBienvenue", { user: message.author.username }));
+}
+```
+
+La locale du serveur est configurée via `/config core > locale`. Voir [Configuration → Localisation](./configuration#localisation) pour les détails.
+
 ## Bonnes pratiques
 
 - **Filtrez tôt** — vérifiez les bots, MPs ou salons non pertinents au début de `execute()`
