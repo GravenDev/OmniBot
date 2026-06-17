@@ -52,6 +52,9 @@ interface Command {
 
 Le paramètre `config` est un `ConfigProvider` qui donne accès à la configuration du module (voir [Configuration](./configuration)). Il est toujours injecté — même pour les modules sans schéma de configuration.
 
+> [!NOTE]
+> Dans les handlers `complete()` (autocomplétion), le `config` injecté provient actuellement du module **Cœur** plutôt que du module de la commande. Les valeurs de configuration spécifiques au module ne sont donc pas disponibles pendant l'autocomplétion — seule la configuration du module Cœur est accessible.
+
 ```typescript
 async execute(interaction, config) {
   const salon = config.get("canalLog");

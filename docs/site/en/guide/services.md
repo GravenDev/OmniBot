@@ -122,7 +122,7 @@ config: {
 ## Best Practices
 
 - **Single responsibility** — each service should focus on one concern
-- **Testable** — services can be unit-tested without Discord API calls by importing the plain class before `declareService`
+- **Testable** — export the class so unit tests can import it directly before `declareService`; alternatively keep it in a separate file and import the plain class for testing without Discord API calls
 - **No global state** — use class instances with proper encapsulation
 - **Import directly** — import the declared instance where needed
 - **Use with Prisma** — services are the natural place for database operations

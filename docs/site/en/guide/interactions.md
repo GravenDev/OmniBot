@@ -61,6 +61,8 @@ The dispatcher splits the interaction's `customId` on `:`, uses the first segmen
 
 ```typescript
 // Command that creates the button
+import { ButtonBuilder, ButtonStyle } from "discord.js";
+
 const button = new ButtonBuilder()
   .setCustomId(`confirm-action:delete:${userId}`)
   .setLabel("Confirm")
@@ -69,6 +71,9 @@ const button = new ButtonBuilder()
 
 ```typescript
 // Interaction handler
+import { ButtonInteraction, MessageFlags } from "discord.js";
+import { declareInteractionHandler } from "#lib/interaction.js";
+
 export default declareInteractionHandler({
   customId: "confirm-action",
   check: (interaction): interaction is ButtonInteraction =>
