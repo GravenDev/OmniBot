@@ -99,7 +99,7 @@ class ConfigService {
       this.getLocaleForGuild(guildId),
       this.getOrCreate(guildId),
     ]);
-    const defaultConfig = this.createDefaultConfigForModule(module);
+    const defaultConfig = this.blankConfigForModule(module);
 
     const updatedConfig = {
       ...currentConfig,
@@ -168,12 +168,11 @@ class ConfigService {
       const moduleConfig = (config as Record<string, any>)[module.id];
 
       if (moduleConfig) {
-        // Validate that the module config has all required fields
-        const defaultConfig = this.createDefaultConfigForModule(module);
-        validatedConfig[module.id] = { ...defaultConfig, ...moduleConfig };
+        validatedConfig[module.id] = { ...moduleConfig };
       } else {
-        // If module config is missing, create default
-        validatedConfig[module.id] = this.createDefaultConfigForModule(module);
+        // No stored config for this module yet — start from a blank slate;
+        // defaults are filled in lazily at read time.
+        validatedConfig[module.id] = this.blankConfigForModule(module);
       }
     }
 
@@ -185,9 +184,10 @@ class ConfigService {
   ): Promise<Record<string, ConfigData<ConfigSchema>>> {
     const config: Record<string, ConfigData<ConfigSchema>> = {};
 
-    // Create default configuration for all modules
+    // Start every module with a blank stored config; defaults are resolved
+    // lazily at read time rather than baked in here.
     for (const module of [...modules, coreModule]) {
-      config[module.id] = this.createDefaultConfigForModule(module);
+      config[module.id] = this.blankConfigForModule(module);
     }
 
     // Save to database
@@ -204,23 +204,19 @@ class ConfigService {
     return config;
   }
 
-  private createDefaultConfigForModule<ConfigType extends ConfigSchema>(
-    module: Module<ConfigType>
+  /**
+   * The initial stored config for a module: empty.
+   *
+   * Defaults are deliberately NOT persisted — {@link ConfigProvider.get}
+   * resolves them lazily at read time, so an unconfigured value tracks the
+   * guild locale. Persisting a default would freeze its value (and its
+   * language) at creation time, and would make it indistinguishable from a
+   * value the admin set explicitly.
+   */
+  private blankConfigForModule<ConfigType extends ConfigSchema>(
+    _module: Module<ConfigType>
   ): ConfigData<ConfigType> {
-    const defaultConfig: any = {};
-
-    if (module.config) {
-      for (const [key, configEntry] of Object.entries(module.config)) {
-        // Only materialize a value when the entry declares a default. Entries
-        // without one stay absent (undefined) — never a fabricated "" / 0 /
-        // false / null — so reads reflect the real "not set" state.
-        if (configEntry.defaultValue !== undefined) {
-          defaultConfig[key] = configEntry.defaultValue;
-        }
-      }
-    }
-
-    return defaultConfig as ConfigData<ConfigType>;
+    return {} as ConfigData<ConfigType>;
   }
 
   private async deserializeConfigData<ConfigType extends ConfigSchema>(

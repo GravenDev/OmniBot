@@ -4,7 +4,9 @@
 
   "config.welcomeMessage.name": "Message de bienvenue",
   "config.welcomeMessage.description": "Message posté automatiquement dans chaque fil créé.",
+  "config.welcomeMessage.default": "💬 Utilisez ce fil pour discuter de ce sujet !",
 
   "config.threadNameTemplate.name": "Template de nom",
-  "config.threadNameTemplate.description": "Nom des fils — variables : {messageAuthor}, {messageContent}, {timestamp}."
+  "config.threadNameTemplate.description": "Nom des fils — variables : {messageAuthor}, {messageContent}, {timestamp}.",
+  "config.threadNameTemplate.default": "Discussion - {messageAuthor}"
 }

@@ -4,7 +4,9 @@
 
   "config.welcomeMessage.name": "Welcome message",
   "config.welcomeMessage.description": "Message automatically posted in each created thread.",
+  "config.welcomeMessage.default": "💬 Use this thread to discuss this topic!",
 
   "config.threadNameTemplate.name": "Name template",
-  "config.threadNameTemplate.description": "Thread name — variables: {messageAuthor}, {messageContent}, {timestamp}."
+  "config.threadNameTemplate.description": "Thread name — variables: {messageAuthor}, {messageContent}, {timestamp}.",
+  "config.threadNameTemplate.default": "Discussion - {messageAuthor}"
 }
