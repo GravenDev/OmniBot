@@ -166,6 +166,28 @@ OmniBot provides two built-in commands in the **Core** module (always active, no
 | `/modules`         | Administrator | Lists all modules with enable/disable buttons          |
 | `/config <module>` | Administrator | Opens the interactive configuration panel for a module |
 
+## Localization
+
+Slash command names and descriptions can be translated per locale using Discord's built-in localization methods:
+
+```typescript
+data: new SlashCommandBuilder()
+  .setName("hello")
+  .setDescription("Says hello!")
+  .setNameLocalizations({ fr: "bonjour" })
+  .setDescriptionLocalizations({ fr: "Dit bonjour !" }),
+```
+
+For module-specific strings in command responses, use `config.t()` to look up translations from your module's i18n files:
+
+```typescript
+async execute(interaction, config) {
+  await interaction.reply(config.t("greeting", { user: interaction.user.username }));
+}
+```
+
+The guild's locale is configured via the core module's `/config core > locale` setting. See [Configuration → Localization](./configuration#localization) for details on setting up translation files.
+
 ## Best Practices
 
 - **Use reply, deferReply, or editReply** appropriately — defer for operations that take longer than 3 seconds

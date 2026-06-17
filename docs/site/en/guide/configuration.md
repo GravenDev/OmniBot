@@ -177,6 +177,50 @@ model GuildConfiguration {
 - An in-memory cache (`configCache`) avoids database reads on every interaction
 - The cache is invalidated on every write
 
+## Localization
+
+Config field names and descriptions can be translated per guild locale via i18n files. The system resolves localized values automatically based on the guild's configured locale (`/config core > locale`).
+
+### Module-level translations
+
+Create an `i18n/` directory in your module with one JSON file per locale:
+
+```json
+// i18n/en.json
+{
+  "config.myField.name": "My Field",
+  "config.myField.description": "Description of my field."
+}
+
+// i18n/fr.json
+{
+  "config.myField.name": "Mon champ",
+  "config.myField.description": "Description de mon champ."
+}
+```
+
+The field's `name` and `description` in the TypeScript schema serve as English defaults — there's no need to duplicate them in `en.json`.
+
+### Using config.t() for messages
+
+The `ConfigProvider` injected into commands, listeners, and interactions exposes a `t()` method for localized strings anywhere in your module:
+
+```typescript
+async execute(interaction, config) {
+  const message = config.t("welcomeMessage", { user: interaction.user.username });
+  await interaction.reply(message);
+}
+```
+
+### Namespace fallback
+
+Keys are resolved in this order:
+
+1. Your module's namespace (e.g. `thread-creator:welcomeMessage`)
+2. The core namespace (`core:welcomeMessage`)
+
+This means common UI strings like `config.previous`, `config.next`, `config.toggle.enable`, and type names (`type.text`, `type.number`, etc.) are provided by the core namespace — you only need to translate module-specific strings.
+
 ## Best Practices
 
 - **Use camelCase for keys**, human-readable `name` and clear `description`

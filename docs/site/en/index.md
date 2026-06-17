@@ -26,4 +26,7 @@ features:
   - icon: 🎛️
     title: Typed configuration
     details: Declare a config schema and get an interactive editing UI.
+  - icon: 🌐
+    title: Internationalization
+    details: Localize your module's UI in multiple languages with per-module i18n files.
 ---
