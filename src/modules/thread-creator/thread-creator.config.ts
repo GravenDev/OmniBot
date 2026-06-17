@@ -17,7 +17,8 @@ export const threadCreatorConfigSchema = {
     name: "Welcome message",
     description: "Message automatically posted in each created thread.",
     type: ConfigType.STRING,
-    defaultValue: "💬 Utilisez ce fil pour discuter de ce sujet !",
+    // English fallback; localized per locale via `config.welcomeMessage.default`.
+    defaultValue: "💬 Use this thread to discuss this topic!",
   },
   threadNameTemplate: {
     name: "Name template",

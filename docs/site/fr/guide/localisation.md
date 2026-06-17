@@ -51,6 +51,23 @@ Utilisez la syntaxe <code v-pre>{{param}}</code> pour les valeurs dynamiques —
 | `config.<fieldKey>.name`        | `name` du champ dans le schéma        |
 | `config.<fieldKey>.description` | `description` du champ dans le schéma |
 
+### Valeurs par défaut
+
+La valeur par défaut d'un champ texte libre (`STRING`) peut être localisée, afin qu'une valeur non configurée s'affiche dans la langue du serveur :
+
+| Motif de clé                | Remplace                                             |
+| --------------------------- | ---------------------------------------------------- |
+| `config.<fieldKey>.default` | Le `defaultValue` du champ (champs texte uniquement) |
+
+Le `defaultValue` du schéma reste le repli anglais. Les défauts ne sont **pas persistés** : `ConfigProvider.get()` les résout à la lecture, donc la valeur suit la langue du serveur et change en direct si la langue change — jusqu'à ce qu'un admin définisse explicitement le champ, après quoi la valeur stockée prime et ne suit plus la langue.
+
+Seuls les champs `STRING` sont localisés ainsi. Les défauts d'enum sont des identifiants stockés (pas du texte affichable) et sont renvoyés tels quels, comme les nombres, booléens et listes.
+
+> [!NOTE]
+> Les serveurs dont la config est antérieure à ce mécanisme conservent le défaut
+> déjà stocké jusqu'à un reset via `/config` — il n'y a pas de migration
+> automatique.
+
 ## Utiliser les traductions dans le code
 
 Le `ConfigProvider` injecté dans les commandes, écouteurs et interactions expose une méthode `t()` :

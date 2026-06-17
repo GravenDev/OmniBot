@@ -196,6 +196,39 @@ export class ConfigProvider<TSchema extends ConfigSchema> {
   }
 
   get<TKey extends keyof TSchema>(key: TKey): ConfigEntryValue<TSchema[TKey]> {
-    return this.data[key];
+    const stored = this.data[key];
+    // A stored value — including `null`, an intentional clear — wins. Only a
+    // truly absent (`undefined`) entry falls back to the schema default.
+    // Defaults are not persisted (see ConfigService), so an unconfigured entry
+    // reaches this branch and is resolved fresh against the current locale.
+    if (stored !== undefined) {
+      return stored;
+    }
+    return this.resolveDefault(key);
+  }
+
+  /**
+   * The schema default for `key`, resolved against the active locale.
+   *
+   * Free-text string defaults are looked up as `config.<key>.default`, so a
+   * module can translate them per locale; the schema's `defaultValue` is the
+   * fallback when no translation matches. Every other type is returned verbatim
+   * — enum defaults in particular are stored identifiers, never display text,
+   * and must not be translated.
+   */
+  private resolveDefault<TKey extends keyof TSchema>(
+    key: TKey
+  ): ConfigEntryValue<TSchema[TKey]> {
+    const entry = this.module.config[key];
+    type Value = ConfigEntryValue<TSchema[TKey]>;
+    if (!entry || entry.defaultValue === undefined) {
+      return undefined as Value;
+    }
+    if (entry.type === ConfigType.STRING) {
+      return this.t("config." + String(key) + ".default", {
+        defaultValue: entry.defaultValue as string,
+      }) as Value;
+    }
+    return entry.defaultValue as Value;
   }
 }

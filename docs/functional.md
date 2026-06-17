@@ -38,6 +38,13 @@ Dès qu'un message est posté dans le salon configuré :
 **Template par défaut :** `Discussion - {messageAuthor}`  
 **Message de bienvenue par défaut :** `💬 Utilisez ce fil pour discuter de ce sujet !`
 
+> [!NOTE]
+> Les valeurs par défaut suivent la langue du serveur (`/config core`) : tant
+> qu'un administrateur n'a pas saisi sa propre valeur, le message de bienvenue
+> par défaut s'affiche dans la langue configurée et change si on bascule la
+> langue. Dès qu'une valeur est définie manuellement, elle est figée et
+> n'est plus affectée par la langue.
+
 **Limites :**
 
 - Noms de fils tronqués à 100 caractères (limite Discord)

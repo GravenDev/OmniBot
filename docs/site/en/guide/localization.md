@@ -51,6 +51,22 @@ Use <code v-pre>{{param}}</code> syntax for dynamic values — never concatenate
 | `config.<fieldKey>.name`        | Field `name` in the config schema        |
 | `config.<fieldKey>.description` | Field `description` in the config schema |
 
+### Default values
+
+A free-text (`STRING`) field's default can be localized so an unconfigured value renders in the guild's language:
+
+| Key pattern                 | Overrides                                          |
+| --------------------------- | -------------------------------------------------- |
+| `config.<fieldKey>.default` | The field's `defaultValue` (free-text fields only) |
+
+The schema's `defaultValue` stays the English fallback. Defaults are **not persisted**: `ConfigProvider.get()` resolves them lazily, so the value tracks the guild locale and changes live when the locale changes — until an admin sets the field explicitly, after which the stored value wins and no longer follows the locale.
+
+Only `STRING` fields are localized this way. Enum defaults are stored identifiers (not display text) and are returned verbatim, as are numbers, booleans and lists.
+
+> [!NOTE]
+> Guilds whose config predates this mechanism keep whatever default was already
+> stored until a `/config` reset — there is no automatic migration.
+
 ## Using translations in code
 
 The `ConfigProvider` injected into commands, listeners, and interactions exposes a `t()` method:

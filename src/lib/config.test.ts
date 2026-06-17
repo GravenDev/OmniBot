@@ -1,4 +1,4 @@
-import { describe, expect, expectTypeOf, it } from "vitest";
+import { beforeAll, describe, expect, expectTypeOf, it } from "vitest";
 import {
   ConfigProvider,
   ConfigType,
@@ -9,6 +9,7 @@ import {
   type ConfigEntry,
   type ConfigSchema,
 } from "./config.js";
+import { addTranslations, initI18n } from "./i18n.js";
 import type { Module } from "./module.js";
 
 describe("ConfigValidator", () => {
@@ -184,6 +185,80 @@ describe("ConfigProvider", () => {
     expectTypeOf(provider.get("tags")).toEqualTypeOf<
       ("a" | "b" | "c")[] | undefined
     >();
+  });
+});
+
+describe("ConfigProvider default resolution", () => {
+  beforeAll(async () => {
+    await initI18n();
+    addTranslations("fr", "test-mod", {
+      "config.note.default": "Bonjour",
+    });
+  });
+
+  const schema = {
+    note: {
+      name: "Note",
+      description: "A note",
+      type: ConfigType.STRING,
+      defaultValue: "Hello",
+    },
+    count: {
+      name: "Count",
+      description: "A count",
+      type: ConfigType.NUMBER,
+      defaultValue: 5,
+    },
+    mode: {
+      name: "Mode",
+      description: "A choice",
+      type: ConfigType.ENUM,
+      options: ["light", "dark"] as const,
+      defaultValue: "light",
+    },
+    greeting: {
+      name: "Greeting",
+      description: "No default",
+      type: ConfigType.STRING,
+    },
+  } satisfies ConfigSchema;
+
+  const module = {
+    id: "test-mod",
+    config: schema,
+  } as unknown as Module<typeof schema>;
+
+  const empty = {} as ConfigData<typeof schema>;
+
+  it("resolves an unset string default through the locale", () => {
+    const provider = new ConfigProvider(module, empty, "fr");
+    expect(provider.get("note")).toBe("Bonjour");
+  });
+
+  it("falls back to the schema default when no translation matches", () => {
+    const provider = new ConfigProvider(module, empty, "en");
+    expect(provider.get("note")).toBe("Hello");
+  });
+
+  it("returns non-string defaults verbatim (numbers, enums)", () => {
+    const provider = new ConfigProvider(module, empty, "fr");
+    expect(provider.get("count")).toBe(5);
+    // Enum defaults are stored identifiers, never translated.
+    expect(provider.get("mode")).toBe("light");
+  });
+
+  it("prefers a stored value over the default", () => {
+    const provider = new ConfigProvider(
+      module,
+      { note: "stored" } as ConfigData<typeof schema>,
+      "fr"
+    );
+    expect(provider.get("note")).toBe("stored");
+  });
+
+  it("returns undefined for an unset field without a default", () => {
+    const provider = new ConfigProvider(module, empty, "fr");
+    expect(provider.get("greeting")).toBeUndefined();
   });
 });
 
