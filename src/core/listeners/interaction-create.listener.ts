@@ -59,11 +59,18 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
     logger.debug(`Executing command | name = ${interaction.commandName}`);
     await command.command.execute(interaction, config);
   } else {
+    const coreConfig = await configService.getConfigForModuleIn(
+      coreModule,
+      interaction.guildId!
+    );
+
     logger.warn(
       `Command not enabled | name = ${interaction.commandName} | module = ${command.module.id}`
     );
     await interaction.reply({
-      content: `The command \`${interaction.commandName}\` is not enabled in this guild.`,
+      content: coreConfig.t("command.notEnabled", {
+        commandName: interaction.commandName,
+      }),
       flags: MessageFlags.Ephemeral,
     });
   }
@@ -157,8 +164,14 @@ async function handleInteraction(interaction: CompatibleInteraction) {
 
     if (!handler.handler.check(interaction, config)) return;
 
-    if (handler.handler.requiresAdmin && !(await requireAdmin(interaction))) {
-      return;
+    if (handler.handler.requiresAdmin) {
+      const coreConfig = await configService.getConfigForModuleIn(
+        coreModule,
+        interaction.guildId!
+      );
+      if (!(await requireAdmin(interaction, coreConfig.t))) {
+        return;
+      }
     }
 
     try {

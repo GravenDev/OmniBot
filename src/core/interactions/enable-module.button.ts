@@ -1,5 +1,7 @@
 import { MessageFlags } from "discord.js";
+import coreModule from "#core/core.module.js";
 import { installModule } from "#core/loaders/module-installer.js";
+import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import { modulesMessage } from "#core/utils/core-messages.js";
 import { modules } from "#index.js";
@@ -11,9 +13,14 @@ export default declareInteractionHandler({
   check: (interaction) => interaction.isButton(),
   async execute(interaction, args) {
     const moduleId = args[0];
+    const coreConfig = await configService.getConfigForModuleIn(
+      coreModule,
+      interaction.guildId!
+    );
+
     if (!moduleId) {
       await interaction.reply({
-        content: "The button is malformed. Please try again later.",
+        content: coreConfig.t("interaction.malformed"),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -22,7 +29,7 @@ export default declareInteractionHandler({
     const module = modules.find((mod) => mod.id === moduleId);
     if (!module) {
       await interaction.reply({
-        content: "Module not found. Please try again later.",
+        content: coreConfig.t("interaction.moduleNotFound"),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -34,7 +41,7 @@ export default declareInteractionHandler({
       await installModule(module, interaction.guild!);
     } catch {
       await interaction.followUp({
-        content: "Failed to enable the module. Please try again later.",
+        content: coreConfig.t("interaction.failedEnable"),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -45,7 +52,7 @@ export default declareInteractionHandler({
     );
 
     await defer.edit({
-      components: [modulesMessage(modulesState)],
+      components: [modulesMessage(modulesState, coreConfig.t)],
       flags: MessageFlags.IsComponentsV2,
     });
   },
