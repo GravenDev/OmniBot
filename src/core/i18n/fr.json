@@ -57,7 +57,7 @@
   "select.category.selectMultiple": "Sélectionnez des catégories",
   "select.category.selectSingle": "Sélectionnez une catégorie",
 
-  "config.header": "# Paramètres de `{{moduleName}}`",
+  "config.header": "# Paramètres · `{{moduleName}}`",
   "config.page": "-# Page {{current}}/{{total}}",
   "config.option": "-# {{typeName}}\n**⚙️  {{optionName}}**\n> {{optionDesc}}\n{{currentValue}}\n\n",
 
@@ -71,7 +71,7 @@
   "type.choice": "Choix",
   "type.listOf": "Liste de {{type}}",
 
-  "modules.core.name": "Module Principal",
+  "modules.core.name": "Configuration Globale",
   "modules.core.description": "Le module principal de l'application, gérant les commandes et évènements principaux. Il est toujours chargé.",
 
   "modules.thread-creator.name": "Thread Creator",

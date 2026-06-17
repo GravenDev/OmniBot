@@ -18,7 +18,7 @@ import commandListener from "./listeners/interaction-create.listener.js";
 
 export default defineModule({
   id: "core",
-  name: "Core Module",
+  name: "Global Configuration",
   description:
     "The core module of the application, managing core commands and events. It is always loaded.",
   version: "1.1.1",
