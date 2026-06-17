@@ -268,23 +268,10 @@ export class ConfigProvider<TSchema extends ConfigSchema> {
   }
 
   /**
-   * Whether `get(key)` is currently serving the schema default rather than a
-   * stored value — true only when nothing is stored and the entry declares a
-   * default. A cleared value (`null`) counts as explicitly set, not default.
-   * Lets the UI flag which values the admin has actually chosen.
-   */
-  isDefault<TKey extends keyof TSchema>(key: TKey): boolean {
-    if (this.data[key] !== undefined) {
-      return false;
-    }
-    return this.module.config[key]?.defaultValue !== undefined;
-  }
-
-  /**
-   * Whether `key` holds an explicitly stored value (including a `null` clear) —
-   * i.e. something a reset could remove to fall back to the default. Distinct
-   * from `!isDefault`: a field with neither a stored value nor a default is not
-   * "set" yet not "default" either.
+   * Whether `key` holds an explicitly stored value (including a `null` clear).
+   * Its negation means the admin has not set the field: `get(key)` is serving a
+   * default — or simply nothing, for a field without one. The UI flags such
+   * values as "default" and a reset only ever touches set fields.
    */
   isSet<TKey extends keyof TSchema>(key: TKey): boolean {
     return this.data[key] !== undefined;
