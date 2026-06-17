@@ -1,0 +1,10 @@
+{
+  "config.channels.name": "Salons surveillés",
+  "config.channels.description": "Salons où surveiller les nouveaux messages (un fil est créé sous chaque message).",
+
+  "config.welcomeMessage.name": "Message de bienvenue",
+  "config.welcomeMessage.description": "Message posté automatiquement dans chaque fil créé.",
+
+  "config.threadNameTemplate.name": "Template de nom",
+  "config.threadNameTemplate.description": "Nom des fils — variables : {messageAuthor}, {messageContent}, {timestamp}."
+}

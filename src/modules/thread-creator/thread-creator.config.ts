@@ -8,21 +8,21 @@ import { ConfigType, type ConfigSchema } from "#lib/config.js";
  */
 export const threadCreatorConfigSchema = {
   channels: {
-    name: "Salons surveillés",
+    name: "Monitored channels",
     description:
-      "Salons où surveiller les nouveaux messages (un fil est créé sous chaque message).",
+      "Channels where new messages are monitored (a thread is created under each message).",
     type: [ConfigType.CHANNEL],
   },
   welcomeMessage: {
-    name: "Message de bienvenue",
-    description: "Message posté automatiquement dans chaque fil créé.",
+    name: "Welcome message",
+    description: "Message automatically posted in each created thread.",
     type: ConfigType.STRING,
     defaultValue: "💬 Utilisez ce fil pour discuter de ce sujet !",
   },
   threadNameTemplate: {
-    name: "Template de nom",
+    name: "Name template",
     description:
-      "Nom des fils — variables : {messageAuthor}, {messageContent}, {timestamp}.",
+      "Thread name — variables: {messageAuthor}, {messageContent}, {timestamp}.",
     type: ConfigType.STRING,
     defaultValue: "Discussion - {messageAuthor}",
   },

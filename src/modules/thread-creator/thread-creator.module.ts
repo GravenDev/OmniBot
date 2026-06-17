@@ -8,7 +8,7 @@ export default defineModule({
   id: "thread-creator",
   name: "Thread Creator",
   description:
-    "Crée automatiquement des fils de discussion sous chaque nouveau message dans les canaux configurés. Remplace le bot Needle.",
+    "Automatically creates discussion threads under each new message in configured channels. Replaces Needle bot.",
   version: "2.1.0",
   author: "AsyncMod Team",
 
