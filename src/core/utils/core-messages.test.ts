@@ -5,8 +5,7 @@ import {
   type ConfigData,
   type ConfigSchema,
 } from "#lib/config.js";
-import { initI18n } from "#lib/i18n.js";
-import { addTranslations } from "#lib/i18n.js";
+import { addTranslations, initI18n } from "#lib/i18n.js";
 import type { Module } from "#lib/module.js";
 import {
   CONFIG_FIELDS_PER_PAGE,

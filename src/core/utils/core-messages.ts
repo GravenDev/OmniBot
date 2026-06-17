@@ -166,7 +166,9 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
           typeName: getConfigTypeName(option.type, config.t),
           optionName: optName,
           optionDesc: optDesc,
-          currentValue: renderCurrentValue(option.type, value),
+          currentValue: config.t("config.currentValue", {
+            value: renderCurrentValue(option.type, value),
+          }),
         })
       )
     );
