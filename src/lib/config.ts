@@ -179,6 +179,31 @@ export function formatConfigValue(
 }
 
 /**
+ * Flag emojis for known `display: "language"` codes, shown as a select prefix.
+ * There is no canonical language→flag mapping (English has no single flag — GB
+ * is used here), so this is a small curated table; extend it when adding a
+ * locale. Codes absent here simply get no emoji.
+ */
+const LANGUAGE_FLAGS: Record<string, string> = {
+  en: "🇬🇧",
+  fr: "🇫🇷",
+};
+
+/**
+ * Optional emoji shown before an enum option in a select menu — currently the
+ * flag for a `language` enum value. Returns undefined when none applies.
+ */
+export function configValueEmoji(
+  entry: ConfigEntry<ConfigType>,
+  value: unknown
+): string | undefined {
+  if (isEnumEntry(entry) && entry.display === "language") {
+    return LANGUAGE_FLAGS[String(value)];
+  }
+  return undefined;
+}
+
+/**
  * Resolved value type of an entry, before factoring in default presence. Enum
  * entries narrow to the literal union of their `options`; everything else maps
  * through {@link ResolveType}.
