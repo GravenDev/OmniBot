@@ -1,3 +1,5 @@
+import { fileURLToPath } from "node:url";
+import path from "path";
 import { Client, Events } from "discord.js";
 import coreModule from "./core/core.module.js";
 import { syncCommands } from "./core/loaders/command-loader.js";
@@ -5,8 +7,9 @@ import {
   loadGlobalEvents,
   loadModuleEvents,
 } from "./core/loaders/listener-loader.js";
-import { loadModules } from "./core/loaders/module-loader.js";
+import { loadModuleI18n, loadModules } from "./core/loaders/module-loader.js";
 import prisma, { Prisma } from "./lib/database.js";
+import { initI18n } from "./lib/i18n.js";
 import logger from "./lib/logger.js";
 import sql = Prisma.sql;
 
@@ -20,6 +23,11 @@ try {
 }
 
 const token = process.env["DISCORD_TOKEN"];
+
+await initI18n();
+
+const corePath = path.resolve(fileURLToPath(import.meta.url), "..", "core");
+await loadModuleI18n("core", corePath);
 
 export const modules = await loadModules("./modules");
 const intents = modules.flatMap((module) => module.intents).filter((a) => !!a);

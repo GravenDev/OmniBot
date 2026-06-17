@@ -14,11 +14,27 @@ import { declareService } from "#lib/service.js";
 const configCache = new Map<string, Record<string, ConfigData<ConfigSchema>>>();
 
 class ConfigService {
+  /**
+   * Resolve the locale for a guild. Falls back to "en" when the value is
+   * missing or invalid. Reads directly from the raw cache / database entry
+   * to avoid the circular dependency that would arise from going through
+   * getConfigForModuleIn for core.
+   */
+  async getLocaleForGuild(guildId: string): Promise<string> {
+    const config = await this.getOrCreate(guildId);
+    const coreData = config["core"] as Record<string, unknown> | undefined;
+    const locale = coreData?.["locale"];
+    return typeof locale === "string" && locale.length > 0 ? locale : "en";
+  }
+
   async getConfigForModuleIn<ConfigType extends ConfigSchema>(
     module: Module<ConfigType>,
     guildId: string
   ): Promise<ConfigProvider<ConfigType>> {
-    const config = await this.getOrCreate(guildId);
+    const [locale, config] = await Promise.all([
+      this.getLocaleForGuild(guildId),
+      this.getOrCreate(guildId),
+    ]);
     const configData = config[module.id];
 
     // Deserialize the config data before creating the provider
@@ -28,7 +44,7 @@ class ConfigService {
       guildId
     );
 
-    return new ConfigProvider(module, deserializedConfig);
+    return new ConfigProvider(module, deserializedConfig, locale);
   }
 
   async updateConfigForModuleIn<ConfigType extends ConfigSchema>(
@@ -36,7 +52,10 @@ class ConfigService {
     guildId: string,
     newConfig: Partial<ConfigData<ConfigType>>
   ): Promise<ConfigProvider<ConfigType>> {
-    const currentConfig = await this.getOrCreate(guildId);
+    const [locale, currentConfig] = await Promise.all([
+      this.getLocaleForGuild(guildId),
+      this.getOrCreate(guildId),
+    ]);
     const moduleConfig = currentConfig[module.id] as ConfigData<ConfigType>;
 
     if (!moduleConfig) {
@@ -69,15 +88,18 @@ class ConfigService {
       guildId
     );
 
-    return new ConfigProvider(module, deserializedConfig);
+    return new ConfigProvider(module, deserializedConfig, locale);
   }
 
   async resetConfigForModuleIn<ConfigType extends ConfigSchema>(
     module: Module<ConfigType>,
     guildId: string
   ): Promise<ConfigProvider<ConfigType>> {
+    const [locale, currentConfig] = await Promise.all([
+      this.getLocaleForGuild(guildId),
+      this.getOrCreate(guildId),
+    ]);
     const defaultConfig = this.createDefaultConfigForModule(module);
-    const currentConfig = await this.getOrCreate(guildId);
 
     const updatedConfig = {
       ...currentConfig,
@@ -101,7 +123,7 @@ class ConfigService {
       guildId
     );
 
-    return new ConfigProvider(module, deserializedConfig);
+    return new ConfigProvider(module, deserializedConfig, locale);
   }
 
   async getFullConfigForGuild(
