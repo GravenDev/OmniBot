@@ -1,0 +1,79 @@
+{
+  "modules.title": "# Modules",
+  "modules.description": "Les modules marqués avec ✅ sont activés, ceux marqués avec ❌ sont désactivés.",
+  "modules.enable": "Activer",
+  "modules.disable": "Désactiver",
+  "modules.item": "{{emoji}} `{{moduleName}}`{{version}}\n> {{description}}",
+  "config.noConfig": "Ce module n'a aucune configuration disponible.",
+  "config.previous": "◀ Précédent",
+  "config.next": "Suivant ▶",
+  "config.noModule": "Aucun module avec l'id `{{moduleId}}`",
+  "config.currentValue": "Valeur actuelle : {{value}}",
+  "config.notFound": "Configuration introuvable.",
+  "config.invalidSelection": "Valeur sélectionnée invalide.",
+  "config.number.invalid": "❌ `{{value}}` n'est pas un nombre valide.",
+
+  "config.enum.noOptions": "Ce champ ne déclare aucune option.",
+  "config.enum.selectMultiple": "Sélectionnez une ou plusieurs valeurs",
+  "config.enum.selectSingle": "Sélectionnez une valeur",
+
+  "admin.noPermission": "Vous n'avez pas la permission de gérer les modules.",
+
+  "setConfig.title": "Définir {{key}}",
+  "setConfig.label": "Entrez une valeur ({{type}}) :",
+
+  "command.notEnabled": "La commande `{{commandName}}` n'est pas activée sur ce serveur.",
+
+  "interaction.malformed": "Le bouton est mal formé. Veuillez réessayer plus tard.",
+  "interaction.moduleNotFound": "Module introuvable. Veuillez réessayer plus tard.",
+  "interaction.failedEnable": "Échec de l'activation du module. Veuillez réessayer plus tard.",
+  "interaction.failedDisable": "Échec de la désactivation du module. Veuillez réessayer plus tard.",
+  "interaction.configOptionNotFound": "Option de configuration introuvable.",
+  "interaction.notBoolean": "Cette option n'est pas un booléen.",
+
+  "scalarList.header": "# `{{moduleName}}` — {{entryName}}\n-# {{typeName}}\n> {{entryDesc}}",
+  "scalarList.valueText": "Valeur (texte)",
+  "scalarList.valueNumber": "Valeur (nombre)",
+  "scalarList.valueBoolean": "Valeur (true / false)",
+  "scalarList.empty": "-# Liste vide.",
+  "scalarList.booleanItem": "Élément {{index}} : {{value}}",
+  "scalarList.remove": "Supprimer",
+  "scalarList.add": "Ajouter",
+  "scalarList.addTitle": "Ajouter — {{name}}",
+  "scalarList.invalidValue": "❌ `{{value}}` n'est pas une valeur valide.",
+
+  "select.user.selectMultiple": "Sélectionnez des utilisateurs",
+  "select.user.selectSingle": "Sélectionnez un utilisateur",
+  "select.role.selectMultiple": "Sélectionnez des rôles",
+  "select.role.selectSingle": "Sélectionnez un rôle",
+  "select.channel.selectMultiple": "Sélectionnez des salons",
+  "select.channel.selectSingle": "Sélectionnez un salon",
+  "select.category.selectMultiple": "Sélectionnez des catégories",
+  "select.category.selectSingle": "Sélectionnez une catégorie",
+
+  "config.header": "# Paramètres de `{{moduleName}}`",
+  "config.page": "-# Page {{current}}/{{total}}",
+  "config.option": "-# {{typeName}}\n**⚙️  {{optionName}}**\n> {{optionDesc}}\n{{currentValue}}\n\n",
+
+  "type.text": "Texte",
+  "type.number": "Nombre",
+  "type.boolean": "Booléen",
+  "type.user": "Utilisateur",
+  "type.role": "Rôle",
+  "type.channel": "Salon",
+  "type.category": "Catégorie",
+  "type.choice": "Choix",
+  "type.listOf": "Liste de {{type}}",
+
+  "modules.core.name": "Module Principal",
+  "modules.core.description": "Le module principal de l'application, gérant les commandes et évènements principaux. Il est toujours chargé.",
+
+  "modules.thread-creator.name": "Thread Creator",
+  "modules.thread-creator.description": "Crée automatiquement des fils de discussion sous chaque nouveau message dans les canaux configurés. Remplace le bot Needle.",
+
+  "modules.test-config.name": "Test Config",
+  "modules.test-config.description": "Module de développement déclarant tous les types de configuration, pour tester l'UI de configuration.",
+
+  "config.locale.name": "Langue",
+  "config.locale.description": "Langue du bot (en/fr)"
+}

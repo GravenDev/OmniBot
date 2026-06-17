@@ -1,0 +1,79 @@
+{
+  "modules.title": "# Modules",
+  "modules.description": "The modules marked with ✅ are enabled, while those marked with ❌ are disabled.",
+  "modules.enable": "Enable",
+  "modules.disable": "Disable",
+  "modules.item": "{{emoji}} `{{moduleName}}`{{version}}\n> {{description}}",
+  "config.noConfig": "This module has no configuration available.",
+  "config.previous": "◀ Previous",
+  "config.next": "Next ▶",
+  "config.noModule": "No module with id `{{moduleId}}`",
+  "config.currentValue": "Current: {{value}}",
+  "config.notFound": "Configuration not found.",
+  "config.invalidSelection": "Invalid selected value.",
+  "config.number.invalid": "❌ `{{value}}` is not a valid number.",
+
+  "config.enum.noOptions": "This field declares no options.",
+  "config.enum.selectMultiple": "Select one or more values",
+  "config.enum.selectSingle": "Select a value",
+
+  "admin.noPermission": "You do not have permission to manage modules.",
+
+  "setConfig.title": "Set {{key}}",
+  "setConfig.label": "Enter a value ({{type}}):",
+
+  "command.notEnabled": "The command `{{commandName}}` is not enabled in this guild.",
+
+  "interaction.malformed": "The button is malformed. Please try again later.",
+  "interaction.moduleNotFound": "Module not found. Please try again later.",
+  "interaction.failedEnable": "Failed to enable the module. Please try again later.",
+  "interaction.failedDisable": "Failed to disable the module. Please try again later.",
+  "interaction.configOptionNotFound": "Configuration option not found.",
+  "interaction.notBoolean": "This option is not a boolean toggle.",
+
+  "scalarList.header": "# `{{moduleName}}` — {{entryName}}\n-# {{typeName}}\n> {{entryDesc}}",
+  "scalarList.valueText": "Value (text)",
+  "scalarList.valueNumber": "Value (number)",
+  "scalarList.valueBoolean": "Value (true / false)",
+  "scalarList.empty": "-# Empty list.",
+  "scalarList.booleanItem": "Item {{index}}: {{value}}",
+  "scalarList.remove": "Remove",
+  "scalarList.add": "Add",
+  "scalarList.addTitle": "Add — {{name}}",
+  "scalarList.invalidValue": "❌ `{{value}}` is not a valid value.",
+
+  "select.user.selectMultiple": "Select users",
+  "select.user.selectSingle": "Select a user",
+  "select.role.selectMultiple": "Select roles",
+  "select.role.selectSingle": "Select a role",
+  "select.channel.selectMultiple": "Select channels",
+  "select.channel.selectSingle": "Select a channel",
+  "select.category.selectMultiple": "Select categories",
+  "select.category.selectSingle": "Select a category",
+
+  "config.header": "# `{{moduleName}}` settings",
+  "config.page": "-# Page {{current}}/{{total}}",
+  "config.option": "-# {{typeName}}\n**⚙️  {{optionName}}**\n> {{optionDesc}}\n{{currentValue}}\n\n",
+
+  "type.text": "Text",
+  "type.number": "Number",
+  "type.boolean": "Boolean",
+  "type.user": "User",
+  "type.role": "Role",
+  "type.channel": "Channel",
+  "type.category": "Category",
+  "type.choice": "Choice",
+  "type.listOf": "List of {{type}}",
+
+  "modules.core.name": "Core Module",
+  "modules.core.description": "The core module of the application, managing core commands and events. It is always loaded.",
+
+  "modules.thread-creator.name": "Thread Creator",
+  "modules.thread-creator.description": "Automatically creates discussion threads under each new message in configured channels. Replaces Needle bot.",
+
+  "modules.test-config.name": "Test Config",
+  "modules.test-config.description": "Development module declaring all configuration types, used to test the configuration UI.",
+
+  "config.locale.name": "Language",
+  "config.locale.description": "Bot language (en/fr)"
+}

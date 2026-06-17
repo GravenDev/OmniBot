@@ -13,30 +13,41 @@ import {
   type ConfigSchema,
   type ListOf,
 } from "#lib/config.js";
+import type { TFunction } from "#lib/i18n.js";
 import type { Module } from "#lib/module.js";
 import { Colors } from "#utils/colors.js";
 
 export const modulesMessage = (
-  modulesState: Awaited<ReturnType<typeof moduleService.getAllModulesStateIn>>
+  modulesState: Awaited<ReturnType<typeof moduleService.getAllModulesStateIn>>,
+  t: TFunction
 ) => {
   const container = new ContainerBuilder().setAccentColor(Colors.Turquoise);
   container.addTextDisplayComponents(
-    (text) => text.setContent("# Modules"),
-    (text) =>
-      text.setContent(
-        "The modules marked with ✅ are enabled, while those marked with ❌ are disabled."
-      )
+    (text) => text.setContent(t("modules.title")),
+    (text) => text.setContent(t("modules.description"))
   );
   container.addSeparatorComponents((separator) => separator.setDivider(true));
 
   for (let state of modulesState) {
     const emoji = state.enabled ? "✅" : "❌";
 
+    const modName = t("modules." + state.module.id + ".name", {
+      defaultValue: state.module.name,
+    });
+    const modDesc = t("modules." + state.module.id + ".description", {
+      defaultValue: state.module.description,
+    });
+    const versionSuffix = state.enabled ? ` (${state.enabledVersion})` : "";
     container.addSectionComponents((section) =>
       section
         .addTextDisplayComponents((text) =>
           text.setContent(
-            `${emoji} \`${state.module.name}\`${state.enabled ? ` (${state.enabledVersion})` : ""}\n> ${state.module.description}`
+            t("modules.item", {
+              emoji,
+              moduleName: modName,
+              version: versionSuffix,
+              description: modDesc,
+            })
           )
         )
         .setButtonAccessory((button) =>
@@ -46,7 +57,9 @@ export const modulesMessage = (
                 ? "disable-module:" + state.module.id
                 : "enable-module:" + state.module.id
             )
-            .setLabel(state.enabled ? "Disable" : "Enable")
+            .setLabel(
+              state.enabled ? t("modules.disable") : t("modules.enable")
+            )
             .setStyle(state.enabled ? ButtonStyle.Danger : ButtonStyle.Success)
         )
     );
@@ -118,12 +131,16 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
   );
   const currentPage = Math.min(Math.max(page, 0), pageCount - 1);
 
-  container.addTextDisplayComponents((text) =>
-    text.setContent(
-      `# \`${module.name}\` settings` +
-        (pageCount > 1 ? `\n-# Page ${currentPage + 1}/${pageCount}` : "")
-    )
-  );
+  const modName = config.t("modules." + module.id + ".name", {
+    defaultValue: module.name,
+  });
+  let header = config.t("config.header", { moduleName: modName });
+  if (pageCount > 1) {
+    header +=
+      "\n" +
+      config.t("config.page", { current: currentPage + 1, total: pageCount });
+  }
+  container.addTextDisplayComponents((text) => text.setContent(header));
   container.addSeparatorComponents((separator) => separator.setDivider(true));
 
   const pageKeys = keys.slice(
@@ -137,9 +154,20 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
 
     const value = config.get(key);
     const section = new SectionBuilder();
+    const optName = config.t("config." + key + ".name", {
+      defaultValue: option.name,
+    });
+    const optDesc = config.t("config." + key + ".description", {
+      defaultValue: option.description,
+    });
     section.addTextDisplayComponents((text) =>
       text.setContent(
-        `-# ${getConfigTypeName(option.type)}\n**⚙️  ${option.name}**\n> ${option.description}\nCurrent: ${renderCurrentValue(option.type, value)}\n\n`
+        config.t("config.option", {
+          typeName: getConfigTypeName(option.type, config.t),
+          optionName: optName,
+          optionDesc: optDesc,
+          currentValue: renderCurrentValue(option.type, value),
+        })
       )
     );
 
@@ -170,7 +198,7 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
 
   if (keys.length === 0) {
     container.addTextDisplayComponents((text) =>
-      text.setContent("-# Ce module n'a aucune configuration disponible.")
+      text.setContent(config.t("config.noConfig"))
     );
   }
 
@@ -181,12 +209,12 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(`config-page:${module.id}:${currentPage - 1}`)
-          .setLabel("◀ Précédent")
+          .setLabel(config.t("config.previous"))
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(currentPage === 0),
         new ButtonBuilder()
           .setCustomId(`config-page:${module.id}:${currentPage + 1}`)
-          .setLabel("Suivant ▶")
+          .setLabel(config.t("config.next"))
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(currentPage === pageCount - 1)
       )
