@@ -5,7 +5,7 @@ Ce guide explique comment créer des commandes slash Discord dans vos modules. L
 ## Créer une commande
 
 ::: tip
-Définissez les noms et descriptions des commandes en anglais par défaut — ils servent de valeur de repli quand aucune traduction n'est disponible pour la locale du serveur. Notez que Discord ne supporte que les descriptions localisées, pas les noms de commandes. Utilisez `setDescriptionLocalizations()` pour les traductions des descriptions.
+Définissez les noms et descriptions des commandes en anglais par défaut — ils servent de valeur de repli quand aucune traduction n'est disponible pour la locale du serveur. Dans ce bot, seules les descriptions sont localisées via `setDescriptionLocalizations()` ; les noms de commandes restent en anglais.
 :::
 
 ```typescript
@@ -187,7 +187,7 @@ data: new SlashCommandBuilder()
   .setDescriptionLocalizations({ fr: "Dit bonjour !" }),
 ```
 
-> Les noms de commandes ne peuvent pas être localisés sur Discord. Utilisez le nom anglais comme source unique de vérité.
+> Dans ce bot, seules les descriptions sont localisées. Les noms de commandes restent en anglais.
 
 Pour les chaînes spécifiques au module dans les réponses de commandes, utilisez `config.t()` pour chercher les traductions dans vos fichiers i18n :
 
