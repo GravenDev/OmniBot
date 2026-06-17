@@ -5,7 +5,7 @@ This guide explains how to create Discord slash commands in your modules. Comman
 ## Creating a Command
 
 ::: tip
-Set command names and descriptions in English by default — they act as the fallback when no translation is available for the guild's locale. Use `setNameLocalizations()` and `setDescriptionLocalizations()` for other locales.
+Set command names and descriptions in English by default — they act as the fallback when no translation is available for the guild's locale. Note that Discord only supports localized descriptions, not command names. Use `setDescriptionLocalizations()` for description translations.
 :::
 
 ```typescript
@@ -172,15 +172,16 @@ OmniBot provides two built-in commands in the **Core** module (always active, no
 
 ## Localization
 
-Slash command names and descriptions can be translated per locale using Discord's built-in localization methods:
+Slash command descriptions can be translated per locale using Discord's built-in localization methods:
 
 ```typescript
 data: new SlashCommandBuilder()
   .setName("hello")
   .setDescription("Says hello!")
-  .setNameLocalizations({ fr: "bonjour" })
   .setDescriptionLocalizations({ fr: "Dit bonjour !" }),
 ```
+
+> Command names cannot be localized on Discord. Use the English name as the single source of truth.
 
 For module-specific strings in command responses, use `config.t()` to look up translations from your module's i18n files:
 
