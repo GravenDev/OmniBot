@@ -35,7 +35,7 @@ Les fichiers de traduction sont découverts automatiquement au démarrage par le
 }
 ```
 
-Utilisez la syntaxe `{{param}}` pour les valeurs dynamiques — ne concaténez jamais avec `${}` ou `+` dans le texte traduit.
+Utilisez la syntaxe <code v-pre>{{param}}</code> pour les valeurs dynamiques — ne concaténez jamais avec `${}` ou `+` dans le texte traduit.
 
 ### Métadonnées du module
 
@@ -88,22 +88,22 @@ Dans ce bot, seules les descriptions sont localisées — les noms de commandes 
 
 Les chaînes d'interface communes sont fournies par le namespace principal et disponibles dans tous les modules sans être redéfinies :
 
-| Clé                     | Valeur anglais             | Valeur français            |
-| ----------------------- | -------------------------- | -------------------------- |
-| `config.previous`       | ◀ Previous                 | ◀ Précédent                |
-| `config.next`           | Next ▶                     | Suivant ▶                  |
-| `config.page`           | Page {{current}}/{{total}} | Page {{current}}/{{total}} |
-| `config.toggle.enable`  | Enable                     | Activer                    |
-| `config.toggle.disable` | Disable                    | Désactiver                 |
-| `type.text`             | Short text                 | Texte court                |
-| `type.number`           | Number                     | Nombre                     |
-| `type.boolean`          | Yes/No                     | Oui/Non                    |
-| `type.user`             | User                       | Utilisateur                |
-| `type.role`             | Role                       | Rôle                       |
-| `type.channel`          | Channel                    | Salon                      |
-| `type.category`         | Category                   | Catégorie                  |
-| `type.enum`             | Choice                     | Choix                      |
-| `type.listOf`           | List of {{type}}           | Liste de {{type}}          |
+| Clé                     | Valeur anglais                                                     | Valeur français                                                    |
+| ----------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `config.previous`       | ◀ Previous                                                         | ◀ Précédent                                                        |
+| `config.next`           | Next ▶                                                             | Suivant ▶                                                          |
+| `config.page`           | Page &#123;&#123;current&#125;&#125;/&#123;&#123;total&#125;&#125; | Page &#123;&#123;current&#125;&#125;/&#123;&#123;total&#125;&#125; |
+| `config.toggle.enable`  | Enable                                                             | Activer                                                            |
+| `config.toggle.disable` | Disable                                                            | Désactiver                                                         |
+| `type.text`             | Short text                                                         | Texte court                                                        |
+| `type.number`           | Number                                                             | Nombre                                                             |
+| `type.boolean`          | Yes/No                                                             | Oui/Non                                                            |
+| `type.user`             | User                                                               | Utilisateur                                                        |
+| `type.role`             | Role                                                               | Rôle                                                               |
+| `type.channel`          | Channel                                                            | Salon                                                              |
+| `type.category`         | Category                                                           | Catégorie                                                          |
+| `type.enum`             | Choice                                                             | Choix                                                              |
+| `type.listOf`           | List of &#123;&#123;type&#125;&#125;                               | Liste de &#123;&#123;type&#125;&#125;                              |
 
 ## Ajouter une nouvelle locale
 
@@ -115,6 +115,6 @@ Les chaînes d'interface communes sont fournies par le namespace principal et di
 ## Bonnes pratiques
 
 - **Écrivez les valeurs TypeScript en anglais** — elles servent de valeur de repli quand aucune traduction ne correspond.
-- **Utilisez toujours des paramètres nommés** (`{{param}}`) dans les valeurs i18n, jamais les templates littéraux `${}`.
+- **Utilisez toujours des paramètres nommés** (<code v-pre>{{param}}</code>) dans les valeurs i18n, jamais les templates littéraux `${}`.
 - **Ne traduisez que les chaînes spécifiques au module** — les étiquettes d'interface communes viennent du namespace principal.
 - **Gardez les fichiers de traduction complets** — les clés manquantes tombent en anglais, ce qui peut produire un affichage multilingue.
