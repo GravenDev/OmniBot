@@ -3,6 +3,7 @@ import {
   ConfigProvider,
   ConfigType,
   ConfigValidator,
+  formatConfigValue,
   getConfigTypeName,
   isEnumEntry,
   type ConfigData,
@@ -310,6 +311,42 @@ describe("ConfigEntry enum typing", () => {
 
     expect(valid.type).toBe(ConfigType.ENUM);
     expect(invalid.type).toBe(ConfigType.ENUM);
+  });
+});
+
+describe("formatConfigValue", () => {
+  const langEntry: ConfigEntry<ConfigType> = {
+    name: "Language",
+    description: "",
+    type: ConfigType.ENUM,
+    options: ["en", "fr"],
+    display: "language",
+  };
+
+  it("renders a language enum value as its name in the viewer locale", () => {
+    expect(formatConfigValue(langEntry, "fr", "fr")).toBe("Français");
+    expect(formatConfigValue(langEntry, "en", "fr")).toBe("Anglais");
+    expect(formatConfigValue(langEntry, "fr", "en")).toBe("French");
+    expect(formatConfigValue(langEntry, "en", "en")).toBe("English");
+  });
+
+  it("returns the raw value for an enum without a display hint", () => {
+    const plain: ConfigEntry<ConfigType> = {
+      name: "Mode",
+      description: "",
+      type: ConfigType.ENUM,
+      options: ["a", "b"],
+    };
+    expect(formatConfigValue(plain, "a", "fr")).toBe("a");
+  });
+
+  it("stringifies a non-enum value", () => {
+    const str: ConfigEntry<ConfigType> = {
+      name: "Note",
+      description: "",
+      type: ConfigType.STRING,
+    };
+    expect(formatConfigValue(str, "hello", "fr")).toBe("hello");
   });
 });
 

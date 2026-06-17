@@ -76,5 +76,5 @@
   "modules.test-config.description": "Development module declaring all configuration types, used to test the configuration UI.",
 
   "config.locale.name": "Language",
-  "config.locale.description": "Bot language (en/fr)"
+  "config.locale.description": "Bot language"
 }

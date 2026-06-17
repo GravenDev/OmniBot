@@ -4,7 +4,7 @@ import {
   type AnySelectMenuInteraction,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
-import { ConfigType, isEnumEntry } from "#lib/config.js";
+import { ConfigType, formatConfigValue, isEnumEntry } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
 import type { CompatibleInteraction } from "#lib/interaction.js";
 import type { Module } from "#lib/module.js";
@@ -77,7 +77,9 @@ export default class EnumConfigHandler extends SelectConfigHandler<ConfigType.EN
     minValues,
     maxValues,
     t,
+    locale,
   }: SelectRowContext): ActionRowBuilder<MessageActionRowComponentBuilder> {
+    const entry = getConfigEntry(_module, _key);
     const options = optionsFor(_module, _key).slice(0, MAX_SELECT_VALUES);
     const menu = new StringSelectMenuBuilder()
       .setCustomId(customId)
@@ -90,7 +92,7 @@ export default class EnumConfigHandler extends SelectConfigHandler<ConfigType.EN
       .setMaxValues(maxValues)
       .addOptions(
         options.map((option) => ({
-          label: option,
+          label: entry ? formatConfigValue(entry, option, locale) : option,
           value: option,
           default: current.includes(option),
         }))

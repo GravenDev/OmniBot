@@ -38,6 +38,8 @@ export interface SelectRowContext {
   minValues: number;
   maxValues: number;
   t: TFunction;
+  /** Viewer locale, for formatting option labels (e.g. language names). */
+  locale: string;
 }
 
 /**
@@ -99,7 +101,8 @@ export abstract class SelectConfigHandler<
     key: string,
     current: string[],
     sourceMessageId: string,
-    t: TFunction
+    t: TFunction,
+    locale: string
   ): ContainerBuilder {
     const customId = `${this.selectCustomId}:${module.id}:${key}:${sourceMessageId}`;
     const isList = isListEntry(getConfigEntry(module, key));
@@ -109,6 +112,7 @@ export abstract class SelectConfigHandler<
       customId,
       current,
       t,
+      locale,
       minValues: isList ? 0 : 1,
       maxValues: isList ? this.maxSelectableValues(module, key) : 1,
     });
@@ -137,7 +141,8 @@ export abstract class SelectConfigHandler<
       String(key),
       this.currentValues(config.get(key)),
       sourceMessageId,
-      config.t
+      config.t,
+      config.locale
     );
 
     await interaction.reply({
@@ -211,7 +216,8 @@ export abstract class SelectConfigHandler<
                 configKey,
                 values,
                 sourceMessageId!,
-                config.t
+                config.t,
+                config.locale
               ),
             ],
             flags: MessageFlags.IsComponentsV2,
