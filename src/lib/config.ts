@@ -1,5 +1,10 @@
 import { CategoryChannel, type Channel, Role, type User } from "discord.js";
+import { createT, type TFunction } from "./i18n.js";
 import type { Module } from "./module.js";
+
+function ucfirst(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 export enum ConfigType {
   STRING = "STRING",
@@ -30,14 +35,20 @@ export const ConfigValidator: Record<ConfigType, (value: string) => boolean> = {
 };
 
 export function getConfigTypeName(
-  type: ConfigType | ListOf<ConfigType>
+  type: ConfigType | ListOf<ConfigType>,
+  t?: TFunction
 ): string {
   if (Array.isArray(type)) {
-    return `List of ${configTypeNames[type[0]]}`;
+    const inner = configTypeNames[type[0]];
+    return t
+      ? t("type.listOf", {
+          type: t("type." + inner, { defaultValue: ucfirst(inner) }),
+        })
+      : `List of ${inner}`;
   }
 
   const name = configTypeNames[type];
-  return name.charAt(0).toUpperCase() + name.slice(1);
+  return t ? t("type." + name, { defaultValue: ucfirst(name) }) : ucfirst(name);
 }
 
 export const configTypeNames: Record<ConfigType, string> = {
@@ -168,10 +179,16 @@ export type ConfigData<TSchema extends ConfigSchema> = {
 export class ConfigProvider<TSchema extends ConfigSchema> {
   private module: Module<TSchema>;
   private readonly data: ConfigData<TSchema>;
+  readonly t: TFunction;
 
-  constructor(module: Module<TSchema>, data: ConfigData<TSchema>) {
+  constructor(
+    module: Module<TSchema>,
+    data: ConfigData<TSchema>,
+    locale: string
+  ) {
     this.module = module;
     this.data = data;
+    this.t = createT(locale, module.id);
   }
 
   get schema() {
