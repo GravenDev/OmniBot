@@ -1,0 +1,43 @@
+{
+  "config.text.name": "Texte",
+  "config.text.description": "Un champ texte libre.",
+
+  "config.number.name": "Nombre",
+  "config.number.description": "Un champ numérique.",
+
+  "config.toggle.name": "Booléen",
+  "config.toggle.description": "Un interrupteur on/off.",
+
+  "config.user.name": "Utilisateur",
+  "config.user.description": "Un utilisateur Discord.",
+
+  "config.role.name": "Rôle",
+  "config.role.description": "Un rôle Discord.",
+
+  "config.channel.name": "Salon",
+  "config.channel.description": "Un salon Discord.",
+
+  "config.category.name": "Catégorie",
+  "config.category.description": "Une catégorie Discord.",
+
+  "config.textList.name": "Liste de textes",
+  "config.textList.description": "Une liste de chaînes (éditeur ajouter/supprimer).",
+
+  "config.numberList.name": "Liste de nombres",
+  "config.numberList.description": "Une liste de nombres (éditeur ajouter/supprimer).",
+
+  "config.boolList.name": "Liste de booléens",
+  "config.boolList.description": "Une liste de booléens (éditeur ajouter/supprimer).",
+
+  "config.roleList.name": "Liste de rôles",
+  "config.roleList.description": "Plusieurs rôles Discord (multi-select).",
+
+  "config.channelList.name": "Liste de salons",
+  "config.channelList.description": "Plusieurs salons Discord (multi-select).",
+
+  "config.choice.name": "Choix",
+  "config.choice.description": "Une valeur parmi un ensemble fixe (select mono-choix).",
+
+  "config.choiceList.name": "Choix multiples",
+  "config.choiceList.description": "Plusieurs valeurs parmi un ensemble fixe (multi-select)."
+}

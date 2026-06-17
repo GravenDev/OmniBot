@@ -1,0 +1,10 @@
+{
+  "config.channels.name": "Monitored channels",
+  "config.channels.description": "Channels where new messages are monitored (a thread is created under each message).",
+
+  "config.welcomeMessage.name": "Welcome message",
+  "config.welcomeMessage.description": "Message automatically posted in each created thread.",
+
+  "config.threadNameTemplate.name": "Name template",
+  "config.threadNameTemplate.description": "Thread name — variables: {messageAuthor}, {messageContent}, {timestamp}."
+}

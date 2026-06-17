@@ -1,0 +1,43 @@
+{
+  "config.text.name": "Text",
+  "config.text.description": "A free text field.",
+
+  "config.number.name": "Number",
+  "config.number.description": "A numeric field.",
+
+  "config.toggle.name": "Boolean",
+  "config.toggle.description": "An on/off toggle.",
+
+  "config.user.name": "User",
+  "config.user.description": "A Discord user.",
+
+  "config.role.name": "Role",
+  "config.role.description": "A Discord role.",
+
+  "config.channel.name": "Channel",
+  "config.channel.description": "A Discord channel.",
+
+  "config.category.name": "Category",
+  "config.category.description": "A Discord category.",
+
+  "config.textList.name": "Text list",
+  "config.textList.description": "A list of strings (add/remove editor).",
+
+  "config.numberList.name": "Number list",
+  "config.numberList.description": "A list of numbers (add/remove editor).",
+
+  "config.boolList.name": "Boolean list",
+  "config.boolList.description": "A list of booleans (add/remove editor).",
+
+  "config.roleList.name": "Role list",
+  "config.roleList.description": "Multiple Discord roles (multi-select).",
+
+  "config.channelList.name": "Channel list",
+  "config.channelList.description": "Multiple Discord channels (multi-select).",
+
+  "config.choice.name": "Choice",
+  "config.choice.description": "A value from a fixed set (single-choice select).",
+
+  "config.choiceList.name": "Multiple choice",
+  "config.choiceList.description": "Multiple values from a fixed set (multi-select)."
+}
