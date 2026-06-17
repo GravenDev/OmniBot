@@ -1,5 +1,4 @@
 import {
-  ButtonBuilder,
   ButtonStyle,
   ContainerBuilder,
   MessageFlags,
@@ -105,21 +104,23 @@ class StarboardService implements Service {
     const { timestamp } = this.buildNameAndTimestamp(referenced);
     const container = new ContainerBuilder();
 
-    container.addSectionComponents((section) =>
-      section
-        .addTextDisplayComponents((text) =>
-          text.setContent(`## ↪ ${referenced.author} · <t:${timestamp}:R>`)
-        )
-        .setThumbnailAccessory((thumbnail) =>
-          thumbnail.setURL(referenced.author.displayAvatarURL())
-        )
-    );
-
-    if (referenced.content) {
-      container.addTextDisplayComponents((text) =>
-        text.setContent(this.truncate(referenced.content))
+    container.addSectionComponents((section) => {
+      section.addTextDisplayComponents((text) =>
+        text.setContent(`## ↪ ${referenced.author} · <t:${timestamp}:R>\n`)
       );
-    }
+
+      if (referenced.content) {
+        section.addTextDisplayComponents((text) =>
+          text.setContent(this.truncate(referenced.content))
+        );
+      }
+
+      section.setThumbnailAccessory((thumbnail) =>
+        thumbnail.setURL(referenced.author.displayAvatarURL())
+      );
+
+      return section;
+    });
 
     const images = referenced.attachments.filter((a) =>
       a.contentType?.startsWith("image/")
@@ -131,27 +132,18 @@ class StarboardService implements Service {
 
     container.addSeparatorComponents((separator) => separator.setDivider(true));
 
-    if (attachmentText) {
-      container.addSectionComponents((section) =>
-        section
-          .addTextDisplayComponents((text) => text.setContent(attachmentText))
-          .setButtonAccessory((button) =>
-            button
-              .setStyle(ButtonStyle.Link)
-              .setURL(referenced.url)
-              .setLabel("Voir le message")
-          )
-      );
-    } else {
-      container.addActionRowComponents((row) =>
-        row.addComponents(
-          new ButtonBuilder()
+    container.addSectionComponents((section) =>
+      section
+        .addTextDisplayComponents((text) =>
+          text.setContent(attachmentText ?? "\u200b")
+        )
+        .setButtonAccessory((button) =>
+          button
             .setStyle(ButtonStyle.Link)
             .setURL(referenced.url)
             .setLabel("Voir le message")
         )
-      );
-    }
+    );
 
     return container;
   }
@@ -164,21 +156,23 @@ class StarboardService implements Service {
     const { timestamp } = this.buildNameAndTimestamp(message);
     const container = new ContainerBuilder();
 
-    container.addSectionComponents((section) =>
-      section
-        .addTextDisplayComponents((text) =>
-          text.setContent(`## ${message.author} · <t:${timestamp}:R>`)
-        )
-        .setThumbnailAccessory((thumbnail) =>
-          thumbnail.setURL(message.author.displayAvatarURL())
-        )
-    );
-
-    if (message.content) {
-      container.addTextDisplayComponents((text) =>
-        text.setContent(this.truncate(message.content))
+    container.addSectionComponents((section) => {
+      section.addTextDisplayComponents((text) =>
+        text.setContent(`## ${message.author} · <t:${timestamp}:R>\n`)
       );
-    }
+
+      if (message.content) {
+        section.addTextDisplayComponents((text) =>
+          text.setContent(this.truncate(message.content))
+        );
+      }
+
+      section.setThumbnailAccessory((thumbnail) =>
+        thumbnail.setURL(message.author.displayAvatarURL())
+      );
+
+      return section;
+    });
 
     const images = message.attachments.filter((a) =>
       a.contentType?.startsWith("image/")
@@ -191,13 +185,15 @@ class StarboardService implements Service {
       );
     }
 
-    container.setAccentColor(EMBED_COLORS[config.get("embedColor")]!);
+    container.setAccentColor(
+      EMBED_COLORS[config.get("embedColor")] ?? EMBED_COLORS["default"]
+    );
 
     container.addSeparatorComponents((separator) => separator.setDivider(true));
 
     if (metrics.emojis.length > 0) {
       container.addTextDisplayComponents((text) =>
-        text.setContent(`## ${this.buildReactionLine(metrics)}`)
+        text.setContent(`### ${this.buildReactionLine(metrics)}`)
       );
     }
 
@@ -274,13 +270,6 @@ class StarboardService implements Service {
         return;
       }
 
-      const metrics = await this.computeReactionMetrics(
-        message,
-        configuredEmojis,
-        config
-      );
-      const threshold = config.get("reactionCount");
-
       const existingEntry = await prisma.starboardEntry.findUnique({
         where: {
           guildId_originalMessageId: {
@@ -290,66 +279,64 @@ class StarboardService implements Service {
         },
       });
 
-      if (existingEntry) {
-        if (metrics.totalUniqueUsers >= threshold) {
-          await this.updateStarboardEntry(
-            existingEntry,
-            message,
-            metrics,
-            config
-          );
-        } else if (config.get("belowThresholdBehavior") === "remove") {
-          await this.removeStarboardEntry(existingEntry, guild);
-        } else {
-          await this.updateStarboardEntry(
-            existingEntry,
-            message,
-            metrics,
-            config
-          );
-        }
-      } else if (metrics.totalUniqueUsers >= threshold) {
-        try {
-          await this.createStarboardEntry(message, metrics, config);
-        } catch (error) {
-          if (
-            error instanceof Prisma.PrismaClientKnownRequestError &&
-            error.code === "P2002"
-          ) {
-            const existingEntry = await prisma.starboardEntry.findUnique({
-              where: {
-                guildId_originalMessageId: {
-                  guildId: guild.id,
-                  originalMessageId: message.id,
-                },
-              },
-            });
-            if (existingEntry) {
-              if (metrics.totalUniqueUsers >= threshold) {
-                await this.updateStarboardEntry(
-                  existingEntry,
-                  message,
-                  metrics,
-                  config
-                );
-              } else if (config.get("belowThresholdBehavior") === "remove") {
-                await this.removeStarboardEntry(existingEntry, guild);
-              } else {
-                await this.updateStarboardEntry(
-                  existingEntry,
-                  message,
-                  metrics,
-                  config
-                );
-              }
-            }
-          } else {
-            throw error;
-          }
-        }
-      }
+      const metrics = await this.computeReactionMetrics(
+        message,
+        configuredEmojis,
+        config
+      );
+
+      await this.applyMetrics(existingEntry, message, metrics, config);
     } catch (error) {
       logger.error({ err: error }, "Starboard reaction handler failed");
+    }
+  }
+
+  private async applyMetrics(
+    entry: {
+      id: string;
+      starboardMessageId: string;
+      starboardChannelId: string;
+    } | null,
+    message: Message,
+    metrics: ReactionMetrics,
+    config: ConfigProvider<StarboardConfigSchema>
+  ): Promise<void> {
+    const threshold = config.get("reactionCount");
+    const belowThreshold = config.get("belowThresholdBehavior");
+    const guild = message.guild!;
+
+    if (entry) {
+      if (metrics.totalUniqueUsers >= threshold || belowThreshold === "keep") {
+        await this.updateStarboardEntry(entry, message, metrics, config);
+      } else {
+        await this.removeStarboardEntry(entry, guild);
+      }
+      return;
+    }
+
+    if (metrics.totalUniqueUsers < threshold) return;
+
+    try {
+      await this.createStarboardEntry(message, metrics, config);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === "P2002"
+      ) {
+        const existingEntry = await prisma.starboardEntry.findUnique({
+          where: {
+            guildId_originalMessageId: {
+              guildId: guild.id,
+              originalMessageId: message.id,
+            },
+          },
+        });
+        if (existingEntry) {
+          await this.applyMetrics(existingEntry, message, metrics, config);
+        }
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -387,7 +374,7 @@ class StarboardService implements Service {
           originalChannelId: message.channel.id,
           starboardMessageId: starboardMessage.id,
           starboardChannelId: starboardChannel.id,
-          reactionCount: metrics.totalUniqueUsers,
+          uniqueUserCount: metrics.totalUniqueUsers,
           reactions: metrics.emojis as unknown as Prisma.InputJsonValue[],
         },
       });
@@ -449,7 +436,7 @@ class StarboardService implements Service {
     await prisma.starboardEntry.update({
       where: { id: entry.id },
       data: {
-        reactionCount: metrics.totalUniqueUsers,
+        uniqueUserCount: metrics.totalUniqueUsers,
         reactions: metrics.emojis as unknown as Prisma.InputJsonValue[],
       },
     });

@@ -5,7 +5,7 @@ model StarboardEntry {
   originalChannelId   String
   starboardMessageId  String
   starboardChannelId  String
-  reactionCount       Int      @default(0)
+  uniqueUserCount     Int      @default(0)
   reactions           Json     @default("[]")
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
