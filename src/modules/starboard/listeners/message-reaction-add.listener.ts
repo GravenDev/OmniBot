@@ -4,6 +4,7 @@ import type {
   PartialUser,
   User,
 } from "discord.js";
+import type { ConfigProvider } from "#lib/config.js";
 import { declareEventListener } from "#lib/listener.js";
 import starboardService from "#modules/starboard/services/starboard.service.js";
 import type { StarboardConfigSchema } from "#modules/starboard/starboard.config.js";
@@ -18,7 +19,7 @@ export default declareEventListener<
     reaction: MessageReaction | PartialMessageReaction,
     user: User | PartialUser,
     _details: unknown,
-    config
+    config: ConfigProvider<StarboardConfigSchema> | undefined
   ) {
     if (!config) return;
 
