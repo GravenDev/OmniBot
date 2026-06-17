@@ -4,6 +4,10 @@ Ce guide explique comment créer des commandes slash Discord dans vos modules. L
 
 ## Créer une commande
 
+::: tip
+Définissez les noms et descriptions des commandes en anglais par défaut — ils servent de valeur de repli quand aucune traduction n'est disponible pour la locale du serveur. Utilisez `setNameLocalizations()` et `setDescriptionLocalizations()` pour les autres locales.
+:::
+
 ```typescript
 // src/modules/salut/commands/bonjour.command.ts
 

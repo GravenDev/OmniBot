@@ -6,6 +6,10 @@ OmniBot provides a typed configuration system for modules. Each module can decla
 
 A module declares its schema in `defineModule()` via the `config` property:
 
+::: tip
+Config field `name` and `description` must be in English in the TypeScript schema — they serve as the fallback when no translation file matches the guild's locale. No need to duplicate them in `en.json`. Add translations in `i18n/` files for other locales.
+:::
+
 ```typescript
 // src/modules/my-module/my-module.module.ts
 

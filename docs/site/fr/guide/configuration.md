@@ -6,6 +6,10 @@ OmniBot fournit un système de configuration typé pour les modules. Chaque modu
 
 Un module déclare son schéma dans `defineModule()` via la propriété `config` :
 
+::: tip
+Les `name` et `description` des champs de configuration doivent être en anglais dans le schéma TypeScript — ils servent de valeur de repli quand aucun fichier de traduction ne correspond à la locale du serveur. Inutile de les dupliquer dans `en.json`. Ajoutez les traductions dans les fichiers `i18n/` pour les autres locales.
+:::
+
 ```typescript
 // src/modules/mon-module/mon-module.module.ts
 

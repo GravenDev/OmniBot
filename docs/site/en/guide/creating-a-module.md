@@ -25,6 +25,10 @@ src/modules/my-module/
 
 ## Step-by-Step: Creating a "Greeter" Module
 
+::: tip
+The module's `name` and `description` should be in English by default. They serve as the fallback when no translation file matches the guild's locale. Add translations in `i18n/` files for other locales.
+:::
+
 ### 1. Create the directory and main file
 
 ```typescript
