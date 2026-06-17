@@ -1,4 +1,5 @@
 import {
+  ButtonBuilder,
   ButtonStyle,
   ContainerBuilder,
   MessageFlags,
@@ -11,7 +12,7 @@ import {
   type User,
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
-import prisma from "#lib/database.js";
+import prisma, { Prisma } from "#lib/database.js";
 import logger from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
 import type { StarboardConfigSchema } from "#modules/starboard/starboard.config.js";
@@ -60,96 +61,184 @@ class StarboardService implements Service {
 
   private async computeReactionMetrics(
     message: Message,
-    configuredEmojis: string[]
+    configuredEmojis: string[],
+    config: ConfigProvider<StarboardConfigSchema>
   ): Promise<ReactionMetrics> {
     const emojis: ReactionMetric[] = [];
     const uniqueUsers = new Set<string>();
+    const selfStar = config.get("selfStar");
 
     for (const [, reaction] of message.reactions.cache) {
       if (!this.matchEmoji(reaction.emoji, configuredEmojis)) continue;
 
+      const users = await reaction.users.fetch();
+      const filteredUsers = [...users.keys()].filter(
+        (id) => selfStar || id !== message.author.id
+      );
+
+      filteredUsers.forEach((id) => uniqueUsers.add(id));
       emojis.push({
         emoji: this.formatEmoji(reaction.emoji),
-        count: reaction.count,
+        count: filteredUsers.length,
       });
-
-      const users = await reaction.users.fetch();
-      for (const userId of users.keys()) {
-        uniqueUsers.add(userId);
-      }
     }
 
     return { emojis, totalUniqueUsers: uniqueUsers.size };
   }
 
   private buildReactionLine(metrics: ReactionMetrics): string {
-    return metrics.emojis.map((m) => `${m.emoji} **${m.count}**`).join(" | ");
+    if (metrics.emojis.length === 0) return "";
+    return metrics.emojis.map((m) => `${m.emoji} **${m.count}**`).join(" · ");
   }
 
-  private buildStarboardContainer(
-    message: Message,
-    metrics: ReactionMetrics,
-    config: ConfigProvider<StarboardConfigSchema>
-  ): ContainerBuilder {
-    const authorName =
-      message.member?.displayName ??
-      message.author.globalName ??
-      message.author.username;
-    const timestamp = Math.floor(message.createdAt.getTime() / 1000);
+  private truncate(text: string, max = 1000): string {
+    if (text.length <= max) return text;
+    return text.slice(0, max - 3) + "...";
+  }
 
-    const container = new ContainerBuilder().setAccentColor(
-      EMBED_COLORS[config.get("embedColor")]!
-    );
+  private buildNameAndTimestamp(message: Message) {
+    const timestamp = Math.floor(message.createdAt.getTime() / 1000);
+    return { timestamp };
+  }
+
+  private buildReplyContainer(referenced: Message): ContainerBuilder {
+    const { timestamp } = this.buildNameAndTimestamp(referenced);
+    const container = new ContainerBuilder();
 
     container.addSectionComponents((section) =>
       section
         .addTextDisplayComponents((text) =>
-          text.setContent(`### ${authorName}\n-# <t:${timestamp}:R>`)
+          text.setContent(`## ↪ ${referenced.author} · <t:${timestamp}:R>`)
+        )
+        .setThumbnailAccessory((thumbnail) =>
+          thumbnail.setURL(referenced.author.displayAvatarURL())
+        )
+    );
+
+    if (referenced.content) {
+      container.addTextDisplayComponents((text) =>
+        text.setContent(this.truncate(referenced.content))
+      );
+    }
+
+    const images = referenced.attachments.filter((a) =>
+      a.contentType?.startsWith("image/")
+    );
+    const attachmentText =
+      images.size > 0
+        ? `🖼️ ${images.size} pièce${images.size > 1 ? "s" : ""} jointe${images.size > 1 ? "s" : ""}`
+        : null;
+
+    container.addSeparatorComponents((separator) => separator.setDivider(true));
+
+    if (attachmentText) {
+      container.addSectionComponents((section) =>
+        section
+          .addTextDisplayComponents((text) => text.setContent(attachmentText))
+          .setButtonAccessory((button) =>
+            button
+              .setStyle(ButtonStyle.Link)
+              .setURL(referenced.url)
+              .setLabel("Voir le message")
+          )
+      );
+    } else {
+      container.addActionRowComponents((row) =>
+        row.addComponents(
+          new ButtonBuilder()
+            .setStyle(ButtonStyle.Link)
+            .setURL(referenced.url)
+            .setLabel("Voir le message")
+        )
+      );
+    }
+
+    return container;
+  }
+
+  private async buildMainContainer(
+    message: Message,
+    metrics: ReactionMetrics,
+    config: ConfigProvider<StarboardConfigSchema>
+  ): Promise<ContainerBuilder> {
+    const { timestamp } = this.buildNameAndTimestamp(message);
+    const container = new ContainerBuilder();
+
+    container.addSectionComponents((section) =>
+      section
+        .addTextDisplayComponents((text) =>
+          text.setContent(`## ${message.author} · <t:${timestamp}:R>`)
         )
         .setThumbnailAccessory((thumbnail) =>
           thumbnail.setURL(message.author.displayAvatarURL())
         )
     );
 
-    container.addSeparatorComponents((separator) => separator.setDivider(true));
-
     if (message.content) {
       container.addTextDisplayComponents((text) =>
-        text.setContent(message.content)
+        text.setContent(this.truncate(message.content))
       );
     }
 
-    const imageAttachments = message.attachments.filter((a) =>
+    const images = message.attachments.filter((a) =>
       a.contentType?.startsWith("image/")
     );
-    if (imageAttachments.size > 0) {
+    if (images.size > 0) {
       container.addMediaGalleryComponents((gallery) =>
         gallery.addItems(
-          ...imageAttachments.map((a) => ({ media: { url: a.url } })).values()
+          ...images.map((a) => ({ media: { url: a.url } })).values()
         )
       );
     }
 
-    container.addTextDisplayComponents((text) =>
-      text.setContent(this.buildReactionLine(metrics))
-    );
+    container.setAccentColor(EMBED_COLORS[config.get("embedColor")]!);
 
     container.addSeparatorComponents((separator) => separator.setDivider(true));
+
+    if (metrics.emojis.length > 0) {
+      container.addTextDisplayComponents((text) =>
+        text.setContent(`## ${this.buildReactionLine(metrics)}`)
+      );
+    }
 
     container.addSectionComponents((section) =>
       section
         .addTextDisplayComponents((text) =>
-          text.setContent(`-# ${metrics.totalUniqueUsers} total`)
+          text.setContent(
+            `-# **${metrics.totalUniqueUsers}** unique${
+              metrics.totalUniqueUsers > 1 ? "s" : ""
+            }`
+          )
         )
         .setButtonAccessory((button) =>
           button
             .setStyle(ButtonStyle.Link)
             .setURL(message.url)
-            .setLabel("Aller au message")
+            .setLabel("Voir le message")
         )
     );
 
     return container;
+  }
+
+  private async buildComponents(
+    message: Message,
+    metrics: ReactionMetrics,
+    config: ConfigProvider<StarboardConfigSchema>
+  ): Promise<ContainerBuilder[]> {
+    const components: ContainerBuilder[] = [];
+
+    if (message.reference?.messageId) {
+      try {
+        const referenced = await message.fetchReference();
+        components.push(this.buildReplyContainer(referenced));
+      } catch {
+        // referenced message deleted or inaccessible
+      }
+    }
+
+    components.push(await this.buildMainContainer(message, metrics, config));
+    return components;
   }
 
   async handleReactionChange(
@@ -158,7 +247,8 @@ class StarboardService implements Service {
     config: ConfigProvider<StarboardConfigSchema>
   ): Promise<void> {
     try {
-      if (reaction.partial || user.partial) return;
+      if (reaction.partial) reaction = await reaction.fetch();
+      if (user.partial) user = await user.fetch();
 
       const message = await reaction.message.fetch();
       const guild = message.guild;
@@ -186,7 +276,8 @@ class StarboardService implements Service {
 
       const metrics = await this.computeReactionMetrics(
         message,
-        configuredEmojis
+        configuredEmojis,
+        config
       );
       const threshold = config.get("reactionCount");
 
@@ -218,12 +309,47 @@ class StarboardService implements Service {
           );
         }
       } else if (metrics.totalUniqueUsers >= threshold) {
-        await this.createStarboardEntry(message, metrics, config);
+        try {
+          await this.createStarboardEntry(message, metrics, config);
+        } catch (error) {
+          if (
+            error instanceof Prisma.PrismaClientKnownRequestError &&
+            error.code === "P2002"
+          ) {
+            const existingEntry = await prisma.starboardEntry.findUnique({
+              where: {
+                guildId_originalMessageId: {
+                  guildId: guild.id,
+                  originalMessageId: message.id,
+                },
+              },
+            });
+            if (existingEntry) {
+              if (metrics.totalUniqueUsers >= threshold) {
+                await this.updateStarboardEntry(
+                  existingEntry,
+                  message,
+                  metrics,
+                  config
+                );
+              } else if (config.get("belowThresholdBehavior") === "remove") {
+                await this.removeStarboardEntry(existingEntry, guild);
+              } else {
+                await this.updateStarboardEntry(
+                  existingEntry,
+                  message,
+                  metrics,
+                  config
+                );
+              }
+            }
+          } else {
+            throw error;
+          }
+        }
       }
     } catch (error) {
-      logger.error(
-        `Erreur dans le StarboardService.handleReactionChange : ${error}`
-      );
+      logger.error({ err: error }, "Starboard reaction handler failed");
     }
   }
 
@@ -242,10 +368,10 @@ class StarboardService implements Service {
     if (!channel?.isTextBased()) return;
     if (!("send" in channel)) return;
 
-    const container = this.buildStarboardContainer(message, metrics, config);
+    const components = await this.buildComponents(message, metrics, config);
 
     const starboardMessage = await (channel as TextChannel).send({
-      components: [container],
+      components,
       flags: MessageFlags.IsComponentsV2,
     });
 
@@ -253,17 +379,22 @@ class StarboardService implements Service {
       await starboardMessage.react(metric.emoji).catch(() => {});
     }
 
-    await prisma.starboardEntry.create({
-      data: {
-        guildId: guild.id,
-        originalMessageId: message.id,
-        originalChannelId: message.channel.id,
-        starboardMessageId: starboardMessage.id,
-        starboardChannelId: starboardChannel.id,
-        reactionCount: metrics.totalUniqueUsers,
-        reactions: metrics.emojis as any,
-      },
-    });
+    try {
+      await prisma.starboardEntry.create({
+        data: {
+          guildId: guild.id,
+          originalMessageId: message.id,
+          originalChannelId: message.channel.id,
+          starboardMessageId: starboardMessage.id,
+          starboardChannelId: starboardChannel.id,
+          reactionCount: metrics.totalUniqueUsers,
+          reactions: metrics.emojis as unknown as Prisma.InputJsonValue[],
+        },
+      });
+    } catch (error) {
+      await starboardMessage.delete().catch(() => {});
+      throw error;
+    }
   }
 
   private async updateStarboardEntry(
@@ -291,13 +422,13 @@ class StarboardService implements Service {
       return;
     }
 
-    const container = this.buildStarboardContainer(
+    const components = await this.buildComponents(
       originalMessage,
       metrics,
       config
     );
     await starboardMessage.edit({
-      components: [container],
+      components,
       flags: MessageFlags.IsComponentsV2,
     });
 
@@ -319,7 +450,7 @@ class StarboardService implements Service {
       where: { id: entry.id },
       data: {
         reactionCount: metrics.totalUniqueUsers,
-        reactions: metrics.emojis as any,
+        reactions: metrics.emojis as unknown as Prisma.InputJsonValue[],
       },
     });
   }
