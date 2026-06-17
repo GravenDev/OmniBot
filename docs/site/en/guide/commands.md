@@ -52,6 +52,9 @@ interface Command {
 
 The `config` parameter is a `ConfigProvider` that gives access to the module's configuration (see [Configuration](./configuration)). It's always injected — even for modules without a config schema.
 
+> [!NOTE]
+> In `complete()` (autocomplete) handlers, the injected `config` currently comes from the **Core** module rather than the command's module. This means module-specific config values are not available during autocomplete — only the Core module's config is accessible.
+
 ```typescript
 async execute(interaction, config) {
   const channel = config.get("logChannel");

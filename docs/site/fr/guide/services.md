@@ -122,7 +122,7 @@ config: {
 ## Bonnes pratiques
 
 - **Responsabilité unique** — chaque service doit se concentrer sur une préoccupation
-- **Testable** — les services peuvent être testés unitairement sans appels API Discord en important la classe avant `declareService`
+- **Testable** — exportez la classe pour que les tests unitaires puissent l'importer directement avant `declareService` ; ou gardez-la dans un fichier séparé et importez la classe brute pour les tests sans appels API Discord
 - **Pas d'état global** — utilisez des instances de classe avec un encapsullement approprié
 - **Import direct** — importez l'instance déclarée là où vous en avez besoin
 - **Utilisation avec Prisma** — les services sont l'endroit naturel pour les opérations base de données
