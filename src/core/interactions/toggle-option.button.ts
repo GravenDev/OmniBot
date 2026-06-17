@@ -1,7 +1,7 @@
 import { MessageFlags } from "discord.js";
 import { resolveConfigurableModule } from "#core/config/config-edit.js";
-import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
+import { replyWithCoreT } from "#core/utils/core-config.js";
 import {
   configPageOfKey,
   configurationMessage,
@@ -16,14 +16,7 @@ export default declareInteractionHandler({
     const module = resolveConfigurableModule(moduleId);
 
     if (!module || !configService.isConfigKey(module, configKey)) {
-      const coreConfig = await configService.getConfigForModuleIn(
-        coreModule,
-        interaction.guildId!
-      );
-      await interaction.reply({
-        content: coreConfig.t("interaction.configOptionNotFound"),
-        flags: MessageFlags.Ephemeral,
-      });
+      await replyWithCoreT(interaction, "interaction.configOptionNotFound");
       return;
     }
 

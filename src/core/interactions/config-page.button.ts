@@ -1,7 +1,7 @@
 import { MessageFlags } from "discord.js";
 import { resolveConfigurableModule } from "#core/config/config-edit.js";
-import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
+import { replyWithCoreT } from "#core/utils/core-config.js";
 import { configurationMessage } from "#core/utils/core-messages.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 
@@ -17,14 +17,7 @@ export default declareInteractionHandler({
   async execute(interaction, [moduleId, pageRaw]) {
     const module = resolveConfigurableModule(moduleId);
     if (!module) {
-      const coreConfig = await configService.getConfigForModuleIn(
-        coreModule,
-        interaction.guildId!
-      );
-      await interaction.reply({
-        content: coreConfig.t("config.notFound"),
-        flags: MessageFlags.Ephemeral,
-      });
+      await replyWithCoreT(interaction, "config.notFound");
       return;
     }
 
