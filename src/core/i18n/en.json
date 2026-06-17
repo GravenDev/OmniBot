@@ -57,7 +57,7 @@
   "select.category.selectMultiple": "Select categories",
   "select.category.selectSingle": "Select a category",
 
-  "config.header": "# `{{moduleName}}` settings",
+  "config.header": "# Settings · `{{moduleName}}`",
   "config.page": "-# Page {{current}}/{{total}}",
   "config.option": "-# {{typeName}}\n**⚙️  {{optionName}}**\n> {{optionDesc}}\n{{currentValue}}\n\n",
 
@@ -71,7 +71,7 @@
   "type.choice": "Choice",
   "type.listOf": "List of {{type}}",
 
-  "modules.core.name": "Core Module",
+  "modules.core.name": "Global Configuration",
   "modules.core.description": "The core module of the application, managing core commands and events. It is always loaded.",
 
   "modules.thread-creator.name": "Thread Creator",
