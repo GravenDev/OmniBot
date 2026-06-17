@@ -22,11 +22,14 @@ export default class ChannelConfigHandler extends EntitySelectConfigHandler<Conf
     current,
     minValues,
     maxValues,
+    t,
   }: SelectRowContext): ActionRowBuilder<MessageActionRowComponentBuilder> {
     const menu = new ChannelSelectMenuBuilder()
       .setCustomId(customId)
       .setPlaceholder(
-        maxValues > 1 ? "Sélectionnez des salons" : "Sélectionnez un salon"
+        maxValues > 1
+          ? t("select.channel.selectMultiple")
+          : t("select.channel.selectSingle")
       )
       .setChannelTypes(
         ChannelType.GuildText,

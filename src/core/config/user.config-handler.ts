@@ -21,13 +21,14 @@ export default class UserConfigHandler extends EntitySelectConfigHandler<ConfigT
     current,
     minValues,
     maxValues,
+    t,
   }: SelectRowContext): ActionRowBuilder<MessageActionRowComponentBuilder> {
     const menu = new UserSelectMenuBuilder()
       .setCustomId(customId)
       .setPlaceholder(
         maxValues > 1
-          ? "Sélectionnez des utilisateurs"
-          : "Sélectionnez un utilisateur"
+          ? t("select.user.selectMultiple")
+          : t("select.user.selectSingle")
       )
       .setMinValues(minValues)
       .setMaxValues(maxValues);

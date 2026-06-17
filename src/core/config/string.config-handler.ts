@@ -6,6 +6,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
+import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
 import { ConfigProvider, ConfigType, type ConfigSchema } from "#lib/config.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
@@ -24,18 +25,16 @@ export default class StringConfigHandler extends ConfigTypeHandler<ConfigType.ST
     module: Module<TSchema>,
     config: ConfigProvider<TSchema>,
     key: string,
-    // The modal updates the public config message in place via isFromMessage,
-    // so it does not need the source message id.
     _sourceMessageId: string
   ): Promise<void> {
     const modal = new ModalBuilder()
       .setCustomId(`set-string-config-modal:${module.id}:${key}`)
-      .setTitle(`Set ${key}`)
+      .setTitle(config.t("setConfig.title", { key }))
       .addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(
           new TextInputBuilder()
             .setCustomId("value")
-            .setLabel(`Enter a value (text):`)
+            .setLabel(config.t("setConfig.label", { type: "text" }))
             .setStyle(TextInputStyle.Short)
             .setValue((config.get(key) ?? "").toString())
             .setRequired(true)
@@ -58,9 +57,14 @@ const handleModalSubmit = declareInteractionHandler({
   check: (interaction) => interaction.isModalSubmit(),
   execute: async (interaction, [moduleId, configKey]) => {
     const module = resolveConfigurableModule(moduleId);
+
     if (!module || !configService.isConfigKey(module, configKey)) {
+      const coreConfig = await configService.getConfigForModuleIn(
+        coreModule,
+        interaction.guildId!
+      );
       await interaction.reply({
-        content: "Configuration introuvable.",
+        content: coreConfig.t("interaction.configOptionNotFound"),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -75,7 +79,6 @@ const handleModalSubmit = declareInteractionHandler({
       value
     );
 
-    // Edit the config message in place rather than posting a new embed.
     if (interaction.isFromMessage()) {
       await interaction.update({
         components,
