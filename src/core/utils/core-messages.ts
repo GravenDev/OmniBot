@@ -160,6 +160,11 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
     const optDesc = config.t("config." + key + ".description", {
       defaultValue: option.description,
     });
+    // Flag values still served by their schema default, so an admin can tell
+    // at a glance what they have actually set versus what is just the default.
+    const renderedValue =
+      renderCurrentValue(option.type, value) +
+      (config.isDefault(key) ? config.t("config.defaultSuffix") : "");
     section.addTextDisplayComponents((text) =>
       text.setContent(
         config.t("config.option", {
@@ -167,7 +172,7 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
           optionName: optName,
           optionDesc: optDesc,
           currentValue: config.t("config.currentValue", {
-            value: renderCurrentValue(option.type, value),
+            value: renderedValue,
           }),
         })
       )

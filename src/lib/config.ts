@@ -208,6 +208,19 @@ export class ConfigProvider<TSchema extends ConfigSchema> {
   }
 
   /**
+   * Whether `get(key)` is currently serving the schema default rather than a
+   * stored value — true only when nothing is stored and the entry declares a
+   * default. A cleared value (`null`) counts as explicitly set, not default.
+   * Lets the UI flag which values the admin has actually chosen.
+   */
+  isDefault<TKey extends keyof TSchema>(key: TKey): boolean {
+    if (this.data[key] !== undefined) {
+      return false;
+    }
+    return this.module.config[key]?.defaultValue !== undefined;
+  }
+
+  /**
    * The schema default for `key`, resolved against the active locale.
    *
    * Free-text string defaults are looked up as `config.<key>.default`, so a
