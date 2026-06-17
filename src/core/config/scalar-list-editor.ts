@@ -10,6 +10,7 @@ import {
   TextInputStyle,
   type ButtonInteraction,
 } from "discord.js";
+import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
 import {
   ConfigType,
@@ -17,6 +18,7 @@ import {
   getConfigTypeName,
   type ListOf,
 } from "#lib/config.js";
+import type { TFunction } from "#lib/i18n.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import type { Module } from "#lib/module.js";
 import type { Registry } from "#lib/registry.js";
@@ -42,14 +44,14 @@ function baseType(entry: {
   return (entry.type as ListOf<ConfigType>)[0];
 }
 
-function inputLabel(type: ConfigType): string {
+function inputLabel(type: ConfigType, t: TFunction): string {
   switch (type) {
     case ConfigType.NUMBER:
-      return "Valeur (nombre)";
+      return t("scalarList.valueNumber");
     case ConfigType.BOOLEAN:
-      return "Valeur (true / false)";
+      return t("scalarList.valueBoolean");
     default:
-      return "Valeur (texte)";
+      return t("scalarList.valueText");
   }
 }
 
@@ -75,15 +77,31 @@ export function scalarListEditorMessage(
   module: Module,
   key: string,
   values: unknown[],
-  sourceMessageId: string
+  sourceMessageId: string,
+  t: TFunction
 ): ContainerBuilder[] {
   const entry = getConfigEntry(module, key);
   const container = new ContainerBuilder().setAccentColor(Colors.Turquoise);
 
+  const modName = t("modules." + module.id + ".name", {
+    defaultValue: module.name,
+  });
+  const entryName = entry
+    ? t("config." + key + ".name", { defaultValue: entry.name })
+    : key;
+  const entryDesc = entry
+    ? t("config." + key + ".description", { defaultValue: entry.description })
+    : "";
+  const typeName = entry ? getConfigTypeName(entry.type, t) : "";
+
   container.addTextDisplayComponents((text) =>
     text.setContent(
-      `# \`${module.name}\` — ${entry?.name ?? key}\n` +
-        `-# ${entry ? getConfigTypeName(entry.type) : ""}\n> ${entry?.description ?? ""}`
+      t("scalarList.header", {
+        moduleName: modName,
+        entryName,
+        typeName,
+        entryDesc,
+      })
     )
   );
   container.addSeparatorComponents((separator) => separator.setDivider(true));
@@ -93,19 +111,23 @@ export function scalarListEditorMessage(
 
   if (values.length === 0) {
     container.addTextDisplayComponents((text) =>
-      text.setContent("-# Liste vide.")
+      text.setContent(t("scalarList.empty"))
     );
   } else if (type === ConfigType.BOOLEAN) {
-    // Booleans are flipped in place via a toggle; a separate remove button drops them.
     values.forEach((value, index) => {
       const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
           .setCustomId(`toggle-list-item:${idSuffix}:${index}`)
-          .setLabel(`Élément ${index + 1} : ${value ? "vrai" : "faux"}`)
+          .setLabel(
+            t("scalarList.booleanItem", {
+              index: String(index + 1),
+              value: value ? "true" : "false",
+            })
+          )
           .setStyle(value ? ButtonStyle.Success : ButtonStyle.Danger),
         new ButtonBuilder()
           .setCustomId(`remove-list-item:${idSuffix}:${index}`)
-          .setLabel("Supprimer")
+          .setLabel(t("scalarList.remove"))
           .setStyle(ButtonStyle.Secondary)
       );
       container.addActionRowComponents(row);
@@ -119,7 +141,7 @@ export function scalarListEditorMessage(
         .setButtonAccessory((button) =>
           button
             .setCustomId(`remove-list-item:${idSuffix}:${index}`)
-            .setLabel("Supprimer")
+            .setLabel(t("scalarList.remove"))
             .setStyle(ButtonStyle.Danger)
         );
       container.addSectionComponents(section);
@@ -129,7 +151,7 @@ export function scalarListEditorMessage(
   const addRow = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setCustomId(`add-list-item:${idSuffix}`)
-      .setLabel("Ajouter")
+      .setLabel(t("scalarList.add"))
       .setStyle(ButtonStyle.Success)
   );
   container.addActionRowComponents(addRow);
@@ -145,8 +167,19 @@ export async function openScalarListEditor(
   values: unknown[],
   sourceMessageId: string
 ): Promise<void> {
+  const config = await configService.getConfigForModuleIn(
+    module,
+    interaction.guildId!
+  );
+
   await interaction.reply({
-    components: scalarListEditorMessage(module, key, values, sourceMessageId),
+    components: scalarListEditorMessage(
+      module,
+      key,
+      values,
+      sourceMessageId,
+      config.t
+    ),
     flags: MessageFlags.Ephemeral + MessageFlags.IsComponentsV2,
   });
 }
@@ -158,8 +191,12 @@ const addListItem = declareInteractionHandler({
   execute: async (interaction, [moduleId, key, sourceMessageId]) => {
     const module = resolveConfigurableModule(moduleId);
     if (!module || !configService.isConfigKey(module, key)) {
+      const coreConfig = await configService.getConfigForModuleIn(
+        coreModule,
+        interaction.guildId!
+      );
       await interaction.reply({
-        content: "Configuration introuvable.",
+        content: coreConfig.t("interaction.configOptionNotFound"),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -168,7 +205,6 @@ const addListItem = declareInteractionHandler({
     const entry = getConfigEntry(module, key)!;
     const type = baseType(entry);
 
-    // Booleans are added directly (then toggled in place) — no modal to type.
     if (type === ConfigType.BOOLEAN) {
       const provider = await configService.getConfigForModuleIn(
         module,
@@ -191,7 +227,8 @@ const addListItem = declareInteractionHandler({
           module,
           key,
           values,
-          sourceMessageId!
+          sourceMessageId!,
+          provider.t
         ),
         flags: MessageFlags.IsComponentsV2,
       });
@@ -204,14 +241,19 @@ const addListItem = declareInteractionHandler({
       return;
     }
 
+    const config = await configService.getConfigForModuleIn(
+      module,
+      interaction.guildId!
+    );
+
     const modal = new ModalBuilder()
       .setCustomId(`add-list-item-modal:${module.id}:${key}:${sourceMessageId}`)
-      .setTitle(`Ajouter — ${entry.name}`)
+      .setTitle(config.t("scalarList.addTitle", { name: entry.name }))
       .addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(
           new TextInputBuilder()
             .setCustomId("value")
-            .setLabel(inputLabel(type))
+            .setLabel(inputLabel(type, config.t))
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
         )
@@ -228,8 +270,12 @@ const toggleListItem = declareInteractionHandler({
   execute: async (interaction, [moduleId, key, sourceMessageId, indexRaw]) => {
     const module = resolveConfigurableModule(moduleId);
     if (!module || !configService.isConfigKey(module, key)) {
+      const coreConfig = await configService.getConfigForModuleIn(
+        coreModule,
+        interaction.guildId!
+      );
       await interaction.reply({
-        content: "Configuration introuvable.",
+        content: coreConfig.t("interaction.configOptionNotFound"),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -255,7 +301,8 @@ const toggleListItem = declareInteractionHandler({
         module,
         key,
         values,
-        sourceMessageId!
+        sourceMessageId!,
+        provider.t
       ),
       flags: MessageFlags.IsComponentsV2,
     });
@@ -270,8 +317,12 @@ const addListItemModal = declareInteractionHandler({
   execute: async (interaction, [moduleId, key, sourceMessageId]) => {
     const module = resolveConfigurableModule(moduleId);
     if (!module || !configService.isConfigKey(module, key)) {
+      const coreConfig = await configService.getConfigForModuleIn(
+        coreModule,
+        interaction.guildId!
+      );
       await interaction.reply({
-        content: "Configuration introuvable.",
+        content: coreConfig.t("interaction.configOptionNotFound"),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -280,8 +331,12 @@ const addListItemModal = declareInteractionHandler({
     const type = baseType(getConfigEntry(module, key)!);
     const raw = interaction.fields.getTextInputValue("value").trim();
     if (!ConfigValidator[type](raw)) {
+      const config = await configService.getConfigForModuleIn(
+        module,
+        interaction.guildId!
+      );
       await interaction.reply({
-        content: `❌ \`${raw}\` n'est pas une valeur valide.`,
+        content: config.t("scalarList.invalidValue", { value: raw }),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -303,7 +358,8 @@ const addListItemModal = declareInteractionHandler({
       module,
       key,
       values,
-      sourceMessageId!
+      sourceMessageId!,
+      provider.t
     );
     if (interaction.isFromMessage()) {
       await interaction.update({
@@ -327,8 +383,12 @@ const removeListItem = declareInteractionHandler({
   execute: async (interaction, [moduleId, key, sourceMessageId, indexRaw]) => {
     const module = resolveConfigurableModule(moduleId);
     if (!module || !configService.isConfigKey(module, key)) {
+      const coreConfig = await configService.getConfigForModuleIn(
+        coreModule,
+        interaction.guildId!
+      );
       await interaction.reply({
-        content: "Configuration introuvable.",
+        content: coreConfig.t("interaction.configOptionNotFound"),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -354,7 +414,8 @@ const removeListItem = declareInteractionHandler({
         module,
         key,
         values,
-        sourceMessageId!
+        sourceMessageId!,
+        provider.t
       ),
       flags: MessageFlags.IsComponentsV2,
     });

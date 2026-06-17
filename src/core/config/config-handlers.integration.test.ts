@@ -16,8 +16,25 @@ import type { Registry } from "#lib/registry.js";
 
 // Mock the persistence boundary so importing the handlers does not boot the bot
 // (config.service.js and config-edit.js both pull in ../../index.js).
+vi.mock("#core/core.module.js", () => ({
+  default: {
+    id: "core",
+    name: "Core Module",
+    description: "",
+    version: "1.0.0",
+    config: {},
+    registry: { commands: [], interactionHandlers: [] },
+    onLoad: vi.fn(),
+    onInstall: vi.fn(),
+    onUninstall: vi.fn(),
+  },
+}));
 vi.mock("#core/services/config.service.js", () => ({
-  default: { isConfigKey: vi.fn(), updateConfigForModuleIn: vi.fn() },
+  default: {
+    isConfigKey: vi.fn(),
+    updateConfigForModuleIn: vi.fn(),
+    getConfigForModuleIn: vi.fn(),
+  },
 }));
 vi.mock("./config-edit.js", () => ({
   resolveConfigurableModule: vi.fn(),
@@ -42,12 +59,22 @@ const { default: EnumConfigHandler } = await import("./enum.config-handler.js");
 
 const isConfigKey = vi.mocked(configService.isConfigKey);
 const updateConfig = vi.mocked(configService.updateConfigForModuleIn);
+const getConfig = vi.mocked(configService.getConfigForModuleIn);
 const resolveModule = vi.mocked(resolveConfigurableModule);
 const save = vi.mocked(saveConfigValue);
 const isList = vi.mocked(isListEntry);
 const configEntry = vi.mocked(getConfigEntry);
 
 const fakeModule = { id: "mod" } as unknown as Module;
+
+function mockConfigProvider(
+  t?: (key: string, opts?: Record<string, unknown>) => string
+): ConfigProvider<ConfigSchema> {
+  return {
+    get: vi.fn(),
+    t: t ?? ((key: string) => key),
+  } as unknown as ConfigProvider<ConfigSchema>;
+}
 
 /**
  * Drives a handler's `registerEditionInteractionHandlers` with a capturing
@@ -70,7 +97,8 @@ beforeEach(() => {
   resolveModule.mockReturnValue(fakeModule);
   isConfigKey.mockReturnValue(true);
   save.mockResolvedValue([]);
-  updateConfig.mockResolvedValue({} as never);
+  updateConfig.mockResolvedValue(mockConfigProvider());
+  getConfig.mockResolvedValue(mockConfigProvider());
   isList.mockReturnValue(false);
 });
 
@@ -98,7 +126,9 @@ describe("NumberConfigHandler modal submit", () => {
 
     expect(save).not.toHaveBeenCalled();
     expect(interaction.reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("nombre") })
+      expect.objectContaining({
+        content: expect.stringContaining("config.number.invalid"),
+      })
     );
   });
 
@@ -132,7 +162,7 @@ describe("NumberConfigHandler modal submit", () => {
     expect(save).not.toHaveBeenCalled();
     expect(interaction.reply).toHaveBeenCalledWith(
       expect.objectContaining({
-        content: expect.stringContaining("introuvable"),
+        content: expect.stringContaining("configOptionNotFound"),
       })
     );
   });
@@ -341,6 +371,7 @@ describe("EnumConfigHandler select submit", () => {
     } as unknown as ButtonInteraction;
     const config = {
       get: () => undefined,
+      t: (key: string) => key,
     } as unknown as ConfigProvider<ConfigSchema>;
 
     await handler.replyToEditRequest(
@@ -352,7 +383,9 @@ describe("EnumConfigHandler select submit", () => {
     );
 
     expect(interaction.reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: expect.stringContaining("option") })
+      expect.objectContaining({
+        content: expect.stringContaining("config.enum.noOptions"),
+      })
     );
   });
 });

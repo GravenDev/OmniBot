@@ -6,8 +6,10 @@ import {
   type ButtonInteraction,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
+import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
 import type { ConfigProvider, ConfigSchema, ConfigType } from "#lib/config.js";
+import type { TFunction } from "#lib/i18n.js";
 import {
   declareInteractionHandler,
   type CompatibleInteraction,
@@ -35,6 +37,7 @@ export interface SelectRowContext {
   current: string[];
   minValues: number;
   maxValues: number;
+  t: TFunction;
 }
 
 /**
@@ -84,7 +87,8 @@ export abstract class SelectConfigHandler<
    */
   protected editorUnavailableReason(
     _module: Module,
-    _key: string
+    _key: string,
+    _t: TFunction
   ): string | null {
     return null;
   }
@@ -94,7 +98,8 @@ export abstract class SelectConfigHandler<
     module: Module,
     key: string,
     current: string[],
-    sourceMessageId: string
+    sourceMessageId: string,
+    t: TFunction
   ): ContainerBuilder {
     const customId = `${this.selectCustomId}:${module.id}:${key}:${sourceMessageId}`;
     const isList = isListEntry(getConfigEntry(module, key));
@@ -103,6 +108,7 @@ export abstract class SelectConfigHandler<
       key,
       customId,
       current,
+      t,
       minValues: isList ? 0 : 1,
       maxValues: isList ? this.maxSelectableValues(module, key) : 1,
     });
@@ -117,7 +123,7 @@ export abstract class SelectConfigHandler<
     key: keyof TSchema,
     sourceMessageId: string
   ): Promise<void> {
-    const reason = this.editorUnavailableReason(module, String(key));
+    const reason = this.editorUnavailableReason(module, String(key), config.t);
     if (reason) {
       await interaction.reply({
         content: reason,
@@ -130,7 +136,8 @@ export abstract class SelectConfigHandler<
       module,
       String(key),
       this.currentValues(config.get(key)),
-      sourceMessageId
+      sourceMessageId,
+      config.t
     );
 
     await interaction.reply({
@@ -158,8 +165,12 @@ export abstract class SelectConfigHandler<
         ) => {
           const module = resolveConfigurableModule(moduleId);
           if (!module || !configService.isConfigKey(module, configKey)) {
+            const coreConfig = await configService.getConfigForModuleIn(
+              coreModule,
+              interaction.guildId!
+            );
             await interaction.reply({
-              content: "Configuration introuvable.",
+              content: coreConfig.t("interaction.configOptionNotFound"),
               flags: MessageFlags.Ephemeral,
             });
             return;
@@ -169,8 +180,12 @@ export abstract class SelectConfigHandler<
           if (
             !values.every((value) => isValidValue(value, module, configKey))
           ) {
+            const config = await configService.getConfigForModuleIn(
+              module,
+              interaction.guildId!
+            );
             await interaction.reply({
-              content: "Valeur sélectionnée invalide.",
+              content: config.t("config.invalidSelection"),
               flags: MessageFlags.Ephemeral,
             });
             return;
@@ -185,12 +200,23 @@ export abstract class SelectConfigHandler<
             { [configKey]: value }
           );
 
+          const config = await configService.getConfigForModuleIn(
+            module,
+            interaction.guildId!
+          );
+
           // Keep the (ephemeral) select open with the new selection, then refresh
           // the public config message — never render a config view here, so its
           // edit buttons can't point at an ephemeral (uneditable) message.
           await interaction.update({
             components: [
-              buildEditorContainer(module, configKey, values, sourceMessageId!),
+              buildEditorContainer(
+                module,
+                configKey,
+                values,
+                sourceMessageId!,
+                config.t
+              ),
             ],
             flags: MessageFlags.IsComponentsV2,
           });

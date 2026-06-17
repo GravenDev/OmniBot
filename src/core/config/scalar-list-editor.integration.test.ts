@@ -6,6 +6,19 @@ import type { Module } from "#lib/module.js";
 import type { Registry } from "#lib/registry.js";
 
 // Mock the persistence boundary so importing the editor does not boot the bot.
+vi.mock("#core/core.module.js", () => ({
+  default: {
+    id: "core",
+    name: "Core Module",
+    description: "",
+    version: "1.0.0",
+    config: {},
+    registry: { commands: [], interactionHandlers: [] },
+    onLoad: vi.fn(),
+    onInstall: vi.fn(),
+    onUninstall: vi.fn(),
+  },
+}));
 vi.mock("#core/services/config.service.js", () => ({
   default: {
     isConfigKey: vi.fn(),
@@ -43,15 +56,22 @@ function handlers(): Record<string, Declared<InteractionHandler<never>>> {
   return Object.fromEntries(registered.map((h) => [h.customId, h]));
 }
 
+function mockProvider(values: unknown[]) {
+  return {
+    get: () => values,
+    t: (key: string) => key,
+  } as never;
+}
+
 function currentValues(values: unknown[]) {
-  getConfig.mockResolvedValue({ get: () => values } as never);
+  getConfig.mockResolvedValue(mockProvider(values));
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   resolveModule.mockReturnValue(fakeModule);
   isConfigKey.mockReturnValue(true);
-  updateConfig.mockResolvedValue({} as never);
+  updateConfig.mockResolvedValue({ t: (key: string) => key } as never);
   entry.mockReturnValue({
     name: "Count",
     description: "",

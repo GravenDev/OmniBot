@@ -21,11 +21,14 @@ export default class RoleConfigHandler extends EntitySelectConfigHandler<ConfigT
     current,
     minValues,
     maxValues,
+    t,
   }: SelectRowContext): ActionRowBuilder<MessageActionRowComponentBuilder> {
     const menu = new RoleSelectMenuBuilder()
       .setCustomId(customId)
       .setPlaceholder(
-        maxValues > 1 ? "Sélectionnez des rôles" : "Sélectionnez un rôle"
+        maxValues > 1
+          ? t("select.role.selectMultiple")
+          : t("select.role.selectSingle")
       )
       .setMinValues(minValues)
       .setMaxValues(maxValues);

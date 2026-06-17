@@ -5,6 +5,7 @@ import {
   type MessageActionRowComponentBuilder,
 } from "discord.js";
 import { ConfigType, isEnumEntry } from "#lib/config.js";
+import type { TFunction } from "#lib/i18n.js";
 import type { CompatibleInteraction } from "#lib/interaction.js";
 import type { Module } from "#lib/module.js";
 import { getConfigEntry } from "./config-edit.js";
@@ -60,28 +61,30 @@ export default class EnumConfigHandler extends SelectConfigHandler<ConfigType.EN
 
   protected override editorUnavailableReason(
     module: Module,
-    key: string
+    key: string,
+    t: TFunction
   ): string | null {
     return optionsFor(module, key).length === 0
-      ? "Ce champ ne déclare aucune option."
+      ? t("config.enum.noOptions")
       : null;
   }
 
   protected override buildSelectRow({
-    module,
-    key,
+    module: _module,
+    key: _key,
     customId,
     current,
     minValues,
     maxValues,
+    t,
   }: SelectRowContext): ActionRowBuilder<MessageActionRowComponentBuilder> {
-    const options = optionsFor(module, key).slice(0, MAX_SELECT_VALUES);
+    const options = optionsFor(_module, _key).slice(0, MAX_SELECT_VALUES);
     const menu = new StringSelectMenuBuilder()
       .setCustomId(customId)
       .setPlaceholder(
         maxValues > 1
-          ? "Sélectionnez une ou plusieurs valeurs"
-          : "Sélectionnez une valeur"
+          ? t("config.enum.selectMultiple")
+          : t("config.enum.selectSingle")
       )
       .setMinValues(minValues)
       .setMaxValues(maxValues)

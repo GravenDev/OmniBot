@@ -6,6 +6,7 @@ import {
   TextInputStyle,
   type ButtonInteraction,
 } from "discord.js";
+import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
 import {
   ConfigType,
@@ -29,17 +30,16 @@ export default class NumberConfigHandler extends ConfigTypeHandler<ConfigType.NU
     module: Module<TSchema>,
     config: ConfigProvider<TSchema>,
     key: keyof TSchema,
-    // The modal updates the public config message in place via isFromMessage.
     _sourceMessageId: string
   ): Promise<void> {
     const modal = new ModalBuilder()
       .setCustomId(`set-config-number-modal:${module.id}:${key.toString()}`)
-      .setTitle(`Set ${key.toString()}`)
+      .setTitle(config.t("setConfig.title", { key: key.toString() }))
       .addComponents(
         new ActionRowBuilder<TextInputBuilder>().addComponents(
           new TextInputBuilder()
             .setCustomId("value")
-            .setLabel(`Enter a value (number):`)
+            .setLabel(config.t("setConfig.label", { type: "number" }))
             .setValue((config.get(key) ?? "").toString())
             .setStyle(TextInputStyle.Short)
             .setRequired(true)
@@ -62,9 +62,14 @@ const handleModalSubmit = declareInteractionHandler({
   check: (interaction) => interaction.isModalSubmit(),
   execute: async (interaction, [moduleId, configKey]) => {
     const module = resolveConfigurableModule(moduleId);
+
     if (!module || !configService.isConfigKey(module, configKey)) {
+      const coreConfig = await configService.getConfigForModuleIn(
+        coreModule,
+        interaction.guildId!
+      );
       await interaction.reply({
-        content: "Configuration introuvable.",
+        content: coreConfig.t("interaction.configOptionNotFound"),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -73,8 +78,12 @@ const handleModalSubmit = declareInteractionHandler({
     const raw = interaction.fields.getTextInputValue("value");
 
     if (!ConfigValidator[ConfigType.NUMBER](raw)) {
+      const config = await configService.getConfigForModuleIn(
+        module,
+        interaction.guildId!
+      );
       await interaction.reply({
-        content: `❌ \`${raw}\` n'est pas un nombre valide.`,
+        content: config.t("config.number.invalid", { value: raw }),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -87,7 +96,6 @@ const handleModalSubmit = declareInteractionHandler({
       Number(raw)
     );
 
-    // Edit the config message in place rather than posting a new embed.
     if (interaction.isFromMessage()) {
       await interaction.update({
         components,
