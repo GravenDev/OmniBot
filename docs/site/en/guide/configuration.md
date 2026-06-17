@@ -223,7 +223,7 @@ Keys are resolved in this order:
 1. Your module's namespace (e.g. `thread-creator:welcomeMessage`)
 2. The core namespace (`core:welcomeMessage`)
 
-This means common UI strings like `config.previous`, `config.next`, `config.toggle.enable`, and type names (`type.text`, `type.number`, etc.) are provided by the core namespace — you only need to translate module-specific strings.
+This means common UI strings like `config.previous`, `config.next`, `modules.enable`, and type names (`type.text`, `type.number`, etc.) are provided by the core namespace — you only need to translate module-specific strings.
 
 ## Best Practices
 

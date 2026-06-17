@@ -223,7 +223,7 @@ Les clés sont résolues dans cet ordre :
 1. Le namespace du module (ex. `thread-creator:messageBienvenue`)
 2. Le namespace cœur (`core:messageBienvenue`)
 
-Cela signifie que les chaînes d'interface communes comme `config.previous`, `config.next`, `config.toggle.enable` et les noms de types (`type.text`, `type.number`, etc.) sont fournies par le namespace cœur — vous n'avez à traduire que les chaînes spécifiques à votre module.
+Cela signifie que les chaînes d'interface communes comme `config.previous`, `config.next`, `modules.enable` et les noms de types (`type.text`, `type.number`, etc.) sont fournies par le namespace cœur — vous n'avez à traduire que les chaînes spécifiques à votre module.
 
 ## Bonnes pratiques
 

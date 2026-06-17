@@ -194,7 +194,7 @@ async execute(interaction, config) {
 }
 ```
 
-Keys are looked up in the module's own namespace first, then fall back to core translations. Common UI labels (`config.previous`, `config.next`, `config.toggle.enable`, etc.) are provided by the core namespace — no need to redefine them in every module.
+Keys are looked up in the module's own namespace first, then fall back to core translations. Common UI labels (`config.previous`, `config.next`, `modules.enable`, etc.) are provided by the core namespace — no need to redefine them in every module.
 
 ### Locale selection
 

@@ -70,7 +70,7 @@ La fonction utilitaire `getConfigTypeName()` accepte une `TFunction` optionnelle
 import { getConfigTypeName } from "#lib/config.js";
 
 const label = getConfigTypeName(ConfigType.STRING, config.t);
-// → "Short text" (EN) ou "Texte court" (FR)
+// → "Text" (EN) ou "Texte" (FR)
 ```
 
 ### Dans les commandes
@@ -88,22 +88,22 @@ Dans ce bot, seules les descriptions sont localisées — les noms de commandes 
 
 Les chaînes d'interface communes sont fournies par le namespace principal et disponibles dans tous les modules sans être redéfinies :
 
-| Clé                     | Valeur anglais                                                     | Valeur français                                                    |
-| ----------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| `config.previous`       | ◀ Previous                                                         | ◀ Précédent                                                        |
-| `config.next`           | Next ▶                                                             | Suivant ▶                                                          |
-| `config.page`           | Page &#123;&#123;current&#125;&#125;/&#123;&#123;total&#125;&#125; | Page &#123;&#123;current&#125;&#125;/&#123;&#123;total&#125;&#125; |
-| `config.toggle.enable`  | Enable                                                             | Activer                                                            |
-| `config.toggle.disable` | Disable                                                            | Désactiver                                                         |
-| `type.text`             | Short text                                                         | Texte court                                                        |
-| `type.number`           | Number                                                             | Nombre                                                             |
-| `type.boolean`          | Yes/No                                                             | Oui/Non                                                            |
-| `type.user`             | User                                                               | Utilisateur                                                        |
-| `type.role`             | Role                                                               | Rôle                                                               |
-| `type.channel`          | Channel                                                            | Salon                                                              |
-| `type.category`         | Category                                                           | Catégorie                                                          |
-| `type.enum`             | Choice                                                             | Choix                                                              |
-| `type.listOf`           | List of &#123;&#123;type&#125;&#125;                               | Liste de &#123;&#123;type&#125;&#125;                              |
+| Clé               | Valeur anglais                                                     | Valeur français                                                    |
+| ----------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `config.previous` | ◀ Previous                                                         | ◀ Précédent                                                        |
+| `config.next`     | Next ▶                                                             | Suivant ▶                                                          |
+| `config.page`     | Page &#123;&#123;current&#125;&#125;/&#123;&#123;total&#125;&#125; | Page &#123;&#123;current&#125;&#125;/&#123;&#123;total&#125;&#125; |
+| `modules.enable`  | Enable                                                             | Activer                                                            |
+| `modules.disable` | Disable                                                            | Désactiver                                                         |
+| `type.text`       | Text                                                               | Texte                                                              |
+| `type.number`     | Number                                                             | Nombre                                                             |
+| `type.boolean`    | Boolean                                                            | Booléen                                                            |
+| `type.user`       | User                                                               | Utilisateur                                                        |
+| `type.role`       | Role                                                               | Rôle                                                               |
+| `type.channel`    | Channel                                                            | Salon                                                              |
+| `type.category`   | Category                                                           | Catégorie                                                          |
+| `type.choice`     | Choice                                                             | Choix                                                              |
+| `type.listOf`     | List of &#123;&#123;type&#125;&#125;                               | Liste de &#123;&#123;type&#125;&#125;                              |
 
 ## Ajouter une nouvelle locale
 
