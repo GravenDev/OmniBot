@@ -1,4 +1,4 @@
-import { Client, Events } from "discord.js";
+import { Client, Events, Partials } from "discord.js";
 import coreModule from "./core/core.module.js";
 import { syncCommands } from "./core/loaders/command-loader.js";
 import {
@@ -26,6 +26,12 @@ const intents = modules.flatMap((module) => module.intents).filter((a) => !!a);
 
 export const client = new Client({
   intents: intents,
+  partials: [
+    Partials.Message,
+    Partials.Reaction,
+    Partials.User,
+    Partials.Channel,
+  ],
 });
 
 client.once(Events.ClientReady, async (readyClient) => {

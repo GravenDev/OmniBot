@@ -15,3 +15,20 @@ model ModuleActivation {
 
   @@id([moduleId, guildId])
 }
+
+// === Modèles de modules/starboard/models/starboard.prisma ===
+model StarboardEntry {
+  id                  String   @id @default(cuid())
+  guildId             String
+  originalMessageId   String
+  originalChannelId   String
+  starboardMessageId  String
+  starboardChannelId  String
+  reactionCount       Int      @default(0)
+  reactions           Json     @default("[]")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([guildId, originalMessageId])
+  @@index([guildId])
+}
