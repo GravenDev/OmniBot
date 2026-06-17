@@ -260,6 +260,36 @@ describe("ConfigProvider default resolution", () => {
     const provider = new ConfigProvider(module, empty, "fr");
     expect(provider.get("greeting")).toBeUndefined();
   });
+
+  describe("isDefault", () => {
+    it("is true for an unset field that declares a default", () => {
+      const provider = new ConfigProvider(module, empty, "fr");
+      expect(provider.isDefault("note")).toBe(true);
+    });
+
+    it("is false once a value is stored", () => {
+      const provider = new ConfigProvider(
+        module,
+        { note: "stored" } as ConfigData<typeof schema>,
+        "fr"
+      );
+      expect(provider.isDefault("note")).toBe(false);
+    });
+
+    it("is false for an unset field without a default", () => {
+      const provider = new ConfigProvider(module, empty, "fr");
+      expect(provider.isDefault("greeting")).toBe(false);
+    });
+
+    it("treats a cleared value (null) as explicitly set, not default", () => {
+      const provider = new ConfigProvider(
+        module,
+        { note: null } as unknown as ConfigData<typeof schema>,
+        "fr"
+      );
+      expect(provider.isDefault("note")).toBe(false);
+    });
+  });
 });
 
 describe("ConfigEntry enum typing", () => {

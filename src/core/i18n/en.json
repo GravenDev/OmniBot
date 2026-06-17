@@ -9,6 +9,7 @@
   "config.next": "Next ▶",
   "config.noModule": "No module with id `{{moduleId}}`",
   "config.currentValue": "Current: {{value}}",
+  "config.defaultSuffix": " _(default)_",
   "config.notFound": "Configuration not found.",
   "config.invalidSelection": "Invalid selected value.",
   "config.number.invalid": "❌ `{{value}}` is not a valid number.",

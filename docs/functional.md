@@ -43,7 +43,9 @@ Dès qu'un message est posté dans le salon configuré :
 > qu'un administrateur n'a pas saisi sa propre valeur, le message de bienvenue
 > par défaut s'affiche dans la langue configurée et change si on bascule la
 > langue. Dès qu'une valeur est définie manuellement, elle est figée et
-> n'est plus affectée par la langue.
+> n'est plus affectée par la langue. Dans `/config`, une valeur encore par
+> défaut est signalée par le marqueur _(par défaut)_, ce qui permet de voir
+> d'un coup d'œil ce qui a réellement été configuré.
 
 **Limites :**
 
