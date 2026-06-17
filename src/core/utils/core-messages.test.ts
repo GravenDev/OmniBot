@@ -1,16 +1,28 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
   ConfigProvider,
   ConfigType,
   type ConfigData,
   type ConfigSchema,
 } from "#lib/config.js";
+import { initI18n } from "#lib/i18n.js";
+import { addTranslations } from "#lib/i18n.js";
 import type { Module } from "#lib/module.js";
 import {
   CONFIG_FIELDS_PER_PAGE,
   configPageOfKey,
   configurationMessage,
 } from "./core-messages.js";
+
+beforeAll(async () => {
+  await initI18n();
+  addTranslations("en", "core", {
+    "config.previous": "◀ Previous",
+    "config.next": "Next ▶",
+    "config.noConfig": "This module has no configuration available.",
+    "config.currentValue": "Current: {{value}}",
+  });
+});
 
 /** Recursively counts every component node (matching Discord's message-wide cap). */
 function countComponents(node: unknown): number {
@@ -58,7 +70,11 @@ function moduleWithFields(count: number): Module<ConfigSchema> {
 }
 
 function panel(module: Module<ConfigSchema>, page = 0) {
-  const config = new ConfigProvider(module, {} as ConfigData<ConfigSchema>);
+  const config = new ConfigProvider(
+    module,
+    {} as ConfigData<ConfigSchema>,
+    "en"
+  );
   return configurationMessage(module, config, page)[0]!.toJSON();
 }
 
