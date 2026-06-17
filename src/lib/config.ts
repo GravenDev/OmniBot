@@ -281,6 +281,16 @@ export class ConfigProvider<TSchema extends ConfigSchema> {
   }
 
   /**
+   * Whether `key` holds an explicitly stored value (including a `null` clear) —
+   * i.e. something a reset could remove to fall back to the default. Distinct
+   * from `!isDefault`: a field with neither a stored value nor a default is not
+   * "set" yet not "default" either.
+   */
+  isSet<TKey extends keyof TSchema>(key: TKey): boolean {
+    return this.data[key] !== undefined;
+  }
+
+  /**
    * The schema default for `key`, resolved against the active locale.
    *
    * Free-text string defaults are looked up as `config.<key>.default`, so a

@@ -212,13 +212,14 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
     container.addTextDisplayComponents((text) =>
       text.setContent(config.t("config.noConfig"))
     );
-  }
+  } else {
+    // Single bottom row: pagination (when multipage) on the left, then the
+    // reset control last so it sits on the right. The target page is encoded in
+    // each customId so the handler can re-render in place.
+    const row = new ActionRowBuilder<ButtonBuilder>();
 
-  // Pagination controls — shown only when the schema spans more than one page.
-  // The target page is encoded in the customId so the handler can re-render.
-  if (pageCount > 1) {
-    container.addActionRowComponents(
-      new ActionRowBuilder<ButtonBuilder>().addComponents(
+    if (pageCount > 1) {
+      row.addComponents(
         new ButtonBuilder()
           .setCustomId(`config-page:${module.id}:${currentPage - 1}`)
           .setLabel(config.t("config.previous"))
@@ -229,8 +230,21 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
           .setLabel(config.t("config.next"))
           .setStyle(ButtonStyle.Secondary)
           .setDisabled(currentPage === pageCount - 1)
-      )
+      );
+    }
+
+    // Reset opens an ephemeral field picker; disabled when nothing is
+    // overridden (every field already on its default), so it is never a no-op.
+    const hasOverrides = keys.some((key) => config.isSet(key));
+    row.addComponents(
+      new ButtonBuilder()
+        .setCustomId(`reset-config:${module.id}:${currentPage}`)
+        .setLabel(config.t("config.reset.button"))
+        .setStyle(ButtonStyle.Secondary)
+        .setDisabled(!hasOverrides)
     );
+
+    container.addActionRowComponents(row);
   }
 
   return [container];

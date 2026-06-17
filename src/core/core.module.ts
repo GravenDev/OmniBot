@@ -9,6 +9,10 @@ import configPageButton from "./interactions/config-page.button.js";
 import configureModuleButton from "./interactions/configure-module.button.js";
 import disableModuleButton from "./interactions/disable-module.button.js";
 import enableModuleButton from "./interactions/enable-module.button.js";
+import {
+  resetConfigButton,
+  resetConfigSelect,
+} from "./interactions/reset-config.js";
 import toggleOptionButton from "./interactions/toggle-option.button.js";
 import commandListener from "./listeners/interaction-create.listener.js";
 
@@ -33,6 +37,9 @@ export default defineModule({
     registry.register(configureModuleButton);
     registry.register(toggleOptionButton);
     registry.register(configPageButton);
+
+    registry.register(resetConfigButton);
+    registry.register(resetConfigSelect);
 
     for (const [, handler] of Object.entries(configTypeHandlers)) {
       handler?.registerEditionInteractionHandlers(registry);
