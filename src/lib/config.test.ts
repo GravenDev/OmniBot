@@ -3,6 +3,7 @@ import {
   ConfigProvider,
   ConfigType,
   ConfigValidator,
+  configValueEmoji,
   formatConfigValue,
   getConfigTypeName,
   isEnumEntry,
@@ -347,6 +348,22 @@ describe("formatConfigValue", () => {
       type: ConfigType.STRING,
     };
     expect(formatConfigValue(str, "hello", "fr")).toBe("hello");
+  });
+
+  it("returns a flag emoji for a known language code", () => {
+    expect(configValueEmoji(langEntry, "fr")).toBe("🇫🇷");
+    expect(configValueEmoji(langEntry, "en")).toBe("🇬🇧");
+  });
+
+  it("returns no emoji for an unknown code or a plain enum", () => {
+    expect(configValueEmoji(langEntry, "de")).toBeUndefined();
+    const plain: ConfigEntry<ConfigType> = {
+      name: "Mode",
+      description: "",
+      type: ConfigType.ENUM,
+      options: ["a", "b"],
+    };
+    expect(configValueEmoji(plain, "a")).toBeUndefined();
   });
 });
 
