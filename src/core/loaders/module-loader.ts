@@ -3,6 +3,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "path";
 import { DeclarationType, type Declared } from "#lib/declared.js";
 import { isDevMode } from "#lib/env.js";
+import { addTranslations } from "#lib/i18n.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 
@@ -14,6 +15,41 @@ const __dirname = path.resolve(
   "..",
   ".."
 );
+
+/**
+ * Scan a module directory for an `i18n/` sub-folder and register every JSON
+ * file found there as a translation bundle under the module's namespace.
+ */
+export async function loadModuleI18n(
+  moduleId: string,
+  modulePath: string
+): Promise<void> {
+  const i18nDir = path.resolve(modulePath, "i18n");
+
+  let files: string[];
+  try {
+    files = await fs.readdir(i18nDir);
+  } catch {
+    // No i18n directory – nothing to load.
+    return;
+  }
+
+  for (const file of files) {
+    const match = file.match(/^(.+)\.json$/);
+    if (!match) continue;
+
+    const lng = match[1];
+    if (!lng) continue;
+
+    const filePath = path.resolve(i18nDir, file);
+    const content = await import(pathToFileURL(filePath).href, {
+      with: { type: "json" },
+    });
+
+    addTranslations(lng, moduleId, content.default ?? content);
+    logger.debug(`Loaded i18n | lng = ${lng} | ns = ${moduleId}`);
+  }
+}
 
 export async function loadModules(basePath: string): Promise<Module[]> {
   logger.info(`Finding modules | path = ${basePath}`);
@@ -83,6 +119,9 @@ export async function loadModule(modulePath: string): Promise<Module | null> {
     logger.warn(`\tInvalid module | path = ${moduleFilePath}`);
     return null;
   }
+
+  // Load translation bundles for this module
+  await loadModuleI18n(module.id, modulePath);
 
   logger.info(`\tModule resolved successfully | id = ${module.id}`);
 
