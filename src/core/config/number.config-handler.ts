@@ -6,8 +6,8 @@ import {
   TextInputStyle,
   type ButtonInteraction,
 } from "discord.js";
-import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
+import { replyWithCoreT } from "#core/utils/core-config.js";
 import {
   ConfigType,
   ConfigValidator,
@@ -64,14 +64,7 @@ const handleModalSubmit = declareInteractionHandler({
     const module = resolveConfigurableModule(moduleId);
 
     if (!module || !configService.isConfigKey(module, configKey)) {
-      const coreConfig = await configService.getConfigForModuleIn(
-        coreModule,
-        interaction.guildId!
-      );
-      await interaction.reply({
-        content: coreConfig.t("interaction.configOptionNotFound"),
-        flags: MessageFlags.Ephemeral,
-      });
+      await replyWithCoreT(interaction, "interaction.configOptionNotFound");
       return;
     }
 

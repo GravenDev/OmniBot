@@ -6,8 +6,8 @@ import {
   type ButtonInteraction,
   type MessageActionRowComponentBuilder,
 } from "discord.js";
-import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
+import { replyWithCoreT } from "#core/utils/core-config.js";
 import type { ConfigProvider, ConfigSchema, ConfigType } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
 import {
@@ -165,14 +165,10 @@ export abstract class SelectConfigHandler<
         ) => {
           const module = resolveConfigurableModule(moduleId);
           if (!module || !configService.isConfigKey(module, configKey)) {
-            const coreConfig = await configService.getConfigForModuleIn(
-              coreModule,
-              interaction.guildId!
+            await replyWithCoreT(
+              interaction,
+              "interaction.configOptionNotFound"
             );
-            await interaction.reply({
-              content: coreConfig.t("interaction.configOptionNotFound"),
-              flags: MessageFlags.Ephemeral,
-            });
             return;
           }
 
