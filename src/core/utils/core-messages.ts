@@ -165,11 +165,11 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
     const optDesc = config.t("config." + key + ".description", {
       defaultValue: option.description,
     });
-    // Flag values still served by their schema default, so an admin can tell
-    // at a glance what they have actually set versus what is just the default.
+    // Flag any field the admin hasn't set (showing a default — or nothing, for
+    // a field without one), so they can tell at a glance what they've changed.
     const renderedValue =
       renderCurrentValue(option, value, config.locale) +
-      (config.isDefault(key) ? config.t("config.defaultSuffix") : "");
+      (config.isSet(key) ? "" : config.t("config.defaultSuffix"));
     section.addTextDisplayComponents((text) =>
       text.setContent(
         config.t("config.option", {

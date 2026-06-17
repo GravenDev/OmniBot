@@ -63,7 +63,7 @@ The schema's `defaultValue` stays the English fallback. Defaults are **not persi
 
 Only `STRING` fields are localized this way. Enum defaults are stored identifiers (not display text) and are returned verbatim, as are numbers, booleans and lists.
 
-In the `/config` panel, a value still served by its default is flagged with a `config.defaultSuffix` marker (`_(default)_`), so an admin can tell at a glance what has actually been set. `ConfigProvider.isDefault(key)` exposes the same distinction in code.
+In the `/config` panel, any field the admin hasn't set — showing a default, or nothing for a field without one — is flagged with a `config.defaultSuffix` marker (`_(default)_`), so they can tell at a glance what has actually been changed. `ConfigProvider.isSet(key)` exposes the same distinction in code.
 
 > [!NOTE]
 > Guilds whose config predates this mechanism keep whatever default was already

@@ -63,7 +63,7 @@ Le `defaultValue` du schéma reste le repli anglais. Les défauts ne sont **pas 
 
 Seuls les champs `STRING` sont localisés ainsi. Les défauts d'enum sont des identifiants stockés (pas du texte affichable) et sont renvoyés tels quels, comme les nombres, booléens et listes.
 
-Dans le panneau `/config`, une valeur encore servie par son défaut est signalée par un marqueur `config.defaultSuffix` (`_(par défaut)_`), pour voir d'un coup d'œil ce qui a réellement été configuré. `ConfigProvider.isDefault(key)` expose la même distinction côté code.
+Dans le panneau `/config`, tout champ que l'admin n'a pas défini — affichant un défaut, ou rien pour un champ qui n'en a pas — est signalé par un marqueur `config.defaultSuffix` (`_(par défaut)_`), pour voir d'un coup d'œil ce qui a réellement été modifié. `ConfigProvider.isSet(key)` expose la même distinction côté code.
 
 > [!NOTE]
 > Les serveurs dont la config est antérieure à ce mécanisme conservent le défaut
