@@ -7,6 +7,9 @@ A module in OmniBot is a self-contained functional unit that can be installed an
 ```
 src/modules/my-module/
 ├── my-module.module.ts          # Main module definition
+├── i18n/                        # Translation files
+│   ├── en.json
+│   └── fr.json
 ├── commands/                    # Slash commands
 │   └── greet.command.ts
 ├── listeners/                   # Event listeners
@@ -141,6 +144,57 @@ The module loader (`src/core/loaders/module-loader.ts`) scans `src/modules/` at 
 5. Returns the `Module` object
 
 **Dev-only modules** (with `devOnly: true`) are skipped when `NODE_ENV` is not `"development"`. Use this for test or debug modules.
+
+## Internationalization
+
+Modules can provide translations for their interface strings (name, description, config fields, and bot messages) using per-module locale files.
+
+### Adding translations
+
+Create an `i18n/` directory in your module with one JSON file per locale:
+
+```
+src/modules/my-module/
+├── my-module.module.ts
+├── i18n/
+│   ├── en.json
+│   └── fr.json
+└── commands/
+    └── ...
+```
+
+The module loader auto-discovers these files at startup and registers them with i18next.
+
+### Translation file format
+
+Each file contains key-value pairs. The module's `name`, `description`, and config field `name`/`description` are automatically resolved from these files, overriding the TypeScript defaults when a matching locale is active:
+
+```json
+{
+  "module.name": "My Module",
+  "module.description": "Does awesome things.",
+  "config.myField.name": "My Field",
+  "config.myField.description": "Description of my field.",
+  "greeting": "Hello {{name}}!"
+}
+```
+
+### Using translations in code
+
+The `ConfigProvider` exposed to commands, listeners, and interactions provides a `t()` method:
+
+```typescript
+async execute(interaction, config) {
+  const greeting = config.t("greeting", { name: interaction.user.username });
+  await interaction.reply(greeting);
+}
+```
+
+Keys are looked up in the module's own namespace first, then fall back to core translations. Common UI labels (`config.previous`, `config.next`, `config.toggle.enable`, etc.) are provided by the core namespace — no need to redefine them in every module.
+
+### Locale selection
+
+The guild's locale is configured via the core module's settings (`/config core > locale`). When a locale file doesn't exist for the selected language, the system falls back to English.
 
 ## Best Practices
 

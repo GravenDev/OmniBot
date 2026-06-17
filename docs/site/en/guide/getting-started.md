@@ -4,7 +4,7 @@ Welcome to OmniBot! This guide will help you set up the bot for development and 
 
 ## What is OmniBot?
 
-OmniBot is a **modular Discord bot** developed for the [Graven - Développement](https://discord.gg/graven) community. Each feature is a self-contained **module** that is auto-discovered at startup and can be installed or uninstalled **per Discord server** via `/modules`. Modules declare their own slash commands, event listeners, interaction handlers, and a typed configuration schema edited live with `/config <module>`.
+OmniBot is a **modular Discord bot** developed for the [Graven - Développement](https://discord.gg/graven) community. Each feature is a self-contained **module** that is auto-discovered at startup and can be installed or uninstalled **per Discord server** via `/modules`. Modules declare their own slash commands, event listeners, interaction handlers, and a typed configuration schema edited live with `/config <module>`. The entire interface is translatable — each module can bundle its own locale files.
 
 The core system wires everything together — adding a feature means creating a module, never touching the bootstrap.
 
@@ -98,7 +98,9 @@ src/
 │   └── utils/                  #   Permission guard, version parser, messages
 ├── modules/                    # Feature modules (one folder per module)
 │   ├── thread-creator/         #   Example module: automatic thread creation
+│   │   └── i18n/               #     Module translations (en.json, fr.json)
 │   └── test-config/            #   Dev-only: exercises every config type
+│       └── i18n/               #     Module translations (en.json, fr.json)
 ├── lib/                        # Shared contracts exposed to modules
 │   ├── module.ts               #   defineModule()
 │   ├── command.ts              #   declareCommand()
@@ -134,6 +136,7 @@ Files use suffixes to identify their role:
 | `*.select.ts`   | Select menu handler                                        |
 | `*.service.ts`  | Business service (e.g. `thread-creation-queue.service.ts`) |
 | `*.prisma`      | Prisma model definition                                    |
+| `i18n/*.json`   | Locale translation files (e.g. `en.json`, `fr.json`)       |
 
 ---
 

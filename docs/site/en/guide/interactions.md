@@ -195,6 +195,21 @@ Interactions are automatically tied to module activation. When a module is disab
 
 When editing configuration via ephemeral select menus, the source config message (public) needs to be updated. The system uses `refreshSourceConfigMessage()` which threads the source message ID through `customId` arguments and re-edits the public message after each change.
 
+## Localization
+
+Interaction responses can use `config.t()` for localized strings. Provide translations in your module's `i18n/` files:
+
+```typescript
+async execute(interaction, [actionId, userId]) {
+  await interaction.reply({
+    content: config.t("actionConfirmed", { action: actionId, user: userId }),
+    flags: MessageFlags.Ephemeral,
+  });
+}
+```
+
+The guild's locale is configured via `/config core > locale`. See [Configuration → Localization](./configuration#localization) for details.
+
 ## Best Practices
 
 ### Response Types

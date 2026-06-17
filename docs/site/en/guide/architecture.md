@@ -11,17 +11,21 @@ When the bot starts (`src/index.ts`), it follows this sequence:
    └─ prisma.$queryRaw`SELECT 1`
    └─ exits with error if DB is unavailable
 
-2. Module discovery
+2. i18n initialization
+   └─ initI18n() — initializes the i18next engine with fallback locale support
+   └─ loadModuleI18n("core") — loads core translation files (en.json, fr.json)
+
+3. Module discovery
    └─ loadModules("./modules")
    └─ scans each subdirectory in src/modules/
    └─ imports the *.module.ts file
    └─ skips devOnly modules in production
 
-3. Intent aggregation
+4. Intent aggregation
    └─ collects GatewayIntentBits from all modules
    └─ creates the Discord Client with the union of all intents
 
-4. ClientReady handler (async)
+5. ClientReady handler (async)
    ├─ For each module:
    │   ├─ module.onLoad(client, registry)
    │   └─ loadModuleEvents(client, module)
@@ -31,10 +35,10 @@ When the bot starts (`src/index.ts`), it follows this sequence:
    │   └─ Prod mode: version-gated guild commands + global core commands
    └─ loadGlobalEvents(client)
 
-5. Login
+6. Login
    └─ client.login(token)
 
-6. Shutdown handlers
+7. Shutdown handlers
    └─ SIGTERM / SIGINT → client.destroy() + prisma.$disconnect()
 ```
 
@@ -122,7 +126,8 @@ The configuration system has several layers:
 2. **Storage** — All configs are stored as a single JSON blob per guild in the `GuildConfiguration` table
 3. **Cache** — `ConfigService` holds an in-memory cache (`configCache`) to avoid DB reads on every interaction
 4. **Deserialization** — Entity IDs (user, role, channel) are stored as strings and resolved to Discord objects at read time
-5. **Admin UI** — `/config <module>` renders an interactive panel with per-field edit controls
+5. **Localization** — Field names and descriptions are resolved from the module's i18n files (falling back to English defaults in the TypeScript schema)
+6. **Admin UI** — `/config <module>` renders an interactive panel with per-field edit controls
 
 ## Service Layer
 
