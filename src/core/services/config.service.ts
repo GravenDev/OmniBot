@@ -126,6 +126,50 @@ class ConfigService {
     return new ConfigProvider(module, deserializedConfig, locale);
   }
 
+  /**
+   * Clears the stored value of specific fields, so each falls back to its
+   * schema default on the next read. Unlike setting a value to `null` (an
+   * explicit "empty"), this removes the key entirely. Fields without a stored
+   * value are left untouched.
+   */
+  async resetFieldsForModuleIn<ConfigType extends ConfigSchema>(
+    module: Module<ConfigType>,
+    guildId: string,
+    keys: string[]
+  ): Promise<ConfigProvider<ConfigType>> {
+    const [locale, currentConfig] = await Promise.all([
+      this.getLocaleForGuild(guildId),
+      this.getOrCreate(guildId),
+    ]);
+
+    const moduleConfig = (currentConfig[module.id] ??
+      {}) as ConfigData<ConfigType>;
+    const updatedModuleConfig: Record<string, unknown> = { ...moduleConfig };
+    for (const key of keys) {
+      delete updatedModuleConfig[key];
+    }
+
+    const updatedConfig = {
+      ...currentConfig,
+      [module.id]: updatedModuleConfig as ConfigData<ConfigType>,
+    };
+
+    await database.guildConfiguration.upsert({
+      where: { guildId },
+      create: { guildId, data: updatedConfig },
+      update: { data: updatedConfig },
+    });
+    configCache.set(guildId, updatedConfig);
+
+    const deserializedConfig = await this.deserializeConfigData(
+      module,
+      updatedModuleConfig as ConfigData<ConfigType>,
+      guildId
+    );
+
+    return new ConfigProvider(module, deserializedConfig, locale);
+  }
+
   async getFullConfigForGuild(
     guildId: string
   ): Promise<Record<string, ConfigData<ConfigSchema>>> {

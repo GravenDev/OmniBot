@@ -57,6 +57,7 @@ function countByType(node: unknown, type: number): number {
 
 const SECTION = 9;
 const ACTION_ROW = 1;
+const BUTTON = 2;
 
 function moduleWithFields(count: number): Module<ConfigSchema> {
   const schema = Object.fromEntries(
@@ -98,12 +99,19 @@ describe("configurationMessage pagination", () => {
     );
   });
 
-  it("adds a navigation row only when there is more than one page", () => {
+  it("uses one bottom row; pagination buttons appear only when multipage", () => {
     const single = moduleWithFields(CONFIG_FIELDS_PER_PAGE);
     const multi = moduleWithFields(CONFIG_FIELDS_PER_PAGE + 1);
 
-    expect(countByType(panel(single), ACTION_ROW)).toBe(0);
+    // A single combined bottom row in both cases (reset lives there).
+    expect(countByType(panel(single), ACTION_ROW)).toBe(1);
     expect(countByType(panel(multi), ACTION_ROW)).toBe(1);
+
+    // Both show 10 field rows on page 0, so the two extra buttons on the
+    // multipage panel are exactly the prev/next pagination controls.
+    expect(
+      countByType(panel(multi), BUTTON) - countByType(panel(single), BUTTON)
+    ).toBe(2);
   });
 
   it("clamps an out-of-range page to the last page", () => {

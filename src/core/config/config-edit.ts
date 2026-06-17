@@ -85,6 +85,24 @@ export async function refreshSourceConfigMessage(
   sourceMessageId: string | undefined,
   key: string
 ): Promise<void> {
+  await refreshSourceConfigMessageAtPage(
+    interaction,
+    module,
+    sourceMessageId,
+    configPageOfKey(module, key)
+  );
+}
+
+/**
+ * Like {@link refreshSourceConfigMessage} but re-renders an explicit page,
+ * for edits that don't map to a single key (e.g. resetting several fields).
+ */
+export async function refreshSourceConfigMessageAtPage(
+  interaction: CompatibleInteraction,
+  module: Module,
+  sourceMessageId: string | undefined,
+  page: number
+): Promise<void> {
   if (!sourceMessageId || !interaction.channelId) {
     return;
   }
@@ -106,11 +124,7 @@ export async function refreshSourceConfigMessage(
 
     const message = await channel.messages.fetch(sourceMessageId);
     await message.edit({
-      components: configurationMessage(
-        module,
-        provider,
-        configPageOfKey(module, key)
-      ),
+      components: configurationMessage(module, provider, page),
       flags: MessageFlags.IsComponentsV2,
     });
   } catch (err) {

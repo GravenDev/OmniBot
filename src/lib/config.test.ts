@@ -292,6 +292,32 @@ describe("ConfigProvider default resolution", () => {
       expect(provider.isDefault("note")).toBe(false);
     });
   });
+
+  describe("isSet", () => {
+    it("is false when nothing is stored (default in use)", () => {
+      const provider = new ConfigProvider(module, empty, "fr");
+      expect(provider.isSet("note")).toBe(false);
+      expect(provider.isSet("greeting")).toBe(false);
+    });
+
+    it("is true for a stored value", () => {
+      const provider = new ConfigProvider(
+        module,
+        { note: "x" } as ConfigData<typeof schema>,
+        "fr"
+      );
+      expect(provider.isSet("note")).toBe(true);
+    });
+
+    it("is true for a cleared value (null counts as set)", () => {
+      const provider = new ConfigProvider(
+        module,
+        { note: null } as unknown as ConfigData<typeof schema>,
+        "fr"
+      );
+      expect(provider.isSet("note")).toBe(true);
+    });
+  });
 });
 
 describe("ConfigEntry enum typing", () => {
