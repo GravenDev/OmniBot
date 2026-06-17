@@ -15,6 +15,7 @@ export default declareCommand({
   data: new SlashCommandBuilder()
     .setName("config")
     .setDescription("Configure the modules of the bot")
+    .setDescriptionLocalizations({ fr: "Configurer les modules du bot" })
     .setDefaultMemberPermissions(0x8)
     .addStringOption((option) =>
       option
@@ -28,12 +29,17 @@ export default declareCommand({
     const module = [...modules, coreModule].find((m) => m.id === moduleId);
 
     if (!module) {
+      const coreConfig = await configService.getConfigForModuleIn(
+        coreModule,
+        interaction.guildId!
+      );
+
       await interaction.reply({
         components: [
           new ContainerBuilder()
             .setAccentColor(Colors.Red)
             .addTextDisplayComponents((text) =>
-              text.setContent(`No module with id  \`${moduleId}\``)
+              text.setContent(coreConfig.t("config.noModule", { moduleId }))
             ),
         ],
         flags: MessageFlags.IsComponentsV2,
@@ -55,18 +61,27 @@ export default declareCommand({
     });
   },
   async complete(interaction) {
-    const modules = await moduleService.getAllModulesStateIn(
-      interaction.guildId!
-    );
+    const [modules, coreConfig] = await Promise.all([
+      moduleService.getAllModulesStateIn(interaction.guildId!),
+      configService.getConfigForModuleIn(coreModule, interaction.guildId!),
+    ]);
 
-    const moduleNames = modules
+    const t = coreConfig.t;
+    const moduleEntries = modules
       .filter((m) => m.enabled)
-      .map((m) => ({ name: m.module.name, value: m.module.id }));
+      .map((m) => ({
+        name: t("modules." + m.module.id + ".name", {
+          defaultValue: m.module.name,
+        }),
+        value: m.module.id,
+      }));
 
     await interaction.respond([
-      ...moduleNames,
+      ...moduleEntries,
       {
-        name: coreModule.name,
+        name: t("modules." + coreModule.id + ".name", {
+          defaultValue: coreModule.name,
+        }),
         value: coreModule.id,
       },
     ]);

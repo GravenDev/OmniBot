@@ -1,5 +1,6 @@
 import { MessageFlags } from "discord.js";
 import { resolveConfigurableModule } from "#core/config/config-edit.js";
+import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
 import {
   configPageOfKey,
@@ -15,8 +16,12 @@ export default declareInteractionHandler({
     const module = resolveConfigurableModule(moduleId);
 
     if (!module || !configService.isConfigKey(module, configKey)) {
+      const coreConfig = await configService.getConfigForModuleIn(
+        coreModule,
+        interaction.guildId!
+      );
       await interaction.reply({
-        content: "Configuration option not found.",
+        content: coreConfig.t("interaction.configOptionNotFound"),
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -31,7 +36,7 @@ export default declareInteractionHandler({
 
     if (typeof currentValue !== "boolean") {
       await interaction.reply({
-        content: "This option is not a boolean toggle.",
+        content: config.t("interaction.notBoolean"),
         flags: MessageFlags.Ephemeral,
       });
       return;
