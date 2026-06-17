@@ -99,6 +99,14 @@ interface ListConfigEntry<T extends ConfigType> {
 }
 
 /**
+ * Optional rendering hint for an enum's option values. `"language"` formats a
+ * BCP-47 code (e.g. `en`, `fr`) as its language name in the viewer's locale via
+ * `Intl.DisplayNames` — so `fr` shows as "Français" / "French". Without a hint
+ * the raw option value is displayed.
+ */
+export type EnumDisplay = "language";
+
+/**
  * Config entry whose value is one of a fixed set of string `options`, edited
  * through a single-choice select menu. Declare `options` `as const` to have
  * `config.get(...)` typed as the literal union of allowed values.
@@ -109,6 +117,7 @@ export interface EnumConfigEntry<Values extends string = string> {
   type: ConfigType.ENUM;
   options: readonly Values[];
   defaultValue?: Values;
+  display?: EnumDisplay;
 }
 
 /** List variant of {@link EnumConfigEntry}: any subset of `options` (multi-select). */
@@ -118,6 +127,7 @@ export interface EnumListConfigEntry<Values extends string = string> {
   type: ListOf<ConfigType.ENUM>;
   options: readonly Values[];
   defaultValue?: Values[];
+  display?: EnumDisplay;
 }
 
 export type ConfigEntry<T extends ConfigType> =
@@ -143,6 +153,29 @@ export function isEnumEntry(
   if (!entry) return false;
   const base = Array.isArray(entry.type) ? entry.type[0] : entry.type;
   return base === ConfigType.ENUM;
+}
+
+/**
+ * Display label for a single enum/scalar value in the viewer's `locale`.
+ *
+ * Honors an enum entry's {@link EnumDisplay} hint (e.g. a `language` enum shows
+ * `fr` as "Français"); any value without an applicable hint is returned
+ * stringified. Used for both the current-value readout and select-menu labels.
+ */
+export function formatConfigValue(
+  entry: ConfigEntry<ConfigType>,
+  value: unknown,
+  locale: string
+): string {
+  if (isEnumEntry(entry) && entry.display === "language") {
+    const name = new Intl.DisplayNames([locale], { type: "language" }).of(
+      String(value)
+    );
+    if (name) {
+      return ucfirst(name);
+    }
+  }
+  return String(value);
 }
 
 /**
@@ -180,6 +213,7 @@ export class ConfigProvider<TSchema extends ConfigSchema> {
   private module: Module<TSchema>;
   private readonly data: ConfigData<TSchema>;
   readonly t: TFunction;
+  readonly locale: string;
 
   constructor(
     module: Module<TSchema>,
@@ -188,6 +222,7 @@ export class ConfigProvider<TSchema extends ConfigSchema> {
   ) {
     this.module = module;
     this.data = data;
+    this.locale = locale;
     this.t = createT(locale, module.id);
   }
 

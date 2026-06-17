@@ -69,6 +69,20 @@ In the `/config` panel, a value still served by its default is flagged with a `c
 > Guilds whose config predates this mechanism keep whatever default was already
 > stored until a `/config` reset — there is no automatic migration.
 
+### Localized enum option labels
+
+An enum field can render its option values as localized names instead of raw codes with a `display` hint:
+
+```typescript
+locale: {
+  type: ConfigType.ENUM,
+  options: ["en", "fr"] as const,
+  display: "language",
+}
+```
+
+With `display: "language"`, each option is shown via `Intl.DisplayNames` in the viewer's locale — `fr` renders as "Français" (FR) or "French" (EN), in both the `/config` readout and the select menu. No translation keys are needed; the names come from the runtime.
+
 ## Using translations in code
 
 The `ConfigProvider` injected into commands, listeners, and interactions exposes a `t()` method:

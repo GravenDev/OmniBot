@@ -8,10 +8,11 @@ import {
 import type moduleService from "#core/services/module.service.js";
 import {
   ConfigType,
+  formatConfigValue,
   getConfigTypeName,
+  type ConfigEntry,
   type ConfigProvider,
   type ConfigSchema,
-  type ListOf,
 } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
 import type { Module } from "#lib/module.js";
@@ -77,8 +78,9 @@ export const modulesMessage = (
  * joined; unset values show `—`.
  */
 function renderCurrentValue(
-  type: ConfigType | ListOf<ConfigType>,
-  value: unknown
+  option: ConfigEntry<ConfigType>,
+  value: unknown,
+  locale: string
 ): string {
   const items = (Array.isArray(value) ? value : [value]).filter(
     (item) => item !== null && item !== undefined
@@ -87,6 +89,7 @@ function renderCurrentValue(
     return "—";
   }
 
+  const type = option.type;
   const baseType = Array.isArray(type) ? type[0] : type;
   const isEntity =
     baseType === ConfigType.USER ||
@@ -95,7 +98,9 @@ function renderCurrentValue(
     baseType === ConfigType.CATEGORY;
 
   return items
-    .map((item) => (isEntity ? String(item) : `\`${String(item)}\``))
+    .map((item) =>
+      isEntity ? String(item) : `\`${formatConfigValue(option, item, locale)}\``
+    )
     .join(", ");
 }
 
@@ -163,7 +168,7 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
     // Flag values still served by their schema default, so an admin can tell
     // at a glance what they have actually set versus what is just the default.
     const renderedValue =
-      renderCurrentValue(option.type, value) +
+      renderCurrentValue(option, value, config.locale) +
       (config.isDefault(key) ? config.t("config.defaultSuffix") : "");
     section.addTextDisplayComponents((text) =>
       text.setContent(

@@ -70,6 +70,20 @@ Dans le panneau `/config`, une valeur encore servie par son défaut est signalé
 > déjà stocké jusqu'à un reset via `/config` — il n'y a pas de migration
 > automatique.
 
+### Libellés d'options d'enum localisés
+
+Un champ enum peut afficher ses options sous forme de noms localisés plutôt que de codes bruts grâce à l'indication `display` :
+
+```typescript
+locale: {
+  type: ConfigType.ENUM,
+  options: ["en", "fr"] as const,
+  display: "language",
+}
+```
+
+Avec `display: "language"`, chaque option est affichée via `Intl.DisplayNames` dans la langue du lecteur — `fr` devient « Français » (FR) ou « French » (EN), aussi bien dans le récapitulatif `/config` que dans le menu de sélection. Aucune clé de traduction n'est nécessaire ; les noms viennent du runtime.
+
 ## Utiliser les traductions dans le code
 
 Le `ConfigProvider` injecté dans les commandes, écouteurs et interactions expose une méthode `t()` :
