@@ -4,6 +4,10 @@ This guide explains how to create Discord slash commands in your modules. Comman
 
 ## Creating a Command
 
+::: tip
+Set command names and descriptions in English by default — they act as the fallback when no translation is available for the guild's locale. Use `setNameLocalizations()` and `setDescriptionLocalizations()` for other locales.
+:::
+
 ```typescript
 // src/modules/greeter/commands/hello.command.ts
 

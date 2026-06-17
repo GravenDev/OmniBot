@@ -25,6 +25,10 @@ src/modules/mon-module/
 
 ## Guide pas à pas : Créer un module « Salut »
 
+::: tip
+Le `name` et `description` du module doivent être en anglais par défaut — ils servent de valeur de repli quand aucun fichier de traduction ne correspond à la locale du serveur. Ajoutez les traductions dans les fichiers `i18n/` pour les autres locales.
+:::
+
 ### 1. Créer le dossier et le fichier principal
 
 ```typescript
