@@ -194,7 +194,7 @@ async execute(interaction, config) {
 }
 ```
 
-Les clés sont d'abord cherchées dans le namespace du module, puis dans celui du cœur. Les libellés communs (`config.previous`, `config.next`, `config.toggle.enable`, etc.) sont fournis par le namespace cœur — pas besoin de les redéfinir dans chaque module.
+Les clés sont d'abord cherchées dans le namespace du module, puis dans celui du cœur. Les libellés communs (`config.previous`, `config.next`, `modules.enable`, etc.) sont fournis par le namespace cœur — pas besoin de les redéfinir dans chaque module.
 
 ### Sélection de la locale
 
