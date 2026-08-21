@@ -1,5 +1,5 @@
 [tools]
 node = "24.18.1"
 pnpm = "11.6.0"
-pitchfork = "2.13.1"
+pitchfork = "2.22.0"
 gh = "2.94.0"
