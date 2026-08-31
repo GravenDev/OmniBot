@@ -45,9 +45,10 @@ export function loadModuleEvents(client: Client, module: Module) {
 
     client.on(listener.eventType, (...args) => {
       const guildId =
-        args.find((arg) => !!arg.roles)?.id ||
-        args.find((arg) => !!arg?.guild).guild?.id ||
-        args.find((arg) => !!arg?.guildId);
+        args.find((arg) => !!arg?.guild)?.guild?.id ||
+        args.find((arg) => !!arg?.guildId)?.guildId ||
+        args.find((arg) => !!arg?.message?.guild)?.message?.guildId ||
+        args.find((arg) => !!arg?.message?.guildId)?.message?.guildId;
 
       if (guildId) {
         moduleService
