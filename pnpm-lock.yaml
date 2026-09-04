@@ -16,7 +16,7 @@ importers:
         version: 14.26.4
       i18next:
         specifier: ^26.3.1
-        version: 26.3.1(typescript@5.9.3)
+        version: 26.4.1(typescript@5.9.3)
       pino:
         specifier: ^10.3.1
         version: 10.3.1
@@ -1636,10 +1636,10 @@ packages:
   html-void-elements@3.0.0:
     resolution: {integrity: sha512-bEqo66MRXsUGxWHV5IP0PUiAWwoEjba4VCzg0LjFJBpchPaTfyfCKTG6bc5F8ucKec3q5y6qOdGyYTSBEvhCrg==}
 
-  i18next@26.3.1:
-    resolution: {integrity: sha512-txQqd5EULsqEh9OJqRH15aCaOuy/nLJyhw5EHCSKLKJE1aBbb3Zve2+uQIxgWhPm1QqUQoWyQBm2kfmmIrzkcQ==}
+  i18next@26.4.1:
+    resolution: {integrity: sha512-9YbX5E6gd1H+yaOSX3izCsPj5iWXyH7X4oC+iuHHJJw8AeHglzOK5SJf+1CHxaYKYigcea+8jvzSxqYx46YvyA==}
     peerDependencies:
-      typescript: ^5 || ^6
+      typescript: ^5 || ^6 || ^7
     peerDependenciesMeta:
       typescript:
         optional: true
@@ -3709,7 +3709,7 @@ snapshots:
 
   html-void-elements@3.0.0: {}
 
-  i18next@26.3.1(typescript@5.9.3):
+  i18next@26.4.1(typescript@5.9.3):
     optionalDependencies:
       typescript: 5.9.3
 
