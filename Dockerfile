@@ -34,7 +34,11 @@ COPY docs/site/package.json ./docs/site/package.json
 # --- deps: full dependency graph (dev included), used to build -------------
 FROM base AS deps
 
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+# The store cache is keyed per target platform: a multi-arch build runs this
+# stage once per platform, and they must not share a store holding native
+# binaries built for the other one.
+ARG TARGETPLATFORM
+RUN --mount=type=cache,id=pnpm-store-${TARGETPLATFORM},target=/pnpm/store,sharing=locked \
     pnpm install --frozen-lockfile --filter omni-bot
 
 # --- build: consolidate schema, generate the client, compile TypeScript ----
@@ -67,7 +71,8 @@ RUN set -eux; \
 # --- prod-deps: runtime dependency tree only ------------------------------
 FROM base AS prod-deps
 
-RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+ARG TARGETPLATFORM
+RUN --mount=type=cache,id=pnpm-store-${TARGETPLATFORM},target=/pnpm/store,sharing=locked \
     pnpm install --frozen-lockfile --prod --filter omni-bot
 
 # `prisma` is an *optional peer* of @prisma/client, so `auto-install-peers`
