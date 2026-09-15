@@ -145,3 +145,6 @@ vite.config.ts.timestamp-*
 
 # pitchfork per-developer daemon overrides (pitchfork.toml is committed)
 pitchfork.local.toml
+
+# Claude Code agent worktrees
+.claude/worktrees/
