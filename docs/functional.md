@@ -80,3 +80,40 @@ plus de commande dédiée : la configuration se fait via `/config thread-creator
 
 Il n'y a plus de flag `actif` : désactiver le module via `/modules` arrête la
 surveillance sans effacer la configuration.
+
+---
+
+## Module IMC
+
+Permet aux membres d'enregistrer leur IMC (poids / taille²) et affiche un
+classement du serveur par IMC décroissant.
+
+### `/imc record` — Enregistrer son IMC
+
+Options :
+
+| Option   | Type   | Contraintes       | Description           |
+| -------- | ------ | ----------------- | --------------------- |
+| `weight` | Nombre | 20 – 300 (requis) | Poids en kilogrammes  |
+| `height` | Nombre | 50 – 250 (requis) | Taille en centimètres |
+
+Le bot calcule l'IMC (`poids / taille²`), l'enregistre (un seul enregistrement
+par membre et par serveur — un nouvel envoi écrase le précédent) et répond en
+**éphémère** avec l'IMC arrondi à une décimale et sa catégorie OMS (maigreur,
+normal, surpoids, obésité).
+
+### `/imc view` — Consulter un IMC
+
+Option `target` (utilisateur, facultatif — vous-même par défaut). Réponse en
+**éphémère**. Si le membre n'a rien enregistré, le bot l'indique.
+
+### `/imc leaderboard` — Classement du serveur
+
+Option `limit` (entier 1 – 25, défaut 10). Réponse **publique** : liste des
+membres ayant enregistré leur IMC, triés par IMC décroissant, avec mention,
+IMC et catégorie.
+
+**Confidentialité :** `record` et `view` répondent en éphémère (données de
+santé visibles du seul demandeur) ; seul `leaderboard` est public — c'est le
+but affiché de la fonctionnalité, chaque membre choisissant d'y figurer en
+enregistrant son IMC.

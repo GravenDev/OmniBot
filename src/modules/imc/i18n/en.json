@@ -1,0 +1,19 @@
+{
+  "module.name": "BMI",
+  "module.description": "Records members' BMI and shows a server leaderboard sorted by BMI (descending).",
+
+  "category.underweight": "underweight",
+  "category.normal": "normal",
+  "category.overweight": "overweight",
+  "category.obesity": "obesity",
+
+  "record.success": "✅ BMI recorded: **{{bmi}}** ({{category}}) — {{weight}} kg / {{height}} cm.",
+  "view.found": "{{user}}: BMI **{{bmi}}** ({{category}}) — {{weight}} kg / {{height}} cm.",
+  "view.missing": "{{user}} hasn't recorded their BMI yet (see `/imc record`).",
+  "leaderboard.title": "BMI Leaderboard",
+  "leaderboard.empty": "Nobody has recorded their BMI on this server yet (see `/imc record`).",
+  "leaderboard.row": "**{{rank}}.** {{user}} — {{bmi}} ({{category}})",
+
+  "error.noGuild": "This command can only be used on a server.",
+  "error.failed": "❌ Something went wrong, please try again later."
+}
