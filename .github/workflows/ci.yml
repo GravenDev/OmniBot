@@ -167,7 +167,7 @@ jobs:
       # Reads the amd64 layers the `docker` job just built, when the Actions
       # cache makes them reachable from this ref, and keeps its own multi-arch
       # cache in a separate scope.
-      - name: Build and push
+      - name: Build and push the bot image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
@@ -180,3 +180,29 @@ jobs:
             type=gha,scope=release
             type=gha,scope=ci-runtime
           cache-to: type=gha,mode=max,scope=release
+
+      # The migrator ships as its own package, under the same tags as the bot:
+      # a deployment pulls the pair for one version, and the migration history
+      # can never drift from the code that expects it.
+      - name: Extract metadata for the migrator
+        id: meta-migrator
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-migrator
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Build and push the migrator image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: migrator
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta-migrator.outputs.tags }}
+          labels: ${{ steps.meta-migrator.outputs.labels }}
+          cache-from: |
+            type=gha,scope=release-migrator
+            type=gha,scope=ci-migrator
+          cache-to: type=gha,mode=max,scope=release-migrator
