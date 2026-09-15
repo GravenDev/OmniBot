@@ -67,9 +67,9 @@ export default declareCommand({
     .addSubcommand((sub) =>
       sub
         .setName("leaderboard")
-        .setDescription("Show the server ranking by BMI (descending)")
+        .setDescription("Show the server ranking by distance to ideal BMI")
         .setDescriptionLocalizations({
-          fr: "Afficher le classement du serveur par IMC décroissant",
+          fr: "Afficher le classement du serveur par écart à l'IMC idéal",
         })
         .addIntegerOption((option) =>
           option
@@ -81,6 +81,33 @@ export default declareCommand({
             .setRequired(false)
             .setMinValue(1)
             .setMaxValue(MAX_LEADERBOARD_LIMIT)
+        )
+        .addStringOption((option) =>
+          option
+            .setName("order")
+            .setDescription(
+              "Sort by distance to ideal BMI: worst or best first"
+            )
+            .setDescriptionLocalizations({
+              fr: "Tri par écart à l'IMC idéal : pires ou meilleurs d'abord",
+            })
+            .setRequired(false)
+            .addChoices(
+              {
+                name: "Farthest from ideal first",
+                name_localizations: {
+                  fr: "Les plus éloignés de l'idéal d'abord",
+                },
+                value: "worst",
+              },
+              {
+                name: "Closest to ideal first",
+                name_localizations: {
+                  fr: "Les plus proches de l'idéal d'abord",
+                },
+                value: "best",
+              }
+            )
         )
     ),
 
@@ -144,25 +171,31 @@ export default declareCommand({
       // leaderboard
       const limit =
         interaction.options.getInteger("limit") ?? DEFAULT_LEADERBOARD_LIMIT;
-      const entries = await imcService.getLeaderboard(
+      const order =
+        interaction.options.getString("order") === "best" ? "best" : "worst";
+      const ranked = await imcService.getLeaderboard(
         interaction.guildId,
-        Math.min(limit, MAX_LEADERBOARD_LIMIT)
+        Math.min(limit, MAX_LEADERBOARD_LIMIT),
+        order
       );
-      if (entries.length === 0) {
+      if (ranked.length === 0) {
         await interaction.reply(config.t("leaderboard.empty"));
         return;
       }
-      const rows = entries
-        .map((entry, index) =>
+      const rows = ranked
+        .map(({ entry, deviation }, index) =>
           config.t("leaderboard.row", {
             rank: index + 1,
             user: `<@${entry.userId}>`,
             bmi: entry.bmi.toFixed(1),
             category: config.t(`category.${categoryForBmi(entry.bmi)}`),
+            deviation: deviation.toFixed(1),
           })
         )
         .join("\n");
-      await interaction.reply(`# ${config.t("leaderboard.title")}\n${rows}`);
+      await interaction.reply(
+        `# ${config.t(`leaderboard.title.${order}`)}\n${rows}`
+      );
     } catch {
       const reply = { content: config.t("error.failed") };
       if (interaction.deferred || interaction.replied) {

@@ -86,7 +86,7 @@ surveillance sans effacer la configuration.
 ## Module IMC
 
 Permet aux membres d'enregistrer leur IMC (poids / taille²) et affiche un
-classement du serveur par IMC décroissant.
+classement du serveur par écart à l'IMC idéal.
 
 ### `/imc record` — Enregistrer son IMC
 
@@ -109,9 +109,17 @@ Option `target` (utilisateur, facultatif — vous-même par défaut). Réponse e
 
 ### `/imc leaderboard` — Classement du serveur
 
-Option `limit` (entier 1 – 25, défaut 10). Réponse **publique** : liste des
-membres ayant enregistré leur IMC, triés par IMC décroissant, avec mention,
-IMC et catégorie.
+Options :
+
+| Option  | Type   | Description                                                                  |
+| ------- | ------ | ---------------------------------------------------------------------------- |
+| `limit` | Entier | Nombre d'entrées (1 – 25, défaut 10)                                         |
+| `order` | Choix  | `worst` (défaut) : les plus éloignés de l'idéal d'abord ; `best` : l'inverse |
+
+Réponse **publique** : liste des membres ayant enregistré leur IMC, triés par
+**écart à la plage idéale** (18,5 – 25, catégorie « normal » OMS : écart 0
+dans la plage, sinon distance à la borne la plus proche), avec mention, IMC,
+catégorie et écart. Égalité d'écart départagée par l'IMC dans le sens du tri.
 
 **Confidentialité :** `record` et `view` répondent en éphémère (données de
 santé visibles du seul demandeur) ; seul `leaderboard` est public — c'est le

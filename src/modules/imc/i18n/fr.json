@@ -1,6 +1,6 @@
 {
   "module.name": "IMC",
-  "module.description": "Enregistre l'IMC des membres et affiche un classement du serveur par IMC décroissant.",
+  "module.description": "Enregistre l'IMC des membres et affiche un classement du serveur par écart à l'IMC idéal.",
 
   "category.underweight": "maigreur",
   "category.normal": "normal",
@@ -10,9 +10,10 @@
   "record.success": "✅ IMC enregistré : **{{bmi}}** ({{category}}) — {{weight}} kg / {{height}} cm.",
   "view.found": "{{user}} : IMC **{{bmi}}** ({{category}}) — {{weight}} kg / {{height}} cm.",
   "view.missing": "{{user}} n'a pas encore enregistré son IMC (voir `/imc record`).",
-  "leaderboard.title": "Classement IMC",
+  "leaderboard.title.worst": "Classement IMC — les plus éloignés de l'idéal",
+  "leaderboard.title.best": "Classement IMC — les plus proches de l'idéal",
   "leaderboard.empty": "Personne n'a encore enregistré son IMC sur ce serveur (voir `/imc record`).",
-  "leaderboard.row": "**{{rank}}.** {{user}} — {{bmi}} ({{category}})",
+  "leaderboard.row": "**{{rank}}.** {{user}} — {{bmi}} ({{category}}, écart {{deviation}})",
 
   "error.noGuild": "Cette commande n'est utilisable que sur un serveur.",
   "error.failed": "❌ Une erreur est survenue, veuillez réessayer plus tard."
