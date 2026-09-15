@@ -9,6 +9,12 @@ export type CompatibleInteraction =
   | MessageComponentInteraction
   | ModalSubmitInteraction;
 
+/**
+ * Who may trigger an interaction. Declared per handler with no default, so a
+ * new handler cannot silently end up public by omission.
+ */
+export type InteractionAccess = "admin" | "everyone";
+
 export interface InteractionHandler<
   Interaction extends CompatibleInteraction,
   ConfigType extends ConfigSchema = {},
@@ -16,10 +22,11 @@ export interface InteractionHandler<
   customId: string;
 
   /**
-   * When true, the interaction is only executed for guild administrators; the
-   * permission check is enforced centrally by the interaction dispatcher.
+   * Who may trigger this interaction. Required on purpose: the dispatcher
+   * enforces it centrally, and making it optional would mean an omitted flag
+   * yields a public handler.
    */
-  requiresAdmin?: boolean;
+  access: InteractionAccess;
 
   check: (
     interaction: CompatibleInteraction,

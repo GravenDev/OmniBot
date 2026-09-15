@@ -12,7 +12,7 @@ import { declareInteractionHandler } from "#lib/interaction.js";
 
 export default declareInteractionHandler({
   customId: "configure-module",
-  requiresAdmin: true,
+  access: "admin",
   check: (interaction) => interaction.isButton(),
   async execute(interaction, [moduleId, configKey]) {
     const module = resolveConfigurableModule(moduleId);

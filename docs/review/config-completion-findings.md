@@ -118,13 +118,12 @@ Légende statut : [ ] à faire · [x] fait
   tous, or les handlers d'édition ne vérifiaient pas les permissions
   (contrairement à enable/disable) → **escalade** (n'importe qui pourrait éditer).
 - **Fait :** `/config` est désormais **public**. La vérification de permission
-  est **centralisée** : un flag déclaratif `requiresAdmin` sur
-  `InteractionHandler`, enforcé une seule fois par le dispatcher
-  (`interaction-create.listener`) avant d'exécuter le handler. Tous les handlers
-  d'édition config + les boutons enable/disable portent `requiresAdmin: true` ;
-  plus aucun appel `requireAdmin` inline (future-proof : un nouveau handler
-  sensible n'a qu'à poser le flag). `requireAdmin` accepte toute
-  `CompatibleInteraction`. Les éditeurs entité/liste restent ephemeral ; les
+  est **centralisée** : un champ déclaratif `access` sur `InteractionHandler`,
+  enforcé une seule fois par le dispatcher (`interaction-create.listener`) avant
+  d'exécuter le handler. Tous les handlers d'édition config + les boutons
+  enable/disable portent `access: "admin"` ; plus aucun appel `requireAdmin`
+  inline. Le champ est **requis** (aucun défaut), donc un nouveau handler ne
+  peut pas devenir public par omission. Les éditeurs entité/liste restent ephemeral ; les
   toggles/modales éditent le message public en place.
 - **Refresh du message public :** les éditeurs entité/liste restent ephemeral
   mais rafraîchissent le message public d'origine après chaque modification

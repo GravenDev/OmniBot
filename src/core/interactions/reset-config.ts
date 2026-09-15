@@ -26,7 +26,7 @@ const RESET_ALL = "*all*";
  */
 export const resetConfigButton = declareInteractionHandler({
   customId: "reset-config",
-  requiresAdmin: true,
+  access: "admin",
   check: (interaction) => interaction.isButton(),
   async execute(interaction, [moduleId, page]) {
     const module = resolveConfigurableModule(moduleId);
@@ -91,7 +91,7 @@ export const resetConfigButton = declareInteractionHandler({
 export const resetConfigSelect =
   declareInteractionHandler<StringSelectMenuInteraction>({
     customId: "reset-config-select",
-    requiresAdmin: true,
+    access: "admin",
     check: (interaction) => interaction.isStringSelectMenu(),
     async execute(interaction, [moduleId, pageStr, sourceMessageId]) {
       const module = resolveConfigurableModule(moduleId);

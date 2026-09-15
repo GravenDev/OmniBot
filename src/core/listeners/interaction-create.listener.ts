@@ -164,7 +164,7 @@ async function handleInteraction(interaction: CompatibleInteraction) {
 
     if (!handler.handler.check(interaction, config)) return;
 
-    if (handler.handler.requiresAdmin) {
+    if (handler.handler.access === "admin") {
       const coreConfig = await configService.getConfigForModuleIn(
         coreModule,
         interaction.guildId!

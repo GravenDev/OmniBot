@@ -144,8 +144,8 @@ model GuildConfiguration {
 - Réservée aux administrateurs (`setDefaultMemberPermissions`).
 - Réponse **publique** (Components V2) : une modification impactant tout le
   serveur ne doit pas être cachée. Comme le message est public, les
-  interactions d'édition sont réservées aux admins via le flag déclaratif
-  `requiresAdmin` (sur `InteractionHandler`), enforcé centralement par le
+  interactions d'édition sont réservées aux admins via le champ déclaratif
+  `access: "admin"` (sur `InteractionHandler`), enforcé centralement par le
   dispatcher d'interactions.
 - Liste chaque option : nom, description, type, valeur courante, et un accessoire
   d'édition selon le type :

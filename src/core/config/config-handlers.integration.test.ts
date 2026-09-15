@@ -115,7 +115,7 @@ describe("NumberConfigHandler modal submit", () => {
 
   it("declares that it requires admin", async () => {
     const submit = await captureRegisteredHandler(new NumberConfigHandler());
-    expect(submit.requiresAdmin).toBe(true);
+    expect(submit.access).toBe("admin");
   });
 
   it("rejects a non-numeric value without saving", async () => {
@@ -264,7 +264,7 @@ describe("UserConfigHandler select submit", () => {
 
   it("declares that it requires admin", async () => {
     const submit = await captureRegisteredHandler(new UserConfigHandler());
-    expect(submit.requiresAdmin).toBe(true);
+    expect(submit.access).toBe("admin");
   });
 });
 
@@ -292,7 +292,7 @@ describe("EnumConfigHandler select submit", () => {
   it("registers under the set-enum-config customId, requiring admin", async () => {
     const submit = await captureRegisteredHandler(new EnumConfigHandler());
     expect(submit.customId).toBe("set-enum-config");
-    expect(submit.requiresAdmin).toBe(true);
+    expect(submit.access).toBe("admin");
   });
 
   it("only matches string select menus", async () => {

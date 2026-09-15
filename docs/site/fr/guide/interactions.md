@@ -25,7 +25,7 @@ src/modules/mon-module/
 ```typescript
 interface InteractionHandler {
   customId: string; // Préfixe pour la correspondance custom ID
-  requiresAdmin?: boolean; // Restreindre aux administrateurs
+  access: "admin" | "everyone"; // Qui peut la déclencher — requis
   check: (
     interaction: CompatibleInteraction,
     config: ConfigProvider
@@ -38,12 +38,12 @@ interface InteractionHandler {
 }
 ```
 
-| Champ           | Requis | Description                                                                                              |
-| --------------- | ------ | -------------------------------------------------------------------------------------------------------- |
-| `customId`      | Oui    | Préfixe unique — comparé au début du `customId` de l'interaction                                         |
-| `requiresAdmin` | Non    | Si `true`, seuls les utilisateurs avec la permission `Administrateur` peuvent utiliser cette interaction |
-| `check`         | Oui    | Garde de type — affine le type d'interaction pour `execute`                                              |
-| `execute`       | Oui    | Appelé quand l'interaction est déclenchée                                                                |
+| Champ      | Requis | Description                                                                                                         |
+| ---------- | ------ | ------------------------------------------------------------------------------------------------------------------- |
+| `customId` | Oui    | Préfixe unique — comparé au début du `customId` de l'interaction                                                    |
+| `access`   | Oui    | `"admin"` réserve l'interaction aux utilisateurs ayant la permission `Administrateur` ; `"everyone"` l'ouvre à tous |
+| `check`    | Oui    | Garde de type — affine le type d'interaction pour `execute`                                                         |
+| `execute`  | Oui    | Appelé quand l'interaction est déclenchée                                                                           |
 
 Le paramètre `config` est un `ConfigProvider` donnant accès à la configuration du module.
 
@@ -155,12 +155,15 @@ export default declareInteractionHandler({
 
 ## Restriction administrateur
 
-Définissez `requiresAdmin: true` pour restreindre une interaction aux administrateurs du serveur :
+`access` n'a pas de valeur par défaut : chaque handler doit déclarer qui peut le
+déclencher, de sorte qu'un nouveau handler ne puisse pas devenir public par
+omission. Définissez `access: "admin"` pour restreindre une interaction aux
+administrateurs du serveur :
 
 ```typescript
 export default declareInteractionHandler({
   customId: "action-dangereuse",
-  requiresAdmin: true,
+  access: "admin",
   check: (interaction) => interaction.isButton(),
 
   async execute(interaction, args) {
