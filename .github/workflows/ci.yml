@@ -3,7 +3,9 @@ name: CI & Release
 on:
   push:
     branches: ["master"]
-    tags: ["v*"]
+    # `v*` also matched any tag starting with a "v" — `vtest`, `vendor-freeze`.
+    # A release run should only start for something version-shaped.
+    tags: ["v[0-9]*"]
   pull_request:
   # Lets a release be re-run from the tag once the cause of a failed publish is
   # fixed, without moving the tag.
@@ -123,6 +125,28 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # `latest` is not listed: the default `latest=auto` flavor already adds it
+      # for a non-prerelease semver tag, and only for one.
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      # The tag filter cannot express semver, so a tag like `v1.2.x` or
+      # `v2-final` still reaches this job, and `type=semver` emits nothing for
+      # it. buildx would then fail with "tag is needed when pushing to
+      # registry", ten minutes in and pointing nowhere near the cause. Refuse
+      # here instead, before QEMU and the build, and say why.
+      - name: Fail if the tag produced no image tag
+        if: steps.meta.outputs.tags == ''
+        run: |
+          echo "::error::${{ github.ref_name }} is not a valid semver tag, so no image tag could be derived. Tag a release as v<major>.<minor>.<patch> (a prerelease such as v0.0.1-rc1 is fine for testing)."
+          exit 1
+
       # arm64 is emulated, hence slow — acceptable on a tag, unlike on every
       # pull request.
       - name: Set up QEMU
@@ -139,17 +163,6 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      # `latest` is not listed: the default `latest=auto` flavor already adds it
-      # for a non-prerelease semver tag, and only for one.
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
 
       # Reads the amd64 layers the `docker` job just built, when the Actions
       # cache makes them reachable from this ref, and keeps its own multi-arch
