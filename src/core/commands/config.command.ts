@@ -1,5 +1,6 @@
 import {
   ContainerBuilder,
+  InteractionContextType,
   MessageFlags,
   SlashCommandBuilder,
 } from "discord.js";
@@ -7,16 +8,20 @@ import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import { configurationMessage } from "#core/utils/core-messages.js";
+import { requireAdmin } from "#core/utils/require-admin.js";
 import { modules } from "#index.js";
 import { declareCommand } from "#lib/command.js";
 import { Colors } from "#utils/colors.js";
+
+const PERMISSION_ADMINISTRATOR = 0x8;
 
 export default declareCommand({
   data: new SlashCommandBuilder()
     .setName("config")
     .setDescription("Configure the modules of the bot")
     .setDescriptionLocalizations({ fr: "Configurer les modules du bot" })
-    .setDefaultMemberPermissions(0x8)
+    .setDefaultMemberPermissions(PERMISSION_ADMINISTRATOR)
+    .setContexts([InteractionContextType.Guild])
     .addStringOption((option) =>
       option
         .setName("module")
@@ -25,15 +30,17 @@ export default declareCommand({
         .setAutocomplete(true)
     ),
   async execute(interaction) {
+    const coreConfig = await configService.getConfigForModuleIn(
+      coreModule,
+      interaction.guildId!
+    );
+
+    if (!(await requireAdmin(interaction, coreConfig.t))) return;
+
     const moduleId = interaction.options.getString("module", true);
     const module = [...modules, coreModule].find((m) => m.id === moduleId);
 
     if (!module) {
-      const coreConfig = await configService.getConfigForModuleIn(
-        coreModule,
-        interaction.guildId!
-      );
-
       await interaction.reply({
         components: [
           new ContainerBuilder()
