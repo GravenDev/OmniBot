@@ -7,6 +7,36 @@ import type { Module } from "#lib/module.js";
 
 const logger = loggerMaker("listeners");
 
+/** The shapes a Discord.js event argument can take when it carries a guild. */
+interface MaybeGuildScoped {
+  guild?: { id?: unknown } | null;
+  guildId?: unknown;
+}
+
+/**
+ * Finds the guild an event happened in by scanning its arguments, since
+ * Discord.js gives no common interface for that. Returns `undefined` for events
+ * that carry no guild at all (a DM, say) rather than throwing: the caller then
+ * runs the listener without any guild-scoped config.
+ */
+function findGuildId(args: unknown[]): string | undefined {
+  for (const arg of args) {
+    const candidate = arg as MaybeGuildScoped | null | undefined;
+
+    const fromGuild = candidate?.guild?.id;
+    if (typeof fromGuild === "string") {
+      return fromGuild;
+    }
+
+    const fromGuildId = candidate?.guildId;
+    if (typeof fromGuildId === "string") {
+      return fromGuildId;
+    }
+  }
+
+  return undefined;
+}
+
 /**
  * Loads global listeners from the core registry and registers them with Discord.
  *
@@ -44,10 +74,7 @@ export function loadModuleEvents(client: Client, module: Module) {
     logger.info(`\tRegistering listener | event = ${listener.eventType}`);
 
     client.on(listener.eventType, (...args) => {
-      const guildId =
-        args.find((arg) => !!arg.roles)?.id ||
-        args.find((arg) => !!arg?.guild).guild?.id ||
-        args.find((arg) => !!arg?.guildId);
+      const guildId = findGuildId(args);
 
       if (guildId) {
         moduleService
