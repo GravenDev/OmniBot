@@ -82,6 +82,44 @@ Copy `.env.example` to `.env`:
 - `DEV_GUILD_ID` — **dev only**: guild where slash commands are registered
   instantly (global commands take ~1h to propagate). Required by `pnpm dev`.
 
+## Deployment
+
+Production runs from the multi-stage `Dockerfile` (Node 24 on Alpine, non-root
+user, `tini` as PID 1) and `compose.prod.yaml` — a separate stack from the
+development `compose.yaml`.
+
+```bash
+cp .env.production.example .env.production   # then fill in the values
+docker compose --env-file .env.production -f compose.prod.yaml up -d --build
+docker compose --env-file .env.production -f compose.prod.yaml logs -f bot
+```
+
+Variables to provide (all required, none has a default):
+
+- `DISCORD_TOKEN` — bot token from the Discord Developer Portal.
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` — database credentials.
+  `DATABASE_URL` is assembled from them by the compose file; PostgreSQL sits on
+  an internal network and publishes no port.
+
+What the stack does:
+
+- **`migrate`** — a one-shot container that runs `prisma migrate deploy` before
+  the bot starts (`depends_on: service_completed_successfully`). The bot image
+  itself ships no Prisma CLI, and two bot instances can never race on the
+  migration history.
+- **`bot`** — read-only root filesystem, all capabilities dropped, restarted by
+  Docker (`restart: unless-stopped`). It has **no healthcheck on purpose**: the
+  bot exposes no HTTP or TCP endpoint, so any probe would either be a lie about
+  the Discord gateway state or a redundant "is PID 1 alive?" check. `tini`
+  forwards `SIGTERM`, which the bot handles by closing the Discord client and
+  the Prisma pool.
+
+Building the image alone:
+
+```bash
+docker build -t omnibot .
+```
+
 ## Project layout
 
 ```
