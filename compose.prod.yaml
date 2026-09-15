@@ -1,9 +1,17 @@
 # Production stack for OmniBot.
 #
-#   cp .env.prod.example .env.prod   # then fill it in
-#   docker compose --env-file .env.prod -f compose.prod.yaml up -d --build
+# This file deploys *published* images — it does not build anything, so the
+# host needs nothing but Docker, this file and an env file:
 #
-# `compose.yaml` is the *development* stack (PostgreSQL only) — do not mix them.
+#   cp .env.prod.example .env.prod   # then fill it in
+#   docker compose --env-file .env.prod -f compose.prod.yaml pull
+#   docker compose --env-file .env.prod -f compose.prod.yaml up -d
+#
+# Both images track `latest`, so deploying a release is always the same two
+# commands and an automated deploy needs no edit on the host. `latest` only ever
+# moves to a non-prerelease tag, so publishing a `-rc` does not deploy it.
+# To build and run the images locally instead, use `docker build --target
+# runtime .` — the CI builds both targets on every pull request.
 
 name: omnibot
 
@@ -42,12 +50,11 @@ services:
     logging: *default-logging
 
   # One-shot init container: applies the Prisma migration history, then exits.
-  # Keeping it out of the bot entrypoint means the bot image carries no Prisma
-  # CLI, and two bot replicas can never race on the same migration.
+  # It carries the Prisma CLI, which the bot image deliberately does not, and
+  # it is pinned to the same version as the bot so the schema the migrations
+  # produce is the one the code expects.
   migrate:
-    build:
-      context: .
-      target: migrator
+    image: ghcr.io/gravendev/omnibot-migrator:latest
     restart: "no"
     environment:
       DATABASE_URL: &database_url postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
@@ -66,10 +73,7 @@ services:
     logging: *default-logging
 
   bot:
-    build:
-      context: .
-      target: runtime
-    image: omnibot:latest
+    image: ghcr.io/gravendev/omnibot:latest
     restart: unless-stopped
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN:?DISCORD_TOKEN is required}
