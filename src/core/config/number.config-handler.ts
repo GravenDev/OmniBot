@@ -58,7 +58,7 @@ export default class NumberConfigHandler extends ConfigTypeHandler<ConfigType.NU
 
 const handleModalSubmit = declareInteractionHandler({
   customId: "set-config-number-modal",
-  requiresAdmin: true,
+  access: "admin",
   check: (interaction) => interaction.isModalSubmit(),
   execute: async (interaction, [moduleId, configKey]) => {
     const module = resolveConfigurableModule(moduleId);

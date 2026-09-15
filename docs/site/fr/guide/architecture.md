@@ -96,14 +96,14 @@ interactionCreate
 │   ├─ diviser customId sur ":" → préfixe + args
 │   ├─ trouver le gestionnaire par préfixe
 │   ├─ vérifier l'activation du module
-│   ├─ si requiresAdmin → vérifier la permission Administrateur
+│   ├─ si access === "admin" → vérifier la permission Administrateur
 │   ├─ exécuter la garde de type (check())
 │   └─ execute(interaction, args, config)
 ```
 
 Cette approche centralisée signifie que :
 
-- Les **permissions** sont vérifiées à un seul endroit (le flag `requiresAdmin` sur `InteractionHandler`)
+- Les **permissions** sont vérifiées à un seul endroit (le champ requis `access` sur `InteractionHandler`)
 - L'**activation du module** est vérifiée automatiquement
 - L'**injection de configuration** se fait de manière transparente
 

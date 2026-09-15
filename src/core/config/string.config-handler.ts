@@ -53,7 +53,7 @@ export default class StringConfigHandler extends ConfigTypeHandler<ConfigType.ST
 
 const handleModalSubmit = declareInteractionHandler({
   customId: "set-string-config-modal",
-  requiresAdmin: true,
+  access: "admin",
   check: (interaction) => interaction.isModalSubmit(),
   execute: async (interaction, [moduleId, configKey]) => {
     const module = resolveConfigurableModule(moduleId);

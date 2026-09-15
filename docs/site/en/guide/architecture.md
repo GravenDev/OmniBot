@@ -96,14 +96,14 @@ interactionCreate
 │   ├─ split customId on ":" → prefix + args
 │   ├─ find handler by prefix
 │   ├─ check module activation
-│   ├─ if requiresAdmin → check Administrator permission
+│   ├─ if access === "admin" → check Administrator permission
 │   ├─ run type guard (check())
 │   └─ execute(interaction, args, config)
 ```
 
 This centralised approach means:
 
-- **Permissions** are checked in one place (the `requiresAdmin` flag on `InteractionHandler`)
+- **Permissions** are checked in one place (the required `access` field on `InteractionHandler`)
 - **Module activation** is verified automatically
 - **Config injection** happens transparently
 

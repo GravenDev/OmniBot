@@ -186,7 +186,7 @@ export async function openScalarListEditor(
 
 const addListItem = declareInteractionHandler({
   customId: "add-list-item",
-  requiresAdmin: true,
+  access: "admin",
   check: (interaction) => interaction.isButton(),
   execute: async (interaction, [moduleId, key, sourceMessageId]) => {
     const module = resolveConfigurableModule(moduleId);
@@ -258,7 +258,7 @@ const addListItem = declareInteractionHandler({
 
 const toggleListItem = declareInteractionHandler({
   customId: "toggle-list-item",
-  requiresAdmin: true,
+  access: "admin",
   check: (interaction) => interaction.isButton(),
   execute: async (interaction, [moduleId, key, sourceMessageId, indexRaw]) => {
     const module = resolveConfigurableModule(moduleId);
@@ -298,7 +298,7 @@ const toggleListItem = declareInteractionHandler({
 
 const addListItemModal = declareInteractionHandler({
   customId: "add-list-item-modal",
-  requiresAdmin: true,
+  access: "admin",
   check: (interaction) => interaction.isModalSubmit(),
   execute: async (interaction, [moduleId, key, sourceMessageId]) => {
     const module = resolveConfigurableModule(moduleId);
@@ -357,7 +357,7 @@ const addListItemModal = declareInteractionHandler({
 
 const removeListItem = declareInteractionHandler({
   customId: "remove-list-item",
-  requiresAdmin: true,
+  access: "admin",
   check: (interaction) => interaction.isButton(),
   execute: async (interaction, [moduleId, key, sourceMessageId, indexRaw]) => {
     const module = resolveConfigurableModule(moduleId);

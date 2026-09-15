@@ -25,7 +25,7 @@ src/modules/my-module/
 ```typescript
 interface InteractionHandler {
   customId: string; // Prefix for custom ID matching
-  requiresAdmin?: boolean; // Restrict to administrators
+  access: "admin" | "everyone"; // Who may trigger it — required
   check: (
     interaction: CompatibleInteraction,
     config: ConfigProvider
@@ -38,12 +38,12 @@ interface InteractionHandler {
 }
 ```
 
-| Field           | Required | Description                                                                    |
-| --------------- | -------- | ------------------------------------------------------------------------------ |
-| `customId`      | Yes      | Unique prefix — matched against the start of the interaction's `customId`      |
-| `requiresAdmin` | No       | If `true`, only users with `Administrator` permission can use this interaction |
-| `check`         | Yes      | Type guard — narrows the interaction type for `execute`                        |
-| `execute`       | Yes      | Called when the interaction is triggered                                       |
+| Field      | Required | Description                                                                                                    |
+| ---------- | -------- | -------------------------------------------------------------------------------------------------------------- |
+| `customId` | Yes      | Unique prefix — matched against the start of the interaction's `customId`                                      |
+| `access`   | Yes      | `"admin"` restricts the interaction to users with the `Administrator` permission; `"everyone"` opens it to all |
+| `check`    | Yes      | Type guard — narrows the interaction type for `execute`                                                        |
+| `execute`  | Yes      | Called when the interaction is triggered                                                                       |
 
 The `config` parameter is a `ConfigProvider` giving access to the module's configuration.
 
@@ -155,12 +155,14 @@ export default declareInteractionHandler({
 
 ## Admin Gating
 
-Set `requiresAdmin: true` to restrict an interaction to server administrators:
+`access` has no default: every handler must state who may trigger it, so a new
+one cannot end up public by omission. Set `access: "admin"` to restrict an
+interaction to server administrators:
 
 ```typescript
 export default declareInteractionHandler({
   customId: "dangerous-action",
-  requiresAdmin: true,
+  access: "admin",
   check: (interaction) => interaction.isButton(),
 
   async execute(interaction, args) {

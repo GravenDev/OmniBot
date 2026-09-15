@@ -161,7 +161,7 @@ export abstract class SelectConfigHandler<
     registry.register(
       declareInteractionHandler<AnySelectMenuInteraction>({
         customId: this.selectCustomId,
-        requiresAdmin: true,
+        access: "admin",
         check: (interaction): interaction is AnySelectMenuInteraction =>
           isMatchingSelect(interaction),
         execute: async (

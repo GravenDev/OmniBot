@@ -8,7 +8,7 @@ import { declareInteractionHandler } from "#lib/interaction.js";
 
 export default declareInteractionHandler({
   customId: "enable-module",
-  requiresAdmin: true,
+  access: "admin",
   check: (interaction) => interaction.isButton(),
   async execute(interaction, args) {
     const moduleId = args[0];

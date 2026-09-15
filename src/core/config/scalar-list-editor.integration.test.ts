@@ -92,10 +92,10 @@ describe("add-list-item-modal", () => {
 
   it("declares that every list editor handler requires admin", () => {
     const all = handlers();
-    expect(all["add-list-item"]!.requiresAdmin).toBe(true);
-    expect(all["add-list-item-modal"]!.requiresAdmin).toBe(true);
-    expect(all["remove-list-item"]!.requiresAdmin).toBe(true);
-    expect(all["toggle-list-item"]!.requiresAdmin).toBe(true);
+    expect(all["add-list-item"]!.access).toBe("admin");
+    expect(all["add-list-item-modal"]!.access).toBe("admin");
+    expect(all["remove-list-item"]!.access).toBe("admin");
+    expect(all["toggle-list-item"]!.access).toBe("admin");
   });
 
   it("appends a parsed, validated value to the list", async () => {
