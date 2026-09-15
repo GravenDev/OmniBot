@@ -1,16 +1,13 @@
 # 🔍 Audit OmniBot
 
 > Les items portent un ID stable `**#N**` (référencé par les commits, ex.
-> « fixed in #26 »). Ils sont en **puces** à dessein : oxfmt renumérote les listes
-> ordonnées markdown, ce qui corromprait ces identifiants.
-
-🔴 Sécurité
-
-- **#1** — ~~Boutons sans vérification de permission~~ ✅ _fixed in c890904_
-- **#2** — ~~Non-null assertion sans fallback sûr~~ ✅ _fixed in c890904_
-- **#3** — client.token! et client.user!.id dans command-loader.ts — utilisés après ClientReady donc sûrs en pratique, mais une assertion explicite ou un guard serait plus robuste.
-
----
+> « fixed in #24 »). Ils sont en **puces** à dessein : oxfmt renumérote les listes
+> ordonnées markdown, ce qui corromprait ces identifiants. Les trous dans la
+> numérotation sont volontaires et les IDs libérés ne sont **jamais réattribués**.
+>
+> **Ce fichier ne recense aucun sujet de sécurité.** Le dépôt est public : y
+> décrire une faiblesse non corrigée revient à en publier le mode d'emploi. Ces
+> sujets sont suivis hors dépôt.
 
 🟠 Dépendances — réductions possibles
 
@@ -55,16 +52,6 @@
 
 - **#14** — Dépendances circulaires — module-installer.ts et module.service.ts importent tous deux { client, modules } depuis ../../index.js.
   - → Solution : context.ts. 🕐 _délayé — la circularité ESM fonctionne en pratique, à traiter lors d'une refonte plus large_
-- **#15** — Extraction de guildId dans listener-loader.ts — fragile :
-
-  ```
-  args.find((arg) => !!arg.roles)?.id ||
-  args.find((arg) => !!arg?.guild).guild?.id ||
-  args.find((arg) => !!arg?.guildId)
-  ```
-
-  Heuristique sur la shape des args Discord.js. Si la structure d'un event change, la détection silencieuse échoue. Mieux vaut que les EventListener de modules déclarent explicitement s'ils sont guild-scoped.
-
 - **#16** — ~~Pas de graceful shutdown~~ ✅ _fixed in 48f44c9_
 - **#17** — Script de consolidation Prisma potentiellement redondant — Prisma 6 supporte nativement les schémas multi-fichiers via glob. À investiguer lors d'une prochaine mise à jour Prisma.
 
@@ -76,11 +63,7 @@
 - **#24** — ~~Imports verbeux/fragiles : remontée `../../..`~~ ✅ _fait : subpath imports natifs `#*` (`package.json` "imports" → `./src` en dev/test/typecheck via la condition `development` ; `./dist` en prod par défaut). Aucune dep, aucune étape de build (Node résout `#*` au runtime, tsc/tsx/vitest via conditions). Les remontées `../` sont réécrites en `#…` ; les `./` même-dossier restent relatifs._
   - **Reste hors périmètre** : la suppression du suffixe `.js` (NodeNext l'impose) nécessiterait un bundler ou `moduleResolution: "Bundler"` — non poursuivi.
 - **#25** — ~~Gate de version inadapté en dev pour les commandes de module~~ ✅ _fait : en `isDevMode()`, `loadDevGuildCommands` enregistre core + commandes des modules activés en un seul PUT sur la dev guild à chaque boot (sans bump de version) ; gate par version conservé en prod_
-- **#26** — Permission des interactions — défaut _fail-open_ (dette de conception, faible). Le flag `requiresAdmin?: boolean` sur `InteractionHandler` (enforcé par le dispatcher) est **optionnel** : un handler sans flag est public. Sûr aujourd'hui (tous les handlers sont admin et explicitement marqués), mais repose sur l'humain pour ne pas oublier `requiresAdmin: true` sur un futur handler sensible.
-  - **Évolution possible (option C, safe-by-construction)** : remplacer le flag optionnel par un champ **requis** type `access: "admin" | "everyone"` (aucun défaut) → le typage force chaque handler à déclarer son niveau d'accès, impossible d'oublier.
-  - **Déclencheur** : à faire quand le nombre de handlers grandit, ou dès l'apparition du premier handler volontairement non-admin (le risque d'oubli devient alors réel).
 - **#28** — ~~CI : remplacer le grep de version Node par `jdx/mise-action`~~ 🚫 _non retenu (décidé)_. L'idée : `mise install` en une étape à la place de `pnpm/action-setup` + `grep '^node = ' .mise.toml` + `setup-node`. **Raisons du refus** : (1) perte du cache pnpm automatique fourni par `setup-node` (`cache: pnpm`) — il faudrait le re-câbler à la main (cf. #32) ; (2) `mise install` installerait aussi des outils inutiles en CI (pitchfork…) ; (3) le grep actuel, bien que peu élégant, est explicite et fonctionne. Le ratio bénéfice/inconvénient n'est pas favorable. (`docs.yml` garde `mise-action` car le build docs est peu fréquent et non sensible à ces points.)
-- **#29** — Branch protection `master` avec `lint` + `build` en _required status checks_ (réglage GitHub, hors repo). Prérequis pour que l'auto-merge Renovate (`platformAutomerge`) attende réellement la CI ; sans ça il pourrait fusionner sans gate.
 - **#30** — `pnpm dev` ne fait pas de hot-reload alors que `CLAUDE.md` annonce « tsx watch » : le script est `node --import tsx src/index.ts` (sans `watch`). À réconcilier (passer le script en `tsx watch`, ou corriger la doc).
 - **#31** — Docs VitePress : logo manquant. Le hero de `docs/site/index.md` référençait `/logo.svg`, absent de `docs/site/public/` (image 404 sur le site publié). La référence `image:` a été retirée temporairement. À rétablir une fois qu'un logo existe : ajouter `docs/site/public/logo.svg` puis remettre le bloc `image: { src: /logo.svg, alt: OmniBot }` dans le frontmatter du hero.
 - **#32** — CI docs : pas de cache du store pnpm. `docs.yml` utilise `jdx/mise-action` (qui ne cache que les outils, pas le store pnpm), contrairement à `ci.yml` qui bénéficie de `cache: pnpm` via `setup-node`. Le workflow ne tournant que sur changements de `docs/`, le ROI est faible — délayé. À traiter si le build docs devient lent : ajouter un `actions/cache` sur `pnpm store path` (clé sur `hashFiles('pnpm-lock.yaml')`), ou activer le cache pnpm de `mise-action`.
@@ -106,16 +89,14 @@
 
 Récapitulatif des actions restantes
 
-| Priorité | Action                                                     |
-| -------- | ---------------------------------------------------------- |
-| 🔵       | Extraire client/modules dans un context.ts (#14) — délayé  |
-| 🟣       | Accès interactions : champ requis (option C, #26) — évol.  |
-| 🟠       | Enum >25 options : warn + doc (#27)                        |
-| 🔵       | Branch protection : `lint`+`build` required (#29) — GitHub |
-| 🟣       | `pnpm dev` : hot-reload vs doc (#30)                       |
-| 🟢       | Docs : ajouter un logo + rétablir le hero image (#31)      |
-| 🟢       | CI docs : cache du store pnpm (#32) — délayé               |
-| 🟢       | Docs : home racine FR-only (#33) — optionnel               |
-| 🟢       | CI : `permissions` au niveau workflow (#34)                |
-| 🟢       | CI : factoriser le setup dupliqué (#35) — incertain        |
-| 🟢       | CI : uniformiser/scoper l'install (#36) — incertain        |
+| Priorité | Action                                                    |
+| -------- | --------------------------------------------------------- |
+| 🔵       | Extraire client/modules dans un context.ts (#14) — délayé |
+| 🟠       | Enum >25 options : warn + doc (#27)                       |
+| 🟣       | `pnpm dev` : hot-reload vs doc (#30)                      |
+| 🟢       | Docs : ajouter un logo + rétablir le hero image (#31)     |
+| 🟢       | CI docs : cache du store pnpm (#32) — délayé              |
+| 🟢       | Docs : home racine FR-only (#33) — optionnel              |
+| 🟢       | CI : `permissions` au niveau workflow (#34)               |
+| 🟢       | CI : factoriser le setup dupliqué (#35) — incertain       |
+| 🟢       | CI : uniformiser/scoper l'install (#36) — incertain       |
