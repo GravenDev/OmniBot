@@ -69,7 +69,7 @@ services:
     build:
       context: .
       target: runtime
-    image: omnibot:${OMNIBOT_VERSION:-latest}
+    image: omnibot:latest
     restart: unless-stopped
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN:?DISCORD_TOKEN is required}
