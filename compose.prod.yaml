@@ -1,7 +1,7 @@
 # Production stack for OmniBot.
 #
-#   cp .env.production.example .env.production   # then fill it in
-#   docker compose --env-file .env.production -f compose.prod.yaml up -d --build
+#   cp .env.prod.example .env.prod   # then fill it in
+#   docker compose --env-file .env.prod -f compose.prod.yaml up -d --build
 #
 # `compose.yaml` is the *development* stack (PostgreSQL only) — do not mix them.
 
@@ -27,8 +27,7 @@ services:
     networks:
       - internal
     healthcheck:
-      test:
-        ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5

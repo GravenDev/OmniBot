@@ -89,9 +89,9 @@ user, `tini` as PID 1) and `compose.prod.yaml` — a separate stack from the
 development `compose.yaml`.
 
 ```bash
-cp .env.production.example .env.production   # then fill in the values
-docker compose --env-file .env.production -f compose.prod.yaml up -d --build
-docker compose --env-file .env.production -f compose.prod.yaml logs -f bot
+cp .env.prod.example .env.prod   # then fill in the values
+docker compose --env-file .env.prod -f compose.prod.yaml up -d --build
+docker compose --env-file .env.prod -f compose.prod.yaml logs -f bot
 ```
 
 Variables to provide (all required, none has a default):
