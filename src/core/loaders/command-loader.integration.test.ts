@@ -51,7 +51,7 @@ function fakeModule(id: string, commandNames: string[]): Module {
 const client = {
   user: { id: "app-1" },
   token: "token",
-} as unknown as Client;
+} as unknown as Client<true>;
 
 function putBodyNames(): string[] {
   const body = restPut.mock.calls[0]?.[1]?.body as { name: string }[];

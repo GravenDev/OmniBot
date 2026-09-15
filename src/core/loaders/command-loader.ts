@@ -16,16 +16,16 @@ const logger = loggerMaker("commands");
  *
  * @param client The Discord client instance used to register the commands.
  */
-export async function loadGlobalCommands(client: Client) {
+export async function loadGlobalCommands(client: Client<true>) {
   logger.info("Loading global commands");
 
   const coreCommands = coreModule.registry.commands.map((command) =>
     command.data.toJSON()
   );
 
-  const rest = new REST().setToken(client.token!);
+  const rest = new REST().setToken(client.token);
   try {
-    await rest.put(Routes.applicationCommands(client.user!.id), {
+    await rest.put(Routes.applicationCommands(client.user.id), {
       body: coreCommands,
     });
     coreCommands.forEach((command) => {
@@ -48,7 +48,10 @@ export async function loadGlobalCommands(client: Client) {
  * a destructive bulk PUT with additive POSTs on the same guild scope would let
  * the PUT wipe the POSTed module commands.
  */
-export async function loadDevGuildCommands(client: Client, modules: Module[]) {
+export async function loadDevGuildCommands(
+  client: Client<true>,
+  modules: Module[]
+) {
   const guildId = devGuildId();
   if (!guildId) {
     logger.error(
@@ -82,9 +85,9 @@ export async function loadDevGuildCommands(client: Client, modules: Module[]) {
     );
   }
 
-  const rest = new REST().setToken(client.token!);
+  const rest = new REST().setToken(client.token);
   try {
-    await rest.put(Routes.applicationGuildCommands(client.user!.id, guildId), {
+    await rest.put(Routes.applicationGuildCommands(client.user.id, guildId), {
       body: commands,
     });
     commands.forEach((command) => {
@@ -99,7 +102,7 @@ export async function loadDevGuildCommands(client: Client, modules: Module[]) {
 }
 
 export async function installModuleCommandsIn(
-  client: Client,
+  client: Client<true>,
   module: Module,
   guild: Guild
 ) {
@@ -111,14 +114,14 @@ export async function installModuleCommandsIn(
     command.data.toJSON()
   );
 
-  const rest = new REST().setToken(client.token!);
+  const rest = new REST().setToken(client.token);
 
   try {
     const createPromises = commands.map((command) => {
       logger.info(`\tCreating command | name = ${command.name}`);
 
       return rest.post(
-        Routes.applicationGuildCommands(client.user!.id, guild.id),
+        Routes.applicationGuildCommands(client.user.id, guild.id),
         {
           body: command,
         }
@@ -174,7 +177,7 @@ export async function uninstallModuleCommandsIn(
 }
 
 export async function updateModuleCommandsIn(
-  client: Client,
+  client: Client<true>,
   module: Module,
   guild: Guild
 ) {
@@ -187,7 +190,7 @@ export async function updateModuleCommandsIn(
 }
 
 export async function checkCommandsForVersionChange(
-  client: Client,
+  client: Client<true>,
   module: Module
 ) {
   logger.info(
@@ -260,7 +263,7 @@ export async function checkCommandsForVersionChange(
  *   itself — only after a successful registration, so a failed one retries next
  *   boot. Core commands are then registered globally.
  */
-export async function syncCommands(client: Client, modules: Module[]) {
+export async function syncCommands(client: Client<true>, modules: Module[]) {
   if (isDevMode()) {
     await loadDevGuildCommands(client, modules);
     for (const module of modules) {
