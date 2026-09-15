@@ -7,6 +7,7 @@ import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import { modulesMessage } from "#core/utils/core-messages.js";
+import { requireAdmin } from "#core/utils/require-admin.js";
 import { declareCommand } from "#lib/command.js";
 
 const PERMISSION_ADMINISTRATOR = 0x8;
@@ -20,14 +21,22 @@ export default declareCommand({
     .setContexts([InteractionContextType.Guild]),
 
   async execute(interaction) {
+    // Checked before deferring: requireAdmin replies, which needs a fresh
+    // interaction.
+    const coreConfig = await configService.getConfigForModuleIn(
+      coreModule,
+      interaction.guildId!
+    );
+
+    if (!(await requireAdmin(interaction, coreConfig.t))) return;
+
     const defer = await interaction.deferReply({
       flags: MessageFlags.Ephemeral,
     });
 
-    const [modulesState, coreConfig] = await Promise.all([
-      moduleService.getAllModulesStateIn(interaction.guildId!),
-      configService.getConfigForModuleIn(coreModule, interaction.guildId!),
-    ]);
+    const modulesState = await moduleService.getAllModulesStateIn(
+      interaction.guildId!
+    );
 
     await defer.edit({
       components: [modulesMessage(modulesState, coreConfig.t)],
