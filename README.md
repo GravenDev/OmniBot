@@ -84,15 +84,23 @@ Copy `.env.example` to `.env`:
 
 ## Deployment
 
-Production runs from the multi-stage `Dockerfile` (Node 24 on Alpine, non-root
-user, `tini` as PID 1) and `compose.prod.yaml` — a separate stack from the
-development `compose.yaml`.
+`compose.prod.yaml` deploys the images published to GHCR on each `v*` tag, so
+the host needs nothing but Docker, that file and an env file — no source
+checkout, no build.
 
 ```bash
 cp .env.prod.example .env.prod   # then fill in the values
-docker compose --env-file .env.prod -f compose.prod.yaml up -d --build
+docker compose --env-file .env.prod -f compose.prod.yaml pull
+docker compose --env-file .env.prod -f compose.prod.yaml up -d
 docker compose --env-file .env.prod -f compose.prod.yaml logs -f bot
 ```
+
+Updating is the same two commands: `pull`, then `up -d` — compose recreates only
+what changed. Both images track `latest`, which metadata-action only ever moves
+to a non-prerelease tag, so cutting a `-rc` publishes it without deploying it.
+
+The images come from the multi-stage `Dockerfile` (Node 24 on Alpine, non-root
+user, `tini` as PID 1), built by CI on every pull request and published on tag.
 
 Variables to provide (all required, none has a default):
 
