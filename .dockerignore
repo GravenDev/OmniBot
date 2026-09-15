@@ -1,0 +1,58 @@
+# Everything the production image must never receive.
+# Keep in sync with the COPY instructions in the Dockerfile.
+
+# Secrets — never bake an environment file into an image.
+.env
+.env.*
+!.env.example
+
+# Build outputs & dependencies (re-created inside the image)
+node_modules
+**/node_modules
+dist
+src/generated
+*.tsbuildinfo
+
+# VCS & CI
+.git
+.gitignore
+.github
+.claude
+
+# Docs site (its own workspace package — only its manifest is needed so that
+# pnpm can validate the workspace against the lockfile)
+docs
+!docs/site/package.json
+
+# Docker & local orchestration
+Dockerfile
+.dockerignore
+compose.yaml
+compose.*.yaml
+pitchfork.toml
+pitchfork.local.toml
+
+# Tooling / editor / local config
+.mise.toml
+.oxlintrc.json
+.oxfmtrc.json
+.commitlintrc
+.lefthook.yaml
+.renovaterc.json
+.idea
+.vscode
+vitest.config.ts
+
+# Tests & project meta
+**/*.test.ts
+coverage
+AUDIT.md
+AGENTS.md
+CLAUDE.md
+README.md
+LICENSE
+
+# Logs & misc
+*.log
+logs
+.DS_Store

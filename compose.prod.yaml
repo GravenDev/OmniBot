@@ -1,0 +1,110 @@
+# Production stack for OmniBot.
+#
+#   cp .env.production.example .env.production   # then fill it in
+#   docker compose --env-file .env.production -f compose.prod.yaml up -d --build
+#
+# `compose.yaml` is the *development* stack (PostgreSQL only) — do not mix them.
+
+name: omnibot
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  # PostgreSQL is reachable only from the internal network: no published port.
+  postgres:
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test:
+        ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1g
+    logging: *default-logging
+
+  # One-shot init container: applies the Prisma migration history, then exits.
+  # Keeping it out of the bot entrypoint means the bot image carries no Prisma
+  # CLI, and two bot replicas can never race on the same migration.
+  migrate:
+    build:
+      context: .
+      target: migrator
+    restart: "no"
+    environment:
+      DATABASE_URL: &database_url postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - internal
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512m
+    logging: *default-logging
+
+  bot:
+    build:
+      context: .
+      target: runtime
+    image: omnibot:${OMNIBOT_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      DISCORD_TOKEN: ${DISCORD_TOKEN:?DISCORD_TOKEN is required}
+      DATABASE_URL: *database_url
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      # `internal` reaches PostgreSQL, `egress` reaches the Discord gateway.
+      - internal
+      - egress
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    # No healthcheck: the bot exposes no HTTP/TCP endpoint — see the
+    # Deployment section of README.md.
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512m
+    logging: *default-logging
+
+networks:
+  # No route to the outside world: only the bot bridges the two networks.
+  internal:
+    internal: true
+  egress: {}
+
+volumes:
+  postgres_data:
