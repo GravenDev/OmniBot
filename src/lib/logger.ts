@@ -1,7 +1,22 @@
 import pino from "pino";
 
+function resolveLevel(): pino.LevelWithSilent {
+  switch (process.env["LOG_LEVEL"]) {
+    case "fatal":
+    case "error":
+    case "warn":
+    case "info":
+    case "debug":
+    case "trace":
+    case "silent":
+      return process.env["LOG_LEVEL"];
+    default:
+      return "debug";
+  }
+}
+
 const base = pino({
-  level: "debug",
+  level: resolveLevel(),
   transport: {
     target: "pino-pretty",
     options: {
