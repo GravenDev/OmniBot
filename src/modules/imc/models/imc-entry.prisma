@@ -1,0 +1,13 @@
+model ImcEntry {
+  id        String   @id @default(cuid())
+  guildId   String
+  userId    String
+  weightKg  Float
+  heightCm  Float
+  bmi       Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guildId, userId])
+  @@index([guildId, bmi])
+}
