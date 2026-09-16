@@ -173,14 +173,20 @@ class ModuleService implements Service {
     guildId: string,
     version: string
   ) {
-    await prisma.moduleActivation.update({
+    await prisma.moduleActivation.upsert({
       where: {
         moduleId_guildId: {
           moduleId,
           guildId,
         },
       },
-      data: {
+      create: {
+        moduleId,
+        guildId,
+        activated: true,
+        activatedVersion: version,
+      },
+      update: {
         activatedVersion: version,
       },
     });

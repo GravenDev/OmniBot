@@ -1,3 +1,4 @@
+import { GatewayIntentBits } from "discord.js";
 import { defineModule } from "#lib/module.js";
 import configCommand from "./commands/config.command.js";
 import moduleCommand from "./commands/module.command.js";
@@ -14,6 +15,7 @@ import {
   resetConfigSelect,
 } from "./interactions/reset-config.js";
 import toggleOptionButton from "./interactions/toggle-option.button.js";
+import guildCreateListener from "./listeners/guild-create.listener.js";
 import commandListener from "./listeners/interaction-create.listener.js";
 
 export default defineModule({
@@ -22,7 +24,7 @@ export default defineModule({
   description:
     "The core module of the application, managing core commands and events. It is always loaded.",
   version: "1.1.1",
-  intents: [],
+  intents: [GatewayIntentBits.Guilds],
   config: coreConfigSchema satisfies CoreConfig,
   onLoad(_, registry) {
     // Register the core module's commands and events in the provided registry
@@ -30,6 +32,7 @@ export default defineModule({
     registry.register(configCommand);
 
     registry.register(commandListener);
+    registry.register(guildCreateListener);
 
     registry.register(enableModuleButton);
     registry.register(disableModuleButton);

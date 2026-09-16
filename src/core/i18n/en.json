@@ -87,5 +87,10 @@
   "modules.test-config.description": "Development module declaring all configuration types, used to test the configuration UI.",
 
   "config.locale.name": "Language",
-  "config.locale.description": "Bot language"
+  "config.locale.description": "Bot language",
+
+  "guild.welcome.title": "# Thanks for inviting me!",
+  "guild.welcome.body": "Admins, start with `/modules` to enable modules and `/config` to configure them.",
+  "guild.welcome.hint": "Your previous configuration will be restored automatically if I have been here before.",
+  "guild.welcome.dmPrefix": "(System channel unavailable) "
 }

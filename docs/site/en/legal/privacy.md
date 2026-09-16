@@ -36,7 +36,7 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 
 ## Data Retention
 
-Configuration and activation data is retained for as long as the bot is active on a guild. When a module is uninstalled, its configuration data may be retained in the guild's configuration blob (configurable by instance operators). To request data deletion, contact the instance operator.
+Configuration and activation data is retained for as long as the bot is active on a guild. When the bot leaves a guild (kick or removal), the data is deliberately kept so everything is restored automatically if the bot is re-invited. When a module is uninstalled, its configuration data may be retained in the guild's configuration blob (configurable by instance operators). To request data deletion, contact the instance operator.
 
 ## Data Sharing
 

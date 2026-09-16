@@ -5,12 +5,12 @@ import type { Module } from "#lib/module.js";
 // client; stub both so importing it never boots the bot or hits a database.
 vi.mock("#index.js", () => ({ modules: [], client: {} }));
 
-const { findMany, update } = vi.hoisted(() => ({
+const { findMany, upsert } = vi.hoisted(() => ({
   findMany: vi.fn(),
-  update: vi.fn(),
+  upsert: vi.fn(),
 }));
 vi.mock("#lib/database.js", () => ({
-  default: { moduleActivation: { findMany, update } },
+  default: { moduleActivation: { findMany, upsert } },
   Prisma: {},
 }));
 
@@ -21,7 +21,7 @@ const module = { id: "thread-creator", version: "2.0.0" } as unknown as Module;
 describe("reconcileActivatedVersions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    update.mockResolvedValue(undefined);
+    upsert.mockResolvedValue(undefined);
   });
 
   it("bumps activatedVersion to the live version for every drifted guild", async () => {
@@ -32,18 +32,30 @@ describe("reconcileActivatedVersions", () => {
 
     await moduleService.reconcileActivatedVersions(module);
 
-    expect(update).toHaveBeenCalledTimes(2);
-    expect(update).toHaveBeenCalledWith({
+    expect(upsert).toHaveBeenCalledTimes(2);
+    expect(upsert).toHaveBeenCalledWith({
       where: {
         moduleId_guildId: { moduleId: "thread-creator", guildId: "guild-a" },
       },
-      data: { activatedVersion: "2.0.0" },
+      create: {
+        moduleId: "thread-creator",
+        guildId: "guild-a",
+        activated: true,
+        activatedVersion: "2.0.0",
+      },
+      update: { activatedVersion: "2.0.0" },
     });
-    expect(update).toHaveBeenCalledWith({
+    expect(upsert).toHaveBeenCalledWith({
       where: {
         moduleId_guildId: { moduleId: "thread-creator", guildId: "guild-b" },
       },
-      data: { activatedVersion: "2.0.0" },
+      create: {
+        moduleId: "thread-creator",
+        guildId: "guild-b",
+        activated: true,
+        activatedVersion: "2.0.0",
+      },
+      update: { activatedVersion: "2.0.0" },
     });
   });
 
@@ -68,7 +80,7 @@ describe("reconcileActivatedVersions", () => {
 
     await moduleService.reconcileActivatedVersions(module);
 
-    expect(update).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
   });
 });
 
