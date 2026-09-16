@@ -8,8 +8,11 @@ import {
   type ConfigSchema,
 } from "#lib/config.js";
 import database from "#lib/database.js";
+import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { declareService } from "#lib/service.js";
+
+const logger = loggerMaker("config");
 
 const configCache = new Map<string, Record<string, ConfigData<ConfigSchema>>>();
 const pendingLoads = new Map<
@@ -299,11 +302,14 @@ class ConfigService {
       if (Array.isArray(configEntry.type)) {
         const listType = configEntry.type[0];
         if (Array.isArray(value)) {
-          deserializedConfig[key] = await Promise.all(
+          const items = await Promise.all(
             value.map(
               async (item) => await this.deserializeValue(item, listType, guild)
             )
           );
+          // Drop entities that vanished since (deleted channel/role/user): a
+          // null item would crash consumers (e.g. `channel.id`).
+          deserializedConfig[key] = items.filter((item) => item !== null);
         }
       } else {
         // Handle single types
@@ -365,8 +371,12 @@ class ConfigService {
           return value;
       }
     } catch (error) {
-      // If deserialization fails, return the original value or null
-      console.warn(`Failed to deserialize ${type} with value ${value}:`, error);
+      // The referenced entity is gone (deleted channel/role/…) or Discord
+      // refused the fetch: report null and let the caller drop it.
+      logger.warn(
+        { err: error },
+        `Failed to deserialize | type = ${type} | value = ${value}`
+      );
       return null;
     }
   }

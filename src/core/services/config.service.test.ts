@@ -1,9 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ConfigType } from "#lib/config.js";
 import type { Module } from "#lib/module.js";
 
+const { guildsFetch, channelsFetch } = vi.hoisted(() => ({
+  guildsFetch: vi.fn(),
+  channelsFetch: vi.fn(),
+}));
 vi.mock("#index.js", () => ({
   modules: [],
-  client: { guilds: { fetch: vi.fn() } },
+  client: { users: { fetch: vi.fn() }, guilds: { fetch: guildsFetch } },
 }));
 vi.mock("#core/core.module.js", () => ({
   default: { id: "core", config: {} },
@@ -54,8 +59,9 @@ vi.mock("#lib/database.js", () => {
 });
 
 const { default: configService } = await import("./config.service.js");
+const { modules } = await import("#index.js");
 
-const module = { id: "core", config: {} } as unknown as Module;
+const coreModule = { id: "core", config: {} } as unknown as Module;
 
 beforeEach(() => {
   rows.clear();
@@ -66,8 +72,8 @@ describe("ConfigService on a guild without stored configuration", () => {
   it("creates the configuration once when it is read concurrently", async () => {
     await expect(
       Promise.all([
-        configService.getConfigForModuleIn(module, "new-guild"),
-        configService.getConfigForModuleIn(module, "new-guild"),
+        configService.getConfigForModuleIn(coreModule, "new-guild"),
+        configService.getConfigForModuleIn(coreModule, "new-guild"),
       ])
     ).resolves.toHaveLength(2);
 
@@ -76,11 +82,50 @@ describe("ConfigService on a guild without stored configuration", () => {
   });
 
   it("does not fail when another process created the row in the meantime", async () => {
-    const first = configService.getConfigForModuleIn(module, "racing-guild");
+    const first = configService.getConfigForModuleIn(coreModule, "racing-guild");
     rows.set("racing-guild", { core: { locale: "fr" } });
 
     const provider = await first;
 
     expect(provider.locale).toBe("fr");
+  });
+});
+
+const channelModule = {
+  id: "mod-a",
+  config: {
+    channels: {
+      name: "Channels",
+      description: "Watched channels",
+      type: [ConfigType.CHANNEL],
+    },
+  },
+} as unknown as Module;
+
+describe("getConfigForModuleIn", () => {
+  beforeEach(() => {
+    (modules as unknown as Module[]).push(channelModule);
+    rows.set("guild-1", {
+      "mod-a": { channels: ["chan-1", "chan-gone"] },
+      core: {},
+    });
+    guildsFetch.mockResolvedValue({ channels: { fetch: channelsFetch } });
+    channelsFetch.mockImplementation(async (id: string) => {
+      if (id === "chan-gone") throw new Error("Unknown Channel");
+      return { id };
+    });
+  });
+
+  afterEach(() => {
+    modules.length = 0;
+  });
+
+  it("drops deserialized entities that vanished instead of returning null", async () => {
+    const config = await configService.getConfigForModuleIn(
+      channelModule,
+      "guild-1"
+    );
+
+    expect(config.get("channels")).toEqual([{ id: "chan-1" }]);
   });
 });

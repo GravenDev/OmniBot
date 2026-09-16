@@ -180,6 +180,7 @@ model GuildConfiguration {
 ```
 
 - Entity IDs (user, role, channel) are stored as strings and **deserialized** to Discord objects at read time
+- Entities deleted since (removed channel/role/…) are silently dropped from lists at read time, so `config.get()` never contains `null`
 - An in-memory cache (`configCache`) avoids database reads on every interaction
 - The cache is invalidated on every write
 

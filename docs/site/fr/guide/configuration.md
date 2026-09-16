@@ -180,6 +180,7 @@ model GuildConfiguration {
 ```
 
 - Les IDs d'entités (utilisateur, rôle, salon) sont stockées sous forme de chaînes et **désérialisées** en objets Discord à la lecture
+- Les entités supprimées depuis (salon/rôle/… retiré) sont écartées des listes à la lecture, donc `config.get()` ne contient jamais `null`
 - Un cache en mémoire (`configCache`) évite les lectures base de données à chaque interaction
 - Le cache est invalidé à chaque écriture
 
