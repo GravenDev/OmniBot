@@ -21,14 +21,22 @@ function findCommand(commandName: string) {
 }
 
 function findInteractionHandler(customId: string) {
-  return [...modules, coreModule]
+  const matches = [...modules, coreModule]
     .flatMap((module) =>
       module.registry.interactionHandlers.map((handler) => ({
         module,
         handler,
       }))
     )
-    .find((entry) => entry.handler.customId === customId);
+    .filter((entry) => entry.handler.customId === customId);
+
+  if (matches.length > 1) {
+    logger.warn(
+      `Duplicate interaction customId, first match wins | customId = ${customId} | modules = ${matches.map((entry) => entry.module.id).join(",")}`
+    );
+  }
+
+  return matches[0];
 }
 
 async function handleCommand(interaction: ChatInputCommandInteraction) {
@@ -42,28 +50,24 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
     `Command found | name = ${command.command.data.name} | module = ${command.module.id}`
   );
 
-  if (
+  // Slash commands only run in guilds: without one there is no module state
+  // nor config to load.
+  if (!interaction.guild || !interaction.guildId) {
+    logger.warn(`Command outside guild | name = ${interaction.commandName}`);
+    return;
+  }
+
+  const coreConfig = await configService.getConfigForModuleIn(
+    coreModule,
+    interaction.guildId
+  );
+
+  const enabled =
     command.module.id === coreModule.id ||
-    (
-      await moduleService.getModuleStateIn(
-        command.module.id,
-        interaction.guild!
-      )
-    ).activated
-  ) {
-    const config = await configService.getConfigForModuleIn(
-      command.module,
-      interaction.guildId!
-    );
+    (await moduleService.getModuleStateIn(command.module.id, interaction.guild))
+      .activated;
 
-    logger.debug(`Executing command | name = ${interaction.commandName}`);
-    await command.command.execute(interaction, config);
-  } else {
-    const coreConfig = await configService.getConfigForModuleIn(
-      coreModule,
-      interaction.guildId!
-    );
-
+  if (!enabled) {
     logger.warn(
       `Command not enabled | name = ${interaction.commandName} | module = ${command.module.id}`
     );
@@ -73,6 +77,40 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
       }),
       flags: MessageFlags.Ephemeral,
     });
+    return;
+  }
+
+  if (command.command.requiresAdmin) {
+    if (!(await requireAdmin(interaction, coreConfig.t))) {
+      return;
+    }
+  }
+
+  const config = await configService.getConfigForModuleIn(
+    command.module,
+    interaction.guildId
+  );
+
+  logger.debug(`Executing command | name = ${interaction.commandName}`);
+  try {
+    await command.command.execute(interaction, config);
+  } catch (err) {
+    logger.error({ err }, `Command failed | name = ${interaction.commandName}`);
+    const payload = {
+      content: coreConfig.t("command.failed", {
+        commandName: interaction.commandName,
+      }),
+      flags: MessageFlags.Ephemeral,
+    } as const;
+    try {
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp(payload);
+      } else {
+        await interaction.reply(payload);
+      }
+    } catch {
+      logger.debug(`Error reply failed | name = ${interaction.commandName}`);
+    }
   }
 }
 
@@ -86,42 +124,49 @@ async function handleComplete(interaction: AutocompleteInteraction) {
     return;
   }
 
+  if (!interaction.guild || !interaction.guildId) {
+    logger.warn(
+      `Autocomplete outside guild | name = ${interaction.commandName}`
+    );
+    await interaction.respond([]);
+    return;
+  }
+
   if (
-    command.module.id === coreModule.id ||
-    (
-      await moduleService.getModuleStateIn(
-        command.module.id,
-        interaction.guild!
-      )
+    command.module.id !== coreModule.id &&
+    !(
+      await moduleService.getModuleStateIn(command.module.id, interaction.guild)
     ).activated
   ) {
-    const config = await configService.getConfigForModuleIn(
-      coreModule,
-      interaction.guildId!
-    );
-
-    if (
-      command.module.id === coreModule.id ||
-      (
-        await moduleService.getModuleStateIn(
-          command.module.id,
-          interaction.guild!
-        )
-      ).activated
-    ) {
-      logger.debug(`Handling autocomplete | name = ${interaction.commandName}`);
-      await command.command.complete?.(interaction, config);
-    } else {
-      logger.warn(
-        `Command not enabled | name = ${interaction.command?.name} | module = ${command.module.id}`
-      );
-      await interaction.respond([]);
-    }
-  } else {
     logger.warn(
       `Command not enabled | name = ${interaction.commandName} | module = ${command.module.id}`
     );
     await interaction.respond([]);
+    return;
+  }
+
+  // The module's own config, like handleCommand: complete() is typed against
+  // the command's schema, so handing it the core config would lie at runtime.
+  const config = await configService.getConfigForModuleIn(
+    command.module,
+    interaction.guildId
+  );
+
+  logger.debug(`Handling autocomplete | name = ${interaction.commandName}`);
+  try {
+    await command.command.complete?.(interaction, config);
+  } catch (err) {
+    logger.error(
+      { err },
+      `Autocomplete failed | name = ${interaction.commandName}`
+    );
+    try {
+      await interaction.respond([]);
+    } catch {
+      logger.debug(
+        `Autocomplete fallback failed | name = ${interaction.commandName}`
+      );
+    }
   }
 }
 
@@ -162,7 +207,15 @@ async function handleInteraction(interaction: CompatibleInteraction) {
       interaction.guildId!
     );
 
-    if (!handler.handler.check(interaction, config)) return;
+    // Read before check(): a rejecting type predicate narrows `interaction`
+    // to never below.
+    const checkedCustomId = interaction.customId;
+    if (!handler.handler.check(interaction, config)) {
+      logger.debug(
+        `Interaction check rejected | customId = ${checkedCustomId}`
+      );
+      return;
+    }
 
     if (handler.handler.access === "admin") {
       const coreConfig = await configService.getConfigForModuleIn(

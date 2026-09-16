@@ -25,6 +25,13 @@ export interface Command<ConfigType extends ConfigSchema = {}> {
     | SlashCommandOptionsOnlyBuilder;
 
   /**
+   * When true, the command is only executed for guild administrators; the
+   * permission check is enforced centrally by the command dispatcher.
+   * Defense in depth on top of `setDefaultMemberPermissions`.
+   */
+  requiresAdmin?: boolean;
+
+  /**
    * The function to execute when the command is invoked.
    *
    * @param interaction The interaction that triggered the command.
