@@ -94,13 +94,22 @@ export class Registry {
           handler as Declared<EventListener<any, any>>
         );
         break;
-      case DeclarationType.Interaction:
-        this._interactionHandlers.push(
-          handler as Declared<
-            InteractionHandler<TCompatibleInteraction, TSchema>
-          >
-        );
+      case DeclarationType.Interaction: {
+        const interaction = handler as Declared<
+          InteractionHandler<TCompatibleInteraction, TSchema>
+        >;
+        if (
+          this._interactionHandlers.some(
+            (existing) => existing.customId === interaction.customId
+          )
+        ) {
+          throw new Error(
+            `Duplicate interaction customId | customId = ${interaction.customId}`
+          );
+        }
+        this._interactionHandlers.push(interaction);
         break;
+      }
       default:
         throw new Error(`Unknown declaration type | type = ${handler.type}`);
     }
