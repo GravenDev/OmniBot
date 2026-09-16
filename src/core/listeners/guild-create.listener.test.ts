@@ -1,6 +1,11 @@
 import { MessageFlags } from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { addTranslations, initI18n } from "#lib/i18n.js";
+import {
+  fakeChannel,
+  fakeGuild,
+  initTestI18n,
+  silenceLogs,
+} from "#lib/testing.js";
 
 const { mockModules } = vi.hoisted(() => ({ mockModules: [] as any[] }));
 vi.mock("#index.js", () => ({ modules: mockModules, client: {} }));
@@ -29,49 +34,16 @@ vi.mock("#core/loaders/command-loader.js", () => ({
 const { default: listener, resolveWelcomeChannel } =
   await import("./guild-create.listener.js");
 
-function fakeChannel(sendImpl?: (args: unknown) => Promise<unknown>) {
-  return {
-    id: "chan-1",
-    isTextBased: () => true,
-    isSendable: () => true,
-    send: vi.fn(sendImpl ?? (async () => ({}))),
-  };
-}
-
-function fakeGuild(overrides: Record<string, any> = {}) {
-  const channel = overrides.channel ?? fakeChannel();
-  const ownerSend = overrides.ownerSend ?? vi.fn(async () => ({}));
-  return {
-    guild: {
-      id: "guild-1",
-      preferredLocale: "fr",
-      systemChannelId: "chan-1",
-      systemChannel: channel,
-      channels: { fetch: vi.fn(async () => channel) },
-      members: {
-        me: {
-          permissionsIn: vi.fn(() => ({ has: () => true })),
-        },
-      },
-      fetchOwner: vi.fn(async () => ({ send: ownerSend })),
-      client: { tag: "fake-client" },
-      ...overrides.guild,
-    } as any,
-    channel,
-    ownerSend,
-  };
-}
+const welcomeBundle = {
+  "guild.welcome.title": "title",
+  "guild.welcome.body": "body",
+  "guild.welcome.hint": "hint",
+  "guild.welcome.dmPrefix": "prefix ",
+};
 
 beforeAll(async () => {
-  await initI18n();
-  for (const lng of ["en", "fr"]) {
-    addTranslations(lng, "core", {
-      "guild.welcome.title": "title",
-      "guild.welcome.body": "body",
-      "guild.welcome.hint": "hint",
-      "guild.welcome.dmPrefix": "prefix ",
-    });
-  }
+  await initTestI18n("core", { en: welcomeBundle, fr: welcomeBundle });
+  silenceLogs();
 });
 
 beforeEach(() => {
