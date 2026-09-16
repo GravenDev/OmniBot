@@ -36,7 +36,7 @@ Les données sont stockées dans une base de données PostgreSQL gérée par l'o
 
 ## Conservation des données
 
-Les données de configuration et d'activation sont conservées tant que le bot est actif sur un serveur. Quand un module est désinstallé, ses données de configuration peuvent être conservées dans le blob de configuration du serveur (configurable par les opérateurs d'instance). Pour demander la suppression des données, contactez l'opérateur de l'instance.
+Les données de configuration et d'activation sont conservées tant que le bot est actif sur un serveur. Quand le bot quitte un serveur (kick ou retrait), les données sont volontairement conservées afin que tout soit restauré automatiquement si le bot est réinvité. Quand un module est désinstallé, ses données de configuration peuvent être conservées dans le blob de configuration du serveur (configurable par les opérateurs d'instance). Pour demander la suppression des données, contactez l'opérateur de l'instance.
 
 ## Partage des données
 

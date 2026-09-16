@@ -105,6 +105,20 @@ function renderCurrentValue(
 }
 
 /**
+ * Welcome panel sent on `guildCreate` (system channel, or DM to the owner as
+ * a fallback). Deliberately generic: it never details a restored state.
+ */
+export const guildWelcomeMessage = (t: TFunction): ContainerBuilder[] => {
+  const container = new ContainerBuilder().setAccentColor(Colors.Turquoise);
+  container.addTextDisplayComponents(
+    (text) => text.setContent(t("guild.welcome.title")),
+    (text) => text.setContent(t("guild.welcome.body")),
+    (text) => text.setContent(t("guild.welcome.hint"))
+  );
+  return [container];
+};
+
+/**
  * Fields rendered per page. Each field costs 3 components (section + text +
  * button) and the message-wide cap is 40, so a page is kept well under it,
  * leaving room for the header and the pagination row.

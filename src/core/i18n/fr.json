@@ -87,5 +87,10 @@
   "modules.test-config.description": "Module de développement déclarant tous les types de configuration, pour tester l'UI de configuration.",
 
   "config.locale.name": "Langue",
-  "config.locale.description": "Langue du bot"
+  "config.locale.description": "Langue du bot",
+
+  "guild.welcome.title": "# Merci de m'avoir invité !",
+  "guild.welcome.body": "Admins, commencez par `/modules` pour activer des modules et `/config` pour les configurer.",
+  "guild.welcome.hint": "Votre configuration précédente sera restaurée automatiquement si je suis déjà venu ici.",
+  "guild.welcome.dmPrefix": "(Salon système indisponible) "
 }
