@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
 
 // The service pulls `client`/`modules` from the bot entrypoint and the Prisma
@@ -15,6 +15,7 @@ vi.mock("#lib/database.js", () => ({
 }));
 
 const { default: moduleService } = await import("./module.service.js");
+const { modules } = await import("#index.js");
 
 const module = { id: "thread-creator", version: "2.0.0" } as unknown as Module;
 
@@ -103,5 +104,63 @@ describe("getActivatedGuildIds", () => {
       select: { guildId: true },
       where: { moduleId: "four-hour-game", activated: true },
     });
+  });
+});
+
+describe("enableModule / disableModule hook ordering", () => {
+  const guild = { id: "guild-1" } as never;
+  const onInstall = vi.fn();
+  const onUninstall = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // clearAllMocks keeps implementations: drop them so one test's throwing
+    // hook does not leak into the next.
+    onInstall.mockReset();
+    onUninstall.mockReset();
+    upsert.mockResolvedValue(undefined);
+    (modules as unknown as Module[]).push({
+      id: "mod-x",
+      version: "1.0.0",
+      registry: {},
+      onInstall,
+      onUninstall,
+    } as unknown as Module);
+  });
+
+  afterEach(() => {
+    modules.length = 0;
+  });
+
+  it("does not mark the module enabled when onInstall throws", async () => {
+    onInstall.mockImplementation(() => {
+      throw new Error("hook blew up");
+    });
+
+    await expect(moduleService.enableModule("mod-x", guild)).rejects.toThrow(
+      "hook blew up"
+    );
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it("runs onInstall before flipping the DB state", async () => {
+    await moduleService.enableModule("mod-x", guild);
+
+    expect(onInstall).toHaveBeenCalledOnce();
+    expect(upsert).toHaveBeenCalledOnce();
+    expect(vi.mocked(onInstall).mock.invocationCallOrder[0]).toBeLessThan(
+      upsert.mock.invocationCallOrder[0]
+    );
+  });
+
+  it("does not mark the module disabled when onUninstall throws", async () => {
+    onUninstall.mockImplementation(() => {
+      throw new Error("hook blew up");
+    });
+
+    await expect(moduleService.disableModule("mod-x", guild)).rejects.toThrow(
+      "hook blew up"
+    );
+    expect(upsert).not.toHaveBeenCalled();
   });
 });
