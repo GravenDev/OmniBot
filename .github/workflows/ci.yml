@@ -206,3 +206,22 @@ jobs:
             type=gha,scope=release-migrator
             type=gha,scope=ci-migrator
           cache-to: type=gha,mode=max,scope=release-migrator
+
+  # The stack is defined in Portainer against this repository; the webhook only
+  # asks it to redeploy, which re-pulls `latest`. Unlike an SSH deploy key, the
+  # secret it needs grants no shell on the host and can do nothing but this.
+  deploy:
+    needs: publish
+    # A prerelease publishes its image but does not move `latest`, so redeploying
+    # on one would restart the stack onto the version already running — a
+    # deployment that reports success and changes nothing.
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-latest
+    permissions: {}
+
+    steps:
+      # -f makes an HTTP error a non-zero exit: without it curl reports success
+      # on a 404, and a webhook that has been revoked or renamed would look like
+      # a successful deployment for as long as nobody checked the bot.
+      - name: Trigger the Portainer stack redeploy
+        run: curl -fsS --max-time 300 -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"

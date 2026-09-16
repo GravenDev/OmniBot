@@ -84,9 +84,22 @@ Copy `.env.example` to `.env`:
 
 ## Deployment
 
-`compose.prod.yaml` deploys the images published to GHCR on each `v*` tag, so
-the host needs nothing but Docker, that file and an env file — no source
-checkout, no build.
+`compose.prod.yaml` deploys the images published to GHCR on each `v*` tag. It
+builds nothing, so a host needs Docker, that file and the environment variables
+— no source checkout, no compiler.
+
+Production runs it as a Portainer stack pointing at this repository, so the
+compose file in use is always the one on `master` rather than a copy that drifts
+from it. Two of its settings matter: **Re-pull image**, without which a redeploy
+reuses the image already cached under `latest`, and the stack environment
+variables, which take the place of an env file. Cutting a release then deploys
+itself — the `deploy` job calls the stack webhook once the images are published.
+
+`latest` only ever moves to a non-prerelease tag, so cutting a `-rc` publishes
+it without deploying it, and the `deploy` job skips those tags for the same
+reason.
+
+To run the stack by hand instead:
 
 ```bash
 cp .env.prod.example .env.prod   # then fill in the values
@@ -95,14 +108,14 @@ docker compose --env-file .env.prod -f compose.prod.yaml up -d
 docker compose --env-file .env.prod -f compose.prod.yaml logs -f bot
 ```
 
-Updating is the same two commands: `pull`, then `up -d` — compose recreates only
-what changed. Both images track `latest`, which metadata-action only ever moves
-to a non-prerelease tag, so cutting a `-rc` publishes it without deploying it.
+Updating is then the same two commands: `pull`, then `up -d` — compose recreates
+only what changed.
 
 The images come from the multi-stage `Dockerfile` (Node 24 on Alpine, non-root
 user, `tini` as PID 1), built by CI on every pull request and published on tag.
 
-Variables to provide (all required, none has a default):
+Variables to provide (all required, none has a default) — in the Portainer
+stack configuration, or in `.env.prod` when running the stack by hand:
 
 - `DISCORD_TOKEN` — bot token from the Discord Developer Portal.
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` — database credentials.
