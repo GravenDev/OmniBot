@@ -40,31 +40,14 @@ markdown, ce qui corromprait les identifiants. Les trous dans la numérotation
 sont volontaires et les IDs libérés ne sont **jamais réattribués** : les IDs 1 à
 3, 15, 26 et 29 ont existé ici et n'y sont plus.
 
-🟠 Dépendances — réductions possibles
-
-- **TASK-4** — ~~winston-daily-rotate-file — mort~~ ✅ _already removed_
-- **TASK-5** — ~~prisma CLI dans dependencies → doit aller en devDependencies~~ ✅ _fixed in 178beab_
-- **TASK-6** — ~~dotenv — dépendance cachée~~ ✅ _removed in 1570454_
-- **TASK-7** — ~~winston — remplacé par pino~~ ✅ _fixed in 6271f8f_
-- **TASK-8** — ~~@prisma/client épinglé exactement vs prisma en ^6.14.0~~ ✅ _both on ^6.19.3_
-
----
-
 🟡 Qualité de code
 
-- **TASK-9** — ~~// @ts-ignore dans service.ts~~ ✅ _fixed in 799b469 — remplacé par Object.assign_
-- **TASK-10** — ~~for (let ...) au lieu de for (const ...)~~ ✅ _fixed in bb5dffa_
-- **TASK-11** — ~~Double bloc JSDoc dans registry.ts~~ ✅ _fixed in c07d0d7_
-- **TASK-12** — ~~Méthodes dépréciées non supprimées~~ ✅ _fixed in 81f4eab_
 - **TASK-13** 🧱 `[debt]` — EventListener<any> et InteractionHandler<any> dans Registry — any dans les tableaux internes. Bound unknown ou union plus précis seraient préférables.
 
 ---
 
 🟠 Correctness (nouveau)
 
-- **TASK-18** — ~~Incohérence d'état dans les boutons enable/disable-module~~ ✅ _fixed in 9aea689_
-- **TASK-19** — ~~Rejets de promesses silencieux dans listener-loader.ts~~ ✅ _fixed in ad80b2e_
-- **TASK-20** — ~~`$` dans les remplacements regex — thread-creator.service.ts~~ ✅ _fixed in 7ae4e27_
 - **TASK-27** 🧱 `[debt]` — Enum >25 options — troncature silencieuse. `EnumConfigHandler.buildSelectRow` borne les options à 25 (limite Discord d'un select) via `.slice(0, 25)`, sans log ni indication visuelle. Conséquences : les options 26+ sont non sélectionnables ; une valeur stockée au-delà de l'index 25 reste valide en base et s'affiche dans le panneau mais n'est plus re-sélectionnable dans l'éditeur ; et l'auteur du module n'a aucun retour que son enum est plafonné.
   - **Fix minimal** : `logger.warn` au moment du `slice` + documenter la limite de 25 dans `docs/specs/module-config.md`.
   - **Fix complet (si besoin réel)** : paginer le select lui-même (plusieurs menus / flux « plus d'options ») — disproportionné tant qu'aucun module n'a >25 choix.
@@ -72,18 +55,10 @@ sont volontaires et les IDs libérés ne sont **jamais réattribués** : les IDs
 
 ---
 
-🟡 Qualité de code (nouveau)
-
-- **TASK-21** — ~~Logique dupliquée dans interaction-create.listener.ts~~ ✅ _fixed in 64ad497_
-- **TASK-22** — ~~Vérification de permission dupliquée entre enable/disable buttons~~ ✅ _fixed in ab336c5_
-
----
-
 🔵 Architecture
 
 - **TASK-14** 🧱 `[debt]` — Dépendances circulaires — module-installer.ts et module.service.ts importent tous deux { client, modules } depuis ../../index.js.
   - → Solution : context.ts. 🕐 _délayé — la circularité ESM fonctionne en pratique, à traiter lors d'une refonte plus large_
-- **TASK-16** — ~~Pas de graceful shutdown~~ ✅ _fixed in 48f44c9_
 - **TASK-37** 🧱 `[debt]` — `MessageContent` — intent privilégié mal amorti. `thread-creator` demande `GatewayIntentBits.MessageContent`, un des trois intents **privilégiés** de Discord, activé dans le Developer Portal après le crash `Used disallowed intents` en production. Or son unique usage est la variable `{messageContent}` du template de nom de fil (`thread-creator.service.ts`), que le template par défaut (`Discussion - {messageAuthor}`) n'utilise même pas. On demande donc l'accès au contenu de tous les messages pour un cas d'usage marginal.
   - **Deux issues** : soit en faire quelque chose qui le justifie (un module qui lit réellement le contenu), soit **retirer l'intent** et la variable de template avec lui.
   - **Déclencheur** : déjà franchi. Depuis le 10 juin 2026, Discord n'évalue plus l'accès aux intents privilégiés au nombre de serveurs mais au nombre d'**utilisateurs uniques** touchés, tous serveurs confondus : sous 10 000 le bouton du Developer Portal suffit, au-delà il faut une demande d'approbation. GravenDev compte à lui seul ~15 000 membres, donc une demande sera nécessaire pour **conserver** l'intent — et elle serait difficile à défendre en l'état. (La vérification à 100 serveurs existe toujours mais est désormais indépendante des intents.)
@@ -94,10 +69,6 @@ sont volontaires et les IDs libérés ne sont **jamais réattribués** : les IDs
 
 🟣 Confort de développement (DX)
 
-- **TASK-23** — ~~Commandes du core enregistrées en global (~1 h de propagation, pénible en dev)~~ ✅ _fait : en `isDevMode()`, enregistrement sur `DEV_GUILD_ID` (instantané) ; global conservé en prod_
-- **TASK-24** — ~~Imports verbeux/fragiles : remontée `../../..`~~ ✅ _fait : subpath imports natifs `#*` (`package.json` "imports" → `./src` en dev/test/typecheck via la condition `development` ; `./dist` en prod par défaut). Aucune dep, aucune étape de build (Node résout `#*` au runtime, tsc/tsx/vitest via conditions). Les remontées `../` sont réécrites en `#…` ; les `./` même-dossier restent relatifs._
-  - **Reste hors périmètre** : la suppression du suffixe `.js` (NodeNext l'impose) nécessiterait un bundler ou `moduleResolution: "Bundler"` — non poursuivi.
-- **TASK-25** — ~~Gate de version inadapté en dev pour les commandes de module~~ ✅ _fait : en `isDevMode()`, `loadDevGuildCommands` enregistre core + commandes des modules activés en un seul PUT sur la dev guild à chaque boot (sans bump de version) ; gate par version conservé en prod_
 - **TASK-28** 📐 `[decision]` — ~~CI : remplacer le grep de version Node par `jdx/mise-action`~~ 🚫 _non retenu (décidé)_. L'idée : `mise install` en une étape à la place de `pnpm/action-setup` + `grep '^node = ' .mise.toml` + `setup-node`. **Raisons du refus** : (1) perte du cache pnpm automatique fourni par `setup-node` (`cache: pnpm`) — il faudrait le re-câbler à la main (cf. TASK-32) ; (2) `mise install` installerait aussi des outils inutiles en CI (pitchfork…) ; (3) le grep actuel, bien que peu élégant, est explicite et fonctionne. Le ratio bénéfice/inconvénient n'est pas favorable. (`docs.yml` garde `mise-action` car le build docs est peu fréquent et non sensible à ces points.)
 - **TASK-30** 🧹 `[chore]` — `pnpm dev` ne fait pas de hot-reload alors que `CLAUDE.md` annonce « tsx watch » : le script est `node --import tsx src/index.ts` (sans `watch`). À réconcilier (passer le script en `tsx watch`, ou corriger la doc).
 - **TASK-31** 🧹 `[chore]` — Docs VitePress : logo manquant. Le hero de `docs/site/index.md` référençait `/logo.svg`, absent de `docs/site/public/` (image 404 sur le site publié). La référence `image:` a été retirée temporairement. À rétablir une fois qu'un logo existe : ajouter `docs/site/public/logo.svg` puis remettre le bloc `image: { src: /logo.svg, alt: OmniBot }` dans le frontmatter du hero.
@@ -136,3 +107,30 @@ Récapitulatif des actions restantes
 | 🟢       | CI : `permissions` au niveau workflow (TASK-34)               |
 | 🟢       | CI : factoriser le setup dupliqué (TASK-35) — incertain       |
 | 🟢       | CI : uniformiser/scoper l'install (TASK-36) — incertain       |
+
+---
+
+<details>
+<summary>📦 Items traités (18)</summary>
+
+- **TASK-4** 🧹 `[chore]` — ~~winston-daily-rotate-file — mort~~ ✅ _already removed_
+- **TASK-5** 🧹 `[chore]` — ~~prisma CLI dans dependencies → doit aller en devDependencies~~ ✅ _fixed in 178beab_
+- **TASK-6** 🧹 `[chore]` — ~~dotenv — dépendance cachée~~ ✅ _removed in 1570454_
+- **TASK-7** 🧹 `[chore]` — ~~winston — remplacé par pino~~ ✅ _fixed in 6271f8f_
+- **TASK-8** 🧹 `[chore]` — ~~@prisma/client épinglé exactement vs prisma en ^6.14.0~~ ✅ _both on ^6.19.3_
+- **TASK-9** 🧱 `[debt]` — ~~// @ts-ignore dans service.ts~~ ✅ _fixed in 799b469 — remplacé par Object.assign_
+- **TASK-10** 🧱 `[debt]` — ~~for (let ...) au lieu de for (const ...)~~ ✅ _fixed in bb5dffa_
+- **TASK-11** 🧱 `[debt]` — ~~Double bloc JSDoc dans registry.ts~~ ✅ _fixed in c07d0d7_
+- **TASK-12** 🧱 `[debt]` — ~~Méthodes dépréciées non supprimées~~ ✅ _fixed in 81f4eab_
+- **TASK-16** 🧱 `[debt]` — ~~Pas de graceful shutdown~~ ✅ _fixed in 48f44c9_
+- **TASK-18** 🧱 `[debt]` — ~~Incohérence d'état dans les boutons enable/disable-module~~ ✅ _fixed in 9aea689_
+- **TASK-19** 🧱 `[debt]` — ~~Rejets de promesses silencieux dans listener-loader.ts~~ ✅ _fixed in ad80b2e_
+- **TASK-20** 🧱 `[debt]` — ~~`$` dans les remplacements regex — thread-creator.service.ts~~ ✅ _fixed in 7ae4e27_
+- **TASK-21** 🧱 `[debt]` — ~~Logique dupliquée dans interaction-create.listener.ts~~ ✅ _fixed in 64ad497_
+- **TASK-22** 🧱 `[debt]` — ~~Vérification de permission dupliquée entre enable/disable buttons~~ ✅ _fixed in ab336c5_
+- **TASK-23** 🧹 `[chore]` — ~~Commandes du core enregistrées en global (~1 h de propagation, pénible en dev)~~ ✅ _fait : en `isDevMode()`, enregistrement sur `DEV_GUILD_ID` (instantané) ; global conservé en prod_
+- **TASK-24** 🧱 `[debt]` — ~~Imports verbeux/fragiles : remontée `../../..`~~ ✅ _fait : subpath imports natifs `#*` (`package.json` "imports" → `./src` en dev/test/typecheck via la condition `development` ; `./dist` en prod par défaut). Aucune dep, aucune étape de build (Node résout `#*` au runtime, tsc/tsx/vitest via conditions). Les remontées `../` sont réécrites en `#…` ; les `./` même-dossier restent relatifs._
+- **TASK-25** 🧹 `[chore]` — ~~Gate de version inadapté en dev pour les commandes de module~~ ✅ _fait : en `isDevMode()`, `loadDevGuildCommands` enregistre core + commandes des modules activés en un seul PUT sur la dev guild à chaque boot (sans bump de version) ; gate par version conservé en prod_
+  - **Reste hors périmètre** : la suppression du suffixe `.js` (NodeNext l'impose) nécessiterait un bundler ou `moduleResolution: "Bundler"` — non poursuivi.
+
+</details>
