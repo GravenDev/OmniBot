@@ -29,6 +29,9 @@ export default declareCommand({
         .setRequired(true)
         .setAutocomplete(true)
     ),
+
+  requiresAdmin: true,
+
   async execute(interaction) {
     const coreConfig = await configService.getConfigForModuleIn(
       coreModule,

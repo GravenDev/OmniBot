@@ -20,6 +20,8 @@ export default declareCommand({
     .setDefaultMemberPermissions(PERMISSION_ADMINISTRATOR)
     .setContexts([InteractionContextType.Guild]),
 
+  requiresAdmin: true,
+
   async execute(interaction) {
     // Checked before deferring: requireAdmin replies, which needs a fresh
     // interaction.
