@@ -53,11 +53,12 @@ export interface ModuleDeclaration<ConfigType extends ConfigSchema = {}> {
   devOnly?: boolean;
 
   /**
-   * Called when the module is initialized at startup.
+   * Called when the module is initialized at startup. May be async; a
+   * throwing onLoad skips the module but never aborts the boot.
    *
    * @param client The Discord client instance.
    */
-  onLoad: (client: Client, registry: Registry) => void;
+  onLoad?: (client: Client, registry: Registry) => void | Promise<void>;
 
   /**
    * Called when the module is installed in a guild.
@@ -65,7 +66,7 @@ export interface ModuleDeclaration<ConfigType extends ConfigSchema = {}> {
    * @param client The Discord client instance.
    * @param guild The guild where the module is being installed.
    */
-  onInstall: (client: Client, guild: Guild, registry: Registry) => void;
+  onInstall?: (client: Client, guild: Guild, registry: Registry) => void;
 
   /**
    * Called when the module is uninstalled from a guild.
@@ -73,7 +74,7 @@ export interface ModuleDeclaration<ConfigType extends ConfigSchema = {}> {
    * @param client The Discord client instance.
    * @param guild The guild from which the module is being uninstalled.
    */
-  onUninstall: (client: Client, guild: Guild, registry: Registry) => void;
+  onUninstall?: (client: Client, guild: Guild, registry: Registry) => void;
 }
 
 /**

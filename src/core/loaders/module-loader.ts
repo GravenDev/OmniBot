@@ -105,12 +105,15 @@ export async function loadModule(modulePath: string): Promise<Module | null> {
 
   const moduleFilePath = path.resolve(modulePath, moduleEntryPoint);
 
-  const imported: { default: Declared<Module> } = await import(
-    pathToFileURL(moduleFilePath).href
-  );
-
-  if (!imported) {
-    logger.warn(`\tFailed to import module | path = ${moduleFilePath}`);
+  let imported: { default: Declared<Module> };
+  try {
+    imported = await import(pathToFileURL(moduleFilePath).href);
+  } catch (error) {
+    // One broken module must not take down the whole boot.
+    logger.error(
+      { err: error },
+      `\tFailed to import module, skipping | path = ${moduleFilePath}`
+    );
     return null;
   }
 

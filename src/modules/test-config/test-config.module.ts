@@ -110,12 +110,4 @@ export default defineModule({
   onLoad() {
     logger.info("Module Test Config chargé (mode développement)");
   },
-
-  onInstall(_client, guild) {
-    logger.info(`Module Test Config activé sur le serveur ${guild.id}`);
-  },
-
-  onUninstall(_client, guild) {
-    logger.info(`Module Test Config désactivé sur le serveur ${guild.id}`);
-  },
 });
