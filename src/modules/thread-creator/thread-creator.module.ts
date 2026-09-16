@@ -27,16 +27,4 @@ export default defineModule({
 
     logger.info("Module Thread Creator chargé avec succès");
   },
-
-  onInstall(_client, guild) {
-    logger.info(
-      `Module Thread Creator installé sur le serveur "${guild.name}" (${guild.id})`
-    );
-  },
-
-  onUninstall(_client, guild) {
-    logger.info(
-      `Module Thread Creator désinstallé du serveur "${guild.name}" (${guild.id})`
-    );
-  },
 });

@@ -42,11 +42,21 @@ export const client = new Client({
 
 client.once(Events.ClientReady, async (readyClient) => {
   for (const module of modules) {
-    module.onLoad(readyClient, module.registry);
+    try {
+      await module.onLoad?.(readyClient, module.registry);
+    } catch (error) {
+      // One failing module must not prevent the others (and the core)
+      // from loading.
+      logger.error(
+        { err: error },
+        `Module onLoad failed, skipping | id = ${module.id}`
+      );
+      continue;
+    }
     loadModuleEvents(readyClient, module);
   }
 
-  coreModule.onLoad(readyClient, coreModule.registry);
+  await coreModule.onLoad?.(readyClient, coreModule.registry);
 
   await syncCommands(readyClient, modules);
 
