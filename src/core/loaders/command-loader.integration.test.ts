@@ -3,11 +3,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
 
 // Avoid booting the bot / Prisma when importing the command loader's module graph.
-vi.mock("#index.js", () => ({ modules: [], client: {} }));
+vi.mock("#index.js", () => ({
+  modules: [],
+  client: { user: { id: "app-1" }, token: "token" },
+}));
 vi.mock("#lib/database.js", () => ({ default: {}, Prisma: {} }));
 
 // Capture REST calls without any network I/O.
-const { restPut } = vi.hoisted(() => ({ restPut: vi.fn() }));
+const { restPut, restPost } = vi.hoisted(() => ({
+  restPut: vi.fn(),
+  restPost: vi.fn(),
+}));
 vi.mock("discord.js", async (importOriginal) => {
   const actual = (await importOriginal()) as typeof import("discord.js");
   class FakeREST {
@@ -15,12 +21,19 @@ vi.mock("discord.js", async (importOriginal) => {
       return this;
     }
     put = restPut;
+    post = restPost;
   }
   return { ...actual, REST: FakeREST };
 });
 
 vi.mock("#core/services/module.service.js", () => ({
-  default: { getModuleStateFromGuildIdIn: vi.fn() },
+  default: {
+    getModuleStateFromGuildIdIn: vi.fn(),
+    getModuleStateIn: vi.fn(),
+    enableModule: vi.fn(),
+    getGuildsWhereVersionDoesNotMatch: vi.fn(),
+    updateModuleActivation: vi.fn(),
+  },
 }));
 
 // Core module with a single known command so we can assert it is always included.
@@ -33,7 +46,12 @@ vi.mock("#core/core.module.js", () => ({
   },
 }));
 
-const { loadDevGuildCommands } = await import("./command-loader.js");
+const {
+  loadDevGuildCommands,
+  installModuleCommandsIn,
+  checkCommandsForVersionChange,
+} = await import("./command-loader.js");
+const { installModule } = await import("./module-installer.js");
 const { default: moduleService } =
   await import("#core/services/module.service.js");
 
@@ -123,5 +141,131 @@ describe("loadDevGuildCommands", () => {
     await loadDevGuildCommands(client, [fakeModule("mod-a", ["alpha"])]);
 
     expect(restPut).not.toHaveBeenCalled();
+  });
+});
+
+function fakeGuild(id: string) {
+  return {
+    id,
+    commands: { fetch: async () => [], delete: vi.fn() },
+  } as unknown as Parameters<typeof installModule>[1];
+}
+
+describe("installModuleCommandsIn", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    restPost.mockResolvedValue(undefined);
+  });
+
+  it("rethrows Discord failures instead of swallowing them", async () => {
+    restPost.mockRejectedValue(new Error("discord is down"));
+
+    await expect(
+      installModuleCommandsIn(
+        client,
+        fakeModule("mod-a", ["alpha"]),
+        fakeGuild("guild-1")
+      )
+    ).rejects.toThrow("discord is down");
+  });
+});
+
+describe("installModule", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    restPost.mockResolvedValue(undefined);
+    vi.mocked(moduleService.getModuleStateIn).mockResolvedValue({
+      activated: false,
+    } as never);
+  });
+
+  it("does not flip the DB state when command registration fails", async () => {
+    restPost.mockRejectedValue(new Error("discord is down"));
+
+    await expect(
+      installModule(fakeModule("mod-a", ["alpha"]), fakeGuild("guild-1"))
+    ).rejects.toThrow("discord is down");
+    expect(moduleService.enableModule).not.toHaveBeenCalled();
+  });
+
+  it("enables the module when registration succeeds", async () => {
+    await installModule(fakeModule("mod-a", ["alpha"]), fakeGuild("guild-1"));
+
+    expect(moduleService.enableModule).toHaveBeenCalledWith(
+      "mod-a",
+      expect.objectContaining({ id: "guild-1" })
+    );
+  });
+});
+
+describe("checkCommandsForVersionChange", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    restPost.mockResolvedValue(undefined);
+    vi.mocked(
+      moduleService.getGuildsWhereVersionDoesNotMatch
+    ).mockResolvedValue([
+      { guildId: "guild-1", currentVersion: "1.0.0" },
+      { guildId: "guild-2", currentVersion: "1.0.0" },
+    ] as never);
+  });
+
+  function versionedClient() {
+    return {
+      ...client,
+      guilds: { fetch: async (id: string) => fakeGuild(id) },
+    } as unknown as Client;
+  }
+
+  function versionedModule() {
+    return {
+      ...fakeModule("mod-a", ["alpha"]),
+      version: "2.0.0",
+    } as unknown as Module;
+  }
+
+  it("queues guilds with a missing version instead of throwing", async () => {
+    vi.mocked(
+      moduleService.getGuildsWhereVersionDoesNotMatch
+    ).mockResolvedValue([{ guildId: "guild-1", currentVersion: "" }] as never);
+
+    await checkCommandsForVersionChange(versionedClient(), versionedModule());
+
+    expect(restPost).toHaveBeenCalled();
+    expect(moduleService.updateModuleActivation).toHaveBeenCalledWith(
+      "mod-a",
+      "guild-1",
+      "2.0.0"
+    );
+  });
+
+  it("resyncs downgraded guilds instead of leaving them behind", async () => {
+    vi.mocked(
+      moduleService.getGuildsWhereVersionDoesNotMatch
+    ).mockResolvedValue([
+      { guildId: "guild-1", currentVersion: "3.0.0" },
+    ] as never);
+
+    await checkCommandsForVersionChange(versionedClient(), versionedModule());
+
+    expect(restPost).toHaveBeenCalled();
+    expect(moduleService.updateModuleActivation).toHaveBeenCalledWith(
+      "mod-a",
+      "guild-1",
+      "2.0.0"
+    );
+  });
+
+  it("bumps activatedVersion only for guilds whose update succeeded", async () => {
+    restPost.mockRejectedValueOnce(new Error("discord is down"));
+
+    await checkCommandsForVersionChange(versionedClient(), versionedModule());
+
+    expect(moduleService.updateModuleActivation).toHaveBeenCalledTimes(1);
+    expect(moduleService.updateModuleActivation).toHaveBeenCalledWith(
+      "mod-a",
+      "guild-2",
+      "2.0.0"
+    );
   });
 });

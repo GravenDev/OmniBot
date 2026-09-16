@@ -10,6 +10,32 @@ import type { Version } from "#lib/version.js";
 const logger = loggerMaker("commands");
 
 /**
+ * Single bulk PUT shared by the dev/prod registration paths, so they cannot
+ * diverge (client construction, error handling, logging).
+ */
+async function registerCommands(
+  client: Client,
+  route: `/${string}`,
+  body: { name: string }[],
+  scope: string
+): Promise<void> {
+  const rest = new REST().setToken(client.token!);
+  try {
+    await rest.put(route, { body });
+    body.forEach((command) => {
+      logger.info(`\tRegistering command | name = ${command.name}`);
+    });
+    logger.info(
+      `Successfully loaded commands | scope = ${scope} | count = ${body.length}`
+    );
+  } catch (error) {
+    logger.error(
+      `Failed to load commands | scope = ${scope} | error = ${error}`
+    );
+  }
+}
+
+/**
  * Registers the core commands globally (production). Global commands can take
  * up to ~1h to propagate; for fast iteration in development use
  * {@link loadDevGuildCommands} instead.
@@ -23,20 +49,12 @@ export async function loadGlobalCommands(client: Client<true>) {
     command.data.toJSON()
   );
 
-  const rest = new REST().setToken(client.token);
-  try {
-    await rest.put(Routes.applicationCommands(client.user.id), {
-      body: coreCommands,
-    });
-    coreCommands.forEach((command) => {
-      logger.info(`\tRegistering command | name = ${command.name}`);
-    });
-    logger.info(
-      `Successfully loaded global commands | count = ${coreCommands.length}`
-    );
-  } catch (error) {
-    logger.error(`Failed to load commands | error = ${error}`);
-  }
+  await registerCommands(
+    client,
+    Routes.applicationCommands(client.user!.id),
+    coreCommands,
+    "global"
+  );
 }
 
 /**
@@ -64,41 +82,38 @@ export async function loadDevGuildCommands(
     command.data.toJSON()
   );
 
-  for (const module of modules) {
-    if (module.registry.commands.length === 0) {
-      continue;
-    }
+  // One round of parallel state lookups instead of N sequential queries.
+  const states = await Promise.all(
+    modules.map(async (module) => {
+      if (module.registry.commands.length === 0) return null;
+      const state = await moduleService.getModuleStateFromGuildIdIn(
+        module.id,
+        guildId
+      );
+      return { module, activated: state.activated };
+    })
+  );
 
-    const state = await moduleService.getModuleStateFromGuildIdIn(
-      module.id,
-      guildId
-    );
-    if (!state.activated) {
+  for (const entry of states) {
+    if (!entry) continue;
+    if (!entry.activated) {
       logger.info(
-        `Skipping commands for disabled module on dev guild | module = ${module.id}`
+        `Skipping commands for disabled module on dev guild | module = ${entry.module.id}`
       );
       continue;
     }
 
     commands.push(
-      ...module.registry.commands.map((command) => command.data.toJSON())
+      ...entry.module.registry.commands.map((command) => command.data.toJSON())
     );
   }
 
-  const rest = new REST().setToken(client.token);
-  try {
-    await rest.put(Routes.applicationGuildCommands(client.user.id, guildId), {
-      body: commands,
-    });
-    commands.forEach((command) => {
-      logger.info(`\tRegistering command | name = ${command.name}`);
-    });
-    logger.info(
-      `Successfully loaded dev guild commands | guildId = ${guildId} | count = ${commands.length}`
-    );
-  } catch (error) {
-    logger.error(`Failed to load dev guild commands | error = ${error}`);
-  }
+  await registerCommands(
+    client,
+    Routes.applicationGuildCommands(client.user!.id, guildId),
+    commands,
+    `dev-guild:${guildId}`
+  );
 }
 
 export async function installModuleCommandsIn(
@@ -138,6 +153,9 @@ export async function installModuleCommandsIn(
       { err: error },
       `Failed to load commands for module "${module.id}" in guild "${guild.id}"`
     );
+    // Rethrown on purpose: callers only flip the DB state on success, so a
+    // failed registration retries instead of showing as installed.
+    throw error;
   }
 }
 
@@ -173,6 +191,8 @@ export async function uninstallModuleCommandsIn(
       { err: error },
       `Failed to uninstall commands for module "${module.id}" in guild "${guild.id}"`
     );
+    // Same contract as install: the caller only flips the DB state on success.
+    throw error;
   }
 }
 
@@ -213,9 +233,16 @@ export async function checkCommandsForVersionChange(
     `\tFound ${guildInfos.length} guilds with version mismatch for module "${module.id}"`
   );
 
+  // A missing version ("" default after a disable, or legacy null) means
+  // "older than anything": queue the guild instead of throwing. Any mismatch
+  // resyncs — including downgrades, so a rollback never leaves guilds behind
+  // forever on the newer command set.
   const guildsToFix = guildInfos.filter(
     (info) =>
-      compareVersions(info.currentVersion as Version, module.version) < 0
+      compareVersions(
+        (info.currentVersion || "0.0.0") as Version,
+        module.version
+      ) !== 0
   );
   logger.info(
     `\tFound ${guildsToFix.length} guilds to update commands for module "${module.id}"`
@@ -230,7 +257,16 @@ export async function checkCommandsForVersionChange(
       `\tUpdating commands in guild "${guild.id}" for module "${module.id}"`
     );
 
-    await updateModuleCommandsIn(client, module, guild);
+    try {
+      await updateModuleCommandsIn(client, module, guild);
+    } catch (err) {
+      // No version bump: the guild stays behind and retries on next boot.
+      logger.error(
+        { err },
+        `Failed to update commands, will retry next boot | module = ${module.id} | guild = ${guild.id}`
+      );
+      continue;
+    }
     await moduleService.updateModuleActivation(
       module.id,
       guild.id,
