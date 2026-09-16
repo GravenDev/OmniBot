@@ -42,6 +42,40 @@ async function findPrismaFiles(dir: string): Promise<string[]> {
   return files;
 }
 
+export interface PrismaSource {
+  path: string;
+  content: string;
+}
+
+export interface DuplicateModel {
+  model: string;
+  first: string;
+  second: string;
+}
+
+/**
+ * Everything is merged into a single schema, so a model name must be unique
+ * across ALL module files. Prisma itself only reports this late at
+ * `generate` time with a cryptic error — fail here with both file paths.
+ */
+export function findDuplicatePrismaModel(
+  files: PrismaSource[]
+): DuplicateModel | null {
+  const origins = new Map<string, string>();
+  for (const file of files) {
+    for (const line of file.content.split("\n")) {
+      const match = line.match(/^\s*model\s+(\w+)/);
+      if (!match?.[1]) continue;
+      const first = origins.get(match[1]);
+      if (first) {
+        return { model: match[1], first, second: file.path };
+      }
+      origins.set(match[1], file.path);
+    }
+  }
+  return null;
+}
+
 async function consolidateSchema() {
   const srcDir = path.join(__dirname, "..", "src");
   const schemaPath = path.join(srcDir, "prisma", "schema.prisma");
@@ -53,6 +87,7 @@ async function consolidateSchema() {
 
   // Lire le contenu du header.prisma
   let consolidatedContent = "";
+  const sources: PrismaSource[] = [];
 
   // Ajouter le contenu de tous les fichiers prisma trouvés
   for (const file of prismaFiles) {
@@ -73,9 +108,17 @@ async function consolidateSchema() {
         .trim();
 
       consolidatedContent += cleanContent + "\n";
+      sources.push({ path: relativePath, content: cleanContent });
     } catch (error) {
       console.warn(`Erreur lors de la lecture de ${file}:`, error);
     }
+  }
+
+  const duplicate = findDuplicatePrismaModel(sources);
+  if (duplicate) {
+    throw new Error(
+      `Duplicate Prisma model "${duplicate.model}" in "${duplicate.first}" and "${duplicate.second}": model names must be unique across all modules.`
+    );
   }
 
   // Écrire le schéma consolidé
@@ -90,5 +133,10 @@ async function consolidateSchema() {
   });
 }
 
-// Exécuter la consolidation
-consolidateSchema().catch(console.error);
+// Exécuter la consolidation (seulement en run direct, pas à l'import en test)
+if (process.argv[1]?.endsWith("consolidate-schema.ts")) {
+  consolidateSchema().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
