@@ -179,7 +179,7 @@ Contributions are welcome — staff and members alike.
 --deny-warnings` and `pnpm exec oxfmt --check` all pass (CI runs the same).
 - **Agent instructions** live in [`AGENTS.md`](AGENTS.md) (also symlinked as
   `CLAUDE.md`) — a concise orientation that is handy for humans too.
-- **Known tech-debt and follow-ups** are tracked in [`AUDIT.md`](AUDIT.md).
+- **Known tech-debt and follow-ups** are tracked in [`TECHNICAL_BACKLOG.md`](TECHNICAL_BACKLOG.md).
 
 ## License
 

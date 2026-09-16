@@ -128,7 +128,7 @@ pnpm test -- --watch         # Mode watch
 
 ## Trouver des tâches
 
-- **[AUDIT.md](https://github.com/GravenDev/OmniBot/blob/master/AUDIT.md)** — suit la dette technique, les problèmes connus et les suivis
+- **[TECHNICAL_BACKLOG.md](https://github.com/GravenDev/OmniBot/blob/master/TECHNICAL_BACKLOG.md)** — suit la dette technique et les corvées d'outillage ; le backlog fonctionnel est dans les issues
 - **[GitHub Issues](https://github.com/GravenDev/OmniBot/issues)** — demandes de fonctionnalités et rapports de bugs
 - **[Documents de review](https://github.com/GravenDev/OmniBot/tree/master/docs/review)** — résultats de revue de code avec éléments actionnables
 
