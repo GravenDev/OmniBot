@@ -15,11 +15,6 @@ export interface EventListener<
   eventType: EventType;
 
   /**
-   * The configuration schema for the module that registered the listener.
-   */
-  configType?: ConfigType;
-
-  /**
    * The function to execute when the event is triggered.
    *
    * @param event The event data that triggered the listener.
