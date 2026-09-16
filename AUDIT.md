@@ -53,6 +53,10 @@
 - **#14** — Dépendances circulaires — module-installer.ts et module.service.ts importent tous deux { client, modules } depuis ../../index.js.
   - → Solution : context.ts. 🕐 _délayé — la circularité ESM fonctionne en pratique, à traiter lors d'une refonte plus large_
 - **#16** — ~~Pas de graceful shutdown~~ ✅ _fixed in 48f44c9_
+- **#37** — `MessageContent` — intent privilégié mal amorti. `thread-creator` demande `GatewayIntentBits.MessageContent`, un des trois intents **privilégiés** de Discord, activé dans le Developer Portal après le crash `Used disallowed intents` en production. Or son unique usage est la variable `{messageContent}` du template de nom de fil (`thread-creator.service.ts`), que le template par défaut (`Discussion - {messageAuthor}`) n'utilise même pas. On demande donc l'accès au contenu de tous les messages pour un cas d'usage marginal.
+  - **Deux issues** : soit en faire quelque chose qui le justifie (un module qui lit réellement le contenu), soit **retirer l'intent** et la variable de template avec lui.
+  - **Déclencheur** : avant toute diffusion large. L'intent reste gratuit sous 100 serveurs, mais au-delà il faut une demande d'approbation à Discord — qu'on aurait du mal à défendre en l'état.
+
 - **#17** — Script de consolidation Prisma potentiellement redondant — Prisma 6 supporte nativement les schémas multi-fichiers via glob. À investiguer lors d'une prochaine mise à jour Prisma.
 
 ---
