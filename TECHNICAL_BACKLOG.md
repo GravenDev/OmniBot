@@ -86,7 +86,7 @@ sont volontaires et les IDs libérés ne sont **jamais réattribués** : les IDs
 - **TASK-16** — ~~Pas de graceful shutdown~~ ✅ _fixed in 48f44c9_
 - **TASK-37** 🧱 `[debt]` — `MessageContent` — intent privilégié mal amorti. `thread-creator` demande `GatewayIntentBits.MessageContent`, un des trois intents **privilégiés** de Discord, activé dans le Developer Portal après le crash `Used disallowed intents` en production. Or son unique usage est la variable `{messageContent}` du template de nom de fil (`thread-creator.service.ts`), que le template par défaut (`Discussion - {messageAuthor}`) n'utilise même pas. On demande donc l'accès au contenu de tous les messages pour un cas d'usage marginal.
   - **Deux issues** : soit en faire quelque chose qui le justifie (un module qui lit réellement le contenu), soit **retirer l'intent** et la variable de template avec lui.
-  - **Déclencheur** : avant toute diffusion large. L'intent reste gratuit sous 100 serveurs, mais au-delà il faut une demande d'approbation à Discord — qu'on aurait du mal à défendre en l'état.
+  - **Déclencheur** : déjà franchi. Depuis le 10 juin 2026, Discord n'évalue plus l'accès aux intents privilégiés au nombre de serveurs mais au nombre d'**utilisateurs uniques** touchés, tous serveurs confondus : sous 10 000 le bouton du Developer Portal suffit, au-delà il faut une demande d'approbation. GravenDev compte à lui seul ~15 000 membres, donc une demande sera nécessaire pour **conserver** l'intent — et elle serait difficile à défendre en l'état. (La vérification à 100 serveurs existe toujours mais est désormais indépendante des intents.)
 
 - **TASK-17** 🔬 `[study]` — Script de consolidation Prisma potentiellement redondant — Prisma 6 supporte nativement les schémas multi-fichiers via glob. À investiguer lors d'une prochaine mise à jour Prisma.
 
@@ -128,6 +128,7 @@ Récapitulatif des actions restantes
 | -------- | ------------------------------------------------------------- |
 | 🔵       | Extraire client/modules dans un context.ts (TASK-14) — délayé |
 | 🟠       | Enum >25 options : warn + doc (TASK-27)                       |
+| 🟠       | `MessageContent` : le justifier ou le retirer (TASK-37)       |
 | 🟣       | `pnpm dev` : hot-reload vs doc (TASK-30)                      |
 | 🟢       | Docs : ajouter un logo + rétablir le hero image (TASK-31)     |
 | 🟢       | CI docs : cache du store pnpm (TASK-32) — délayé              |
