@@ -2,7 +2,17 @@
 
 Un module dans OmniBot est une unité fonctionnelle autonome qui peut être installée et désinstallée par serveur Discord. Chaque module peut contenir des commandes, des écouteurs d'événements, des gestionnaires d'interactions, des services, une configuration et des modèles de base de données.
 
-## Structure d'un module
+## Générer un module
+
+Ne partez pas de zéro. Générez un squelette fonctionnel (définition, schéma config, une commande, un listener, `i18n/en+fr.json`, un modèle Prisma commenté, et un test) :
+
+```bash
+pnpm new-module mon-module "Mon Module"
+```
+
+Le module généré compile et son test passe sans retouche. Remplissez la description `TODO`, puis activez-le via `/modules` sur votre serveur dev. Aucune étape d'enregistrement : les modules sont auto-découverts depuis `src/modules/` au démarrage.
+
+Pour les tests, utilisez les helpers partagés de `#lib/testing.js` (`makeTestConfig`, `fakeGuild`, `fakeMessage`, `initTestI18n`) plutôt que des mocks maison. Notez que `vi.mock("#index.js")` et `vi.mock("#lib/database.js")` doivent toujours être déclarés par fichier de test — Vitest les hisse, aucun helper ne peut les masquer.
 
 ```
 src/modules/mon-module/
@@ -198,6 +208,20 @@ Les clés sont d'abord cherchées dans le namespace du module, puis dans celui d
 ### Sélection de la locale
 
 La locale du serveur est configurée via les paramètres du module Cœur (`/config core > locale`). Quand un fichier de locale n'existe pas pour la langue sélectionnée, le système utilise l'anglais par défaut.
+
+## Liste de vérification avant publication
+
+Avant que votre module n'atteigne des serveurs de production :
+
+- **Incrémentez `version`** quand vous ajoutez, renommez ou modifiez une commande — la production ne ré-enregistre les commandes que lors d'un changement de version (le dev resynchronise à chaque démarrage, facile à rater en local)
+- **Renseignez `DEV_GUILD_ID`** dans `.env` — sans lui, le mode dev n'enregistre aucune commande
+- **Préfixez noms de commandes et `customId`** avec votre id de module — les deux sont résolus premier-arrivé-premier-servi entre tous les modules, et un `:` dans un argument décale le parsing des `customId`
+- **Gardez `if (!config) return`** dans les listeners — hors serveurs (MP), ils tournent avec une config `undefined`
+- **Mettez `requiresAdmin: true`** sur chaque commande et handler sensible — sinon exposé à tout le monde
+- **Jamais d'objet en `defaultValue` d'entité** (`USER`/`ROLE`/`CHANNEL`/`CATEGORY` restent non renseignés ; les ids sont stockés, les objets sont réhydratés)
+- **Déclarez les `options` des `ENUM` avec `as const`** pour typer `config.get()` en union littérale
+- **Ordre Prisma** : écrire `models/*.prisma`, puis `pnpm prisma:generate`, puis `pnpm prisma:migrate` — et gardez des noms de modèles uniques entre modules
+- **Pas de side-effect au top-level** — les modules `devOnly` sont quand même importés en production ; seul leur enregistrement est sauté
 
 ## Bonnes pratiques
 

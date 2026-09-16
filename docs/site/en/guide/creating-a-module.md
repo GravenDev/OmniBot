@@ -2,6 +2,18 @@
 
 A module in OmniBot is a self-contained functional unit that can be installed and uninstalled per Discord server. Each module can contain commands, event listeners, interaction handlers, services, configuration, and database models.
 
+## Scaffolding a Module
+
+Don't start from scratch. Generate a working module skeleton (definition, config schema, one command, one listener, `i18n/en+fr.json`, a commented Prisma model, and a test):
+
+```bash
+pnpm new-module my-module "My Module"
+```
+
+The generated module compiles and its test passes unmodified. Fill the `TODO` description, then enable it via `/modules` on your dev guild. No registration step exists: modules are auto-discovered from `src/modules/` at startup.
+
+For tests, use the shared helpers from `#lib/testing.js` (`makeTestConfig`, `fakeGuild`, `fakeMessage`, `initTestI18n`) instead of hand-rolled mocks. Note that `vi.mock("#index.js")` and `vi.mock("#lib/database.js")` must still be declared per test file — Vitest hoists them, so no helper can hide them.
+
 ## Module Structure
 
 ```
@@ -198,6 +210,20 @@ Keys are looked up in the module's own namespace first, then fall back to core t
 ### Locale selection
 
 The guild's locale is configured via the core module's settings (`/config core > locale`). When a locale file doesn't exist for the selected language, the system falls back to English.
+
+## Publishing Checklist
+
+Before your module reaches production guilds:
+
+- **Bump `version`** when you add, rename, or change a command — production re-registers guild commands only on a version change (dev re-syncs every boot, so this is easy to miss locally)
+- **Set `DEV_GUILD_ID`** in `.env` — without it, dev mode registers no commands at all
+- **Prefix command names and `customId`s** with your module id — both are matched first-come-first-served across all modules, and a `:` inside an argument shifts `customId` parsing
+- **Guard listeners with `if (!config) return`** — listeners run with `undefined` config outside guilds (DMs)
+- **Put `requiresAdmin: true`** on every sensitive command and interaction handler — fail-open otherwise
+- **Never put an object in an entity `defaultValue`** (`USER`/`ROLE`/`CHANNEL`/`CATEGORY` defaults must stay unset; ids are stored, objects are hydrated)
+- **Declare `ENUM` `options` `as const`** for literal-union typing of `config.get()`
+- **Prisma order**: write `models/*.prisma`, then `pnpm prisma:generate`, then `pnpm prisma:migrate` — and keep model names unique across all modules
+- **No top-level side effects** — `devOnly` modules are still imported in production; only their registration is skipped
 
 ## Best Practices
 
