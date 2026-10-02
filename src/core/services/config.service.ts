@@ -12,6 +12,10 @@ import type { Module } from "#lib/module.js";
 import { declareService } from "#lib/service.js";
 
 const configCache = new Map<string, Record<string, ConfigData<ConfigSchema>>>();
+const pendingLoads = new Map<
+  string,
+  Promise<Record<string, ConfigData<ConfigSchema>>>
+>();
 
 class ConfigService {
   /**
@@ -185,6 +189,15 @@ class ConfigService {
       return configCache.get(guildId)!;
     }
 
+    let pending = pendingLoads.get(guildId);
+    if (!pending) {
+      pending = this.load(guildId).finally(() => pendingLoads.delete(guildId));
+      pendingLoads.set(guildId, pending);
+    }
+    return pending;
+  }
+
+  private async load(guildId: string) {
     const config = await database.guildConfiguration.findUnique({
       where: { guildId },
     });
@@ -235,17 +248,17 @@ class ConfigService {
     }
 
     // Save to database
-    await database.guildConfiguration.create({
-      data: {
-        guildId,
-        data: config,
-      },
+    const stored = await database.guildConfiguration.upsert({
+      where: { guildId },
+      create: { guildId, data: config },
+      update: {},
     });
 
     // Cache the configuration
-    configCache.set(guildId, config);
+    const validatedConfig = this.validateConfig(stored.data);
+    configCache.set(guildId, validatedConfig);
 
-    return config;
+    return validatedConfig;
   }
 
   /**

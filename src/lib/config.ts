@@ -1,4 +1,5 @@
 import { CategoryChannel, type Channel, Role, type User } from "discord.js";
+import { formatDuration, parseDuration } from "./duration.js";
 import { createT, type TFunction } from "./i18n.js";
 import type { Module } from "./module.js";
 
@@ -15,6 +16,7 @@ export enum ConfigType {
   CHANNEL = "CHANNEL",
   ROLE = "ROLE",
   ENUM = "ENUM",
+  DURATION = "DURATION",
 }
 
 export const ConfigValidator: Record<ConfigType, (value: string) => boolean> = {
@@ -32,6 +34,7 @@ export const ConfigValidator: Record<ConfigType, (value: string) => boolean> = {
   // Membership against the field's declared `options` is enforced by the enum
   // handler (which has access to the entry); this generic predicate cannot.
   ENUM: () => true,
+  DURATION: (value: string) => parseDuration(value) !== null,
 };
 
 export function getConfigTypeName(
@@ -60,6 +63,7 @@ export const configTypeNames: Record<ConfigType, string> = {
   CHANNEL: "channel",
   CATEGORY: "category",
   ENUM: "choice",
+  DURATION: "duration",
 };
 
 export type ListOf<T extends ConfigType> = [T];
@@ -75,6 +79,7 @@ export interface TypeMap {
   // Fallback when an enum entry declares no literal `options` (`as const`);
   // ConfigEntryValue narrows to the literal union when options are present.
   [ConfigType.ENUM]: string;
+  [ConfigType.DURATION]: number;
 }
 
 export type ResolveType<T extends ConfigType | ListOf<ConfigType>> =
@@ -136,7 +141,7 @@ export type ConfigEntry<T extends ConfigType> =
   // Without this, `{ type: ENUM }` would match SimpleConfigEntry and compile
   // without options, then fail at runtime building an empty select menu.
   | SimpleConfigEntry<Exclude<T, ConfigType.ENUM>>
-  | ListConfigEntry<Exclude<T, ConfigType.ENUM>>
+  | ListConfigEntry<Exclude<T, ConfigType.ENUM | ConfigType.DURATION>>
   | EnumConfigEntry
   | EnumListConfigEntry;
 
@@ -174,6 +179,9 @@ export function formatConfigValue(
     if (name) {
       return ucfirst(name);
     }
+  }
+  if (entry.type === ConfigType.DURATION && typeof value === "number") {
+    return formatDuration(value);
   }
   return String(value);
 }

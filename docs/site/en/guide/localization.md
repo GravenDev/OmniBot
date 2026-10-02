@@ -27,8 +27,6 @@ Translation files are auto-discovered at startup by the module loader — no reg
 
 ```json
 {
-  "module.name": "My Module",
-  "module.description": "Does awesome things.",
   "config.myField.name": "My Field",
   "config.myField.description": "Description of my field.",
   "greeting": "Hello {{name}}!"
@@ -39,10 +37,12 @@ Use <code v-pre>{{param}}</code> syntax for dynamic values — never concatenate
 
 ### Module metadata
 
-| Key                  | Overrides                                |
-| -------------------- | ---------------------------------------- |
-| `module.name`        | Module `name` in `defineModule()`        |
-| `module.description` | Module `description` in `defineModule()` |
+The module's name and description are translated in the **core** translation files (`src/core/i18n/<locale>.json`), not in the module's own: the `/modules` list is rendered with the core namespace only, so a key in the module's `i18n/` folder would never be found there.
+
+| Key (in `src/core/i18n/`)  | Overrides                                |
+| -------------------------- | ---------------------------------------- |
+| `modules.<id>.name`        | Module `name` in `defineModule()`        |
+| `modules.<id>.description` | Module `description` in `defineModule()` |
 
 ### Config field labels
 
@@ -135,6 +135,7 @@ Common UI strings are provided by the core namespace and are available in every 
 | `type.channel`    | Channel                                                            | Salon                                                              |
 | `type.category`   | Category                                                           | Catégorie                                                          |
 | `type.choice`     | Choice                                                             | Choix                                                              |
+| `type.duration`   | Duration                                                           | Durée                                                              |
 | `type.listOf`     | List of &#123;&#123;type&#125;&#125;                               | Liste de &#123;&#123;type&#125;&#125;                              |
 
 ## Adding a new locale

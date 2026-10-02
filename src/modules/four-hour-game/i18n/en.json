@@ -1,0 +1,26 @@
+{
+  "config.channel.name": "Game channel",
+  "config.channel.description": "Channel where the game is played.",
+
+  "config.delay.name": "Delay",
+  "config.delay.description": "Time a message must stay the last one for its author to score a point.",
+
+  "point.title": "Point awarded!",
+  "point.description_one": "{{user}} scores a point! They now have {{count}} point.",
+  "point.description_other": "{{user}} scores a point! They now have {{count}} points.",
+
+  "score.title": "🎪 The 4h game",
+  "score.value": "{{user}}'s score is **{{score}}**.",
+  "score.none": "{{user}} has no score on this server.",
+
+  "leaderboard.empty": "Nobody has scored yet.",
+  "leaderboard.header.rank": "Rank",
+  "leaderboard.header.player": "Player",
+  "leaderboard.header.score": "Score",
+
+  "admin.noPermission": "You must be an administrator to use this command.",
+  "admin.set.created": "{{user}}'s score set to **{{score}}**.",
+  "admin.set.updated": "{{user}}'s score updated to **{{score}}**.",
+  "admin.unset.done": "{{user}}'s score removed.",
+  "admin.unset.none": "{{user}} has no score to remove."
+}

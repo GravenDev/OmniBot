@@ -4,6 +4,8 @@
 
   "config.number.name": "Nombre",
   "config.number.description": "Un champ numérique.",
+  "config.duration.name": "Durée",
+  "config.duration.description": "Une durée comme 30s, 4h ou 1h30m.",
 
   "config.toggle.name": "Booléen",
   "config.toggle.description": "Un interrupteur on/off.",

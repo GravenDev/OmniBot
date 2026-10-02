@@ -56,13 +56,15 @@ RUN pnpm build
 # tsc only emits the .ts files it compiles, so the runtime assets have to be
 # placed next to the JavaScript by hand:
 #   - i18n bundles (*.json) live next to their module sources,
+#   - image assets (fonts, pictures) live in each module's assets/ folder,
 #   - the generated Prisma client is imported relatively from dist/lib.
 # Type declarations are dropped (useless at runtime); .js.map files are kept so
 # that production stack traces stay readable.
 RUN set -eux; \
     find dist \( -name '*.d.ts' -o -name '*.d.ts.map' \) -delete; \
     cd src; \
-    find . -name '*.json' -not -path './prisma/*' -not -path './generated/*' \
+    find . -type f \( -name '*.json' -o -path '*/assets/*' \) \
+      -not -path './prisma/*' -not -path './generated/*' \
       -exec sh -c 'mkdir -p "/app/dist/$(dirname "$1")" && cp "$1" "/app/dist/$1"' _ {} \; ; \
     mkdir -p /app/dist/generated; \
     cp -R /app/src/generated/prisma /app/dist/generated/prisma; \

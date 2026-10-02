@@ -51,6 +51,14 @@ class ModuleService implements Service {
     return state ?? { moduleId, guildId, activated: false };
   }
 
+  async getActivatedGuildIds(moduleId: string): Promise<string[]> {
+    const activations = await prisma.moduleActivation.findMany({
+      select: { guildId: true },
+      where: { moduleId, activated: true },
+    });
+    return activations.map((activation) => activation.guildId);
+  }
+
   async getGuildsWhereVersionDoesNotMatch(module: Module, version: string) {
     const activations = await prisma.moduleActivation.findMany({
       select: {

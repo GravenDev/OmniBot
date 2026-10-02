@@ -53,20 +53,21 @@ export default defineModule({
 
 ### Supported Types
 
-| Type       | Input                       | Storage (JSON)    | Read (deserialized) |
-| ---------- | --------------------------- | ----------------- | ------------------- |
-| `STRING`   | Modal (text input)          | `string`          | `string`            |
-| `NUMBER`   | Modal (text → number)       | `number`          | `number`            |
-| `BOOLEAN`  | Toggle button               | `boolean`         | `boolean`           |
-| `USER`     | User select menu            | `string` (id)     | `User`              |
-| `ROLE`     | Role select menu            | `string` (id)     | `Role`              |
-| `CHANNEL`  | Channel select menu         | `string` (id)     | `Channel`           |
-| `CATEGORY` | Category select menu        | `string` (id)     | `CategoryChannel`   |
-| `ENUM`     | Select menu (fixed choices) | `string` (choice) | Literal union       |
+| Type       | Input                        | Storage (JSON)     | Read (deserialized) |
+| ---------- | ---------------------------- | ------------------ | ------------------- |
+| `STRING`   | Modal (text input)           | `string`           | `string`            |
+| `NUMBER`   | Modal (text → number)        | `number`           | `number`            |
+| `BOOLEAN`  | Toggle button                | `boolean`          | `boolean`           |
+| `USER`     | User select menu             | `string` (id)      | `User`              |
+| `ROLE`     | Role select menu             | `string` (id)      | `Role`              |
+| `CHANNEL`  | Channel select menu          | `string` (id)      | `Channel`           |
+| `CATEGORY` | Category select menu         | `string` (id)      | `CategoryChannel`   |
+| `ENUM`     | Select menu (fixed choices)  | `string` (choice)  | Literal union       |
+| `DURATION` | Modal (`30s`, `4h`, `1h30m`) | `number` (seconds) | `number` (seconds)  |
 
 ### Lists
 
-Any type can be declared as a **list** using `type: [ConfigType.X]`:
+Any type except `DURATION` can be declared as a **list** using `type: [ConfigType.X]`:
 
 ```typescript
 config: {
@@ -162,6 +163,7 @@ The panel displays:
 | `BOOLEAN`                             | Toggle button                  | On click    | Public message updated in place |
 | `USER`, `ROLE`, `CHANNEL`, `CATEGORY` | Entity select menu (ephemeral) | On select   | Public message refreshed        |
 | `ENUM`                                | String select menu (ephemeral) | On select   | Public message refreshed        |
+| `DURATION`                            | Modal (duration input)         | On submit   | Public message updated in place |
 | List of scalars                       | Add/remove editor (ephemeral)  | On action   | Public message refreshed        |
 
 **Ephemeral editors** (select menus, list editors) refresh the public config message after each change using `refreshSourceConfigMessage()`. The source message ID is threaded through the `customId` of the ephemeral components.

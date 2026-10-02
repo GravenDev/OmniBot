@@ -23,7 +23,7 @@ When the bot starts (`src/index.ts`), it follows this sequence:
 
 4. Intent aggregation
    └─ collects GatewayIntentBits from all modules
-   └─ creates the Discord Client with the union of all intents
+   └─ creates the Discord Client with the union of all intents and partials
 
 5. ClientReady handler (async)
    ├─ For each module:

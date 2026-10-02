@@ -1,4 +1,9 @@
-import { type Client, GatewayIntentBits, type Guild } from "discord.js";
+import {
+  type Client,
+  GatewayIntentBits,
+  type Guild,
+  type Partials,
+} from "discord.js";
 import type { ConfigSchema } from "./config.js";
 import { DeclarationType, type Declared } from "./declared.js";
 import { Registry } from "./registry.js";
@@ -34,6 +39,8 @@ export interface ModuleDeclaration<ConfigType extends ConfigSchema = {}> {
    * Intents that the module requires.
    */
   intents?: GatewayIntentBits[];
+
+  partials?: Partials[];
 
   /**
    * Configuration schema for the module.

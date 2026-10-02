@@ -82,6 +82,16 @@ describe("ConfigValidator", () => {
       expect(ConfigValidator.ENUM(value)).toBe(true);
     });
   });
+
+  describe("DURATION", () => {
+    it.each(["30s", "4h", "1h30m", "3d"])("accepts %j", (value) => {
+      expect(ConfigValidator.DURATION(value)).toBe(true);
+    });
+
+    it.each(["", "4", "0s", "4x", "-1h"])("rejects %j", (value) => {
+      expect(ConfigValidator.DURATION(value)).toBe(false);
+    });
+  });
 });
 
 describe("getConfigTypeName", () => {
@@ -90,6 +100,7 @@ describe("getConfigTypeName", () => {
     expect(getConfigTypeName(ConfigType.NUMBER)).toBe("Number");
     expect(getConfigTypeName(ConfigType.CATEGORY)).toBe("Category");
     expect(getConfigTypeName(ConfigType.ENUM)).toBe("Choice");
+    expect(getConfigTypeName(ConfigType.DURATION)).toBe("Duration");
   });
 
   it("describes a list type", () => {
@@ -335,6 +346,16 @@ describe("formatConfigValue", () => {
       options: ["a", "b"],
     };
     expect(formatConfigValue(plain, "a", "fr")).toBe("a");
+  });
+
+  it("renders a duration in seconds with the notation used to edit it", () => {
+    const delay: ConfigEntry<ConfigType> = {
+      name: "Delay",
+      description: "",
+      type: ConfigType.DURATION,
+    };
+    expect(formatConfigValue(delay, 4 * 3600, "fr")).toBe("4h");
+    expect(formatConfigValue(delay, 5400, "en")).toBe("1h30m");
   });
 
   it("stringifies a non-enum value", () => {

@@ -53,20 +53,21 @@ export default defineModule({
 
 ### Types supportés
 
-| Type       | Saisie                          | Stockage (JSON)  | Lecture (désérialisé) |
-| ---------- | ------------------------------- | ---------------- | --------------------- |
-| `STRING`   | Modale (saisie texte)           | `string`         | `string`              |
-| `NUMBER`   | Modale (texte → nombre)         | `number`         | `number`              |
-| `BOOLEAN`  | Bouton toggle                   | `boolean`        | `boolean`             |
-| `USER`     | Menu de sélection utilisateur   | `string` (id)    | `User`                |
-| `ROLE`     | Menu de sélection rôle          | `string` (id)    | `Role`                |
-| `CHANNEL`  | Menu de sélection salon         | `string` (id)    | `Channel`             |
-| `CATEGORY` | Menu de sélection catégorie     | `string` (id)    | `CategoryChannel`     |
-| `ENUM`     | Menu de sélection (choix fixes) | `string` (choix) | Union littérale       |
+| Type       | Saisie                          | Stockage (JSON)     | Lecture (désérialisé) |
+| ---------- | ------------------------------- | ------------------- | --------------------- |
+| `STRING`   | Modale (saisie texte)           | `string`            | `string`              |
+| `NUMBER`   | Modale (texte → nombre)         | `number`            | `number`              |
+| `BOOLEAN`  | Bouton toggle                   | `boolean`           | `boolean`             |
+| `USER`     | Menu de sélection utilisateur   | `string` (id)       | `User`                |
+| `ROLE`     | Menu de sélection rôle          | `string` (id)       | `Role`                |
+| `CHANNEL`  | Menu de sélection salon         | `string` (id)       | `Channel`             |
+| `CATEGORY` | Menu de sélection catégorie     | `string` (id)       | `CategoryChannel`     |
+| `ENUM`     | Menu de sélection (choix fixes) | `string` (choix)    | Union littérale       |
+| `DURATION` | Modale (`30s`, `4h`, `1h30m`)   | `number` (secondes) | `number` (secondes)   |
 
 ### Listes
 
-N'importe quel type peut être déclaré en **liste** via `type: [ConfigType.X]` :
+N'importe quel type sauf `DURATION` peut être déclaré en **liste** via `type: [ConfigType.X]` :
 
 ```typescript
 config: {
@@ -162,6 +163,7 @@ Le panneau affiche :
 | `BOOLEAN`                             | Bouton toggle                        | Au clic         | Message public mis à jour sur place |
 | `USER`, `ROLE`, `CHANNEL`, `CATEGORY` | Menu select entité (éphémère)        | À la sélection  | Message public rafraîchi            |
 | `ENUM`                                | Menu select chaîne (éphémère)        | À la sélection  | Message public rafraîchi            |
+| `DURATION`                            | Modale (saisie durée)                | À la soumission | Message public mis à jour sur place |
 | Liste de scalaires                    | Éditeur ajouter/supprimer (éphémère) | À l'action      | Message public rafraîchi            |
 
 **Éditeurs éphémères** (menus de sélection, éditeurs de listes) : ils rafraîchissent le message de configuration public après chaque modification en utilisant `refreshSourceConfigMessage()`. L'ID du message source est transmis via le `customId` des composants éphémères.

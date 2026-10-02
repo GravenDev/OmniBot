@@ -33,6 +33,12 @@ export default defineModule({
       type: ConfigType.NUMBER,
       defaultValue: 42,
     },
+    duration: {
+      name: "Duration",
+      description: "A duration such as 30s, 4h or 1h30m.",
+      type: ConfigType.DURATION,
+      defaultValue: 4 * 60 * 60,
+    },
     toggle: {
       name: "Boolean",
       description: "An on/off toggle.",
