@@ -7,7 +7,6 @@ import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import { modulesMessage } from "#core/utils/core-messages.js";
-import { requireAdmin } from "#core/utils/require-admin.js";
 import { declareCommand } from "#lib/command.js";
 
 const PERMISSION_ADMINISTRATOR = 0x8;
@@ -23,14 +22,13 @@ export default declareCommand({
   requiresAdmin: true,
 
   async execute(interaction) {
-    // Checked before deferring: requireAdmin replies, which needs a fresh
-    // interaction.
+    // Admin access is enforced centrally by the command dispatcher via
+    // `requiresAdmin` — checked before deferring (a reply needs a fresh
+    // interaction).
     const coreConfig = await configService.getConfigForModuleIn(
       coreModule,
       interaction.guildId!
     );
-
-    if (!(await requireAdmin(interaction, coreConfig.t))) return;
 
     const defer = await interaction.deferReply({
       flags: MessageFlags.Ephemeral,
