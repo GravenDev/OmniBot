@@ -1,0 +1,58 @@
+{
+  "config.leaderboardChannel.name": "Daily leaderboard channel",
+  "config.leaderboardChannel.description": "Channel where yesterday's leaderboard is posted every day at 01:00 UTC.",
+
+  "leaderboard.header.rank": "Rank",
+  "leaderboard.header.player": "Player",
+  "leaderboard.header.number": "Roll",
+  "leaderboard.header.score": "Score",
+  "leaderboard.header.placement": "Placement",
+  "leaderboard.empty": "Nobody has rolled today yet.",
+
+  "daily.message": "🏆 Yesterday's RNGdle leaderboard — congratulations to {{winners}}!",
+
+  "overall.header.score": "Overall Score",
+  "overall.empty": "No roll has been recorded on this server yet.",
+  "overall.page": "Page {{current}}/{{total}}",
+
+  "profile.bothOptions": "Choose either a member or an RNGdle username, not both.",
+  "profile.notRegistered": "This player has no linked RNGdle account. An administrator can link one with `/rngdle-admin register`.",
+  "profile.noRolls": "No roll found for `{{username}}` yet.",
+  "profile.bestRoll": "Best Roll",
+  "profile.worstRoll": "Worst Roll",
+  "profile.date": "Date: {{date}}",
+  "profile.totalRolls": "Total Rolls",
+  "profile.averageScore": "Average Score",
+  "profile.maxBadges": "Max Badges",
+  "profile.maxBadgesValue_one": "{{count}} badge at once",
+  "profile.maxBadgesValue_other": "{{count}} badges at once",
+  "profile.overallScore": "Overall Score",
+  "profile.tierBreakdown": "Tier Breakdown",
+
+  "server.title": "RNGdle - Server Stats",
+  "server.bestRoll": "Best Roll OAT",
+  "server.worstRoll": "Worst Roll OAT",
+  "server.by": "by {{name}}",
+  "server.totalRolls": "Total Rolls",
+  "server.averageScore": "Average Score",
+  "server.overallScore": "Overall Score",
+  "server.tierBreakdown": "Tier Breakdown",
+  "server.empty": "No roll has been recorded on this server yet.",
+
+  "error.generic": "Something went wrong. Try again later.",
+
+  "admin.noPermission": "You must be an administrator to use this command.",
+  "admin.register.created": "{{user}} is now linked to the RNGdle account `{{username}}` ({{count}} rolls imported).",
+  "admin.register.renamed": "{{user}} is now linked to the RNGdle account `{{username}}`; the rolls of the previous account were removed ({{count}} rolls imported).",
+  "admin.register.unchanged": "{{user}} was already linked to `{{username}}` ({{count}} new rolls imported).",
+  "admin.register.notFound": "No RNGdle account named `{{username}}` exists.",
+  "admin.register.unreachable": "rngdle.com could not be reached. Try again in a few minutes.",
+  "admin.register.conflict": "`{{username}}` is already linked to {{user}} on this server.",
+  "admin.delete.done": "{{user}} is no longer linked, and their rolls were deleted.",
+  "admin.delete.none": "{{user}} has no linked RNGdle account.",
+  "admin.show.title": "Linked RNGdle accounts ({{count}})",
+  "admin.show.empty": "No RNGdle account is linked on this server.",
+  "admin.refresh.done": "{{accounts}} accounts refreshed: {{inserted}} rolls added, {{updated}} updated, {{failed}} failures.",
+  "admin.refresh.cooldown": "A full refresh already ran recently on this server. Try again {{time}}.",
+  "admin.clear.done": "{{count}} rolls deleted. They will be downloaded again at the next refresh."
+}

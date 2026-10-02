@@ -4,6 +4,7 @@ export enum DeclarationType {
   Listener = "listener",
   Service = "service",
   Interaction = "interaction",
+  Task = "task",
 }
 
 /**

@@ -12,6 +12,10 @@ import {
   loadModuleI18n,
   loadModules,
 } from "./core/loaders/module-loader.js";
+import {
+  startModuleTasks,
+  stopAllTasks,
+} from "./core/loaders/task-scheduler.js";
 import prisma, { Prisma } from "./lib/database.js";
 import { initI18n } from "./lib/i18n.js";
 import logger from "./lib/logger.js";
@@ -66,6 +70,7 @@ client.once(Events.ClientReady, async (readyClient) => {
       continue;
     }
     loadModuleEvents(readyClient, module);
+    startModuleTasks(readyClient, module);
   }
 
   // Dropped from the shared list so that nothing it registered before
@@ -111,6 +116,7 @@ const shutdown = async () => {
   shuttingDown = true;
 
   logger.info("Shutting down...");
+  stopAllTasks();
   try {
     await client.destroy();
     await prisma.$disconnect();

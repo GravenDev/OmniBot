@@ -41,23 +41,29 @@ export function loadAsset(file: URL): Promise<Image> {
   return image;
 }
 
-export async function fetchAvatar(
-  user: User,
-  size: 64 | 128 | 256 = 128
-): Promise<Image | null> {
+export async function fetchImage(url: string | null): Promise<Image | null> {
+  if (!url) {
+    return null;
+  }
   try {
-    const response = await fetch(
-      user.displayAvatarURL({ extension: "png", size }),
-      { signal: AbortSignal.timeout(AVATAR_TIMEOUT_MS) }
-    );
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(AVATAR_TIMEOUT_MS),
+    });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
     return await loadImage(Buffer.from(await response.arrayBuffer()));
   } catch (err) {
-    logger.warn({ err }, `Could not fetch avatar | userId = ${user.id}`);
+    logger.warn({ err }, `Could not fetch image | url = ${url}`);
     return null;
   }
+}
+
+export function fetchAvatar(
+  user: User,
+  size: 64 | 128 | 256 = 128
+): Promise<Image | null> {
+  return fetchImage(user.displayAvatarURL({ extension: "png", size }));
 }
 
 export function drawCircularImage(

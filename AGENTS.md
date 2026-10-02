@@ -43,6 +43,7 @@ See [`docs/site/`](docs/site/README.md) for the full developer guide:
 | Event listeners            | [docs/site/en/guide/listeners.md](docs/site/en/guide/listeners.md)                 |
 | Buttons / modals / selects | [docs/site/en/guide/interactions.md](docs/site/en/guide/interactions.md)           |
 | Services                   | [docs/site/en/guide/services.md](docs/site/en/guide/services.md)                   |
+| Scheduled tasks            | [docs/site/en/guide/tasks.md](docs/site/en/guide/tasks.md)                         |
 | Prisma / database          | [docs/site/en/guide/database.md](docs/site/en/guide/database.md)                   |
 | Functional behavior        | [docs/functional.md](docs/functional.md)                                           |
 

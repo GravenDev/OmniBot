@@ -32,3 +32,32 @@ model FourHourGameLastMessage {
   authorId  String
   sentAt    DateTime
 }
+
+// === Modèles de modules/rngdle/rngdle.prisma ===
+model RngdleAccount {
+  guildId  String
+  userId   String
+  username String
+
+  @@id([guildId, userId])
+}
+
+model RngdleRoll {
+  guildId    String
+  rollId     String
+  userId     String
+  number     Int
+  score      BigInt
+  badgeCount Int      @default(0)
+  rolledAt   DateTime
+
+  @@id([guildId, rollId])
+  @@index([guildId, rolledAt])
+  @@index([guildId, userId])
+}
+
+model RngdleScoreTable {
+  id        Int      @id @default(1)
+  data      Json
+  updatedAt DateTime @updatedAt
+}
