@@ -31,9 +31,13 @@ await loadModuleI18n("core", corePath);
 
 export const modules = await loadModules("./modules");
 const intents = modules.flatMap((module) => module.intents).filter((a) => !!a);
+const partials = [
+  ...new Set(modules.flatMap((module) => module.partials ?? [])),
+];
 
 export const client = new Client({
   intents: intents,
+  partials: partials,
 });
 
 client.once(Events.ClientReady, async (readyClient) => {

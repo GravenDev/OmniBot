@@ -18,6 +18,8 @@
   "config.notFound": "Configuration not found.",
   "config.invalidSelection": "Invalid selected value.",
   "config.number.invalid": "❌ `{{value}}` is not a valid number.",
+  "config.duration.invalid": "❌ `{{value}}` is not a valid duration. Use a number followed by `s`, `m`, `h` or `d`, e.g. `30s`, `4h`, `1h30m`.",
+  "config.duration.placeholder": "e.g. 30s, 5m, 4h, 1h30m, 3d",
 
   "config.enum.noOptions": "This field declares no options.",
   "config.enum.selectMultiple": "Select one or more values",
@@ -69,6 +71,7 @@
   "type.channel": "Channel",
   "type.category": "Category",
   "type.choice": "Choice",
+  "type.duration": "Duration",
   "type.listOf": "List of {{type}}",
 
   "modules.core.name": "Global Configuration",
@@ -76,6 +79,9 @@
 
   "modules.thread-creator.name": "Thread Creator",
   "modules.thread-creator.description": "Automatically creates discussion threads under each new message in configured channels. Replaces Needle bot.",
+
+  "modules.four-hour-game.name": "4h Game",
+  "modules.four-hour-game.description": "Score a point when your message stays the last one in the game channel for the configured delay.",
 
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Development module declaring all configuration types, used to test the configuration UI.",

@@ -108,6 +108,7 @@ interface ModuleDeclaration {
   version: Version; // Semver "x.y.z"
   author?: string; // Nom de l'auteur (optionnel)
   intents?: GatewayIntentBits[]; // Intentions Discord Gateway
+  partials?: Partials[]; // Partials discord.js, ex. événements sur des messages hors cache
   devOnly?: boolean; // Chargé seulement en mode dev
   config?: ConfigSchema; // Schéma de configuration
 
@@ -171,12 +172,10 @@ Le chargeur de modules découvre automatiquement ces fichiers au démarrage et l
 
 ### Format des fichiers de traduction
 
-Chaque fichier contient des paires clé-valeur. Le `name`, `description` et les champs de configuration du module sont automatiquement résolus depuis ces fichiers, remplaçant les valeurs par défaut TypeScript quand la locale correspondante est active :
+Chaque fichier contient des paires clé-valeur. Le `name` et la `description` des champs de configuration sont automatiquement résolus depuis ces fichiers, remplaçant les valeurs par défaut TypeScript quand la locale correspondante est active. Le `name` et la `description` du module lui-même se traduisent en revanche dans les fichiers du core, sous `modules.<id>.name` et `modules.<id>.description` (voir le guide de localisation) :
 
 ```json
 {
-  "module.name": "Mon Module",
-  "module.description": "Fait des choses géniales.",
   "config.monChamp.name": "Mon Champ",
   "config.monChamp.description": "Description de mon champ.",
   "salutation": "Bonjour {{name}} !"

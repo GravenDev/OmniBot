@@ -4,6 +4,8 @@
 
   "config.number.name": "Number",
   "config.number.description": "A numeric field.",
+  "config.duration.name": "Duration",
+  "config.duration.description": "A duration such as 30s, 4h or 1h30m.",
 
   "config.toggle.name": "Boolean",
   "config.toggle.description": "An on/off toggle.",

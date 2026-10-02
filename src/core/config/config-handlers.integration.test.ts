@@ -54,6 +54,8 @@ const {
 } = await import("./config-edit.js");
 const { default: NumberConfigHandler } =
   await import("./number.config-handler.js");
+const { default: DurationConfigHandler } =
+  await import("./duration.config-handler.js");
 const { default: UserConfigHandler } = await import("./user.config-handler.js");
 const { default: EnumConfigHandler } = await import("./enum.config-handler.js");
 
@@ -158,6 +160,68 @@ describe("NumberConfigHandler modal submit", () => {
     const interaction = fakeModalInteraction("42");
 
     await submit.execute(interaction, ["nope", "count"], undefined as never);
+
+    expect(save).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining("configOptionNotFound"),
+      })
+    );
+  });
+});
+
+describe("DurationConfigHandler modal submit", () => {
+  function fakeModalInteraction(value: string) {
+    return {
+      guildId: "guild-1",
+      fields: { getTextInputValue: () => value },
+      isFromMessage: () => true,
+      update: vi.fn(),
+      reply: vi.fn(),
+    } as unknown as ModalSubmitInteraction;
+  }
+
+  it("declares that it requires admin", async () => {
+    const submit = await captureRegisteredHandler(new DurationConfigHandler());
+    expect(submit.access).toBe("admin");
+  });
+
+  it.each(["abc", "4", "0s", "-1h"])(
+    "rejects %j without saving",
+    async (value) => {
+      const submit = await captureRegisteredHandler(
+        new DurationConfigHandler()
+      );
+      const interaction = fakeModalInteraction(value);
+
+      await submit.execute(interaction, ["mod", "delay"], undefined as never);
+
+      expect(save).not.toHaveBeenCalled();
+      expect(interaction.reply).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: expect.stringContaining("config.duration.invalid"),
+        })
+      );
+    }
+  );
+
+  it("saves the duration as a number of seconds", async () => {
+    const submit = await captureRegisteredHandler(new DurationConfigHandler());
+    const interaction = fakeModalInteraction("1h30m");
+
+    await submit.execute(interaction, ["mod", "delay"], undefined as never);
+
+    expect(save).toHaveBeenCalledWith(fakeModule, "guild-1", "delay", 5400);
+    expect(interaction.update).toHaveBeenCalled();
+    expect(interaction.reply).not.toHaveBeenCalled();
+  });
+
+  it("reports when the module/key cannot be resolved", async () => {
+    resolveModule.mockReturnValue(undefined);
+    const submit = await captureRegisteredHandler(new DurationConfigHandler());
+    const interaction = fakeModalInteraction("4h");
+
+    await submit.execute(interaction, ["nope", "delay"], undefined as never);
 
     expect(save).not.toHaveBeenCalled();
     expect(interaction.reply).toHaveBeenCalledWith(

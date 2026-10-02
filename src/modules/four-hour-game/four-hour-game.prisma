@@ -1,0 +1,15 @@
+model FourHourGameScore {
+  guildId String
+  userId  String
+  score   Int
+
+  @@id([guildId, userId])
+}
+
+model FourHourGameLastMessage {
+  guildId   String   @id
+  channelId String
+  messageId String
+  authorId  String
+  sentAt    DateTime
+}

@@ -1,0 +1,26 @@
+{
+  "config.channel.name": "Salon du jeu",
+  "config.channel.description": "Salon dans lequel se joue le jeu.",
+
+  "config.delay.name": "Délai",
+  "config.delay.description": "Durée pendant laquelle un message doit rester le dernier pour que son auteur marque un point.",
+
+  "point.title": "Point gagné !",
+  "point.description_one": "{{user}} marque un point ! Son total passe à {{count}} point.",
+  "point.description_other": "{{user}} marque un point ! Son total passe à {{count}} points.",
+
+  "score.title": "🎪 Le jeu des 4h",
+  "score.value": "Le score de {{user}} est **{{score}}**.",
+  "score.none": "{{user}} n'a pas de score sur ce serveur.",
+
+  "leaderboard.empty": "Personne n'a encore marqué de point.",
+  "leaderboard.header.rank": "Rang",
+  "leaderboard.header.player": "Pseudo",
+  "leaderboard.header.score": "Score",
+
+  "admin.noPermission": "Vous devez être administrateur pour utiliser cette commande.",
+  "admin.set.created": "Score de {{user}} fixé à **{{score}}**.",
+  "admin.set.updated": "Score de {{user}} mis à jour : **{{score}}**.",
+  "admin.unset.done": "Score de {{user}} supprimé.",
+  "admin.unset.none": "{{user}} n'a pas de score à supprimer."
+}

@@ -18,6 +18,8 @@
   "config.notFound": "Configuration introuvable.",
   "config.invalidSelection": "Valeur sélectionnée invalide.",
   "config.number.invalid": "❌ `{{value}}` n'est pas un nombre valide.",
+  "config.duration.invalid": "❌ `{{value}}` n'est pas une durée valide. Utilisez un nombre suivi de `s`, `m`, `h` ou `d`, par ex. `30s`, `4h`, `1h30m`.",
+  "config.duration.placeholder": "ex. 30s, 5m, 4h, 1h30m, 3d",
 
   "config.enum.noOptions": "Ce champ ne déclare aucune option.",
   "config.enum.selectMultiple": "Sélectionnez une ou plusieurs valeurs",
@@ -69,6 +71,7 @@
   "type.channel": "Salon",
   "type.category": "Catégorie",
   "type.choice": "Choix",
+  "type.duration": "Durée",
   "type.listOf": "Liste de {{type}}",
 
   "modules.core.name": "Configuration Globale",
@@ -76,6 +79,9 @@
 
   "modules.thread-creator.name": "Thread Creator",
   "modules.thread-creator.description": "Crée automatiquement des fils de discussion sous chaque nouveau message dans les canaux configurés. Remplace le bot Needle.",
+
+  "modules.four-hour-game.name": "Jeu des 4h",
+  "modules.four-hour-game.description": "Marquez un point quand votre message reste le dernier du salon de jeu pendant le délai configuré.",
 
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Module de développement déclarant tous les types de configuration, pour tester l'UI de configuration.",

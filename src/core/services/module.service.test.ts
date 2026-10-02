@@ -71,3 +71,25 @@ describe("reconcileActivatedVersions", () => {
     expect(update).not.toHaveBeenCalled();
   });
 });
+
+describe("getActivatedGuildIds", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("lists the guilds where the module is activated", async () => {
+    findMany.mockResolvedValue([
+      { guildId: "guild-a" },
+      { guildId: "guild-b" },
+    ]);
+
+    expect(await moduleService.getActivatedGuildIds("four-hour-game")).toEqual([
+      "guild-a",
+      "guild-b",
+    ]);
+    expect(findMany).toHaveBeenCalledWith({
+      select: { guildId: true },
+      where: { moduleId: "four-hour-game", activated: true },
+    });
+  });
+});

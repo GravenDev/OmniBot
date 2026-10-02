@@ -108,6 +108,7 @@ interface ModuleDeclaration {
   version: Version; // Semver "x.y.z"
   author?: string; // Optional author name
   intents?: GatewayIntentBits[]; // Discord gateway intents
+  partials?: Partials[]; // discord.js partials, e.g. events on uncached messages
   devOnly?: boolean; // Only loaded in dev mode
   config?: ConfigSchema; // Configuration schema
 
@@ -171,12 +172,10 @@ The module loader auto-discovers these files at startup and registers them with 
 
 ### Translation file format
 
-Each file contains key-value pairs. The module's `name`, `description`, and config field `name`/`description` are automatically resolved from these files, overriding the TypeScript defaults when a matching locale is active:
+Each file contains key-value pairs. Config field `name`/`description` are automatically resolved from these files, overriding the TypeScript defaults when a matching locale is active. The module's own `name` and `description` are translated in the core files instead, under `modules.<id>.name` and `modules.<id>.description` (see the localization guide):
 
 ```json
 {
-  "module.name": "My Module",
-  "module.description": "Does awesome things.",
   "config.myField.name": "My Field",
   "config.myField.description": "Description of my field.",
   "greeting": "Hello {{name}}!"

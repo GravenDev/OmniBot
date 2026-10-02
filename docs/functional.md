@@ -22,6 +22,48 @@ Le bouton est désactivé tant qu'aucun champ n'a été personnalisé (rien à r
 
 ---
 
+## Module Jeu des 4h
+
+Repris du bot DJ4H. Dans le salon de jeu, le dernier message posté « tient » : si personne d'autre n'écrit pendant le délai configuré (4 h par défaut), son auteur marque un point au message suivant.
+
+### Comportement automatique
+
+À chaque message posté dans le salon configuré :
+
+1. Si c'est le premier message suivi, il devient le dernier message, sans point.
+2. S'il vient de l'auteur du dernier message, il est ignoré : le dernier message ne change pas, et un joueur ne peut donc pas relancer son propre délai.
+3. Si le délai s'est écoulé depuis le dernier message, **l'auteur du dernier message** marque un point ; le bot l'annonce dans le salon avec son nouveau total.
+4. Dans tous les autres cas, le nouveau message devient le dernier message.
+
+Les messages de bots, les messages système (arrivée d'un membre, épinglage, boost…), les messages hors du salon (y compris dans ses fils) et les messages privés sont ignorés. Un message plus ancien que le dernier message enregistré (reçu dans le désordre) est ignoré lui aussi. Après un changement de salon de jeu, le dernier message de l'ancien salon ne compte plus : la partie repart du premier message posté dans le nouveau. Il en va de même quand le module est réactivé après avoir été désactivé.
+
+Un message supprimé ne compte plus : si c'était le dernier message, c'est le message de joueur précédent encore présent dans le salon qui redevient le dernier message, avec son heure d'envoi réelle. Si le salon n'en contient plus, la partie repart du prochain message.
+
+Au démarrage, le bot relit le vrai dernier message de joueur de chaque salon de jeu pour rattraper les messages postés ou supprimés pendant qu'il était arrêté. Les points qui auraient dû être gagnés pendant l'arrêt ne sont pas rattrapés. Les messages d'un même serveur sont traités un par un : deux messages simultanés ne peuvent pas marquer deux fois sur le même prédécesseur.
+
+### `/jd4h score [member]`
+
+Affiche le score du membre indiqué, ou le sien par défaut.
+
+### `/jd4h leaderboard`
+
+Génère une image du top 10 du serveur (rang, médailles pour le podium, avatar, pseudo, score). Les membres à 0 point et ceux dont le compte Discord est introuvable n'y figurent pas. L'image est réutilisée pendant 15 secondes par serveur et par langue, et régénérée dès qu'un score change.
+
+### `/jd4h-admin set <member> <score>` et `/jd4h-admin unset <member>`
+
+**Permission requise :** Administrateur
+
+Fixe le score d'un membre, ou le supprime. Fixer un score à 0 revient à le supprimer. Réponses éphémères.
+
+### Configuration — `/config four-hour-game`
+
+| Champ     | Type  | Description                                                                               |
+| --------- | ----- | ----------------------------------------------------------------------------------------- |
+| `channel` | Salon | Salon du jeu. Tant qu'il n'est pas défini, le module ne fait rien.                        |
+| `delay`   | Durée | Délai pour marquer un point, saisi comme `30s`, `5m`, `4h`, `1h30m`, `3d`. Défaut : `4h`. |
+
+---
+
 ## Module Thread Creator
 
 Crée automatiquement un fil de discussion sous chaque nouveau message dans un salon configuré. Remplace le bot Needle.
