@@ -84,6 +84,9 @@
   "modules.four-hour-game.name": "Jeu des 4h",
   "modules.four-hour-game.description": "Marquez un point quand votre message reste le dernier du salon de jeu pendant le délai configuré.",
 
+  "modules.rngdle.name": "RNGdle",
+  "modules.rngdle.description": "Suit les tirages rngdle.com des membres : classements, profils, statistiques du serveur et classement quotidien.",
+
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Module de développement déclarant tous les types de configuration, pour tester l'UI de configuration.",
 

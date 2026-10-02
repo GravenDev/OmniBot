@@ -8,6 +8,10 @@ import {
   loadModuleEvents,
 } from "./core/loaders/listener-loader.js";
 import { loadModuleI18n, loadModules } from "./core/loaders/module-loader.js";
+import {
+  startModuleTasks,
+  stopAllTasks,
+} from "./core/loaders/task-scheduler.js";
 import prisma, { Prisma } from "./lib/database.js";
 import { initI18n } from "./lib/i18n.js";
 import logger from "./lib/logger.js";
@@ -54,6 +58,7 @@ client.once(Events.ClientReady, async (readyClient) => {
       continue;
     }
     loadModuleEvents(readyClient, module);
+    startModuleTasks(readyClient, module);
   }
 
   await coreModule.onLoad?.(readyClient, coreModule.registry);
@@ -67,6 +72,7 @@ await client.login(token);
 
 const shutdown = async () => {
   logger.info("Shutting down...");
+  stopAllTasks();
   await client.destroy();
   await prisma.$disconnect();
   process.exit(0);
