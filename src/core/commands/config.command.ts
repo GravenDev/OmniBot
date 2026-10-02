@@ -8,7 +8,6 @@ import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import { configurationMessage } from "#core/utils/core-messages.js";
-import { requireAdmin } from "#core/utils/require-admin.js";
 import { modules } from "#index.js";
 import { declareCommand } from "#lib/command.js";
 import { Colors } from "#utils/colors.js";
@@ -33,12 +32,12 @@ export default declareCommand({
   requiresAdmin: true,
 
   async execute(interaction) {
+    // Admin access is enforced centrally by the command dispatcher via
+    // `requiresAdmin` (defense in depth: `setDefaultMemberPermissions` above).
     const coreConfig = await configService.getConfigForModuleIn(
       coreModule,
       interaction.guildId!
     );
-
-    if (!(await requireAdmin(interaction, coreConfig.t))) return;
 
     const moduleId = interaction.options.getString("module", true);
     const module = [...modules, coreModule].find((m) => m.id === moduleId);
