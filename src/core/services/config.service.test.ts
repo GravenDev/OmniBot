@@ -82,7 +82,10 @@ describe("ConfigService on a guild without stored configuration", () => {
   });
 
   it("does not fail when another process created the row in the meantime", async () => {
-    const first = configService.getConfigForModuleIn(coreModule, "racing-guild");
+    const first = configService.getConfigForModuleIn(
+      coreModule,
+      "racing-guild"
+    );
     rows.set("racing-guild", { core: { locale: "fr" } });
 
     const provider = await first;
