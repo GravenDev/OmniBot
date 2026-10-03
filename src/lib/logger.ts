@@ -1,4 +1,5 @@
 import pino from "pino";
+import { isDevMode } from "./env.js";
 
 function resolveLevel(): pino.LevelWithSilent {
   switch (process.env["LOG_LEVEL"]) {
@@ -11,21 +12,23 @@ function resolveLevel(): pino.LevelWithSilent {
     case "silent":
       return process.env["LOG_LEVEL"];
     default:
-      return "debug";
+      return isDevMode() ? "debug" : "info";
   }
 }
 
 const base = pino({
   level: resolveLevel(),
-  transport: {
-    target: "pino-pretty",
-    options: {
-      colorize: true,
-      translateTime: "yyyy-mm-dd HH:MM:ss",
-      ignore: "pid,hostname",
-      messageFormat: "{if name}[{name}] {end}{msg}",
+  ...(isDevMode() && {
+    transport: {
+      target: "pino-pretty",
+      options: {
+        colorize: true,
+        translateTime: "yyyy-mm-dd HH:MM:ss",
+        ignore: "pid,hostname",
+        messageFormat: "{if name}[{name}] {end}{msg}",
+      },
     },
-  },
+  }),
 });
 
 export const loggerMaker = (name?: string) =>

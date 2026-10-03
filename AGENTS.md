@@ -60,4 +60,4 @@ Copy `.env.example` to `.env`:
 
 - `DISCORD_TOKEN` — bot token from Discord Developer Portal
 - `DATABASE_URL` — PostgreSQL connection string (default matches `compose.yaml`)
-- `LOG_LEVEL` — optional log level (`fatal`/`error`/`warn`/`info`/`debug`/`trace`/`silent`, default `debug`); invalid values fall back to `debug`
+- `LOG_LEVEL` — optional log level (`fatal`/`error`/`warn`/`info`/`debug`/`trace`/`silent`, default `debug` in development, `info` otherwise); invalid values fall back to that default. Logs are pretty-printed in development and JSON otherwise
