@@ -268,4 +268,25 @@ describe("checkCommandsForVersionChange", () => {
       "2.0.0"
     );
   });
+
+  it("skips guilds the bot can no longer reach and updates the others", async () => {
+    const fetchingClient = {
+      ...client,
+      guilds: {
+        fetch: async (id: string) => {
+          if (id === "guild-1") throw new Error("Unknown Guild");
+          return fakeGuild(id);
+        },
+      },
+    } as unknown as Client;
+
+    await checkCommandsForVersionChange(fetchingClient, versionedModule());
+
+    expect(moduleService.updateModuleActivation).toHaveBeenCalledTimes(1);
+    expect(moduleService.updateModuleActivation).toHaveBeenCalledWith(
+      "mod-a",
+      "guild-2",
+      "2.0.0"
+    );
+  });
 });
