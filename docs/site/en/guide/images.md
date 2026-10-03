@@ -2,11 +2,11 @@
 
 Leaderboards and stat cards are rendered as PNG images with [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas) (prebuilt binaries, nothing to install). Two ready-made renderers cover most needs; lower-level helpers are there for anything else.
 
-| Module                   | Provides                                                                                             |
-| ------------------------ | ---------------------------------------------------------------------------------------------------- |
-| `#lib/leaderboard-table` | `renderLeaderboardTable`: ranked table with medals, avatars, names and your own columns              |
-| `#lib/stat-card`         | `renderStatCard`: card with a portrait, a title, an optional rank, a grid of stat boxes and a footer |
-| `#lib/imaging`           | Shared palette and font, avatar download, circular images, fitted text, assets                       |
+| Module                   | Provides                                                                                                 |
+| ------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `#lib/leaderboard-table` | `renderLeaderboardTable`: ranked table with medals, avatars, names and your own columns                  |
+| `#lib/stat-card`         | `renderStatCard`: card with a portrait, a title, an optional rank, a grid of stat boxes and a side panel |
+| `#lib/imaging`           | Shared palette and font, avatar download, circular images, fitted text, assets                           |
 
 The Outfit font and the gold, silver and bronze medals ship in `src/lib/assets/` and are loaded for you.
 
@@ -57,9 +57,9 @@ import { renderStatCard } from "#lib/stat-card.js";
 
 const png = await renderStatCard({
   image: await fetchAvatar(user),
-  title: { text: user.username, y: 35, size: 50 },
+  title: user.username,
+  subtitle: t("stats.memberSince", { date }),
   rank: { position: 3, total: 42 },
-  valueSize: 30,
   rows: [
     [
       { title: t("stats.messages"), value: "1 204" },
@@ -69,17 +69,19 @@ const png = await renderStatCard({
       {
         title: t("stats.joined"),
         value: "2024-03-01",
-        subtext: t("stats.joinedHint"),
+        subtext: t("stats.hint"),
       },
     ],
   ],
 });
 ```
 
-- **Rows** hold one to three boxes, laid out on the full width, in halves or in thirds.
-- **A box** has a `title` and a `value`, and optionally a `color` (value and outline), a `suffix` after the value, a `subtext` and a small corner `avatar`.
-- **The rank** shows a medal for the podium, `#N / total` otherwise; it is hidden when `position` is 0.
-- **A footer** (`{ height, draw(ctx, top) }`) adds a custom panel under the boxes. `drawPanel`, `drawPanelTitle`, `drawText` and `measureText` from `#lib/stat-card` keep it consistent with the rest of the card; the RNGdle tier breakdown is built this way (`src/modules/rngdle/rendering/cards.ts`).
+The card is 1000 px wide, landscape, so Discord displays it large enough to read.
+
+- **The header** shows the round `image`, the `title`, an optional `subtitle` and an optional `rank`: a medal for the podium, `#N / total` otherwise, hidden when `position` is 0.
+- **Rows** hold one to three boxes, which share the row's width.
+- **A box** has a `title` and a `value`, and optionally a `color` (value and outline; `outline: false` keeps the color without the frame), a `subtext` and a small corner `avatar`. Text that is too long shrinks to fit the box.
+- **An aside** (`{ width, draw(ctx, x, y, width, height) }`) adds a custom panel on the right of the boxes, as tall as them. `drawPanel`, `drawPanelTitle`, `drawText`, `drawFittedText` and `measureText` from `#lib/stat-card` keep it consistent with the rest of the card; the RNGdle tier breakdown is built this way (`src/modules/rngdle/rendering/cards.ts`).
 
 ## Good Practices
 

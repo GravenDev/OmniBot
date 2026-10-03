@@ -2,11 +2,11 @@
 
 Les classements et les fiches de statistiques sont rendus en images PNG avec [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas) (binaires précompilés, rien à installer). Deux générateurs prêts à l'emploi couvrent l'essentiel des besoins ; des fonctions de plus bas niveau sont là pour le reste.
 
-| Module                   | Fournit                                                                                                             |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `#lib/leaderboard-table` | `renderLeaderboardTable` : tableau classé avec médailles, avatars, pseudos et vos propres colonnes                  |
-| `#lib/stat-card`         | `renderStatCard` : fiche avec portrait, titre, rang optionnel, grille de cases de statistiques et pied personnalisé |
-| `#lib/imaging`           | Palette et police communes, téléchargement d'avatars, images rondes, texte ajusté, ressources                       |
+| Module                   | Fournit                                                                                                           |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `#lib/leaderboard-table` | `renderLeaderboardTable` : tableau classé avec médailles, avatars, pseudos et vos propres colonnes                |
+| `#lib/stat-card`         | `renderStatCard` : fiche avec portrait, titre, rang optionnel, grille de cases de statistiques et panneau latéral |
+| `#lib/imaging`           | Palette et police communes, téléchargement d'avatars, images rondes, texte ajusté, ressources                     |
 
 La police Outfit et les médailles or, argent et bronze sont fournies dans `src/lib/assets/` et chargées pour vous.
 
@@ -57,9 +57,9 @@ import { renderStatCard } from "#lib/stat-card.js";
 
 const png = await renderStatCard({
   image: await fetchAvatar(user),
-  title: { text: user.username, y: 35, size: 50 },
+  title: user.username,
+  subtitle: t("stats.memberSince", { date }),
   rank: { position: 3, total: 42 },
-  valueSize: 30,
   rows: [
     [
       { title: t("stats.messages"), value: "1 204" },
@@ -69,17 +69,19 @@ const png = await renderStatCard({
       {
         title: t("stats.joined"),
         value: "01/03/2024",
-        subtext: t("stats.joinedHint"),
+        subtext: t("stats.hint"),
       },
     ],
   ],
 });
 ```
 
-- **Les lignes** contiennent une à trois cases, disposées sur toute la largeur, en moitiés ou en tiers.
-- **Une case** a un `title` et une `value`, et éventuellement une `color` (valeur et contour), un `suffix` après la valeur, un `subtext` et un petit `avatar` dans le coin.
-- **Le rang** affiche une médaille pour le podium, `#N / total` sinon ; il est masqué quand `position` vaut 0.
-- **Un pied** (`{ height, draw(ctx, top) }`) ajoute un panneau personnalisé sous les cases. `drawPanel`, `drawPanelTitle`, `drawText` et `measureText` de `#lib/stat-card` le gardent cohérent avec le reste de la fiche ; la répartition par palier de RNGdle est construite ainsi (`src/modules/rngdle/rendering/cards.ts`).
+La fiche fait 1000 px de large, en paysage, pour que Discord l'affiche assez grande pour être lue.
+
+- **L'en-tête** affiche l'`image` ronde, le `title`, un `subtitle` optionnel et un `rank` optionnel : une médaille pour le podium, `#N / total` sinon, masqué quand `position` vaut 0.
+- **Les lignes** contiennent une à trois cases, qui se partagent la largeur de la ligne.
+- **Une case** a un `title` et une `value`, et éventuellement une `color` (valeur et contour ; `outline: false` garde la couleur sans le cadre), un `subtext` et un petit `avatar` dans le coin. Un texte trop long rétrécit pour tenir dans la case.
+- **Un panneau latéral** (`{ width, draw(ctx, x, y, width, height) }`) ajoute un panneau personnalisé à droite des cases, de la même hauteur qu'elles. `drawPanel`, `drawPanelTitle`, `drawText`, `drawFittedText` et `measureText` de `#lib/stat-card` le gardent cohérent avec le reste de la fiche ; la répartition par palier de RNGdle est construite ainsi (`src/modules/rngdle/rendering/cards.ts`).
 
 ## Bonnes pratiques
 
