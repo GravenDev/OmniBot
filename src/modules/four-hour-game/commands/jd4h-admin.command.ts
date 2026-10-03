@@ -12,7 +12,7 @@ import fourHourGameService, {
 } from "#modules/four-hour-game/services/four-hour-game.service.js";
 
 const PERMISSION_ADMINISTRATOR = 0x8;
-const MAX_SCORE = 2_147_483_647;
+const MAX_SCORE = 1_000_000_000;
 
 const logger = loggerMaker("four-hour-game");
 
