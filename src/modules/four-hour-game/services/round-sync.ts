@@ -1,3 +1,5 @@
+import configService from "#core/services/config.service.js";
+import moduleService from "#core/services/module.service.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
@@ -10,8 +12,6 @@ export async function syncRound(
   module: Module<FourHourGameConfigSchema>,
   guildId: string
 ): Promise<void> {
-  const { default: configService } =
-    await import("#core/services/config.service.js");
   const config = await configService.getConfigForModuleIn(module, guildId);
   const channel = config.get("channel");
   if (!channel?.isTextBased()) {
@@ -26,8 +26,6 @@ export async function syncRound(
 export async function syncAllRounds(
   module: Module<FourHourGameConfigSchema>
 ): Promise<void> {
-  const { default: moduleService } =
-    await import("#core/services/module.service.js");
   const guildIds = await moduleService.getActivatedGuildIds(module.id);
 
   for (const guildId of guildIds) {

@@ -1,9 +1,9 @@
 import { MessageFlags } from "discord.js";
 import { installModule } from "#core/loaders/module-installer.js";
+import { modules } from "#core/runtime.js";
 import moduleService from "#core/services/module.service.js";
 import { getCoreT } from "#core/utils/core-config.js";
 import { modulesMessage } from "#core/utils/core-messages.js";
-import { modules } from "#index.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 
 export default declareInteractionHandler({

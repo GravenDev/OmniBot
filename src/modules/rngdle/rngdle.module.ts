@@ -5,9 +5,7 @@ import rngdleAdminCommand from "./commands/rngdle-admin.command.js";
 import rngdleCommand from "./commands/rngdle.command.js";
 import overallPageButton from "./interactions/overall-page.button.js";
 import { rngdleConfigSchema } from "./rngdle.config.js";
-import { createDailyLeaderboardTask } from "./tasks/daily-leaderboard.task.js";
-import scoreTableTask from "./tasks/score-table.task.js";
-import syncTask from "./tasks/sync.task.js";
+import { rngdleTasks } from "./tasks.js";
 
 const logger = loggerMaker("rngdle");
 
@@ -27,9 +25,9 @@ const rngdleModule = defineModule({
     registry.register(rngdleCommand);
     registry.register(rngdleAdminCommand);
     registry.register(overallPageButton);
-    registry.register(syncTask);
-    registry.register(scoreTableTask);
-    registry.register(createDailyLeaderboardTask(rngdleModule));
+    for (const task of rngdleTasks(rngdleModule)) {
+      registry.register(task);
+    }
   },
 
   onInstall(_client, guild) {

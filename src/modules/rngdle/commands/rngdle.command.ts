@@ -7,154 +7,108 @@ import {
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
-import { loggerMaker } from "#lib/logger.js";
-import { overallPageComponents } from "#modules/rngdle/interactions/overall-page.button.js";
+import { overallPageMessage } from "#modules/rngdle/interactions/overall-page.button.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
+import store from "#modules/rngdle/services/store.js";
+import sync from "#modules/rngdle/services/sync.js";
 import {
-  buildDailyLeaderboard,
-  buildProfile,
-  buildServerStats,
-  cachedOverallPage,
-  utcDayRange,
-} from "#modules/rngdle/services/boards.js";
-import imageCache from "#modules/rngdle/services/image-cache.service.js";
-import rngdleService from "#modules/rngdle/services/rngdle.service.js";
-import syncService from "#modules/rngdle/services/sync.service.js";
-import { replyWithError } from "./replies.js";
-
-const logger = loggerMaker("rngdle");
-
-type Config = ConfigProvider<RngdleConfigSchema>;
-type GuildCommand = ChatInputCommandInteraction<"cached" | "raw">;
+  dailyLeaderboard,
+  profileCard,
+  serverCard,
+  type ViewContext,
+} from "#modules/rngdle/services/views.js";
 
 const AUTOCOMPLETE_LIMIT = 25;
 
-function attachment(image: Buffer, name: string) {
-  return [new AttachmentBuilder(image, { name })];
+type Interaction = ChatInputCommandInteraction<"cached" | "raw">;
+type Config = ConfigProvider<RngdleConfigSchema>;
+
+function viewContext(interaction: Interaction, config: Config): ViewContext {
+  return {
+    client: interaction.client,
+    guildId: interaction.guildId,
+    t: config.t,
+    locale: config.locale,
+  };
 }
 
-async function showToday(interaction: GuildCommand, config: Config) {
-  await interaction.deferReply();
-  await syncService.syncGuildIfStale(interaction.guildId);
-
-  const range = utcDayRange(0);
-  const board = await imageCache.get(
-    interaction.guildId,
-    `daily:${config.locale}:${range[0].toISOString()}`,
-    () =>
-      buildDailyLeaderboard(
-        interaction.client,
-        interaction.guildId,
-        range,
-        config.t
-      )
+async function replyWithImage(
+  interaction: Interaction,
+  image: Buffer | null,
+  name: string,
+  emptyMessage: string
+) {
+  await interaction.editReply(
+    image
+      ? { files: [new AttachmentBuilder(image, { name })] }
+      : { content: emptyMessage }
   );
-  if (!board) {
-    await interaction.editReply(config.t("leaderboard.empty"));
-    return;
-  }
-  await interaction.editReply({
-    files: attachment(board.image, "leaderboard.png"),
-  });
 }
 
-async function showProfile(interaction: GuildCommand, config: Config) {
-  const member = interaction.options.getUser("member");
-  const username = interaction.options.getString("username");
-  if (member && username) {
-    await interaction.reply({
-      content: config.t("profile.bothOptions"),
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
+async function leaderboard(interaction: Interaction, config: Config) {
+  const board = await dailyLeaderboard(viewContext(interaction, config), 0);
+  await replyWithImage(
+    interaction,
+    board?.image ?? null,
+    "leaderboard.png",
+    config.t("leaderboard.empty")
+  );
+}
 
-  const account = username
-    ? await rngdleService.findAccountByUsername(interaction.guildId, username)
-    : await rngdleService.getAccount(
+async function profile(interaction: Interaction, config: Config) {
+  const account = interaction.options.getString("username")
+    ? await store.accountByUsername(
         interaction.guildId,
-        (member ?? interaction.user).id
+        interaction.options.getString("username", true)
+      )
+    : await store.account(
+        interaction.guildId,
+        (interaction.options.getUser("member") ?? interaction.user).id
       );
   if (!account) {
-    await interaction.reply({
-      content: config.t("profile.notRegistered"),
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
-
-  await interaction.deferReply();
-  await syncService.syncGuildIfStale(interaction.guildId);
-
-  const user = await interaction.client.users
-    .fetch(account.userId)
-    .catch(() => null);
-  if (!user) {
     await interaction.editReply(config.t("profile.notRegistered"));
     return;
   }
-
-  const image = await imageCache.get(
-    interaction.guildId,
-    `profile:${config.locale}:${account.userId}`,
-    () => buildProfile(account, user, config.t, config.locale)
+  await replyWithImage(
+    interaction,
+    await profileCard(viewContext(interaction, config), account),
+    `profile-${account.username}.png`,
+    config.t("profile.noRolls", { username: account.username })
   );
-  if (!image) {
-    await interaction.editReply(
-      config.t("profile.noRolls", { username: account.username })
-    );
-    return;
-  }
-  await interaction.editReply({
-    files: attachment(image, `profile-${account.username}.png`),
-  });
 }
 
-async function showServerStats(interaction: GuildCommand, config: Config) {
-  await interaction.deferReply();
-  await syncService.syncGuildIfStale(interaction.guildId);
-
+async function serverStats(interaction: Interaction, config: Config) {
   const guild =
     interaction.guild ??
     (await interaction.client.guilds.fetch(interaction.guildId));
-  const image = await imageCache.get(
-    interaction.guildId,
-    `server:${config.locale}`,
-    () => buildServerStats(interaction.client, guild, config.t)
+  await replyWithImage(
+    interaction,
+    await serverCard(viewContext(interaction, config), guild),
+    "server-stats.png",
+    config.t("server.empty")
   );
-  if (!image) {
-    await interaction.editReply(config.t("server.empty"));
-    return;
-  }
-  await interaction.editReply({ files: attachment(image, "server-stats.png") });
 }
 
-async function showOverall(interaction: GuildCommand, config: Config) {
-  await interaction.deferReply();
-  await syncService.syncGuildIfStale(interaction.guildId);
-
-  const result = await cachedOverallPage(
-    interaction.client,
-    interaction.guildId,
-    interaction.options.getInteger("page") ?? 1,
-    interaction.user.id,
-    config.t,
-    config.locale
+async function leaderboardAll(interaction: Interaction, config: Config) {
+  await interaction.editReply(
+    await overallPageMessage(
+      viewContext(interaction, config),
+      interaction.options.getInteger("page") ?? 1,
+      interaction.user.id,
+      "public"
+    )
   );
-  if (!result) {
-    await interaction.editReply(config.t("overall.empty"));
-    return;
-  }
-  await interaction.editReply({
-    files: attachment(result.image, "leaderboard.png"),
-    components: overallPageComponents(
-      result.page,
-      result.pageCount,
-      "public",
-      config.t
-    ),
-  });
 }
+
+const subcommands: Record<
+  string,
+  (interaction: Interaction, config: Config) => Promise<void>
+> = {
+  leaderboard,
+  profile,
+  "server-stats": serverStats,
+  "leaderboard-all": leaderboardAll,
+};
 
 export default declareCommand<RngdleConfigSchema>({
   data: new SlashCommandBuilder()
@@ -215,38 +169,30 @@ export default declareCommand<RngdleConfigSchema>({
     if (!interaction.inGuild()) {
       return;
     }
-
-    try {
-      switch (interaction.options.getSubcommand()) {
-        case "leaderboard":
-          await showToday(interaction, config);
-          break;
-        case "profile":
-          await showProfile(interaction, config);
-          break;
-        case "server-stats":
-          await showServerStats(interaction, config);
-          break;
-        case "leaderboard-all":
-          await showOverall(interaction, config);
-          break;
-      }
-    } catch (err) {
-      logger.error(
-        { err },
-        `RNGdle command failed | guildId = ${interaction.guildId}`
-      );
-      await replyWithError(interaction, config.t("error.generic"));
+    if (
+      interaction.options.getUser("member") &&
+      interaction.options.getString("username")
+    ) {
+      await interaction.reply({
+        content: config.t("profile.bothOptions"),
+        flags: MessageFlags.Ephemeral,
+      });
+      return;
     }
+
+    await interaction.deferReply();
+    await sync.refreshIfStale(interaction.guildId);
+    await subcommands[interaction.options.getSubcommand()]?.(
+      interaction,
+      config
+    );
   },
 
   async complete(interaction) {
-    if (!interaction.inGuild()) {
-      await interaction.respond([]);
-      return;
-    }
     const typed = interaction.options.getFocused().toLowerCase();
-    const accounts = await rngdleService.listAccounts(interaction.guildId);
+    const accounts = interaction.guildId
+      ? await store.accounts(interaction.guildId)
+      : [];
     await interaction.respond(
       accounts
         .filter((account) => account.username.toLowerCase().includes(typed))
