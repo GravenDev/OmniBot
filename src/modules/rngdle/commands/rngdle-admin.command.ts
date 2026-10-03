@@ -13,64 +13,53 @@ import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
 import {
   fetchUserRolls,
   RngdleUserNotFoundError,
-} from "#modules/rngdle/services/rngdle-api.js";
-import rngdleService from "#modules/rngdle/services/rngdle.service.js";
-import syncService, {
-  FullSyncCooldownError,
-} from "#modules/rngdle/services/sync.service.js";
+} from "#modules/rngdle/services/api.js";
+import store from "#modules/rngdle/services/store.js";
+import sync, { FullSyncCooldownError } from "#modules/rngdle/services/sync.js";
 import { Colors } from "#utils/colors.js";
-import { replyWithError } from "./replies.js";
 
 const PERMISSION_ADMINISTRATOR = 0x8;
 const USERNAME_MAX_LENGTH = 64;
 
 const logger = loggerMaker("rngdle");
 
+type Interaction = ChatInputCommandInteraction<"cached" | "raw">;
 type Config = ConfigProvider<RngdleConfigSchema>;
-type GuildCommand = ChatInputCommandInteraction<"cached" | "raw">;
 
-async function register(interaction: GuildCommand, config: Config) {
+const ephemeral = { flags: MessageFlags.Ephemeral } as const;
+const noPings = { allowedMentions: { parse: [] } } as const;
+
+async function register(interaction: Interaction, config: Config) {
+  const { guildId } = interaction;
   const member = interaction.options.getUser("member", true);
   const username = interaction.options.getString("username", true).trim();
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  await interaction.deferReply(ephemeral);
 
-  let rolls;
-  try {
-    rolls = await fetchUserRolls(username, null);
-  } catch (err) {
-    if (err instanceof RngdleUserNotFoundError) {
-      await interaction.editReply(
-        config.t("admin.register.notFound", { username })
-      );
-      return;
+  const rolls = await fetchUserRolls(username, null).catch((err: unknown) => {
+    if (!(err instanceof RngdleUserNotFoundError)) {
+      logger.warn({ err }, `rngdle.com unreachable | username = ${username}`);
     }
-    logger.warn({ err }, `Could not reach rngdle.com | username = ${username}`);
-    await interaction.editReply(config.t("admin.register.unreachable"));
+    return err instanceof RngdleUserNotFoundError ? "notFound" : "unreachable";
+  });
+  if (typeof rolls === "string") {
+    await interaction.editReply(
+      config.t(`admin.register.${rolls}`, { username })
+    );
     return;
   }
 
-  const outcome = await syncService.runExclusive(
-    interaction.guildId,
-    async () => {
-      const holder = await rngdleService.findAccountByUsername(
-        interaction.guildId,
-        username
-      );
-      if (holder && holder.userId !== member.id) {
-        return { conflict: holder.userId } as const;
-      }
-      const result = await rngdleService.register(
-        interaction.guildId,
-        member.id,
-        username
-      );
-      const saved = await rngdleService.saveRolls(
-        { guildId: interaction.guildId, userId: member.id, username },
-        rolls
-      );
-      return { result, saved } as const;
+  const outcome = await sync.exclusive(guildId, async () => {
+    const holder = await store.accountByUsername(guildId, username);
+    if (holder && holder.userId !== member.id) {
+      return { conflict: holder.userId };
     }
-  );
+    const result = await store.register(guildId, member.id, username);
+    const { inserted } = await store.saveRolls(
+      { guildId, userId: member.id, username },
+      rolls
+    );
+    return { result, inserted };
+  });
 
   if ("conflict" in outcome) {
     await interaction.editReply({
@@ -78,104 +67,100 @@ async function register(interaction: GuildCommand, config: Config) {
         username,
         user: `<@${outcome.conflict}>`,
       }),
-      allowedMentions: { parse: [] },
+      ...noPings,
     });
     return;
   }
 
-  const { result, saved } = outcome;
   logger.info(
-    `Account ${result} | guildId = ${interaction.guildId} | userId = ${member.id} | username = ${username} | rolls = ${saved.inserted} | by = ${interaction.user.id}`
+    `Account ${outcome.result} | guildId = ${guildId} | userId = ${member.id} | username = ${username} | by = ${interaction.user.id}`
   );
   await interaction.editReply({
-    content: config.t(`admin.register.${result}`, {
+    content: config.t(`admin.register.${outcome.result}`, {
       user: `<@${member.id}>`,
       username,
-      count: saved.inserted,
+      count: outcome.inserted,
     }),
-    allowedMentions: { parse: [] },
+    ...noPings,
   });
 }
 
-async function unregister(interaction: GuildCommand, config: Config) {
+async function unregister(interaction: Interaction, config: Config) {
   const member = interaction.options.getUser("member", true);
-  const deleted = await syncService.runExclusive(interaction.guildId, () =>
-    rngdleService.unregister(interaction.guildId, member.id)
+  const deleted = await sync.exclusive(interaction.guildId, () =>
+    store.unregister(interaction.guildId, member.id)
   );
-  if (deleted) {
-    logger.info(
-      `Account deleted | guildId = ${interaction.guildId} | userId = ${member.id} | by = ${interaction.user.id}`
-    );
-  }
   await interaction.reply({
     content: config.t(deleted ? "admin.delete.done" : "admin.delete.none", {
       user: `<@${member.id}>`,
     }),
-    flags: MessageFlags.Ephemeral,
-    allowedMentions: { parse: [] },
+    ...ephemeral,
+    ...noPings,
   });
 }
 
-async function show(interaction: GuildCommand, config: Config) {
-  const accounts = await rngdleService.listAccounts(interaction.guildId);
-  if (accounts.length === 0) {
-    await interaction.reply({
-      content: config.t("admin.show.empty"),
-      flags: MessageFlags.Ephemeral,
-    });
-    return;
-  }
-  await interaction.reply({
-    embeds: [
-      new EmbedBuilder()
-        .setTitle(config.t("admin.show.title", { count: accounts.length }))
-        .setDescription(
-          accounts
-            .map((account) => `<@${account.userId}> → \`${account.username}\``)
-            .join("\n")
-            .slice(0, 4096)
-        )
-        .setColor(Colors.SkyBlue),
-    ],
-    flags: MessageFlags.Ephemeral,
-    allowedMentions: { parse: [] },
-  });
-}
-
-async function refresh(interaction: GuildCommand, config: Config) {
-  const full = interaction.options.getBoolean("full") ?? false;
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-  let report;
-  try {
-    report = await syncService.syncGuild(interaction.guildId, { full });
-  } catch (err) {
-    if (err instanceof FullSyncCooldownError) {
-      await interaction.editReply(
-        config.t("admin.refresh.cooldown", {
-          time: `<t:${Math.ceil(err.retryAt.getTime() / 1000)}:R>`,
-        })
-      );
-      return;
-    }
-    throw err;
-  }
-  await interaction.editReply(
-    report.accounts === 0
-      ? config.t("admin.show.empty")
-      : config.t("admin.refresh.done", { ...report })
+async function show(interaction: Interaction, config: Config) {
+  const accounts = await store.accounts(interaction.guildId);
+  await interaction.reply(
+    accounts.length === 0
+      ? { content: config.t("admin.show.empty"), ...ephemeral }
+      : {
+          embeds: [
+            new EmbedBuilder()
+              .setTitle(
+                config.t("admin.show.title", { count: accounts.length })
+              )
+              .setDescription(
+                accounts
+                  .map((a) => `<@${a.userId}> → \`${a.username}\``)
+                  .join("\n")
+                  .slice(0, 4096)
+              )
+              .setColor(Colors.SkyBlue),
+          ],
+          ...ephemeral,
+          ...noPings,
+        }
   );
 }
 
-async function clear(interaction: GuildCommand, config: Config) {
-  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-  const count = await syncService.runExclusive(interaction.guildId, () =>
-    rngdleService.clearRolls(interaction.guildId)
+async function refresh(interaction: Interaction, config: Config) {
+  await interaction.deferReply(ephemeral);
+  const full = interaction.options.getBoolean("full") ?? false;
+  try {
+    const report = await sync.syncGuild(interaction.guildId, full);
+    await interaction.editReply(
+      report.accounts === 0
+        ? config.t("admin.show.empty")
+        : config.t("admin.refresh.done", { ...report })
+    );
+  } catch (err) {
+    if (!(err instanceof FullSyncCooldownError)) {
+      throw err;
+    }
+    await interaction.editReply(
+      config.t("admin.refresh.cooldown", {
+        time: `<t:${Math.ceil(err.retryAt.getTime() / 1000)}:R>`,
+      })
+    );
+  }
+}
+
+async function clear(interaction: Interaction, config: Config) {
+  await interaction.deferReply(ephemeral);
+  const count = await sync.exclusive(interaction.guildId, () =>
+    store.clearRolls(interaction.guildId)
   );
   logger.info(
     `Rolls cleared | guildId = ${interaction.guildId} | count = ${count} | by = ${interaction.user.id}`
   );
   await interaction.editReply(config.t("admin.clear.done", { count }));
 }
+
+const subcommands: Record<
+  string,
+  (interaction: Interaction, config: Config) => Promise<void>
+> = { register, delete: unregister, show, refresh, clear };
 
 export default declareCommand<RngdleConfigSchema>({
   data: new SlashCommandBuilder()
@@ -254,37 +239,11 @@ export default declareCommand<RngdleConfigSchema>({
     ),
 
   async execute(interaction, config) {
-    if (!interaction.inGuild()) {
-      return;
-    }
-    if (!(await requireAdmin(interaction, config.t))) {
-      return;
-    }
-
-    try {
-      switch (interaction.options.getSubcommand()) {
-        case "register":
-          await register(interaction, config);
-          break;
-        case "delete":
-          await unregister(interaction, config);
-          break;
-        case "show":
-          await show(interaction, config);
-          break;
-        case "refresh":
-          await refresh(interaction, config);
-          break;
-        case "clear":
-          await clear(interaction, config);
-          break;
-      }
-    } catch (err) {
-      logger.error(
-        { err },
-        `RNGdle admin command failed | guildId = ${interaction.guildId}`
+    if (interaction.inGuild() && (await requireAdmin(interaction, config.t))) {
+      await subcommands[interaction.options.getSubcommand()]?.(
+        interaction,
+        config
       );
-      await replyWithError(interaction, config.t("error.generic"));
     }
   },
 });

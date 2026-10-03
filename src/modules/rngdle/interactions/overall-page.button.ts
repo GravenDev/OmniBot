@@ -6,43 +6,69 @@ import {
   MessageFlags,
   type ButtonInteraction,
 } from "discord.js";
-import type { TFunction } from "#lib/i18n.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
-import { loggerMaker } from "#lib/logger.js";
-import { replyWithError } from "#modules/rngdle/commands/replies.js";
-import { cachedOverallPage } from "#modules/rngdle/services/boards.js";
-
-const logger = loggerMaker("rngdle");
+import {
+  overallPage,
+  type ViewContext,
+} from "#modules/rngdle/services/views.js";
 
 const CUSTOM_ID = "rngdle-overall";
 
 type Visibility = "public" | "private";
 
-export function overallPageComponents(
+function pageButton(customId: string, label: string, disabled: boolean) {
+  return new ButtonBuilder()
+    .setCustomId(customId)
+    .setLabel(label)
+    .setStyle(ButtonStyle.Primary)
+    .setDisabled(disabled);
+}
+
+export async function overallPageMessage(
+  context: ViewContext,
   page: number,
-  pageCount: number,
-  visibility: Visibility,
-  t: TFunction
-): ActionRowBuilder<ButtonBuilder>[] {
-  return [
-    new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder()
-        .setCustomId(`${CUSTOM_ID}:${page - 1}:${visibility}`)
-        .setLabel(t("config.previous"))
-        .setStyle(ButtonStyle.Primary)
-        .setDisabled(page <= 1),
-      new ButtonBuilder()
-        .setCustomId(`${CUSTOM_ID}:indicator:${visibility}`)
-        .setLabel(t("overall.page", { current: page, total: pageCount }))
-        .setStyle(ButtonStyle.Success)
-        .setDisabled(true),
-      new ButtonBuilder()
-        .setCustomId(`${CUSTOM_ID}:${page + 1}:${visibility}`)
-        .setLabel(t("config.next"))
-        .setStyle(ButtonStyle.Primary)
-        .setDisabled(page >= pageCount)
-    ),
-  ];
+  callerId: string,
+  visibility: Visibility
+) {
+  const result = await overallPage(context, page, callerId);
+  if (!result) {
+    return {
+      content: context.t("overall.empty"),
+      files: [],
+      attachments: [],
+      components: [],
+    };
+  }
+
+  const id = (target: number | string) =>
+    `${CUSTOM_ID}:${target}:${visibility}`;
+  return {
+    content: "",
+    files: [new AttachmentBuilder(result.image, { name: "leaderboard.png" })],
+    attachments: [],
+    components: [
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        pageButton(
+          id(result.page - 1),
+          context.t("config.previous"),
+          result.page <= 1
+        ),
+        pageButton(
+          id("indicator"),
+          context.t("overall.page", {
+            current: result.page,
+            total: result.pageCount,
+          }),
+          true
+        ).setStyle(ButtonStyle.Success),
+        pageButton(
+          id(result.page + 1),
+          context.t("config.next"),
+          result.page >= result.pageCount
+        )
+      ),
+    ],
+  };
 }
 
 export default declareInteractionHandler<ButtonInteraction>({
@@ -56,50 +82,23 @@ export default declareInteractionHandler<ButtonInteraction>({
       return;
     }
 
-    try {
-      if (visibility === "private") {
-        await interaction.deferUpdate();
-      } else {
-        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-      }
-
-      const result = await cachedOverallPage(
-        interaction.client,
-        interaction.guildId,
+    if (visibility === "private") {
+      await interaction.deferUpdate();
+    } else {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    }
+    await interaction.editReply(
+      await overallPageMessage(
+        {
+          client: interaction.client,
+          guildId: interaction.guildId,
+          t: config.t,
+          locale: config.locale,
+        },
         page,
         interaction.user.id,
-        config.t,
-        config.locale
-      );
-      if (!result) {
-        await interaction.editReply({
-          content: config.t("overall.empty"),
-          files: [],
-          attachments: [],
-          components: [],
-        });
-        return;
-      }
-
-      await interaction.editReply({
-        content: "",
-        files: [
-          new AttachmentBuilder(result.image, { name: "leaderboard.png" }),
-        ],
-        attachments: [],
-        components: overallPageComponents(
-          result.page,
-          result.pageCount,
-          "private",
-          config.t
-        ),
-      });
-    } catch (err) {
-      logger.error(
-        { err },
-        `RNGdle page button failed | guildId = ${interaction.guildId}`
-      );
-      await replyWithError(interaction, config.t("error.generic"));
-    }
+        "private"
+      )
+    );
   },
 });

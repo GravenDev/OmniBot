@@ -40,7 +40,3 @@ onLoad(_client, registry) {
 - **No overlap.** If a run is still in progress when the next one is due, the next one is skipped.
 - **Failures are contained.** An error thrown by `run` is logged with the task name; the task keeps its schedule and the bot keeps running.
 - **Every run is logged** with its duration.
-
-::: warning Importing core services from a module
-`#core/services/*` modules import the bot entry point, which is itself still loading modules when your module file is imported. Import them **lazily inside `run`** (`await import("#core/services/module.service.js")`) rather than at the top of a file imported by your module — see the `rngdle` module's daily leaderboard task for an example.
-:::

@@ -40,7 +40,3 @@ onLoad(_client, registry) {
 - **Pas de chevauchement.** Si une exécution est encore en cours à l'échéance suivante, celle-ci est sautée.
 - **Les erreurs sont contenues.** Une erreur levée par `run` est journalisée avec le nom de la tâche ; la tâche garde son planning et le bot continue de tourner.
 - **Chaque exécution est journalisée** avec sa durée.
-
-::: warning Importer les services du cœur depuis un module
-Les modules `#core/services/*` importent le point d'entrée du bot, qui est lui-même encore en train de charger les modules quand le fichier de votre module est importé. Importez-les **paresseusement dans `run`** (`await import("#core/services/module.service.js")`) plutôt qu'en tête d'un fichier importé par votre module — voir la tâche du classement quotidien du module `rngdle`.
-:::

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("#index.js", () => ({ modules: [], client: {} }));
+vi.mock("#core/runtime.js", () => ({ modules: [], client: {} }));
 vi.mock("#core/core.module.js", () => ({
   default: { id: "core", registry: { listeners: [] } },
 }));

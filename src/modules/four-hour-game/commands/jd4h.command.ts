@@ -8,13 +8,15 @@ import {
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { fetchAvatar } from "#lib/imaging.js";
+import { RevisionCache } from "#lib/revision-cache.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
 import { renderLeaderboard } from "#modules/four-hour-game/rendering/leaderboard-image.js";
 import fourHourGameService from "#modules/four-hour-game/services/four-hour-game.service.js";
-import leaderboardCache from "#modules/four-hour-game/services/leaderboard-cache.service.js";
 import { Colors } from "#utils/colors.js";
 
 const LEADERBOARD_SIZE = 10;
+
+const leaderboardCache = new RevisionCache(15_000);
 
 type Config = ConfigProvider<FourHourGameConfigSchema>;
 
@@ -94,8 +96,8 @@ async function showLeaderboard(
   await interaction.deferReply();
 
   const image = await leaderboardCache.get(
-    interaction.guildId,
-    config.locale,
+    `${interaction.guildId}:${config.locale}`,
+    fourHourGameService.getRevision(interaction.guildId),
     () => buildLeaderboardImage(interaction, config)
   );
 

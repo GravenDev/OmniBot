@@ -1,6 +1,14 @@
+import { readFileSync } from "node:fs";
 import prisma from "#lib/database.js";
 import { declareService, type Service } from "#lib/service.js";
-import type { RemoteRoll } from "./rngdle-api.js";
+import type { RemoteRoll } from "./api.js";
+import {
+  isPlausibleTable,
+  ScoreTable,
+  type CompressedTable,
+} from "./scoring.js";
+
+const SNAPSHOT = new URL("../assets/score-table.json", import.meta.url);
 
 export interface Account {
   guildId: string;
@@ -16,40 +24,34 @@ export interface StoredRoll {
   rolledAt: Date;
 }
 
-export interface UserTotal {
-  userId: string;
-  total: number;
+export interface RollFilter {
+  userId?: string;
+  from?: Date;
+  to?: Date;
+  byScore?: boolean;
 }
 
 export type RegisterResult = "created" | "renamed" | "unchanged";
 
-const rollFields = {
-  userId: true,
-  number: true,
-  score: true,
-  badgeCount: true,
-  rolledAt: true,
-} as const;
-
-function toStoredRoll(roll: {
-  userId: string;
-  number: number;
-  score: bigint;
-  badgeCount: number;
-  rolledAt: Date;
-}): StoredRoll {
-  return { ...roll, score: Number(roll.score) };
+function loadTable(data: unknown): ScoreTable | null {
+  const valid =
+    typeof data === "object" &&
+    data !== null &&
+    Object.values(data).every((percent) => typeof percent === "number") &&
+    isPlausibleTable(data as CompressedTable);
+  return valid ? new ScoreTable(data as CompressedTable) : null;
 }
 
-class RngdleService implements Service {
+class RngdleStore implements Service {
   private readonly revisions = new Map<string, number>();
+  private table: Promise<ScoreTable> | null = null;
 
-  getRevision(guildId: string): number {
+  revision(guildId: string): number {
     return this.revisions.get(guildId) ?? 0;
   }
 
-  private bumpRevision(guildId: string): void {
-    this.revisions.set(guildId, this.getRevision(guildId) + 1);
+  private touch(guildId: string): void {
+    this.revisions.set(guildId, this.revision(guildId) + 1);
   }
 
   async register(
@@ -57,9 +59,8 @@ class RngdleService implements Service {
     userId: string,
     username: string
   ): Promise<RegisterResult> {
-    const existing = await prisma.rngdleAccount.findUnique({
-      where: { guildId_userId: { guildId, userId } },
-    });
+    const key = { guildId_userId: { guildId, userId } };
+    const existing = await prisma.rngdleAccount.findUnique({ where: key });
     if (existing?.username === username) {
       return "unchanged";
     }
@@ -67,12 +68,12 @@ class RngdleService implements Service {
     await prisma.$transaction([
       prisma.rngdleRoll.deleteMany({ where: { guildId, userId } }),
       prisma.rngdleAccount.upsert({
-        where: { guildId_userId: { guildId, userId } },
+        where: key,
         create: { guildId, userId, username },
         update: { username },
       }),
     ]);
-    this.bumpRevision(guildId);
+    this.touch(guildId);
     return existing ? "renamed" : "created";
   }
 
@@ -81,31 +82,26 @@ class RngdleService implements Service {
       prisma.rngdleRoll.deleteMany({ where: { guildId, userId } }),
       prisma.rngdleAccount.deleteMany({ where: { guildId, userId } }),
     ]);
-    if (deleted.count === 0) {
-      return false;
+    if (deleted.count > 0) {
+      this.touch(guildId);
     }
-    this.bumpRevision(guildId);
-    return true;
+    return deleted.count > 0;
   }
 
-  listAccounts(guildId: string): Promise<Account[]> {
+  accounts(guildId: string): Promise<Account[]> {
     return prisma.rngdleAccount.findMany({
       where: { guildId },
       orderBy: { username: "asc" },
     });
   }
 
-  listAllAccounts(): Promise<Account[]> {
-    return prisma.rngdleAccount.findMany();
-  }
-
-  getAccount(guildId: string, userId: string): Promise<Account | null> {
+  account(guildId: string, userId: string): Promise<Account | null> {
     return prisma.rngdleAccount.findUnique({
       where: { guildId_userId: { guildId, userId } },
     });
   }
 
-  findAccountByUsername(
+  accountByUsername(
     guildId: string,
     username: string
   ): Promise<Account | null> {
@@ -118,7 +114,7 @@ class RngdleService implements Service {
     const { count } = await prisma.rngdleRoll.deleteMany({
       where: { guildId },
     });
-    this.bumpRevision(guildId);
+    this.touch(guildId);
     return count;
   }
 
@@ -132,20 +128,21 @@ class RngdleService implements Service {
   }
 
   async saveRolls(
-    account: Account,
+    { guildId, userId }: Account,
     rolls: RemoteRoll[]
   ): Promise<{ inserted: number; updated: number }> {
-    const { guildId, userId } = account;
     if (rolls.length === 0) {
       return { inserted: 0, updated: 0 };
     }
 
-    const existing = await prisma.rngdleRoll.findMany({
-      where: { guildId, rollId: { in: rolls.map((roll) => roll.id) } },
-      select: { rollId: true, score: true, badgeCount: true },
-    });
-    const known = new Map(existing.map((roll) => [roll.rollId, roll]));
-
+    const known = new Map(
+      (
+        await prisma.rngdleRoll.findMany({
+          where: { guildId, rollId: { in: rolls.map((roll) => roll.id) } },
+          select: { rollId: true, score: true, badgeCount: true },
+        })
+      ).map((roll) => [roll.rollId, roll])
+    );
     const fresh = rolls.filter((roll) => !known.has(roll.id));
     const changed = rolls.filter((roll) => {
       const stored = known.get(roll.id);
@@ -178,43 +175,38 @@ class RngdleService implements Service {
     ]);
 
     if (created.count > 0 || changed.length > 0) {
-      this.bumpRevision(guildId);
+      this.touch(guildId);
     }
     return { inserted: created.count, updated: changed.length };
   }
 
-  async rollsBetween(
-    guildId: string,
-    from: Date,
-    to: Date
-  ): Promise<StoredRoll[]> {
+  async rolls(guildId: string, filter: RollFilter = {}): Promise<StoredRoll[]> {
     const rolls = await prisma.rngdleRoll.findMany({
-      where: { guildId, rolledAt: { gte: from, lt: to } },
-      orderBy: [{ score: "desc" }, { rolledAt: "asc" }],
-      select: rollFields,
+      where: {
+        guildId,
+        ...(filter.userId && { userId: filter.userId }),
+        ...((filter.from || filter.to) && {
+          rolledAt: {
+            ...(filter.from && { gte: filter.from }),
+            ...(filter.to && { lt: filter.to }),
+          },
+        }),
+      },
+      orderBy: filter.byScore
+        ? [{ score: "desc" }, { rolledAt: "asc" }]
+        : { rolledAt: "asc" },
+      select: {
+        userId: true,
+        number: true,
+        score: true,
+        badgeCount: true,
+        rolledAt: true,
+      },
     });
-    return rolls.map(toStoredRoll);
+    return rolls.map((roll) => ({ ...roll, score: Number(roll.score) }));
   }
 
-  async userRolls(guildId: string, userId: string): Promise<StoredRoll[]> {
-    const rolls = await prisma.rngdleRoll.findMany({
-      where: { guildId, userId },
-      orderBy: { rolledAt: "asc" },
-      select: rollFields,
-    });
-    return rolls.map(toStoredRoll);
-  }
-
-  async guildRolls(guildId: string): Promise<StoredRoll[]> {
-    const rolls = await prisma.rngdleRoll.findMany({
-      where: { guildId },
-      orderBy: { rolledAt: "asc" },
-      select: rollFields,
-    });
-    return rolls.map(toStoredRoll);
-  }
-
-  async totalsByUser(guildId: string): Promise<UserTotal[]> {
+  async totals(guildId: string): Promise<{ userId: string; total: number }[]> {
     const groups = await prisma.rngdleRoll.groupBy({
       by: ["userId"],
       where: { guildId },
@@ -227,6 +219,35 @@ class RngdleService implements Service {
       }))
       .sort((a, b) => b.total - a.total || a.userId.localeCompare(b.userId));
   }
+
+  scoreTable(): Promise<ScoreTable> {
+    if (!this.table) {
+      this.table = prisma.rngdleScoreTable
+        .findUnique({ where: { id: 1 } })
+        .then(
+          (stored) =>
+            loadTable(stored?.data) ??
+            new ScoreTable(JSON.parse(readFileSync(SNAPSHOT, "utf8")))
+        );
+      this.table.catch(() => {
+        this.table = null;
+      });
+    }
+    return this.table;
+  }
+
+  async replaceScoreTable(data: CompressedTable): Promise<boolean> {
+    if ((await this.scoreTable()).equals(data)) {
+      return false;
+    }
+    await prisma.rngdleScoreTable.upsert({
+      where: { id: 1 },
+      create: { id: 1, data },
+      update: { data },
+    });
+    this.table = Promise.resolve(new ScoreTable(data));
+    return true;
+  }
 }
 
-export default declareService(new RngdleService());
+export default declareService(new RngdleStore());

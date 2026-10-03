@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
 
 // Avoid booting the bot / Prisma when importing the command loader's module graph.
-vi.mock("#index.js", () => ({
+vi.mock("#core/runtime.js", () => ({
   modules: [],
   client: { user: { id: "app-1" }, token: "token", isReady: () => true },
 }));

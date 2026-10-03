@@ -16,6 +16,7 @@ import {
   startModuleTasks,
   stopAllTasks,
 } from "./core/loaders/task-scheduler.js";
+import { setRuntime } from "./core/runtime.js";
 import prisma, { Prisma } from "./lib/database.js";
 import { initI18n } from "./lib/i18n.js";
 import logger from "./lib/logger.js";
@@ -37,7 +38,7 @@ await initI18n();
 const corePath = path.resolve(fileURLToPath(import.meta.url), "..", "core");
 await loadModuleI18n("core", corePath);
 
-export const modules = await loadModules("./modules");
+const modules = await loadModules("./modules");
 const intents = [
   ...new Set(
     [coreModule, ...modules].flatMap((module) => module.intents ?? [])
@@ -49,10 +50,11 @@ const partials = [
   ),
 ];
 
-export const client = new Client({
+const client = new Client({
   intents: intents,
   partials: partials,
 });
+setRuntime(modules, client);
 
 client.once(Events.ClientReady, async (readyClient) => {
   const failed = new Set<string>();

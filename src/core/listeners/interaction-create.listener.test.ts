@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockModules } = vi.hoisted(() => ({ mockModules: [] as any[] }));
-vi.mock("#index.js", () => ({ modules: mockModules, client: {} }));
+vi.mock("#core/runtime.js", () => ({ modules: mockModules, client: {} }));
 vi.mock("#core/core.module.js", () => ({
   default: { id: "core", registry: { commands: [], interactionHandlers: [] } },
 }));
