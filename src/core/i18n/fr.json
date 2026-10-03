@@ -33,6 +33,8 @@
   "command.notEnabled": "La commande `{{commandName}}` n'est pas activée sur ce serveur.",
   "command.failed": "Quelque chose s'est mal passé lors de l'exécution de `{{commandName}}`. Veuillez réessayer plus tard.",
 
+  "interaction.moduleNotEnabled": "Le module de cette fonctionnalité n'est pas activé sur ce serveur.",
+  "interaction.failed": "Quelque chose s'est mal passé. Veuillez réessayer plus tard.",
   "interaction.malformed": "Le bouton est mal formé. Veuillez réessayer plus tard.",
   "interaction.moduleNotFound": "Module introuvable. Veuillez réessayer plus tard.",
   "interaction.failedEnable": "Échec de l'activation du module. Veuillez réessayer plus tard.",

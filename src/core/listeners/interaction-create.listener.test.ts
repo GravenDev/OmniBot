@@ -206,3 +206,85 @@ describe("handleCommand", () => {
     expect(interaction.reply).not.toHaveBeenCalled();
   });
 });
+
+describe("component interactions", () => {
+  function pushHandler(handler: any) {
+    mockModules.push({
+      id: "mod-a",
+      registry: { commands: [], interactionHandlers: [handler] },
+    });
+  }
+
+  function fakeButton(customId: string, overrides: Record<string, any> = {}) {
+    return {
+      customId,
+      guild: { id: "guild-1" },
+      guildId: "guild-1",
+      isChatInputCommand: () => false,
+      isAutocomplete: () => false,
+      isMessageComponent: () => true,
+      isModalSubmit: () => false,
+      replied: false,
+      deferred: false,
+      reply: vi.fn(async () => ({})),
+      followUp: vi.fn(async () => ({})),
+      ...overrides,
+    } as any;
+  }
+
+  it("tells the user when the handler's module is disabled", async () => {
+    const execute = vi.fn(async () => {});
+    pushHandler({
+      customId: "btn",
+      access: "everyone",
+      check: () => true,
+      execute,
+    });
+    getModuleStateIn.mockResolvedValue({ activated: false });
+
+    const interaction = fakeButton("btn:1");
+    await listener.execute(interaction, undefined);
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "interaction.moduleNotEnabled" })
+    );
+  });
+
+  it("replies an error when the handler throws", async () => {
+    pushHandler({
+      customId: "btn",
+      access: "everyone",
+      check: () => true,
+      execute: vi.fn(async () => {
+        throw new Error("boom");
+      }),
+    });
+
+    const interaction = fakeButton("btn", { deferred: true });
+    await listener.execute(interaction, undefined);
+
+    expect(interaction.followUp).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "interaction.failed" })
+    );
+  });
+
+  it("passes the customId arguments to the handler", async () => {
+    const execute = vi.fn(async () => {});
+    pushHandler({
+      customId: "btn",
+      access: "everyone",
+      check: () => true,
+      execute,
+    });
+
+    const interaction = fakeButton("btn:a:b");
+    await listener.execute(interaction, undefined);
+
+    expect(execute).toHaveBeenCalledWith(
+      interaction,
+      ["a", "b"],
+      expect.anything()
+    );
+  });
+});
