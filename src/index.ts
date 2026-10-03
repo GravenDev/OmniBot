@@ -7,7 +7,11 @@ import {
   loadGlobalEvents,
   loadModuleEvents,
 } from "./core/loaders/listener-loader.js";
-import { loadModuleI18n, loadModules } from "./core/loaders/module-loader.js";
+import {
+  findDuplicateDeclarations,
+  loadModuleI18n,
+  loadModules,
+} from "./core/loaders/module-loader.js";
 import prisma, { Prisma } from "./lib/database.js";
 import { initI18n } from "./lib/i18n.js";
 import logger from "./lib/logger.js";
@@ -30,9 +34,15 @@ const corePath = path.resolve(fileURLToPath(import.meta.url), "..", "core");
 await loadModuleI18n("core", corePath);
 
 export const modules = await loadModules("./modules");
-const intents = modules.flatMap((module) => module.intents).filter((a) => !!a);
+const intents = [
+  ...new Set(
+    [coreModule, ...modules].flatMap((module) => module.intents ?? [])
+  ),
+];
 const partials = [
-  ...new Set(modules.flatMap((module) => module.partials ?? [])),
+  ...new Set(
+    [coreModule, ...modules].flatMap((module) => module.partials ?? [])
+  ),
 ];
 
 export const client = new Client({
@@ -57,6 +67,10 @@ client.once(Events.ClientReady, async (readyClient) => {
   }
 
   await coreModule.onLoad?.(readyClient, coreModule.registry);
+
+  for (const duplicate of findDuplicateDeclarations([...modules, coreModule])) {
+    logger.error(`Duplicate declaration, first match wins | ${duplicate}`);
+  }
 
   loadGlobalEvents(readyClient);
 
