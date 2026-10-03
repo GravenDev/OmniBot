@@ -2,7 +2,7 @@
   "name": "omni-bot",
   "version": "0.1.0",
   "private": true,
-  "description": "",
+  "description": "Modular Discord bot whose modules are installed per guild",
   "keywords": [],
   "license": "GPL-3.0-or-later",
   "author": "",

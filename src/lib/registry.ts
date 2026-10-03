@@ -16,7 +16,7 @@ export class Registry {
    * An array of commands declared by the module.
    * @private
    */
-  private readonly _commands: Declared<Command<any>>[];
+  private readonly _commands: Declared<Command<any>>[] = [];
 
   /**
    * An array of event listeners declared by the module.
@@ -31,15 +31,6 @@ export class Registry {
   private readonly _interactionHandlers: Declared<
     InteractionHandler<any, any>
   >[] = [];
-
-  /**
-   * Creates a new instance of the ModuleRegistry.
-   */
-  constructor() {
-    this._commands = [];
-    this._listeners = [];
-    this._interactionHandlers = [];
-  }
 
   /**
    * Retrieves all registered commands.
