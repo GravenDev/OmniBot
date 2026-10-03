@@ -17,6 +17,10 @@ vi.mock("#core/services/config.service.js", () => ({
   default: { getConfigForModuleIn },
 }));
 
+vi.mock("#lib/i18n.js", () => ({
+  createT: () => (key: string) => key,
+}));
+
 const { default: listener } = await import("./interaction-create.listener.js");
 
 function fakeCommand(commandName: string, overrides: Record<string, any> = {}) {
@@ -285,6 +289,29 @@ describe("component interactions", () => {
       interaction,
       ["a", "b"],
       expect.anything()
+    );
+  });
+});
+
+describe("dispatch failures", () => {
+  it("answers the user when loading the config fails", async () => {
+    mockModules.push({
+      id: "mod-a",
+      registry: {
+        commands: [{ data: { name: "hello" }, execute: vi.fn() }],
+        interactionHandlers: [],
+      },
+    });
+    getConfigForModuleIn.mockRejectedValue(new Error("db down"));
+
+    const interaction = fakeCommand("hello", {
+      locale: "en-US",
+      isRepliable: () => true,
+    });
+    await listener.execute(interaction, undefined);
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "interaction.failed" })
     );
   });
 });
