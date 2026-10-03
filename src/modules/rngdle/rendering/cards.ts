@@ -1,15 +1,14 @@
 import type { Image, SKRSContext2D } from "@napi-rs/canvas";
 import { drawCircularImage, PALETTE, rgb } from "#lib/imaging.js";
 import {
-  CARD_CONTENT_WIDTH,
-  CARD_MARGIN,
   drawPanel,
   drawPanelTitle,
   drawText,
   LABEL_SIZE,
   measureText,
+  PANEL_PADDING,
   renderStatCard,
-  type CardSection,
+  type CardAside,
   type StatBox,
 } from "#lib/stat-card.js";
 import {
@@ -20,17 +19,26 @@ import {
 } from "#modules/rngdle/services/scoring.js";
 import { formatSpaced } from "./format.js";
 
-const BREAKDOWN_HEIGHT = 240;
-const BREAKDOWN_ROWS_Y = 60;
-const BREAKDOWN_COLUMNS = [80, 440];
-const BREAKDOWN_PER_COLUMN = 4;
+const OUTLINED_TIERS = new Set<TierOrError>([
+  "MYTHIC",
+  "ANOMALY",
+  "EPIC",
+  "RARE",
+  "TRASH",
+]);
 const BREAKDOWN_TIERS = [...TIERS].reverse();
-const COUNT_RIGHT = 220;
-const LEADERS_X = 235;
-const LEADER_SIZE = 24;
+const BREAKDOWN_TOP = 52;
+const BREAKDOWN_BOTTOM = 18;
+const TIER_LABEL_SIZE = 17;
+const TIER_LABEL_WIDTH = 128;
+const COUNT_WIDTH = 66;
+const BAR_HEIGHT = 10;
+const BAR_TRACK: [number, number, number] = [50, 50, 50];
+const LEADER_SIZE = 22;
 const LEADER_STEP = 14;
 const LEADER_BORDER = 2;
 const MAX_LEADERS = 3;
+const LEADERS_WIDTH = LEADER_SIZE + (MAX_LEADERS - 1) * LEADER_STEP + 8;
 
 interface Roll {
   number: number;
@@ -60,7 +68,7 @@ export interface ProfileImageData {
 export interface ProfileLabels {
   bestRoll: string;
   worstRoll: string;
-  date: (date: string) => string;
+  roll: (number: string) => string;
   totalRolls: string;
   averageScore: string;
   maxBadges: string;
@@ -91,68 +99,99 @@ export interface ServerStatsLabels {
   bestRoll: string;
   worstRoll: string;
   by: (name: string) => string;
+  roll: (number: string) => string;
   totalRolls: string;
   averageScore: string;
   overallScore: string;
   tierBreakdown: string;
 }
 
+function ep(value: number): string {
+  return `${formatSpaced(value)} EP`;
+}
+
+function scoreBox(title: string, score: number, tier: TierOrError): StatBox {
+  return {
+    title,
+    value: ep(score),
+    color: TIER_COLORS[tier],
+    outline: OUTLINED_TIERS.has(tier),
+  };
+}
+
 function drawLeaders(
   ctx: SKRSContext2D,
   leaders: (Image | null)[],
   x: number,
-  y: number
+  centerY: number
 ): void {
   const radius = LEADER_SIZE / 2;
+  const top = centerY - radius;
   for (let index = leaders.length - 1; index >= 0; index--) {
     const left = x + index * LEADER_STEP;
     ctx.beginPath();
-    ctx.arc(left + radius, y + radius, radius + LEADER_BORDER, 0, Math.PI * 2);
+    ctx.arc(left + radius, centerY, radius + LEADER_BORDER, 0, Math.PI * 2);
     ctx.fillStyle = rgb(PALETTE.box);
     ctx.fill();
-    drawCircularImage(ctx, leaders[index] ?? null, left, y, LEADER_SIZE);
+    drawCircularImage(ctx, leaders[index] ?? null, left, top, LEADER_SIZE);
   }
 }
 
 function tierBreakdown(
   title: string,
   counts: Record<Tier, number>,
-  rowStep: number,
   leaders?: Record<Tier, (Image | null)[]>
-): CardSection {
+): CardAside {
   return {
-    height: BREAKDOWN_HEIGHT,
-    draw(ctx, top) {
-      drawPanel(ctx, CARD_MARGIN, top, CARD_CONTENT_WIDTH, BREAKDOWN_HEIGHT);
-      drawPanelTitle(ctx, title, CARD_MARGIN, top);
+    width: leaders ? 420 : 350,
+    draw(ctx, x, y, width, height) {
+      drawPanel(ctx, x, y, width, height);
+      drawPanelTitle(ctx, title, x, y);
+
+      const max = Math.max(1, ...Object.values(counts));
+      const step =
+        (height - BREAKDOWN_TOP - BREAKDOWN_BOTTOM) / BREAKDOWN_TIERS.length;
+      const labelX = x + PANEL_PADDING;
+      const barX = labelX + TIER_LABEL_WIDTH;
+      const countRight =
+        x + width - PANEL_PADDING - (leaders ? LEADERS_WIDTH : 0);
+      const barWidth = countRight - COUNT_WIDTH - barX;
+
       BREAKDOWN_TIERS.forEach((tier, index) => {
-        const x = BREAKDOWN_COLUMNS[Math.floor(index / BREAKDOWN_PER_COLUMN)]!;
-        const y =
-          top + BREAKDOWN_ROWS_Y + rowStep * (index % BREAKDOWN_PER_COLUMN);
-        drawText(ctx, `${tier}:`, x, y, LABEL_SIZE, TIER_COLORS[tier]);
-        const count = formatSpaced(counts[tier] ?? 0);
-        const countX = x + COUNT_RIGHT - measureText(ctx, count, LABEL_SIZE);
-        drawText(ctx, count, countX, y, LABEL_SIZE, PALETTE.text);
+        const count = counts[tier] ?? 0;
+        const centerY = y + BREAKDOWN_TOP + step * (index + 0.5);
+        const color = count > 0 ? TIER_COLORS[tier] : PALETTE.subtext;
+        const labelTop = centerY - TIER_LABEL_SIZE * 0.62;
+        drawText(ctx, tier, labelX, labelTop, TIER_LABEL_SIZE, color);
+
+        ctx.beginPath();
+        ctx.roundRect(barX, centerY - BAR_HEIGHT / 2, barWidth, BAR_HEIGHT, 5);
+        ctx.fillStyle = rgb(BAR_TRACK);
+        ctx.fill();
+        if (count > 0) {
+          const filled = Math.max(BAR_HEIGHT, (count / max) * barWidth);
+          ctx.beginPath();
+          ctx.roundRect(barX, centerY - BAR_HEIGHT / 2, filled, BAR_HEIGHT, 5);
+          ctx.fillStyle = rgb(TIER_COLORS[tier]);
+          ctx.fill();
+        }
+
+        const text = formatSpaced(count);
+        const countX = countRight - measureText(ctx, text, LABEL_SIZE);
+        drawText(
+          ctx,
+          text,
+          countX,
+          centerY - LABEL_SIZE * 0.62,
+          LABEL_SIZE,
+          count > 0 ? PALETTE.text : PALETTE.subtext
+        );
         if (leaders) {
           const tierLeaders = (leaders[tier] ?? []).slice(0, MAX_LEADERS);
-          drawLeaders(ctx, tierLeaders, x + LEADERS_X, y - 1);
+          drawLeaders(ctx, tierLeaders, countRight + 12, centerY);
         }
       });
     },
-  };
-}
-
-function ep(value: number): string {
-  return `${formatSpaced(value)} EP`;
-}
-
-function rollBox(title: string, roll: Roll, subtext: string): StatBox {
-  return {
-    title,
-    value: formatSpaced(roll.number),
-    color: TIER_COLORS[roll.tier],
-    suffix: `(${ep(roll.score)})`,
-    subtext,
   };
 }
 
@@ -160,33 +199,32 @@ export function renderProfile(
   data: ProfileImageData,
   labels: ProfileLabels
 ): Promise<Buffer> {
+  const rollBox = (title: string, roll: ProfileRoll): StatBox => ({
+    ...scoreBox(title, roll.score, roll.tier),
+    subtext: `${labels.roll(formatSpaced(roll.number))} · ${roll.dateText}`,
+  });
   return renderStatCard({
     image: data.avatar,
-    title: { text: data.username, y: 35, size: 50 },
+    title: data.username,
     rank: { position: data.serverRank, total: data.totalPlayers },
-    valueSize: 30,
     rows: [
       [
-        rollBox(labels.bestRoll, data.best, labels.date(data.best.dateText)),
-        rollBox(labels.worstRoll, data.worst, labels.date(data.worst.dateText)),
+        rollBox(labels.bestRoll, data.best),
+        rollBox(labels.worstRoll, data.worst),
+      ],
+      [
+        scoreBox(labels.averageScore, data.averageScore, data.averageTier),
+        { title: labels.overallScore, value: ep(data.totalScore) },
       ],
       [
         { title: labels.totalRolls, value: formatSpaced(data.totalRolls) },
         {
-          title: labels.averageScore,
-          value: ep(data.averageScore),
-          color: TIER_COLORS[data.averageTier],
-        },
-      ],
-      [
-        {
           title: labels.maxBadges,
           value: labels.maxBadgesValue(data.maxBadges),
         },
-        { title: labels.overallScore, value: ep(data.totalScore) },
       ],
     ],
-    footer: tierBreakdown(labels.tierBreakdown, data.tierCounts, 40),
+    aside: tierBreakdown(labels.tierBreakdown, data.tierCounts),
   });
 }
 
@@ -194,30 +232,28 @@ export function renderServerStats(
   data: ServerStatsImageData,
   labels: ServerStatsLabels
 ): Promise<Buffer> {
-  const roll = (title: string, value: ServerStatsRoll): StatBox => ({
-    ...rollBox(title, value, labels.by(value.playerName)),
-    avatar: value.avatar,
+  const rollBox = (title: string, roll: ServerStatsRoll): StatBox => ({
+    ...scoreBox(title, roll.score, roll.tier),
+    subtext: `${labels.by(roll.playerName)} · ${labels.roll(formatSpaced(roll.number))}`,
+    avatar: roll.avatar,
   });
   return renderStatCard({
     image: data.icon,
-    title: { text: labels.title, y: 45, size: 45 },
-    valueSize: 28,
+    title: labels.title,
     rows: [
-      [roll(labels.bestRoll, data.best), roll(labels.worstRoll, data.worst)],
       [
-        { title: labels.totalRolls, value: formatSpaced(data.totalRolls) },
-        {
-          title: labels.averageScore,
-          value: ep(data.averageScore),
-          color: TIER_COLORS[data.averageTier],
-        },
+        rollBox(labels.bestRoll, data.best),
+        rollBox(labels.worstRoll, data.worst),
+      ],
+      [
+        scoreBox(labels.averageScore, data.averageScore, data.averageTier),
         { title: labels.overallScore, value: ep(data.overallScore) },
       ],
+      [{ title: labels.totalRolls, value: formatSpaced(data.totalRolls) }],
     ],
-    footer: tierBreakdown(
+    aside: tierBreakdown(
       labels.tierBreakdown,
       data.tierCounts,
-      45,
       data.tierLeaders
     ),
   });

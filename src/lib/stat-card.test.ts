@@ -10,39 +10,38 @@ const box = { title: "Title", value: "42" };
 function card(overrides: Partial<StatCard> = {}): StatCard {
   return {
     image: null,
-    title: { text: "Player", y: 35, size: 50 },
-    valueSize: 30,
+    title: "Player",
     rows: [[box, box]],
     ...overrides,
   };
 }
 
 describe("renderStatCard", () => {
-  it("grows with its rows and its footer", async () => {
-    const twoRows = await renderStatCard(
-      card({ rows: [[box], [box, box, box]] })
-    );
-    const withFooter = await renderStatCard(
-      card({ footer: { height: 240, draw: vi.fn() } })
+  it("grows with its rows", async () => {
+    const oneRow = await renderStatCard(card());
+    const threeRows = await renderStatCard(
+      card({ rows: [[box], [box, box], [box, box, box]] })
     );
 
-    expect(pngSize(twoRows)).toEqual({ width: 800, height: 450 });
-    expect(pngSize(withFooter)).toEqual({ width: 800, height: 580 });
+    expect(pngSize(oneRow)).toEqual({ width: 1000, height: 300 });
+    expect(pngSize(threeRows)).toEqual({ width: 1000, height: 560 });
   });
 
-  it("hands the footer its top position", async () => {
+  it("gives the aside panel the column right of the boxes", async () => {
     const draw = vi.fn();
 
     await renderStatCard(
-      card({ rows: [[box], [box]], footer: { height: 10, draw } })
+      card({ rows: [[box], [box]], aside: { width: 300, draw } })
     );
 
-    expect(draw).toHaveBeenCalledWith(expect.anything(), 440);
+    expect(draw).toHaveBeenCalledWith(expect.anything(), 660, 160, 300, 240);
   });
 
-  it("renders a rank, with or without a medal", async () => {
+  it("renders a subtitle and a rank, with or without a medal", async () => {
     for (const position of [1, 7]) {
-      const png = await renderStatCard(card({ rank: { position, total: 12 } }));
+      const png = await renderStatCard(
+        card({ subtitle: "Subtitle", rank: { position, total: 12 } })
+      );
       expect(png.subarray(1, 4).toString("ascii")).toBe("PNG");
     }
   });
