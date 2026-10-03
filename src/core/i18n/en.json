@@ -31,7 +31,7 @@
   "setConfig.label": "Enter a value ({{type}}):",
 
   "command.notEnabled": "The command `{{commandName}}` is not enabled in this guild.",
-  "command.failed": "Something went wrong while running `{{commandName}}`. Please try again later.",
+  "command.failed": "Something went wrong. Please try again later.",
 
   "interaction.malformed": "The button is malformed. Please try again later.",
   "interaction.moduleNotFound": "Module not found. Please try again later.",

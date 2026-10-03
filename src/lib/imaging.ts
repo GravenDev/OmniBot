@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import {
   type Image,
   type SKRSContext2D,
+  createCanvas,
   GlobalFonts,
   loadImage,
 } from "@napi-rs/canvas";
@@ -11,11 +12,30 @@ import { loggerMaker } from "./logger.js";
 const logger = loggerMaker("imaging");
 
 const AVATAR_TIMEOUT_MS = 5_000;
+const ASSETS = new URL("./assets/", import.meta.url);
+
+export const FONT = "Outfit";
 
 export type Rgb = readonly [number, number, number];
 
+export const PALETTE = {
+  background: [25, 25, 25],
+  header: [50, 50, 50],
+  rowEven: [35, 35, 35],
+  rowOdd: [45, 45, 45],
+  box: [35, 35, 35],
+  text: [255, 255, 255],
+  title: [200, 200, 200],
+  subtext: [170, 170, 170],
+  placeholder: [120, 120, 120],
+} as const satisfies Record<string, Rgb>;
+
 export function rgb([r, g, b]: Rgb): string {
   return `rgb(${r}, ${g}, ${b})`;
+}
+
+export function font(size: number, family: string = FONT): string {
+  return `${size}px ${family}`;
 }
 
 const registeredFonts = new Set<string>();
@@ -39,6 +59,14 @@ export function loadAsset(file: URL): Promise<Image> {
     image.catch(() => imageCache.delete(key));
   }
   return image;
+}
+
+export function loadMedals(): Promise<Image[]> {
+  return Promise.all(
+    ["gold", "silver", "bronze"].map((medal) =>
+      loadAsset(new URL(`medal_${medal}.png`, ASSETS))
+    )
+  );
 }
 
 export async function fetchImage(url: string | null): Promise<Image | null> {
@@ -66,6 +94,28 @@ export function fetchAvatar(
   return fetchImage(user.displayAvatarURL({ extension: "png", size }));
 }
 
+export function fillBand(
+  ctx: SKRSContext2D,
+  color: Rgb,
+  top: number,
+  bottom: number
+): void {
+  ctx.fillStyle = rgb(color);
+  ctx.fillRect(0, top, ctx.canvas.width, bottom - top + 1);
+}
+
+export function createBoard(
+  width: number,
+  height: number,
+  headerHeight: number
+): SKRSContext2D {
+  registerFont(new URL("outfit.ttf", ASSETS), FONT);
+  const ctx = createCanvas(width, height).getContext("2d");
+  fillBand(ctx, PALETTE.background, 0, height - 1);
+  fillBand(ctx, PALETTE.header, 0, headerHeight);
+  return ctx;
+}
+
 export function drawCircularImage(
   ctx: SKRSContext2D,
   image: Image | null,
@@ -81,20 +131,29 @@ export function drawCircularImage(
   if (image) {
     ctx.drawImage(image, x, y, size, size);
   } else {
-    ctx.fillStyle = rgb([120, 120, 120]);
+    ctx.fillStyle = rgb(PALETTE.placeholder);
     ctx.fillRect(x, y, size, size);
   }
   ctx.restore();
 }
 
-export type TextAnchor = "top" | "ascender";
+export function fillTextCentered(
+  ctx: SKRSContext2D,
+  text: string,
+  x: number,
+  centerY: number
+): void {
+  ctx.textBaseline = "alphabetic";
+  const capHeight = ctx.measureText("H").actualBoundingBoxAscent;
+  ctx.fillText(text, x, Math.round(centerY + capHeight / 2));
+}
 
 export function fillTextAnchored(
   ctx: SKRSContext2D,
   text: string,
   x: number,
   y: number,
-  anchor: TextAnchor = "top"
+  anchor: "top" | "ascender" = "top"
 ): void {
   ctx.textBaseline = "alphabetic";
   const metrics = ctx.measureText(text);
@@ -103,30 +162,4 @@ export function fillTextAnchored(
       ? metrics.actualBoundingBoxAscent
       : metrics.fontBoundingBoxAscent;
   ctx.fillText(text, x, y + ascent);
-}
-
-export interface FittedTextOptions {
-  family: string;
-  size: number;
-  maxWidth: number;
-  color: string;
-  align?: "left" | "right";
-}
-
-export function drawFittedText(
-  ctx: SKRSContext2D,
-  text: string,
-  x: number,
-  y: number,
-  { family, size, maxWidth, color, align = "left" }: FittedTextOptions
-): void {
-  let fontSize = size;
-  ctx.font = `${fontSize}px ${family}`;
-  while (fontSize > 1 && ctx.measureText(text).width > maxWidth) {
-    fontSize -= 1;
-    ctx.font = `${fontSize}px ${family}`;
-  }
-  ctx.fillStyle = color;
-  ctx.textAlign = align;
-  fillTextAnchored(ctx, text, x, y);
 }

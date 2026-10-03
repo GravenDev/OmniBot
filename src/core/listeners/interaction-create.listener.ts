@@ -1,13 +1,15 @@
 import {
   type AutocompleteInteraction,
   type ChatInputCommandInteraction,
+  type Interaction,
   MessageFlags,
 } from "discord.js";
 import coreModule from "#core/core.module.js";
+import { modules } from "#core/runtime.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
+import { getCoreT } from "#core/utils/core-config.js";
 import { requireAdmin } from "#core/utils/require-admin.js";
-import { modules } from "#index.js";
 import type { CompatibleInteraction } from "#lib/interaction.js";
 import { declareEventListener } from "#lib/listener.js";
 import logger from "#lib/logger.js";
@@ -92,26 +94,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
   );
 
   logger.debug(`Executing command | name = ${interaction.commandName}`);
-  try {
-    await command.command.execute(interaction, config);
-  } catch (err) {
-    logger.error({ err }, `Command failed | name = ${interaction.commandName}`);
-    const payload = {
-      content: coreConfig.t("command.failed", {
-        commandName: interaction.commandName,
-      }),
-      flags: MessageFlags.Ephemeral,
-    } as const;
-    try {
-      if (interaction.replied || interaction.deferred) {
-        await interaction.followUp(payload);
-      } else {
-        await interaction.reply(payload);
-      }
-    } catch {
-      logger.debug(`Error reply failed | name = ${interaction.commandName}`);
-    }
-  }
+  await command.command.execute(interaction, config);
 }
 
 async function handleComplete(interaction: AutocompleteInteraction) {
@@ -227,35 +210,56 @@ async function handleInteraction(interaction: CompatibleInteraction) {
       }
     }
 
-    try {
-      logger.debug(
-        `Executing interaction | customId = ${interaction.customId}`
-      );
-      await handler.handler.execute(interaction, args, config);
-    } catch (err) {
-      logger.error(
-        { err },
-        `Interaction handler failed | customId = ${interaction.customId}`
-      );
+    logger.debug(`Executing interaction | customId = ${interaction.customId}`);
+    await handler.handler.execute(interaction, args, config);
+  }
+}
+
+async function reportFailure(interaction: Interaction, err: unknown) {
+  logger.error(
+    { err },
+    `Interaction failed | type = ${interaction.type} | guildId = ${interaction.guildId}`
+  );
+  if (!interaction.isRepliable() || !interaction.guildId) {
+    return;
+  }
+
+  try {
+    const content = (await getCoreT(interaction.guildId))("command.failed");
+    if (interaction.replied) {
+      await interaction.followUp({ content, flags: MessageFlags.Ephemeral });
+    } else if (interaction.deferred) {
+      await interaction.editReply({
+        content,
+        embeds: [],
+        components: [],
+        files: [],
+        attachments: [],
+      });
+    } else {
+      await interaction.reply({ content, flags: MessageFlags.Ephemeral });
     }
+  } catch (replyErr) {
+    logger.warn({ err: replyErr }, "Could not report the failure to the user");
   }
 }
 
 export default declareEventListener({
   eventType: "interactionCreate",
   execute: async (interaction) => {
-    if (interaction.isChatInputCommand()) {
-      await handleCommand(interaction);
-      return;
-    }
-
-    if (interaction.isAutocomplete()) {
-      await handleComplete(interaction);
-      return;
-    }
-
-    if (interaction.isMessageComponent() || interaction.isModalSubmit()) {
-      await handleInteraction(interaction);
+    try {
+      if (interaction.isChatInputCommand()) {
+        await handleCommand(interaction);
+      } else if (interaction.isAutocomplete()) {
+        await handleComplete(interaction);
+      } else if (
+        interaction.isMessageComponent() ||
+        interaction.isModalSubmit()
+      ) {
+        await handleInteraction(interaction);
+      }
+    } catch (err) {
+      await reportFailure(interaction, err);
     }
   },
 });

@@ -31,7 +31,7 @@
   "setConfig.label": "Entrez une valeur ({{type}}) :",
 
   "command.notEnabled": "La commande `{{commandName}}` n'est pas activée sur ce serveur.",
-  "command.failed": "Quelque chose s'est mal passé lors de l'exécution de `{{commandName}}`. Veuillez réessayer plus tard.",
+  "command.failed": "Une erreur est survenue. Veuillez réessayer plus tard.",
 
   "interaction.malformed": "Le bouton est mal formé. Veuillez réessayer plus tard.",
   "interaction.moduleNotFound": "Module introuvable. Veuillez réessayer plus tard.",

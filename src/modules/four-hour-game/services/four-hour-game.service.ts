@@ -1,4 +1,5 @@
 import prisma from "#lib/database.js";
+import { KeyedQueue } from "#lib/keyed-queue.js";
 import { declareService, type Service } from "#lib/service.js";
 import { evaluateMessage, type MessageOutcome } from "./game-rules.js";
 
@@ -31,7 +32,7 @@ export interface LeaderboardEntry {
 }
 
 class FourHourGameService implements Service {
-  private readonly guildChains = new Map<string, Promise<unknown>>();
+  private readonly queue = new KeyedQueue();
   private readonly revisions = new Map<string, number>();
 
   getRevision(guildId: string): number {
@@ -42,24 +43,11 @@ class FourHourGameService implements Service {
     this.revisions.set(guildId, this.getRevision(guildId) + 1);
   }
 
-  private serialize<T>(guildId: string, task: () => Promise<T>): Promise<T> {
-    const previous = this.guildChains.get(guildId) ?? Promise.resolve();
-    const next = previous.then(task, task);
-    const settled = next.catch(() => undefined);
-    this.guildChains.set(guildId, settled);
-    void settled.then(() => {
-      if (this.guildChains.get(guildId) === settled) {
-        this.guildChains.delete(guildId);
-      }
-    });
-    return next;
-  }
-
   handleMessage(
     message: GameMessage,
     delaySeconds: number
   ): Promise<MessageResult> {
-    return this.serialize(message.guildId, () =>
+    return this.queue.run(message.guildId, () =>
       this.processMessage(message, delaySeconds)
     );
   }
@@ -106,7 +94,7 @@ class FourHourGameService implements Service {
   }
 
   resetRound(guildId: string): Promise<void> {
-    return this.serialize(guildId, async () => {
+    return this.queue.run(guildId, async () => {
       await prisma.fourHourGameLastMessage.deleteMany({ where: { guildId } });
     });
   }
@@ -116,7 +104,7 @@ class FourHourGameService implements Service {
     channelId: string,
     fetchLatest: LatestMessageFetcher
   ): Promise<void> {
-    return this.serialize(guildId, () =>
+    return this.queue.run(guildId, () =>
       this.replaceLastMessage(guildId, channelId, fetchLatest)
     );
   }
@@ -127,7 +115,7 @@ class FourHourGameService implements Service {
     messageIds: readonly string[],
     fetchLatest: LatestMessageFetcher
   ): Promise<boolean> {
-    return this.serialize(guildId, async () => {
+    return this.queue.run(guildId, async () => {
       const last = await prisma.fourHourGameLastMessage.findUnique({
         where: { guildId },
       });

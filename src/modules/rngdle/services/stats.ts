@@ -1,5 +1,5 @@
-import type { StoredRoll } from "./rngdle.service.js";
-import { TIERS, type ScoreTable, type Tier } from "./score-table.js";
+import { TIERS, type ScoreTable, type Tier } from "./scoring.js";
+import type { StoredRoll } from "./store.js";
 
 export interface RollSummary {
   userId: string;

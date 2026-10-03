@@ -3,7 +3,7 @@ import type { Module } from "#lib/module.js";
 
 // The service pulls `client`/`modules` from the bot entrypoint and the Prisma
 // client; stub both so importing it never boots the bot or hits a database.
-vi.mock("#index.js", () => ({ modules: [], client: {} }));
+vi.mock("#core/runtime.js", () => ({ modules: [], client: {} }));
 
 const { findMany, upsert } = vi.hoisted(() => ({
   findMany: vi.fn(),
@@ -15,7 +15,7 @@ vi.mock("#lib/database.js", () => ({
 }));
 
 const { default: moduleService } = await import("./module.service.js");
-const { modules } = await import("#index.js");
+const { modules } = await import("#core/runtime.js");
 
 const module = { id: "thread-creator", version: "2.0.0" } as unknown as Module;
 
