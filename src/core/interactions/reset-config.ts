@@ -62,7 +62,7 @@ export const resetConfigButton = declareInteractionHandler({
         }),
         value: key,
       })),
-    ];
+    ].slice(0, 25);
 
     const menu = new StringSelectMenuBuilder()
       .setCustomId(customId)
