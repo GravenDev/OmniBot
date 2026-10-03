@@ -241,7 +241,7 @@ export function profileCard(
       {
         bestRoll: t("profile.bestRoll"),
         worstRoll: t("profile.worstRoll"),
-        date: (date) => t("profile.date", { date }),
+        roll: (number) => t("profile.roll", { number }),
         totalRolls: t("profile.totalRolls"),
         averageScore: t("profile.averageScore"),
         maxBadges: t("profile.maxBadges"),
@@ -306,6 +306,7 @@ export function serverCard(
         bestRoll: t("server.bestRoll"),
         worstRoll: t("server.worstRoll"),
         by: (name) => t("server.by", { name }),
+        roll: (number) => t("server.roll", { number }),
         totalRolls: t("server.totalRolls"),
         averageScore: t("server.averageScore"),
         overallScore: t("server.overallScore"),

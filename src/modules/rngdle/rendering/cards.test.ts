@@ -74,7 +74,7 @@ describe("renderProfile", () => {
   const labels = {
     bestRoll: "Best Roll",
     worstRoll: "Worst Roll",
-    date: (date: string) => `Date : ${date}`,
+    roll: (number: string) => `roll ${number}`,
     totalRolls: "Total Rolls",
     averageScore: "Average Score",
     maxBadges: "Max Badges",
@@ -83,12 +83,12 @@ describe("renderProfile", () => {
     tierBreakdown: "Tier Breakdown",
   };
 
-  it("renders an 800x840 PNG for every kind of rank", async () => {
+  it("renders a 1000x560 PNG for every kind of rank", async () => {
     const pngs = await Promise.all(
       [0, 1, 2, 3, 7].map((rank) => renderProfile(profile(rank), labels))
     );
     for (const png of pngs) {
-      expect(pngSize(png)).toEqual({ width: 800, height: 840 });
+      expect(pngSize(png)).toEqual({ width: 1000, height: 560 });
     }
     expect(new Set(pngs.map((png) => png.toString("base64"))).size).toBe(5);
   });
@@ -100,14 +100,15 @@ describe("renderServerStats", () => {
     bestRoll: "Best Roll OAT",
     worstRoll: "Worst Roll OAT",
     by: (name: string) => `by ${name}`,
+    roll: (number: string) => `roll ${number}`,
     totalRolls: "Total Rolls",
     averageScore: "Average Score",
     overallScore: "Overall Score",
     tierBreakdown: "Tier Breakdown",
   };
 
-  it.each([0, 3, 5])("renders an 800x710 PNG with %i leaders", async (n) => {
+  it.each([0, 3, 5])("renders a 1000x560 PNG with %i leaders", async (n) => {
     const png = await renderServerStats(serverStats(n), labels);
-    expect(pngSize(png)).toEqual({ width: 800, height: 710 });
+    expect(pngSize(png)).toEqual({ width: 1000, height: 560 });
   });
 });
