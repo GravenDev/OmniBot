@@ -92,6 +92,7 @@ async function reinstallModuleCommands(guild: Guild): Promise<void> {
       // Sequential on purpose: the installer already POSTs in parallel per
       // command, no need to fan out across modules too.
       await installModuleCommandsIn(guild.client, mod, guild);
+      await moduleService.updateModuleActivation(mod.id, guild.id, mod.version);
     } catch (err) {
       logger.error(
         { err },

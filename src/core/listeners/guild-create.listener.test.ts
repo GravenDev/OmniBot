@@ -14,18 +14,20 @@ const {
   clearCacheForGuild,
   getFullConfigForGuild,
   getAllModulesStateIn,
+  updateModuleActivation,
   installModuleCommandsIn,
 } = vi.hoisted(() => ({
   clearCacheForGuild: vi.fn(),
   getFullConfigForGuild: vi.fn(),
   getAllModulesStateIn: vi.fn(),
+  updateModuleActivation: vi.fn(),
   installModuleCommandsIn: vi.fn(),
 }));
 vi.mock("#core/services/config.service.js", () => ({
   default: { clearCacheForGuild, getFullConfigForGuild },
 }));
 vi.mock("#core/services/module.service.js", () => ({
-  default: { getAllModulesStateIn },
+  default: { getAllModulesStateIn, updateModuleActivation },
 }));
 vi.mock("#core/loaders/command-loader.js", () => ({
   installModuleCommandsIn,
@@ -108,6 +110,27 @@ describe("guildCreate", () => {
 
     await expect(listener.execute(guild, undefined)).resolves.toBeUndefined();
     expect(installModuleCommandsIn).toHaveBeenCalledTimes(2);
+  });
+
+  it("records the live version only for modules reinstalled successfully", async () => {
+    const modA = { id: "a", version: "2.0.0", registry: { commands: [{}] } };
+    const modB = { id: "b", version: "3.0.0", registry: { commands: [{}] } };
+    mockModules.push(modA, modB);
+    getAllModulesStateIn.mockResolvedValue([
+      { module: { id: "a" }, enabled: true },
+      { module: { id: "b" }, enabled: true },
+    ]);
+    installModuleCommandsIn.mockRejectedValueOnce(new Error("boom"));
+    const { guild } = fakeGuild();
+
+    await listener.execute(guild, undefined);
+
+    expect(updateModuleActivation).toHaveBeenCalledTimes(1);
+    expect(updateModuleActivation).toHaveBeenCalledWith(
+      "b",
+      "guild-1",
+      "3.0.0"
+    );
   });
 
   it("falls back to the owner DM when no system channel exists", async () => {
