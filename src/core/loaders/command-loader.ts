@@ -248,11 +248,18 @@ export async function checkCommandsForVersionChange(
     `\tFound ${guildsToFix.length} guilds to update commands for module "${module.id}"`
   );
 
-  const guilds = await Promise.all(
-    guildsToFix.map(async (info) => await client.guilds.fetch(info.guildId))
-  );
+  for (const info of guildsToFix) {
+    let guild: Guild;
+    try {
+      guild = await client.guilds.fetch(info.guildId);
+    } catch (err) {
+      logger.warn(
+        { err },
+        `Guild unreachable, skipping command update | module = ${module.id} | guild = ${info.guildId}`
+      );
+      continue;
+    }
 
-  for (const guild of guilds) {
     logger.info(
       `\tUpdating commands in guild "${guild.id}" for module "${module.id}"`
     );
