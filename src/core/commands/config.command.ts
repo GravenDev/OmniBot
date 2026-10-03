@@ -85,14 +85,23 @@ export default declareCommand({
         value: m.module.id,
       }));
 
-    await interaction.respond([
-      ...moduleEntries,
-      {
-        name: t("modules." + coreModule.id + ".name", {
-          defaultValue: coreModule.name,
-        }),
-        value: coreModule.id,
-      },
-    ]);
+    const focused = interaction.options.getFocused().toLowerCase();
+    await interaction.respond(
+      [
+        ...moduleEntries,
+        {
+          name: t("modules." + coreModule.id + ".name", {
+            defaultValue: coreModule.name,
+          }),
+          value: coreModule.id,
+        },
+      ]
+        .filter(
+          (entry) =>
+            entry.name.toLowerCase().includes(focused) ||
+            entry.value.toLowerCase().includes(focused)
+        )
+        .slice(0, 25)
+    );
   },
 });
