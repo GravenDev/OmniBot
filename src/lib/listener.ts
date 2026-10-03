@@ -19,7 +19,6 @@ export interface EventListener<
    *
    * @param event The event data that triggered the listener.
    * @param config The configuration for the module that registered the listener.
-   * @param config The configuration for the module that registered the listener.
    * @returns A promise that resolves when the listener has finished executing.
    */
   execute: (
@@ -43,7 +42,6 @@ export function declareEventListener<
 ): Declared<EventListener<EventType, ConfigType>> {
   return {
     type: DeclarationType.Listener,
-    eventType: listener.eventType,
-    execute: listener.execute,
+    ...listener,
   };
 }
