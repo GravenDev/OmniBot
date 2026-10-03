@@ -1,6 +1,7 @@
 import {
   type AutocompleteInteraction,
   type ChatInputCommandInteraction,
+  type Interaction,
   MessageFlags,
 } from "discord.js";
 import coreModule from "#core/core.module.js";
@@ -8,6 +9,7 @@ import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import { requireAdmin } from "#core/utils/require-admin.js";
 import { modules } from "#index.js";
+import { createT } from "#lib/i18n.js";
 import type { CompatibleInteraction } from "#lib/interaction.js";
 import { declareEventListener } from "#lib/listener.js";
 import logger from "#lib/logger.js";
@@ -264,21 +266,55 @@ async function handleInteraction(interaction: CompatibleInteraction) {
   }
 }
 
+async function dispatch(interaction: Interaction) {
+  if (interaction.isChatInputCommand()) {
+    await handleCommand(interaction);
+    return;
+  }
+
+  if (interaction.isAutocomplete()) {
+    await handleComplete(interaction);
+    return;
+  }
+
+  if (interaction.isMessageComponent() || interaction.isModalSubmit()) {
+    await handleInteraction(interaction);
+  }
+}
+
+// Last resort when dispatch itself fails (database, config loading…): the
+// guild locale may be unreachable, so the user's own locale is used.
+async function replyDispatchFailure(interaction: Interaction) {
+  if (interaction.isAutocomplete()) {
+    if (!interaction.responded) await interaction.respond([]);
+    return;
+  }
+
+  if (!interaction.isRepliable()) return;
+
+  const payload = {
+    content: createT(interaction.locale, "core")("interaction.failed"),
+    flags: MessageFlags.Ephemeral,
+  } as const;
+  if (interaction.replied || interaction.deferred) {
+    await interaction.followUp(payload);
+  } else {
+    await interaction.reply(payload);
+  }
+}
+
 export default declareEventListener({
   eventType: "interactionCreate",
   execute: async (interaction) => {
-    if (interaction.isChatInputCommand()) {
-      await handleCommand(interaction);
-      return;
-    }
-
-    if (interaction.isAutocomplete()) {
-      await handleComplete(interaction);
-      return;
-    }
-
-    if (interaction.isMessageComponent() || interaction.isModalSubmit()) {
-      await handleInteraction(interaction);
+    try {
+      await dispatch(interaction);
+    } catch (err) {
+      logger.error({ err }, "Interaction dispatch failed");
+      try {
+        await replyDispatchFailure(interaction);
+      } catch {
+        logger.debug("Dispatch failure reply failed");
+      }
     }
   },
 });
