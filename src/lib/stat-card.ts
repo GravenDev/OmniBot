@@ -194,28 +194,28 @@ function drawRank(
   medals: Image[]
 ): void {
   const right = WIDTH - MARGIN;
-  const totalText = ` / ${total}`;
-  ctx.textAlign = "right";
-  ctx.font = font(TOTAL_SIZE);
-  ctx.fillStyle = rgb(PALETTE.subtext);
-  fillTextCentered(ctx, totalText, right, HEADER_CENTER + 14);
-  const before = right - measureText(ctx, totalText, TOTAL_SIZE);
-
   const medal = medals[position - 1];
   const medalWidth = MEDAL_WIDTHS[position - 1];
   if (medal && medalWidth) {
     ctx.drawImage(
       medal,
-      Math.round(before - medalWidth),
+      right - medalWidth,
       HEADER_CENTER - MEDAL_HEIGHT / 2,
       medalWidth,
       MEDAL_HEIGHT
     );
-  } else {
-    ctx.font = font(RANK_SIZE);
-    ctx.fillStyle = rgb(RANK_COLOR);
-    fillTextCentered(ctx, `#${position}`, before, HEADER_CENTER);
+    return;
   }
+
+  const totalText = ` / ${total}`;
+  ctx.textAlign = "right";
+  ctx.font = font(TOTAL_SIZE);
+  ctx.fillStyle = rgb(PALETTE.subtext);
+  fillTextCentered(ctx, totalText, right, HEADER_CENTER + 14);
+  const rankRight = right - measureText(ctx, totalText, TOTAL_SIZE);
+  ctx.font = font(RANK_SIZE);
+  ctx.fillStyle = rgb(RANK_COLOR);
+  fillTextCentered(ctx, `#${position}`, rankRight, HEADER_CENTER);
   ctx.textAlign = "left";
 }
 
