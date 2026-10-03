@@ -132,3 +132,35 @@ describe("getConfigForModuleIn", () => {
     expect(config.get("channels")).toEqual([{ id: "chan-1" }]);
   });
 });
+
+describe("concurrent config writes", () => {
+  const moduleA = { id: "mod-a", config: {} } as unknown as Module;
+  const moduleB = { id: "mod-b", config: {} } as unknown as Module;
+
+  beforeEach(() => {
+    (modules as unknown as Module[]).push(moduleA, moduleB);
+    rows.set("guild-w", { "mod-a": {}, "mod-b": {}, core: {} });
+    guildsFetch.mockResolvedValue({ channels: { fetch: channelsFetch } });
+  });
+
+  afterEach(() => {
+    modules.length = 0;
+  });
+
+  it("keeps both saves when two modules are updated at the same time", async () => {
+    await configService.getFullConfigForGuild("guild-w");
+
+    await Promise.all([
+      configService.updateConfigForModuleIn(moduleA, "guild-w", {
+        x: 1,
+      } as never),
+      configService.updateConfigForModuleIn(moduleB, "guild-w", {
+        y: 2,
+      } as never),
+    ]);
+
+    const full = await configService.getFullConfigForGuild("guild-w");
+    expect(full["mod-a"]).toEqual({ x: 1 });
+    expect(full["mod-b"]).toEqual({ y: 2 });
+  });
+});

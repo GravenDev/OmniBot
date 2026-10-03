@@ -19,6 +19,7 @@ const pendingLoads = new Map<
   string,
   Promise<Record<string, ConfigData<ConfigSchema>>>
 >();
+const writeChains = new Map<string, Promise<unknown>>();
 
 class ConfigService {
   /**
@@ -59,78 +60,23 @@ class ConfigService {
     guildId: string,
     newConfig: Partial<ConfigData<ConfigType>>
   ): Promise<ConfigProvider<ConfigType>> {
-    const [locale, currentConfig] = await Promise.all([
-      this.getLocaleForGuild(guildId),
-      this.getOrCreate(guildId),
-    ]);
-    const moduleConfig = currentConfig[module.id] as ConfigData<ConfigType>;
-
-    if (!moduleConfig) {
-      throw new Error(
-        `Unable to find configuration for module ${module.id} in guild ${guildId}`
-      );
-    }
-
-    // Merge the new config with the existing config
-    const updatedModuleConfig = { ...moduleConfig, ...newConfig };
-    const updatedConfig = {
-      ...currentConfig,
-      [module.id]: updatedModuleConfig,
-    };
-
-    // Update the database
-    await database.guildConfiguration.upsert({
-      where: { guildId },
-      create: { guildId, data: updatedConfig },
-      update: { data: updatedConfig },
+    return this.writeModuleConfig(module, guildId, (moduleConfig) => {
+      if (!moduleConfig) {
+        throw new Error(
+          `Unable to find configuration for module ${module.id} in guild ${guildId}`
+        );
+      }
+      return { ...moduleConfig, ...newConfig };
     });
-
-    // Update the cache
-    configCache.set(guildId, updatedConfig);
-
-    // Deserialize the updated config before returning
-    const deserializedConfig = await this.deserializeConfigData(
-      module,
-      updatedModuleConfig,
-      guildId
-    );
-
-    return new ConfigProvider(module, deserializedConfig, locale);
   }
 
   async resetConfigForModuleIn<ConfigType extends ConfigSchema>(
     module: Module<ConfigType>,
     guildId: string
   ): Promise<ConfigProvider<ConfigType>> {
-    const [locale, currentConfig] = await Promise.all([
-      this.getLocaleForGuild(guildId),
-      this.getOrCreate(guildId),
-    ]);
-    const defaultConfig = this.blankConfigForModule(module);
-
-    const updatedConfig = {
-      ...currentConfig,
-      [module.id]: defaultConfig,
-    };
-
-    // Update the database
-    await database.guildConfiguration.upsert({
-      where: { guildId },
-      create: { guildId, data: updatedConfig },
-      update: { data: updatedConfig },
-    });
-
-    // Update the cache
-    configCache.set(guildId, updatedConfig);
-
-    // Deserialize the default config before returning
-    const deserializedConfig = await this.deserializeConfigData(
-      module,
-      defaultConfig as ConfigData<ConfigType>,
-      guildId
+    return this.writeModuleConfig(module, guildId, () =>
+      this.blankConfigForModule(module)
     );
-
-    return new ConfigProvider(module, deserializedConfig, locale);
   }
 
   /**
@@ -144,37 +90,66 @@ class ConfigService {
     guildId: string,
     keys: string[]
   ): Promise<ConfigProvider<ConfigType>> {
-    const [locale, currentConfig] = await Promise.all([
-      this.getLocaleForGuild(guildId),
-      this.getOrCreate(guildId),
-    ]);
+    return this.writeModuleConfig(module, guildId, (moduleConfig) => {
+      const updated: Record<string, unknown> = { ...moduleConfig };
+      for (const key of keys) {
+        delete updated[key];
+      }
+      return updated as ConfigData<ConfigType>;
+    });
+  }
 
-    const moduleConfig = (currentConfig[module.id] ??
-      {}) as ConfigData<ConfigType>;
-    const updatedModuleConfig: Record<string, unknown> = { ...moduleConfig };
-    for (const key of keys) {
-      delete updatedModuleConfig[key];
-    }
+  /**
+   * Read-modify-write of one module's slice of the guild blob. Writes to the
+   * same guild are chained: each one reads the result of the previous, so two
+   * concurrent saves cannot overwrite each other with a stale snapshot.
+   */
+  private writeModuleConfig<ConfigType extends ConfigSchema>(
+    module: Module<ConfigType>,
+    guildId: string,
+    transform: (
+      moduleConfig: ConfigData<ConfigType> | undefined
+    ) => ConfigData<ConfigType>
+  ): Promise<ConfigProvider<ConfigType>> {
+    const write = async () => {
+      const [locale, currentConfig] = await Promise.all([
+        this.getLocaleForGuild(guildId),
+        this.getOrCreate(guildId),
+      ]);
+      const updatedModuleConfig = transform(
+        currentConfig[module.id] as ConfigData<ConfigType> | undefined
+      );
+      const updatedConfig = {
+        ...currentConfig,
+        [module.id]: updatedModuleConfig,
+      };
 
-    const updatedConfig = {
-      ...currentConfig,
-      [module.id]: updatedModuleConfig as ConfigData<ConfigType>,
+      await database.guildConfiguration.upsert({
+        where: { guildId },
+        create: { guildId, data: updatedConfig },
+        update: { data: updatedConfig },
+      });
+      configCache.set(guildId, updatedConfig);
+
+      return { locale, updatedModuleConfig };
     };
 
-    await database.guildConfiguration.upsert({
-      where: { guildId },
-      create: { guildId, data: updatedConfig },
-      update: { data: updatedConfig },
+    const previous = writeChains.get(guildId) ?? Promise.resolve();
+    const next = previous.then(write, write);
+    const settled = next.catch(() => undefined);
+    writeChains.set(guildId, settled);
+    void settled.then(() => {
+      if (writeChains.get(guildId) === settled) writeChains.delete(guildId);
     });
-    configCache.set(guildId, updatedConfig);
 
-    const deserializedConfig = await this.deserializeConfigData(
-      module,
-      updatedModuleConfig as ConfigData<ConfigType>,
-      guildId
-    );
-
-    return new ConfigProvider(module, deserializedConfig, locale);
+    return next.then(async ({ locale, updatedModuleConfig }) => {
+      const deserializedConfig = await this.deserializeConfigData(
+        module,
+        updatedModuleConfig,
+        guildId
+      );
+      return new ConfigProvider(module, deserializedConfig, locale);
+    });
   }
 
   async getFullConfigForGuild(
