@@ -58,17 +58,36 @@ client.once(Events.ClientReady, async (readyClient) => {
 
   await coreModule.onLoad?.(readyClient, coreModule.registry);
 
-  await syncCommands(readyClient, modules);
-
   loadGlobalEvents(readyClient);
+
+  await syncCommands(readyClient, modules);
+});
+
+process.on("unhandledRejection", (reason) => {
+  logger.error({ err: reason }, "Unhandled promise rejection");
+});
+
+process.on("uncaughtException", (err) => {
+  logger.fatal({ err }, "Uncaught exception, exiting");
+  process.exit(1);
 });
 
 await client.login(token);
 
+let shuttingDown = false;
+
 const shutdown = async () => {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
   logger.info("Shutting down...");
-  await client.destroy();
-  await prisma.$disconnect();
+  try {
+    await client.destroy();
+    await prisma.$disconnect();
+  } catch (err) {
+    logger.error({ err }, "Error during shutdown");
+    process.exit(1);
+  }
   process.exit(0);
 };
 
