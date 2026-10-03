@@ -130,3 +130,32 @@ export async function loadModule(modulePath: string): Promise<Module | null> {
 
   return module;
 }
+
+export function findDuplicateDeclarations(modules: Module[]): string[] {
+  const commandOwners = new Map<string, string[]>();
+  const customIdOwners = new Map<string, string[]>();
+
+  for (const module of modules) {
+    for (const command of module.registry.commands) {
+      const owners = commandOwners.get(command.data.name) ?? [];
+      commandOwners.set(command.data.name, [...owners, module.id]);
+    }
+    for (const handler of module.registry.interactionHandlers) {
+      const owners = customIdOwners.get(handler.customId) ?? [];
+      customIdOwners.set(handler.customId, [...owners, module.id]);
+    }
+  }
+
+  const duplicates: string[] = [];
+  for (const [name, owners] of commandOwners) {
+    if (owners.length > 1) {
+      duplicates.push(`command "${name}" | modules = ${owners.join(",")}`);
+    }
+  }
+  for (const [customId, owners] of customIdOwners) {
+    if (owners.length > 1) {
+      duplicates.push(`customId "${customId}" | modules = ${owners.join(",")}`);
+    }
+  }
+  return duplicates;
+}
