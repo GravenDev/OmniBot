@@ -193,50 +193,73 @@ async function handleInteraction(interaction: CompatibleInteraction) {
     `Interaction handler found | customId = ${interaction.customId} | module = ${handler.module.id}`
   );
 
-  if (
-    handler.module.id === coreModule.id ||
-    (
-      await moduleService.getModuleStateIn(
-        handler.module.id,
-        interaction.guild!
-      )
-    ).activated
-  ) {
-    const config = await configService.getConfigForModuleIn(
-      handler.module,
-      interaction.guildId!
+  if (!interaction.guild || !interaction.guildId) {
+    logger.warn(
+      `Interaction outside guild | customId = ${interaction.customId}`
     );
+    return;
+  }
 
-    // Read before check(): a rejecting type predicate narrows `interaction`
-    // to never below.
-    const checkedCustomId = interaction.customId;
-    if (!handler.handler.check(interaction, config)) {
-      logger.debug(
-        `Interaction check rejected | customId = ${checkedCustomId}`
-      );
+  const coreConfig = await configService.getConfigForModuleIn(
+    coreModule,
+    interaction.guildId
+  );
+
+  const enabled =
+    handler.module.id === coreModule.id ||
+    (await moduleService.getModuleStateIn(handler.module.id, interaction.guild))
+      .activated;
+
+  if (!enabled) {
+    logger.warn(
+      `Interaction for disabled module | customId = ${interaction.customId} | module = ${handler.module.id}`
+    );
+    await interaction.reply({
+      content: coreConfig.t("interaction.moduleNotEnabled"),
+      flags: MessageFlags.Ephemeral,
+    });
+    return;
+  }
+
+  const config = await configService.getConfigForModuleIn(
+    handler.module,
+    interaction.guildId
+  );
+
+  // Read before check(): a rejecting type predicate narrows `interaction`
+  // to never below.
+  const checkedCustomId = interaction.customId;
+  if (!handler.handler.check(interaction, config)) {
+    logger.debug(`Interaction check rejected | customId = ${checkedCustomId}`);
+    return;
+  }
+
+  if (handler.handler.access === "admin") {
+    if (!(await requireAdmin(interaction, coreConfig.t))) {
       return;
     }
+  }
 
-    if (handler.handler.access === "admin") {
-      const coreConfig = await configService.getConfigForModuleIn(
-        coreModule,
-        interaction.guildId!
-      );
-      if (!(await requireAdmin(interaction, coreConfig.t))) {
-        return;
-      }
-    }
-
+  try {
+    logger.debug(`Executing interaction | customId = ${interaction.customId}`);
+    await handler.handler.execute(interaction, args, config);
+  } catch (err) {
+    logger.error(
+      { err },
+      `Interaction handler failed | customId = ${interaction.customId}`
+    );
+    const payload = {
+      content: coreConfig.t("interaction.failed"),
+      flags: MessageFlags.Ephemeral,
+    } as const;
     try {
-      logger.debug(
-        `Executing interaction | customId = ${interaction.customId}`
-      );
-      await handler.handler.execute(interaction, args, config);
-    } catch (err) {
-      logger.error(
-        { err },
-        `Interaction handler failed | customId = ${interaction.customId}`
-      );
+      if (interaction.replied || interaction.deferred) {
+        await interaction.followUp(payload);
+      } else {
+        await interaction.reply(payload);
+      }
+    } catch {
+      logger.debug(`Error reply failed | customId = ${interaction.customId}`);
     }
   }
 }

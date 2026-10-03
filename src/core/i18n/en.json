@@ -33,6 +33,8 @@
   "command.notEnabled": "The command `{{commandName}}` is not enabled in this guild.",
   "command.failed": "Something went wrong while running `{{commandName}}`. Please try again later.",
 
+  "interaction.moduleNotEnabled": "This feature's module is not enabled in this server.",
+  "interaction.failed": "Something went wrong. Please try again later.",
   "interaction.malformed": "The button is malformed. Please try again later.",
   "interaction.moduleNotFound": "Module not found. Please try again later.",
   "interaction.failedEnable": "Failed to enable the module. Please try again later.",
