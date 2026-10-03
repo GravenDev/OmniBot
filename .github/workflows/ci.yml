@@ -90,6 +90,7 @@ jobs:
           target: runtime
           platforms: linux/amd64
           push: false
+          load: true
           tags: omnibot:ci
           cache-from: type=gha,scope=ci-runtime
           cache-to: type=gha,mode=max,scope=ci-runtime
@@ -103,9 +104,26 @@ jobs:
           target: migrator
           platforms: linux/amd64
           push: false
+          load: true
           tags: omnibot-migrator:ci
           cache-from: type=gha,scope=ci-migrator
           cache-to: type=gha,mode=max,scope=ci-migrator
+      # Building is not enough: a CMD pointing at a missing file builds fine and
+      # only fails at start. Apply the migrations, then start the bot with a
+      # dummy token — reaching Discord's token check proves the whole import
+      # graph loads from the production image.
+      - name: Smoke-test the images
+        run: |
+          docker network create smoke
+          docker run -d --name pg --network smoke -e POSTGRES_PASSWORD=ci postgres:17.11-alpine
+          until docker exec pg pg_isready -U postgres; do sleep 1; done
+          url=postgresql://postgres:ci@pg:5432/postgres
+          docker run --rm --network smoke -e DATABASE_URL=$url omnibot-migrator:ci
+          set +e
+          out=$(timeout 60 docker run --rm --network smoke -e DISCORD_TOKEN=ci -e DATABASE_URL=$url omnibot:ci 2>&1)
+          set -e
+          echo "$out"
+          echo "$out" | grep -q TokenInvalid
 
   # Publishing lives in this workflow rather than its own so it can depend on the
   # checks: a separate workflow triggered by the same tag would run *beside*
