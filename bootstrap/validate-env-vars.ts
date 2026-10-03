@@ -3,7 +3,8 @@
 // Let's just crash before starting if missing
 // values.
 //
-// Runs under tsx (see the `dev`/`start` scripts), so the single dev-mode
+// Runs under tsx in dev and under Node's native type stripping in production
+// (see the `dev`/`start` scripts and the Dockerfile), so the single dev-mode
 // definition in `#lib/env.js` can be imported instead of duplicating the
 // "development" literal here.
 import { isDevMode } from "#lib/env.js";
