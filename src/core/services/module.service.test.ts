@@ -5,12 +5,13 @@ import type { Module } from "#lib/module.js";
 // client; stub both so importing it never boots the bot or hits a database.
 vi.mock("#index.js", () => ({ modules: [], client: {} }));
 
-const { findMany, upsert } = vi.hoisted(() => ({
+const { findMany, findFirst, upsert } = vi.hoisted(() => ({
   findMany: vi.fn(),
+  findFirst: vi.fn(),
   upsert: vi.fn(),
 }));
 vi.mock("#lib/database.js", () => ({
-  default: { moduleActivation: { findMany, upsert } },
+  default: { moduleActivation: { findMany, findFirst, upsert } },
   Prisma: {},
 }));
 
@@ -162,5 +163,68 @@ describe("enableModule / disableModule hook ordering", () => {
       "hook blew up"
     );
     expect(upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("module state cache", () => {
+  const guild = { id: "guild-1" } as never;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    moduleService.clearStateCache();
+    upsert.mockResolvedValue(undefined);
+    findFirst.mockResolvedValue({
+      moduleId: "mod-x",
+      guildId: "guild-1",
+      activated: true,
+    });
+    (modules as unknown as Module[]).push({
+      id: "mod-x",
+      version: "1.0.0",
+      registry: {},
+    } as unknown as Module);
+  });
+
+  afterEach(() => {
+    modules.length = 0;
+  });
+
+  it("queries the database once for repeated reads", async () => {
+    await moduleService.getModuleStateFromGuildIdIn("mod-x", "guild-1");
+    await moduleService.getModuleStateFromGuildIdIn("mod-x", "guild-1");
+
+    expect(findFirst).toHaveBeenCalledOnce();
+  });
+
+  it("re-reads the database after the module is disabled", async () => {
+    await moduleService.getModuleStateFromGuildIdIn("mod-x", "guild-1");
+    findFirst.mockResolvedValue({
+      moduleId: "mod-x",
+      guildId: "guild-1",
+      activated: false,
+    });
+
+    await moduleService.disableModule("mod-x", guild);
+    const state = await moduleService.getModuleStateFromGuildIdIn(
+      "mod-x",
+      "guild-1"
+    );
+
+    expect(state.activated).toBe(false);
+    expect(findFirst).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not keep a failed read in cache", async () => {
+    findFirst.mockRejectedValueOnce(new Error("db down"));
+
+    await expect(
+      moduleService.getModuleStateFromGuildIdIn("mod-x", "guild-1")
+    ).rejects.toThrow("db down");
+    const state = await moduleService.getModuleStateFromGuildIdIn(
+      "mod-x",
+      "guild-1"
+    );
+
+    expect(state.activated).toBe(true);
   });
 });

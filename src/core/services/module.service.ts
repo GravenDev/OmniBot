@@ -4,6 +4,14 @@ import prisma from "#lib/database.js";
 import type { Module } from "#lib/module.js";
 import { declareService, type Service } from "#lib/service.js";
 
+type ModuleState = { moduleId: string; guildId: string; activated: boolean };
+
+const stateCache = new Map<string, Promise<ModuleState>>();
+
+function stateKey(moduleId: string, guildId: string) {
+  return `${moduleId}:${guildId}`;
+}
+
 class ModuleService implements Service {
   getAllModules() {
     return modules;
@@ -41,14 +49,23 @@ class ModuleService implements Service {
       throw new Error(`Module with ID ${moduleId} not found`);
     }
 
-    const state = await prisma.moduleActivation.findFirst({
-      where: {
-        moduleId,
-        guildId,
-      },
-    });
+    const key = stateKey(moduleId, guildId);
+    let state = stateCache.get(key);
+    if (!state) {
+      state = prisma.moduleActivation
+        .findFirst({ where: { moduleId, guildId } })
+        .then((found) => found ?? { moduleId, guildId, activated: false });
+      stateCache.set(key, state);
+      state.catch(() => {
+        if (stateCache.get(key) === state) stateCache.delete(key);
+      });
+    }
 
-    return state ?? { moduleId, guildId, activated: false };
+    return state;
+  }
+
+  clearStateCache() {
+    stateCache.clear();
   }
 
   async getActivatedGuildIds(moduleId: string): Promise<string[]> {
@@ -111,6 +128,7 @@ class ModuleService implements Service {
         activatedVersion: module.version,
       },
     });
+    stateCache.delete(stateKey(moduleId, guild.id));
 
     return activation;
   }
@@ -142,6 +160,7 @@ class ModuleService implements Service {
         activatedVersion: "",
       },
     });
+    stateCache.delete(stateKey(moduleId, guild.id));
 
     return activation;
   }
@@ -194,6 +213,7 @@ class ModuleService implements Service {
         activatedVersion: version,
       },
     });
+    stateCache.delete(stateKey(moduleId, guildId));
   }
 }
 
