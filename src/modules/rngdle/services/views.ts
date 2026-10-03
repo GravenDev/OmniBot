@@ -86,32 +86,31 @@ export function dailyLeaderboard(
 ): Promise<DailyLeaderboard | null> {
   const [from, to] = utcDayRange(daysAgo);
   return cached(context, `daily:${from.toISOString()}`, async () => {
-    const [rolls, table] = await Promise.all([
+    const [rolls, table, accounts] = await Promise.all([
       store.rolls(context.guildId, { from, to, byScore: true }),
       store.scoreTable(),
+      store.accounts(context.guildId),
     ]);
     const top = rolls.slice(0, DAILY_SIZE);
+    const usernames = new Map(accounts.map((a) => [a.userId, a.username]));
     const players = await resolvePlayers(
       context.client,
       top.map((roll) => roll.userId)
     );
-    const rows = top.flatMap((roll, index) => {
+    const rows = top.map((roll, index) => {
       const player = players.get(roll.userId);
-      return player
-        ? [
-            {
-              rank: index + 1,
-              ...player,
-              number: roll.number,
-              score: roll.score,
-              percent: table.percentOf(roll.score),
-              tier: table.tierOf(roll.score),
-            },
-          ]
-        : [];
+      return {
+        rank: index + 1,
+        name: player?.name ?? usernames.get(roll.userId) ?? "?",
+        avatar: player?.avatar ?? null,
+        number: roll.number,
+        score: roll.score,
+        percent: table.percentOf(roll.score),
+        tier: table.tierOf(roll.score),
+      };
     });
     const best = top[0]?.score;
-    if (rows.length === 0 || best === undefined) {
+    if (best === undefined) {
       return null;
     }
 

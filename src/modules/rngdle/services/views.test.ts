@@ -132,26 +132,27 @@ describe("dailyLeaderboard", () => {
     expect(rowsOf()).toHaveLength(25);
   });
 
-  it("skips players that cannot be resolved but keeps the ranks", async () => {
+  it("keeps players Discord cannot resolve, under their RNGdle username", async () => {
+    mocks.accounts.mockResolvedValue([
+      { guildId: "g", userId: "ghost", username: "ghost-rngdle" },
+    ]);
     mocks.rolls.mockResolvedValue([
-      roll("a", 30),
-      roll("ghost", 20),
-      roll("b", 10),
+      roll("ghost", 30),
+      roll("a", 20),
+      roll("unknown", 10),
     ]);
 
-    await dailyLeaderboard(context, 0);
+    const board = await dailyLeaderboard(context, 0);
 
     expect(rowsOf().map((row) => [row.rank, row.name])).toEqual([
-      [1, "name-a"],
-      [3, "name-b"],
+      [1, "ghost-rngdle"],
+      [2, "name-a"],
+      [3, "?"],
     ]);
+    expect(board?.winnerIds).toEqual(["ghost"]);
   });
 
-  it("returns null without rolls or when nobody can be resolved", async () => {
-    expect(await dailyLeaderboard(context, 0)).toBeNull();
-
-    setup();
-    mocks.rolls.mockResolvedValue([roll("ghost", 5)]);
+  it("returns null without rolls", async () => {
     expect(await dailyLeaderboard(context, 0)).toBeNull();
     expect(mocks.renderDaily).not.toHaveBeenCalled();
   });

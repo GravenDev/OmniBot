@@ -87,14 +87,14 @@ async function register(interaction: Interaction, config: Config) {
 
 async function unregister(interaction: Interaction, config: Config) {
   const member = interaction.options.getUser("member", true);
+  await interaction.deferReply(ephemeral);
   const deleted = await sync.exclusive(interaction.guildId, () =>
     store.unregister(interaction.guildId, member.id)
   );
-  await interaction.reply({
+  await interaction.editReply({
     content: config.t(deleted ? "admin.delete.done" : "admin.delete.none", {
       user: `<@${member.id}>`,
     }),
-    ...ephemeral,
     ...noPings,
   });
 }
