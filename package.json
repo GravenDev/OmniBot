@@ -17,7 +17,7 @@
   "scripts": {
     "build": "pnpm prisma:generate && tsc",
     "dev": "NODE_ENV=development node --conditions=development --env-file=.env --import tsx ./bootstrap/validate-env-vars.ts && NODE_ENV=development node --conditions=development --env-file=.env --import tsx src/index.ts",
-    "start": "node --import tsx ./bootstrap/validate-env-vars.ts && node ./dist/index.js",
+    "start": "node ./bootstrap/validate-env-vars.ts && node ./dist/index.js",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",

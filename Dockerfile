@@ -138,4 +138,4 @@ USER omnibot
 # would be worse than none — see the Deployment section of README.md.
 
 ENTRYPOINT ["/sbin/tini", "--"]
-CMD ["sh", "-c", "node ./bootstrap/validate-env-vars.mjs && exec node ./dist/index.js"]
+CMD ["sh", "-c", "node ./bootstrap/validate-env-vars.ts && exec node ./dist/index.js"]
