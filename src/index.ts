@@ -8,6 +8,11 @@ import {
   loadModuleEvents,
 } from "./core/loaders/listener-loader.js";
 import { loadModuleI18n, loadModules } from "./core/loaders/module-loader.js";
+import {
+  startModuleTasks,
+  stopAllTasks,
+} from "./core/loaders/task-scheduler.js";
+import { setRuntime } from "./core/runtime.js";
 import prisma, { Prisma } from "./lib/database.js";
 import { initI18n } from "./lib/i18n.js";
 import logger from "./lib/logger.js";
@@ -29,16 +34,17 @@ await initI18n();
 const corePath = path.resolve(fileURLToPath(import.meta.url), "..", "core");
 await loadModuleI18n("core", corePath);
 
-export const modules = await loadModules("./modules");
+const modules = await loadModules("./modules");
 const intents = modules.flatMap((module) => module.intents).filter((a) => !!a);
 const partials = [
   ...new Set(modules.flatMap((module) => module.partials ?? [])),
 ];
 
-export const client = new Client({
+const client = new Client({
   intents: intents,
   partials: partials,
 });
+setRuntime(modules, client);
 
 client.once(Events.ClientReady, async (readyClient) => {
   for (const module of modules) {
@@ -54,6 +60,7 @@ client.once(Events.ClientReady, async (readyClient) => {
       continue;
     }
     loadModuleEvents(readyClient, module);
+    startModuleTasks(readyClient, module);
   }
 
   await coreModule.onLoad?.(readyClient, coreModule.registry);
@@ -67,6 +74,7 @@ await client.login(token);
 
 const shutdown = async () => {
   logger.info("Shutting down...");
+  stopAllTasks();
   await client.destroy();
   await prisma.$disconnect();
   process.exit(0);

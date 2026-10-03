@@ -31,7 +31,7 @@
   "setConfig.label": "Entrez une valeur ({{type}}) :",
 
   "command.notEnabled": "La commande `{{commandName}}` n'est pas activée sur ce serveur.",
-  "command.failed": "Quelque chose s'est mal passé lors de l'exécution de `{{commandName}}`. Veuillez réessayer plus tard.",
+  "command.failed": "Une erreur est survenue. Veuillez réessayer plus tard.",
 
   "interaction.malformed": "Le bouton est mal formé. Veuillez réessayer plus tard.",
   "interaction.moduleNotFound": "Module introuvable. Veuillez réessayer plus tard.",
@@ -83,6 +83,9 @@
 
   "modules.four-hour-game.name": "Jeu des 4h",
   "modules.four-hour-game.description": "Marquez un point quand votre message reste le dernier du salon de jeu pendant le délai configuré.",
+
+  "modules.rngdle.name": "RNGdle",
+  "modules.rngdle.description": "Suit les tirages rngdle.com des membres : classements, profils, statistiques du serveur et classement quotidien.",
 
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Module de développement déclarant tous les types de configuration, pour tester l'UI de configuration.",

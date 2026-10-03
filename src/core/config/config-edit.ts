@@ -1,11 +1,11 @@
 import { MessageFlags } from "discord.js";
 import coreModule from "#core/core.module.js";
+import { modules } from "#core/runtime.js";
 import configService from "#core/services/config.service.js";
 import {
   configPageOfKey,
   configurationMessage,
 } from "#core/utils/core-messages.js";
-import { modules } from "#index.js";
 import {
   ConfigType,
   type ConfigEntry,

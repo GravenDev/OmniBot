@@ -31,7 +31,7 @@
   "setConfig.label": "Enter a value ({{type}}):",
 
   "command.notEnabled": "The command `{{commandName}}` is not enabled in this guild.",
-  "command.failed": "Something went wrong while running `{{commandName}}`. Please try again later.",
+  "command.failed": "Something went wrong. Please try again later.",
 
   "interaction.malformed": "The button is malformed. Please try again later.",
   "interaction.moduleNotFound": "Module not found. Please try again later.",
@@ -83,6 +83,9 @@
 
   "modules.four-hour-game.name": "4h Game",
   "modules.four-hour-game.description": "Score a point when your message stays the last one in the game channel for the configured delay.",
+
+  "modules.rngdle.name": "RNGdle",
+  "modules.rngdle.description": "Tracks the members' rngdle.com rolls: leaderboards, profiles, server statistics and a daily leaderboard.",
 
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Development module declaring all configuration types, used to test the configuration UI.",

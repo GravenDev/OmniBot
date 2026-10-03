@@ -7,6 +7,7 @@ import type {
   InteractionHandler,
 } from "./interaction.js";
 import type { EventListener } from "./listener.js";
+import type { ScheduledTask } from "./task.js";
 
 /**
  * Represents the declarations made by a module.
@@ -31,6 +32,8 @@ export class Registry {
   private readonly _interactionHandlers: Declared<
     InteractionHandler<any, any>
   >[] = [];
+
+  private readonly _tasks: Declared<ScheduledTask>[] = [];
 
   /**
    * Creates a new instance of the ModuleRegistry.
@@ -68,6 +71,10 @@ export class Registry {
     return [...this._interactionHandlers];
   }
 
+  get tasks(): Declared<ScheduledTask>[] {
+    return [...this._tasks];
+  }
+
   /**
    * Registers a handler (command, event listener, or interaction handler) with the module.
    * @param handler The handler to register.
@@ -82,6 +89,7 @@ export class Registry {
       | InteractionHandler<TCompatibleInteraction, TSchema>
       | EventListener<TEventType, TSchema>
       | Command<TSchema>
+      | ScheduledTask
     >
   ) {
     switch (handler.type) {
@@ -110,6 +118,9 @@ export class Registry {
         this._interactionHandlers.push(interaction);
         break;
       }
+      case DeclarationType.Task:
+        this._tasks.push(handler as Declared<ScheduledTask>);
+        break;
       default:
         throw new Error(`Unknown declaration type | type = ${handler.type}`);
     }

@@ -6,7 +6,7 @@ const { guildsFetch, channelsFetch } = vi.hoisted(() => ({
   guildsFetch: vi.fn(),
   channelsFetch: vi.fn(),
 }));
-vi.mock("#index.js", () => ({
+vi.mock("#core/runtime.js", () => ({
   modules: [],
   client: { users: { fetch: vi.fn() }, guilds: { fetch: guildsFetch } },
 }));
@@ -59,7 +59,7 @@ vi.mock("#lib/database.js", () => {
 });
 
 const { default: configService } = await import("./config.service.js");
-const { modules } = await import("#index.js");
+const { modules } = await import("#core/runtime.js");
 
 const coreModule = { id: "core", config: {} } as unknown as Module;
 
