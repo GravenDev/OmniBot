@@ -1,5 +1,5 @@
 import type { Guild } from "discord.js";
-import { client, modules } from "#index.js";
+import { modules } from "#index.js";
 import prisma from "#lib/database.js";
 import type { Module } from "#lib/module.js";
 import { declareService, type Service } from "#lib/service.js";
@@ -104,11 +104,6 @@ class ModuleService implements Service {
       throw new Error(`Module with ID ${moduleId} not found`);
     }
 
-    // Hook first: a throwing onInstall must not leave the DB marked enabled,
-    // otherwise the next install throws "already installed" and the guild is
-    // stuck.
-    module.onInstall?.(client, guild, module.registry);
-
     // Create a new activation record
     const activation = await prisma.moduleActivation.upsert({
       where: {
@@ -138,9 +133,6 @@ class ModuleService implements Service {
     if (!module) {
       throw new Error(`Module with ID ${moduleId} not found`);
     }
-
-    // Same ordering as enableModule: hook first, DB flip only on success.
-    module.onUninstall?.(client, guild, module.registry);
 
     const activation = await prisma.moduleActivation.upsert({
       where: {
