@@ -28,6 +28,9 @@ export async function installModule(module: Module, guild: Guild) {
     throw new Error(`Module ${module.id} is already installed in this guild.`);
   }
 
+  // Hook first: if it throws, neither Discord nor the database has changed.
+  module.onInstall?.(readyClient(), guild, module.registry);
+
   // Install the commands
   await installModuleCommandsIn(readyClient(), module, guild);
 
@@ -42,6 +45,8 @@ export async function uninstallModule(module: Module, guild: Guild) {
   if (!isInstalled) {
     throw new Error(`Module ${module.id} is not installed in this guild.`);
   }
+
+  module.onUninstall?.(readyClient(), guild, module.registry);
 
   // Uninstall the commands
   await uninstallModuleCommandsIn(readyClient(), module, guild);

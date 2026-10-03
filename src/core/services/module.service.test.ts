@@ -108,64 +108,6 @@ describe("getActivatedGuildIds", () => {
   });
 });
 
-describe("enableModule / disableModule hook ordering", () => {
-  const guild = { id: "guild-1" } as never;
-  const onInstall = vi.fn();
-  const onUninstall = vi.fn();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    // clearAllMocks keeps implementations: drop them so one test's throwing
-    // hook does not leak into the next.
-    onInstall.mockReset();
-    onUninstall.mockReset();
-    upsert.mockResolvedValue(undefined);
-    (modules as unknown as Module[]).push({
-      id: "mod-x",
-      version: "1.0.0",
-      registry: {},
-      onInstall,
-      onUninstall,
-    } as unknown as Module);
-  });
-
-  afterEach(() => {
-    modules.length = 0;
-  });
-
-  it("does not mark the module enabled when onInstall throws", async () => {
-    onInstall.mockImplementation(() => {
-      throw new Error("hook blew up");
-    });
-
-    await expect(moduleService.enableModule("mod-x", guild)).rejects.toThrow(
-      "hook blew up"
-    );
-    expect(upsert).not.toHaveBeenCalled();
-  });
-
-  it("runs onInstall before flipping the DB state", async () => {
-    await moduleService.enableModule("mod-x", guild);
-
-    expect(onInstall).toHaveBeenCalledOnce();
-    expect(upsert).toHaveBeenCalledOnce();
-    expect(vi.mocked(onInstall).mock.invocationCallOrder[0]).toBeLessThan(
-      upsert.mock.invocationCallOrder[0]
-    );
-  });
-
-  it("does not mark the module disabled when onUninstall throws", async () => {
-    onUninstall.mockImplementation(() => {
-      throw new Error("hook blew up");
-    });
-
-    await expect(moduleService.disableModule("mod-x", guild)).rejects.toThrow(
-      "hook blew up"
-    );
-    expect(upsert).not.toHaveBeenCalled();
-  });
-});
-
 describe("module state cache", () => {
   const guild = { id: "guild-1" } as never;
 

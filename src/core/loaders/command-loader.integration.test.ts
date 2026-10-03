@@ -31,6 +31,7 @@ vi.mock("#core/services/module.service.js", () => ({
     getModuleStateFromGuildIdIn: vi.fn(),
     getModuleStateIn: vi.fn(),
     enableModule: vi.fn(),
+    disableModule: vi.fn(),
     getGuildsWhereVersionDoesNotMatch: vi.fn(),
     updateModuleActivation: vi.fn(),
   },
@@ -51,7 +52,8 @@ const {
   installModuleCommandsIn,
   checkCommandsForVersionChange,
 } = await import("./command-loader.js");
-const { installModule } = await import("./module-installer.js");
+const { installModule, uninstallModule } =
+  await import("./module-installer.js");
 const { default: moduleService } =
   await import("#core/services/module.service.js");
 
@@ -188,6 +190,21 @@ describe("installModule", () => {
     expect(moduleService.enableModule).not.toHaveBeenCalled();
   });
 
+  it("touches neither Discord nor the DB when onInstall throws", async () => {
+    const module = {
+      ...fakeModule("mod-a", ["alpha"]),
+      onInstall: () => {
+        throw new Error("hook blew up");
+      },
+    } as unknown as Module;
+
+    await expect(installModule(module, fakeGuild("guild-1"))).rejects.toThrow(
+      "hook blew up"
+    );
+    expect(restPost).not.toHaveBeenCalled();
+    expect(moduleService.enableModule).not.toHaveBeenCalled();
+  });
+
   it("enables the module when registration succeeds", async () => {
     await installModule(fakeModule("mod-a", ["alpha"]), fakeGuild("guild-1"));
 
@@ -288,5 +305,31 @@ describe("checkCommandsForVersionChange", () => {
       "guild-2",
       "2.0.0"
     );
+  });
+});
+
+describe("uninstallModule", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(moduleService.getModuleStateIn).mockResolvedValue({
+      activated: true,
+    } as never);
+  });
+
+  it("keeps commands and DB state when onUninstall throws", async () => {
+    const guild = fakeGuild("guild-1");
+    const fetchCommands = vi.spyOn(guild.commands, "fetch");
+    const module = {
+      ...fakeModule("mod-a", ["alpha"]),
+      onUninstall: () => {
+        throw new Error("hook blew up");
+      },
+    } as unknown as Module;
+
+    await expect(uninstallModule(module, guild)).rejects.toThrow(
+      "hook blew up"
+    );
+    expect(fetchCommands).not.toHaveBeenCalled();
+    expect(moduleService.disableModule).not.toHaveBeenCalled();
   });
 });
