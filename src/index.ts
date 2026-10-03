@@ -51,6 +51,7 @@ export const client = new Client({
 });
 
 client.once(Events.ClientReady, async (readyClient) => {
+  const failed = new Set<string>();
   for (const module of modules) {
     try {
       await module.onLoad?.(readyClient, module.registry);
@@ -61,20 +62,35 @@ client.once(Events.ClientReady, async (readyClient) => {
         { err: error },
         `Module onLoad failed, skipping | id = ${module.id}`
       );
+      failed.add(module.id);
       continue;
     }
     loadModuleEvents(readyClient, module);
   }
 
-  await coreModule.onLoad?.(readyClient, coreModule.registry);
+  // Dropped from the shared list so that nothing it registered before
+  // throwing (commands, interaction handlers) is dispatched or synced.
+  for (let i = modules.length - 1; i >= 0; i--) {
+    if (failed.has(modules[i]!.id)) modules.splice(i, 1);
+  }
+
+  try {
+    await coreModule.onLoad?.(readyClient, coreModule.registry);
+    loadGlobalEvents(readyClient);
+  } catch (err) {
+    logger.fatal({ err }, "Core failed to load, exiting");
+    process.exit(1);
+  }
 
   for (const duplicate of findDuplicateDeclarations([...modules, coreModule])) {
     logger.error(`Duplicate declaration, first match wins | ${duplicate}`);
   }
 
-  loadGlobalEvents(readyClient);
-
-  await syncCommands(readyClient, modules);
+  try {
+    await syncCommands(readyClient, modules);
+  } catch (err) {
+    logger.error({ err }, "Command sync failed");
+  }
 });
 
 process.on("unhandledRejection", (reason) => {
