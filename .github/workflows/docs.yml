@@ -6,6 +6,7 @@ on:
     paths: &doc-paths
       - "docs/**"
       - ".github/workflows/docs.yml"
+      - ".github/actions/setup/**"
   pull_request:
     paths: *doc-paths
   workflow_dispatch:
@@ -21,11 +22,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
-      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
-
-      - run: pnpm install --frozen-lockfile --filter omnibot-docs
+      - uses: ./.github/actions/setup
+        with:
+          package: omnibot-docs
 
       - run: pnpm --filter omnibot-docs build
         env:
