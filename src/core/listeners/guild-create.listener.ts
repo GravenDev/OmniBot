@@ -4,11 +4,11 @@ import {
   type Guild,
   type GuildTextBasedChannel,
 } from "discord.js";
+import { modules } from "#core/context.js";
 import { installModuleCommandsIn } from "#core/loaders/command-loader.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import { guildWelcomeMessage } from "#core/utils/core-messages.js";
-import { modules } from "#index.js";
 import { createT, type TFunction } from "#lib/i18n.js";
 import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";

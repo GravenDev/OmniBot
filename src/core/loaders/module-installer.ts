@@ -1,6 +1,6 @@
 import type { Client, Guild } from "discord.js";
+import { client } from "#core/context.js";
 import moduleService from "#core/services/module.service.js";
-import { client } from "#index.js";
 import type { Module } from "#lib/module.js";
 import {
   installModuleCommandsIn,

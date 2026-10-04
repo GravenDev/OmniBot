@@ -14,8 +14,7 @@ import type { InteractionHandler } from "#lib/interaction.js";
 import type { Module } from "#lib/module.js";
 import type { Registry } from "#lib/registry.js";
 
-// Mock the persistence boundary so importing the handlers does not boot the bot
-// (config.service.js and config-edit.js both pull in ../../index.js).
+// Mock the persistence boundary so importing the handlers stays in memory.
 vi.mock("#core/core.module.js", () => ({
   default: {
     id: "core",

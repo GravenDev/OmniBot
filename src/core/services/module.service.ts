@@ -1,5 +1,5 @@
 import type { Guild } from "discord.js";
-import { modules } from "#index.js";
+import { modules } from "#core/context.js";
 import prisma from "#lib/database.js";
 import type { Module } from "#lib/module.js";
 import { declareService, type Service } from "#lib/service.js";

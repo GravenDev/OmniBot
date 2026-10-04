@@ -12,7 +12,7 @@ pnpm new-module my-module "My Module"
 
 The generated module compiles and its test passes unmodified. Fill the `TODO` description, then enable it via `/modules` on your dev guild. No registration step exists: modules are auto-discovered from `src/modules/` at startup.
 
-For tests, use the shared helpers from `#lib/testing.js` (`makeTestConfig`, `fakeGuild`, `fakeMessage`, `initTestI18n`) instead of hand-rolled mocks. Note that `vi.mock("#index.js")` and `vi.mock("#lib/database.js")` must still be declared per test file — Vitest hoists them, so no helper can hide them.
+For tests, use the shared helpers from `#lib/testing.js` (`makeTestConfig`, `fakeGuild`, `fakeMessage`, `initTestI18n`) instead of hand-rolled mocks. Note that `vi.mock("#lib/database.js")` must still be declared per test file — Vitest hoists it, so no helper can hide it. The loaded modules and the Discord client live in `#core/context.js`, which has no side effect on import.
 
 ## Module Structure
 

@@ -8,7 +8,7 @@ import {
 } from "#lib/testing.js";
 
 const { mockModules } = vi.hoisted(() => ({ mockModules: [] as any[] }));
-vi.mock("#index.js", () => ({ modules: mockModules, client: {} }));
+vi.mock("#core/context.js", () => ({ modules: mockModules, client: {} }));
 
 const {
   clearCacheForGuild,

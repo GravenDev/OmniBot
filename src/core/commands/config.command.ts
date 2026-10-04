@@ -4,11 +4,11 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from "discord.js";
+import { modules } from "#core/context.js";
 import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import { configurationMessage } from "#core/utils/core-messages.js";
-import { modules } from "#index.js";
 import { declareCommand } from "#lib/command.js";
 import { Colors } from "#utils/colors.js";
 

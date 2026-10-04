@@ -1,6 +1,7 @@
 import { fileURLToPath } from "node:url";
 import path from "path";
 import { Client, Events } from "discord.js";
+import { modules, setClient } from "./core/context.js";
 import coreModule from "./core/core.module.js";
 import { syncCommands } from "./core/loaders/command-loader.js";
 import {
@@ -33,7 +34,7 @@ await initI18n();
 const corePath = path.resolve(fileURLToPath(import.meta.url), "..", "core");
 await loadModuleI18n("core", corePath);
 
-export const modules = await loadModules("./modules");
+modules.push(...(await loadModules("./modules")));
 const intents = [
   ...new Set(
     [coreModule, ...modules].flatMap((module) => module.intents ?? [])
@@ -45,10 +46,11 @@ const partials = [
   ),
 ];
 
-export const client = new Client({
+const client = new Client({
   intents: intents,
   partials: partials,
 });
+setClient(client);
 
 client.once(Events.ClientReady, async (readyClient) => {
   const failed = new Set<string>();
