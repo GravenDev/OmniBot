@@ -16,7 +16,12 @@ export default defineConfig({
 
   cleanUrls: true,
 
+  head: [
+    ["link", { rel: "icon", type: "image/svg+xml", href: `${base}logo.svg` }],
+  ],
+
   themeConfig: {
+    logo: "/logo.svg",
     search: {
       provider: "local",
     },
