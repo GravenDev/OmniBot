@@ -29,22 +29,33 @@ export function loadGlobalEvents(client: Client) {
 /**
  * Best-effort guild resolution for a raw client event payload. Only real
  * guild ids are returned: a member-like object resolves through its guild
- * (never its own user id), and a non-string `guildId` is ignored instead of
+ * (never its own user id), a reaction through its message, and a non-string `guildId` is ignored instead of
  * being passed to the database layer. Returns undefined for guild-less
  * events (DMs), in which case the listener runs without config.
  */
 export function extractGuildId(args: unknown[]): string | undefined {
   for (const arg of args) {
-    if (!arg || typeof arg !== "object") continue;
-    const record = arg as { guild?: { id?: unknown }; guildId?: unknown };
-    if (record.guild && typeof record.guild.id === "string") {
-      return record.guild.id;
-    }
-    if (typeof record.guildId === "string") {
-      return record.guildId;
-    }
+    const guildId = ownGuildId(arg) ?? ownGuildId(messageOf(arg));
+    if (guildId) return guildId;
   }
   return undefined;
+}
+
+function ownGuildId(value: unknown): string | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const record = value as { guild?: { id?: unknown }; guildId?: unknown };
+  if (record.guild && typeof record.guild.id === "string") {
+    return record.guild.id;
+  }
+  if (typeof record.guildId === "string") {
+    return record.guildId;
+  }
+  return undefined;
+}
+
+function messageOf(value: unknown): unknown {
+  if (!value || typeof value !== "object") return undefined;
+  return (value as { message?: unknown }).message;
 }
 
 /**
