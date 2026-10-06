@@ -5,6 +5,9 @@ hero:
   name: OmniBot
   text: Bot Discord modulaire
   tagline: Documentation pour créer et étendre les fonctionnalités du bot.
+  image:
+    src: /logo.svg
+    alt: OmniBot
   actions:
     - theme: brand
       text: Commencer

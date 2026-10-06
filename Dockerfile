@@ -31,6 +31,8 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY docs/site/package.json ./docs/site/package.json
 
+RUN corepack install
+
 # --- deps: full dependency graph (dev included), used to build -------------
 FROM base AS deps
 

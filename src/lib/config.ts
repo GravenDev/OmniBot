@@ -152,6 +152,9 @@ export type ConfigSchema = Record<string, ConfigEntry<ConfigType>>;
  * drawn from a declared `options` set. Narrows to the option-carrying entry
  * shapes so callers can read `entry.options`.
  */
+/** Maximum entries Discord allows a select menu to return. */
+export const MAX_SELECT_VALUES = 25;
+
 export function isEnumEntry(
   entry: ConfigEntry<ConfigType> | undefined
 ): entry is EnumConfigEntry | EnumListConfigEntry {
