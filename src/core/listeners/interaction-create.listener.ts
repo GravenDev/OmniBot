@@ -4,8 +4,8 @@ import {
   type Interaction,
   MessageFlags,
 } from "discord.js";
-import { modules } from "#core/context.js";
 import coreModule from "#core/core.module.js";
+import { modules } from "#core/runtime.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import { requireAdmin } from "#core/utils/require-admin.js";

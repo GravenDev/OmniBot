@@ -4,8 +4,8 @@ import {
   type Guild,
   type GuildTextBasedChannel,
 } from "discord.js";
-import { modules } from "#core/context.js";
 import { installModuleCommandsIn } from "#core/loaders/command-loader.js";
+import { modules } from "#core/runtime.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import { guildWelcomeMessage } from "#core/utils/core-messages.js";

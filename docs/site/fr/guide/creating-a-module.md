@@ -12,7 +12,7 @@ pnpm new-module mon-module "Mon Module"
 
 Le module généré compile et son test passe sans retouche. Remplissez la description `TODO`, puis activez-le via `/modules` sur votre serveur dev. Aucune étape d'enregistrement : les modules sont auto-découverts depuis `src/modules/` au démarrage.
 
-Pour les tests, utilisez les helpers partagés de `#lib/testing.js` (`makeTestConfig`, `fakeGuild`, `fakeMessage`, `initTestI18n`) plutôt que des mocks maison. Notez que `vi.mock("#lib/database.js")` doit toujours être déclaré par fichier de test — Vitest le hisse, aucun helper ne peut le masquer. Les modules chargés et le client Discord vivent dans `#core/context.js`, sans effet de bord à l'import.
+Pour les tests, utilisez les helpers partagés de `#lib/testing.js` (`makeTestConfig`, `fakeGuild`, `fakeMessage`, `initTestI18n`) plutôt que des mocks maison. Notez que `vi.mock("#core/runtime.js")` et `vi.mock("#lib/database.js")` doivent toujours être déclarés par fichier de test — Vitest les hisse, aucun helper ne peut les masquer.
 
 ```
 src/modules/mon-module/

@@ -1,6 +1,6 @@
 import type { JsonValue } from "@prisma/client/runtime/client";
-import { client, modules } from "#core/context.js";
 import coreModule from "#core/core.module.js";
+import { client, modules } from "#core/runtime.js";
 import {
   ConfigProvider,
   ConfigType,

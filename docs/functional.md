@@ -70,6 +70,58 @@ Fixe le score d'un membre, ou le supprime. Fixer un score à 0 revient à le sup
 
 ---
 
+## Module RNGdle
+
+Repris du bot DJ4H. Suit les tirages quotidiens des membres sur [rngdle.com](https://www.rngdle.com) : un administrateur lie chaque membre à son pseudo RNGdle, puis le bot télécharge ses tirages et en tire des classements, des profils et des statistiques. Toutes les données sont propres à chaque serveur : un même joueur peut être lié sur plusieurs serveurs sans que ses tirages se mélangent.
+
+### Paliers
+
+Chaque tirage est classé selon le percentile de son score parmi tous les tirages de rngdle.com : TRASH (moins de 1 %), COMMON (moins de 50 %), UNCOMMON (moins de 75 %), RARE (moins de 90 %), EPIC (moins de 95 %), ANOMALY (moins de 99 %) et MYTHIC. La table des percentiles est extraite du site au démarrage du bot puis chaque semaine ; si elle change, tous les tirages sont retéléchargés. Une table extraite qui ne ressemble pas à une table de percentiles est ignorée.
+
+### Synchronisation
+
+Les tirages sont téléchargés à 06:00 et 18:00 UTC, avant le classement quotidien, et au plus toutes les 5 minutes par serveur quand un joueur lance une commande `/rngdle`. Si rngdle.com est lent, la commande n'attend pas plus de 10 secondes et affiche les données déjà enregistrées. Un compte qui a déjà un tirage enregistré pour le jour en cours n'est pas re-téléchargé. Un pseudo qui n'existe plus sur rngdle.com est signalé dans les journaux et ignoré.
+
+### `/rngdle leaderboard`
+
+Image du classement des tirages du jour (UTC) : rang, avatar, pseudo, numéro tiré coloré selon son palier, score et placement en percentile. Limité aux 25 premiers.
+
+### `/rngdle profile [member] [username]`
+
+Image du profil d'un joueur : meilleur et pire tirage avec leur date, nombre de tirages, score moyen, record de badges, score total, rang au classement général du serveur et répartition par palier. Sans option, affiche son propre profil. L'option `username` propose les pseudos liés sur le serveur ; les deux options ne se combinent pas.
+
+### `/rngdle server-stats`
+
+Image des statistiques du serveur : meilleur et pire tirage de tous les temps, nombre de tirages, score moyen, score total et répartition par palier avec les trois joueurs les plus représentés dans chacun.
+
+### `/rngdle leaderboard-all [page]`
+
+Image du classement général (somme des scores), 10 joueurs par page, avec des boutons Précédent et Suivant. Si le membre qui consulte n'est pas sur la page, sa ligne est ajoutée en bas. Cliquer sur les boutons d'un message public ouvre une copie visible de soi seul, qu'on peut ensuite parcourir.
+
+### Classement quotidien
+
+Chaque jour à 01:00 UTC, le bot publie le classement de la veille dans le salon configuré, en mentionnant le ou les meilleurs joueurs.
+
+### `/rngdle-admin`
+
+**Permission requise :** Administrateur. Réponses visibles de l'administrateur seul.
+
+| Sous-commande                  | Effet                                                                                                                                                                                                            |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `register <member> <username>` | Lie un membre à un pseudo RNGdle, après avoir vérifié qu'il existe, et importe tous ses tirages. Un pseudo ne peut être lié qu'à un seul membre par serveur. Changer de pseudo supprime les tirages de l'ancien. |
+| `delete <member>`              | Délie le membre et supprime ses tirages sur ce serveur.                                                                                                                                                          |
+| `show`                         | Liste les comptes liés sur le serveur.                                                                                                                                                                           |
+| `refresh [full]`               | Télécharge tout de suite les nouveaux tirages du serveur ; avec `full`, retélécharge tout l'historique (au plus une fois tous les quarts d'heure).                                                               |
+| `clear`                        | Supprime les tirages enregistrés sur ce serveur ; ils sont retéléchargés à la synchronisation suivante.                                                                                                          |
+
+### Configuration — `/config rngdle`
+
+| Champ                | Type  | Description                                                                    |
+| -------------------- | ----- | ------------------------------------------------------------------------------ |
+| `leaderboardChannel` | Salon | Salon du classement quotidien. Tant qu'il n'est pas défini, rien n'est publié. |
+
+---
+
 ## Module Thread Creator
 
 Crée automatiquement un fil de discussion sous chaque nouveau message dans un salon configuré. Remplace le bot Needle.

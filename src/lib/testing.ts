@@ -2,11 +2,11 @@
  * Test-only helpers for module authors. Import from `*.test.ts` files only —
  * never from runtime code.
  *
- * What this file does NOT do: `vi.mock("#lib/database.js")` must still be
- * declared at the top of each test file. Vitest hoists that call above
- * imports, so no helper can hide it. Forgetting it hits a real database.
- * The shared `modules` list lives in `#core/context.js`, which has no side
- * effect on import: push fake modules into it, or mock it.
+ * What this file does NOT do: `vi.mock("#core/runtime.js")` and
+ * `vi.mock("#lib/database.js")` must still be declared at the top of each
+ * test file. Vitest hoists those calls above imports, so no helper can hide
+ * them. Forgetting the `#core/runtime.js` mock leaves `modules` empty and
+ * `client` undefined, forgetting the database mock hits a real database.
  */
 import { ChannelType } from "discord.js";
 import { vi } from "vitest";

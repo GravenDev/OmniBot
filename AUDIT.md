@@ -47,7 +47,7 @@
 
 🔵 Architecture
 
-- **#14** — ~~Dépendances circulaires vers `index.js`~~ ✅ _fait : `client` et `modules` vivent dans `src/core/context.ts` (sans effet de bord à l'import) ; `index.ts` les alimente. Les tests n'ont plus besoin de mocker `#index.js` pour éviter de démarrer le bot._
+- **#14** — ~~Dépendances circulaires vers `index.js`~~ ✅ _fait : `client` et `modules` vivent dans `src/core/runtime.ts` (sans effet de bord à l'import) ; `index.ts` les alimente via `setRuntime`. Les tests n'ont plus besoin de mocker `#index.js` pour éviter de démarrer le bot._
 - **#16** — ~~Pas de graceful shutdown~~ ✅ _fixed in 48f44c9_
 - **#17** — ~~Script de consolidation Prisma potentiellement redondant~~ 🚫 _non retenu (investigué)_. `prisma.config.ts` utilise déjà le mode multi-fichiers sur `src/prisma`, mais les `.prisma` des modules vivent dans `src/modules/*/`. Pointer Prisma sur `src/` ramasserait aussi `src/generated/prisma/schema.prisma` (copie émise par `prisma generate`) ; garder les schémas à côté de leur module suppose donc la consolidation.
 

@@ -1,7 +1,6 @@
 import { fileURLToPath } from "node:url";
 import path from "path";
 import { Client, Events } from "discord.js";
-import { modules, setClient } from "./core/context.js";
 import coreModule from "./core/core.module.js";
 import { syncCommands } from "./core/loaders/command-loader.js";
 import {
@@ -13,6 +12,11 @@ import {
   loadModuleI18n,
   loadModules,
 } from "./core/loaders/module-loader.js";
+import {
+  startModuleTasks,
+  stopAllTasks,
+} from "./core/loaders/task-scheduler.js";
+import { setRuntime } from "./core/runtime.js";
 import prisma, { Prisma } from "./lib/database.js";
 import { initI18n } from "./lib/i18n.js";
 import logger from "./lib/logger.js";
@@ -34,7 +38,7 @@ await initI18n();
 const corePath = path.resolve(fileURLToPath(import.meta.url), "..", "core");
 await loadModuleI18n("core", corePath);
 
-modules.push(...(await loadModules("./modules")));
+const modules = await loadModules("./modules");
 const intents = [
   ...new Set(
     [coreModule, ...modules].flatMap((module) => module.intents ?? [])
@@ -50,7 +54,7 @@ const client = new Client({
   intents: intents,
   partials: partials,
 });
-setClient(client);
+setRuntime(modules, client);
 
 client.once(Events.ClientReady, async (readyClient) => {
   const failed = new Set<string>();
@@ -68,6 +72,7 @@ client.once(Events.ClientReady, async (readyClient) => {
       continue;
     }
     loadModuleEvents(readyClient, module);
+    startModuleTasks(readyClient, module);
   }
 
   // Dropped from the shared list so that nothing it registered before
@@ -113,6 +118,7 @@ const shutdown = async () => {
   shuttingDown = true;
 
   logger.info("Shutting down...");
+  stopAllTasks();
   try {
     await client.destroy();
     await prisma.$disconnect();
