@@ -7,6 +7,7 @@ import {
   renderProfile,
   renderServerStats,
 } from "#modules/rngdle/rendering/cards.js";
+import { formatRatio } from "#modules/rngdle/rendering/format.js";
 import {
   renderDailyLeaderboard,
   renderOverallLeaderboard,
@@ -247,6 +248,9 @@ export function profileCard(
         maxBadgesValue: (count) => t("profile.maxBadgesValue", { count }),
         overallScore: t("profile.overallScore"),
         tierBreakdown: t("profile.tierBreakdown"),
+        expected: t("profile.expected"),
+        ratio: (ratio) =>
+          t("profile.ratio", { ratio: formatRatio(context.locale, ratio) }),
       }
     );
   });
@@ -310,6 +314,9 @@ export function serverCard(
         averageScore: t("server.averageScore"),
         overallScore: t("server.overallScore"),
         tierBreakdown: t("server.tierBreakdown"),
+        expected: t("server.expected"),
+        ratio: (ratio) =>
+          t("server.ratio", { ratio: formatRatio(context.locale, ratio) }),
       }
     );
   });
