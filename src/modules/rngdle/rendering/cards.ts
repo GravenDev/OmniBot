@@ -4,7 +4,6 @@ import {
   drawPanel,
   drawPanelTitle,
   drawText,
-  LABEL_SIZE,
   measureText,
   PANEL_PADDING,
   renderStatCard,
@@ -13,6 +12,7 @@ import {
 } from "#lib/stat-card.js";
 import {
   TIER_COLORS,
+  TIER_ODDS,
   TIERS,
   type Tier,
   type TierOrError,
@@ -30,10 +30,20 @@ const BREAKDOWN_TIERS = [...TIERS].reverse();
 const BREAKDOWN_TOP = 52;
 const BREAKDOWN_BOTTOM = 18;
 const TIER_LABEL_SIZE = 17;
-const TIER_LABEL_WIDTH = 128;
-const COUNT_WIDTH = 66;
+const TIER_LABEL_WIDTH = 118;
+const COUNT_SIZE = 14;
+const COUNT_WIDTH = 40;
 const BAR_HEIGHT = 10;
 const BAR_TRACK: [number, number, number] = [50, 50, 50];
+const SHORTFALL_ALPHA = 0.45;
+const MAX_DEVIATION = 2;
+const MARKER_WIDTH = 2;
+const MARKER_OVERHANG = 4;
+const RATIO_WIDTH = 66;
+const RATIO_SIZE = 17;
+const LEGEND_SIZE = 14;
+const LEGEND_Y = 20;
+const LEGEND_GAP = 6;
 const LEADER_SIZE = 22;
 const LEADER_STEP = 14;
 const LEADER_BORDER = 2;
@@ -75,6 +85,8 @@ export interface ProfileLabels {
   maxBadgesValue: (count: number) => string;
   overallScore: string;
   tierBreakdown: string;
+  expected: string;
+  ratio: (ratio: number) => string;
 }
 
 export interface ServerStatsRoll extends Roll {
@@ -104,6 +116,8 @@ export interface ServerStatsLabels {
   averageScore: string;
   overallScore: string;
   tierBreakdown: string;
+  expected: string;
+  ratio: (ratio: number) => string;
 }
 
 function ep(value: number): string {
@@ -137,25 +151,69 @@ function drawLeaders(
   }
 }
 
+function deviation(count: number, total: number, tier: Tier): number {
+  const ratio = count / (total * TIER_ODDS[tier]);
+  if (ratio === 0) {
+    return -1;
+  }
+  return Math.max(-1, Math.min(1, Math.log2(ratio) / MAX_DEVIATION));
+}
+
+function drawMarker(ctx: SKRSContext2D, x: number, centerY: number): void {
+  const height = BAR_HEIGHT + MARKER_OVERHANG * 2;
+  ctx.fillStyle = rgb(PALETTE.text);
+  ctx.fillRect(
+    x - MARKER_WIDTH / 2,
+    centerY - height / 2,
+    MARKER_WIDTH,
+    height
+  );
+}
+
 function tierBreakdown(
   title: string,
+  expectedLabel: string,
+  formatRatio: (ratio: number) => string,
   counts: Record<Tier, number>,
   leaders?: Record<Tier, (Image | null)[]>
 ): CardAside {
   return {
-    width: leaders ? 420 : 350,
+    width: leaders ? 460 : 390,
     draw(ctx, x, y, width, height) {
       drawPanel(ctx, x, y, width, height);
       drawPanelTitle(ctx, title, x, y);
 
-      const max = Math.max(1, ...Object.values(counts));
+      const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
       const step =
         (height - BREAKDOWN_TOP - BREAKDOWN_BOTTOM) / BREAKDOWN_TIERS.length;
       const labelX = x + PANEL_PADDING;
       const barX = labelX + TIER_LABEL_WIDTH;
       const countRight =
         x + width - PANEL_PADDING - (leaders ? LEADERS_WIDTH : 0);
-      const barWidth = countRight - COUNT_WIDTH - barX;
+      const ratioRight = countRight - COUNT_WIDTH;
+      const barWidth = ratioRight - RATIO_WIDTH - barX;
+      const half = barWidth / 2;
+      const centerX = barX + half;
+
+      if (total > 0) {
+        const legendX =
+          countRight - measureText(ctx, expectedLabel, LEGEND_SIZE);
+        drawText(
+          ctx,
+          expectedLabel,
+          legendX,
+          y + LEGEND_Y,
+          LEGEND_SIZE,
+          PALETTE.subtext
+        );
+        ctx.fillStyle = rgb(PALETTE.subtext);
+        ctx.fillRect(
+          legendX - LEGEND_GAP - MARKER_WIDTH,
+          y + LEGEND_Y,
+          MARKER_WIDTH,
+          LEGEND_SIZE
+        );
+      }
 
       BREAKDOWN_TIERS.forEach((tier, index) => {
         const count = counts[tier] ?? 0;
@@ -168,24 +226,45 @@ function tierBreakdown(
         ctx.roundRect(barX, centerY - BAR_HEIGHT / 2, barWidth, BAR_HEIGHT, 5);
         ctx.fillStyle = rgb(BAR_TRACK);
         ctx.fill();
-        if (count > 0) {
-          const filled = Math.max(BAR_HEIGHT, (count / max) * barWidth);
-          ctx.beginPath();
-          ctx.roundRect(barX, centerY - BAR_HEIGHT / 2, filled, BAR_HEIGHT, 5);
-          ctx.fillStyle = rgb(TIER_COLORS[tier]);
-          ctx.fill();
+
+        if (total > 0) {
+          const offset = deviation(count, total, tier) * half;
+          if (offset !== 0) {
+            ctx.globalAlpha = offset > 0 ? 1 : SHORTFALL_ALPHA;
+            ctx.fillStyle = rgb(TIER_COLORS[tier]);
+            ctx.fillRect(
+              Math.min(centerX, centerX + offset),
+              centerY - BAR_HEIGHT / 2,
+              Math.abs(offset),
+              BAR_HEIGHT
+            );
+            ctx.globalAlpha = 1;
+          }
+
+          const ratio =
+            Math.round((count / (total * TIER_ODDS[tier])) * 10) / 10;
+          const ratioText = formatRatio(ratio);
+          drawText(
+            ctx,
+            ratioText,
+            ratioRight - measureText(ctx, ratioText, RATIO_SIZE),
+            centerY - RATIO_SIZE * 0.62,
+            RATIO_SIZE,
+            ratio > 1 ? TIER_COLORS[tier] : PALETTE.subtext
+          );
         }
+        drawMarker(ctx, centerX, centerY);
 
         const text = formatSpaced(count);
-        const countX = countRight - measureText(ctx, text, LABEL_SIZE);
         drawText(
           ctx,
           text,
-          countX,
-          centerY - LABEL_SIZE * 0.62,
-          LABEL_SIZE,
-          count > 0 ? PALETTE.text : PALETTE.subtext
+          countRight - measureText(ctx, text, COUNT_SIZE),
+          centerY - COUNT_SIZE * 0.62,
+          COUNT_SIZE,
+          PALETTE.subtext
         );
+
         if (leaders) {
           const tierLeaders = (leaders[tier] ?? []).slice(0, MAX_LEADERS);
           drawLeaders(ctx, tierLeaders, countRight + 12, centerY);
@@ -224,7 +303,12 @@ export function renderProfile(
         },
       ],
     ],
-    aside: tierBreakdown(labels.tierBreakdown, data.tierCounts),
+    aside: tierBreakdown(
+      labels.tierBreakdown,
+      labels.expected,
+      labels.ratio,
+      data.tierCounts
+    ),
   });
 }
 
@@ -253,6 +337,8 @@ export function renderServerStats(
     ],
     aside: tierBreakdown(
       labels.tierBreakdown,
+      labels.expected,
+      labels.ratio,
       data.tierCounts,
       data.tierLeaders
     ),
