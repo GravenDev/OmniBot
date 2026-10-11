@@ -5,6 +5,14 @@ model GuildConfiguration {
   data    Json
 }
 
+// === Modèles de core/models/mentions.prisma ===
+model MentionOptOut {
+  guildId String
+  userId  String
+
+  @@id([guildId, userId])
+}
+
 // === Modèles de core/models/modules.prisma ===
 model ModuleActivation {
   moduleId String

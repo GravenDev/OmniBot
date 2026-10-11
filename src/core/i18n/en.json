@@ -95,6 +95,9 @@
   "config.locale.name": "Language",
   "config.locale.description": "Bot language",
 
+  "pings.enabled": "The bot will ping you again in its announcements on this server.",
+  "pings.disabled": "The bot will no longer ping you in its announcements on this server. Your name still appears in them.",
+
   "guild.welcome.title": "# Thanks for inviting me!",
   "guild.welcome.body": "Admins, start with `/modules` to enable modules and `/config` to configure them.",
   "guild.welcome.hint": "Your previous configuration will be restored automatically if I have been here before.",

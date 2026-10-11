@@ -2,6 +2,7 @@ import { GatewayIntentBits } from "discord.js";
 import { defineModule } from "#lib/module.js";
 import configCommand from "./commands/config.command.js";
 import moduleCommand from "./commands/module.command.js";
+import pingsCommand from "./commands/pings.command.js";
 import configTypeHandlers from "./config/config-handler-registry.js";
 import { registerScalarListEditorHandlers } from "./config/scalar-list-editor.js";
 import type { CoreConfig } from "./core.config.js";
@@ -30,6 +31,7 @@ export default defineModule({
     // Register the core module's commands and events in the provided registry
     registry.register(moduleCommand);
     registry.register(configCommand);
+    registry.register(pingsCommand);
 
     registry.register(commandListener);
     registry.register(guildCreateListener);
