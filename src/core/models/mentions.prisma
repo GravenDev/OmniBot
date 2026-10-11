@@ -1,0 +1,6 @@
+model MentionOptOut {
+  guildId String
+  userId  String
+
+  @@id([guildId, userId])
+}
