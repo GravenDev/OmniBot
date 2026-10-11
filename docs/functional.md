@@ -26,6 +26,12 @@ En bas du panneau `/config` d'un module, un bouton **Réinitialiser…** ouvre u
 
 Le bouton est désactivé tant qu'aucun champ n'a été personnalisé (rien à réinitialiser). Réinitialiser un champ retire simplement la valeur enregistrée : il repasse sur le défaut (qui suit alors de nouveau la langue du serveur, cf. plus bas) et son marqueur _(par défaut)_ réapparaît.
 
+### `/pings` — Ne plus être mentionné
+
+**Permission requise :** aucune
+
+`/pings enabled:False` inscrit le membre sur la liste des personnes que le bot ne mentionne plus dans ses annonces sur ce serveur ; `/pings enabled:True` l'en retire. La liste est propre à chaque serveur et commune à tous les modules. Le nom du membre reste affiché dans les annonces, mais il n'en reçoit plus de notification. La réponse n'est visible que de lui.
+
 ---
 
 ## Module Jeu des 4h
@@ -100,7 +106,7 @@ Image du classement général (somme des scores), 10 joueurs par page, avec des 
 
 ### Classement quotidien
 
-Chaque jour à 01:00 UTC, le bot publie le classement de la veille dans le salon configuré, en mentionnant le ou les meilleurs joueurs.
+Chaque jour à 01:00 UTC, le bot publie le classement de la veille dans le salon configuré, en mentionnant le ou les meilleurs joueurs (sauf ceux qui ont désactivé leurs mentions avec `/pings`).
 
 ### `/rngdle-admin`
 

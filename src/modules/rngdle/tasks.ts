@@ -1,5 +1,6 @@
 import { AttachmentBuilder, type Client } from "discord.js";
 import configService from "#core/services/config.service.js";
+import mentionService from "#core/services/mention.service.js";
 import moduleService from "#core/services/module.service.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
@@ -36,7 +37,9 @@ async function postDailyLeaderboard(
       winners: board.winnerIds.map((id) => `<@${id}>`).join(" "),
     }),
     files: [new AttachmentBuilder(board.image, { name: "leaderboard.png" })],
-    allowedMentions: { users: board.winnerIds },
+    allowedMentions: {
+      users: await mentionService.mentionable(guildId, board.winnerIds),
+    },
   });
   logger.info(`Daily leaderboard posted | guildId = ${guildId}`);
 }
