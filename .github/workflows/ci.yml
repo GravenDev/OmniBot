@@ -20,11 +20,12 @@ concurrency:
 jobs:
   lint:
     runs-on: ubuntu-latest
-    permissions:
+    permissions: &read-only
       contents: read
 
     steps:
-      - uses: actions/checkout@v7
+      - &checkout
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: $/.github/actions/setup
@@ -35,13 +36,10 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    permissions: *read-only
 
     steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
+      - *checkout
       - uses: $/.github/actions/setup
       - name: Build
         run: pnpm build
@@ -50,14 +48,12 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    permissions: *read-only
 
     steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      - name: Set up Docker Buildx
+      - *checkout
+      - &setup-buildx
+        name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       # amd64 only, like the release: the Portainer host is amd64, and nothing
       # consumes an arm64 image.
@@ -123,9 +119,7 @@ jobs:
       IMAGE_NAME: ${{ github.repository }}
 
     steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
+      - *checkout
 
       # `latest` is not listed: the default `latest=auto` flavor already adds it
       # for a non-prerelease semver tag, and only for one.
@@ -149,8 +143,7 @@ jobs:
           echo "::error::${{ github.ref_name }} is not a valid semver tag, so no image tag could be derived. Tag a release as v<major>.<minor>.<patch> (a prerelease such as v0.0.1-rc1 is fine for testing)."
           exit 1
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - *setup-buildx
 
       - name: Log in to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
