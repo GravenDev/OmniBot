@@ -112,11 +112,11 @@ Les tirages sont téléchargés à 06:00 et 18:00 UTC, avant le classement quoti
 
 ### `/rngdle leaderboard`
 
-Image du classement des tirages du jour (UTC) : rang, avatar, surnom sur le serveur (ou pseudo RNGdle si le membre est introuvable), numéro tiré coloré selon son palier, score et placement en percentile. Limité aux 25 premiers.
+Image du classement des tirages du jour (UTC) : rang, avatar, surnom sur le serveur (ou pseudo RNGdle si le membre est introuvable), numéro tiré coloré selon son palier, score et placement en percentile. Limité aux 25 premiers. Deux boutons sont proposés sous l'image : « Mon profil » et « Classement général ».
 
 ### `/rngdle profile [member] [username]`
 
-Image du profil d'un joueur : meilleur et pire tirage avec leur date, score moyen avec le nombre de tirages, score total, série en cours avec son record, record de badges, rang au classement général du serveur et répartition par palier. La série compte les jours UTC consécutifs avec au moins un tirage ; elle reste en cours tant que le joueur a tiré hier ou aujourd'hui, et retombe à zéro après un jour sans tirage. Sans option, affiche son propre profil. L'option `username` propose les pseudos liés sur le serveur ; les deux options ne se combinent pas. Un membre qui n'a pas encore lié de compte est invité à le faire avec `/rngdle link`.
+Image du profil d'un joueur : meilleur et pire tirage avec leur date, score moyen avec le nombre de tirages, score total, série en cours avec son record, record de badges, rang au classement général du serveur et répartition par palier. La série compte les jours UTC consécutifs avec au moins un tirage ; elle reste en cours tant que le joueur a tiré hier ou aujourd'hui, et retombe à zéro après un jour sans tirage. Sans option, affiche son propre profil. L'option `username` propose les pseudos liés sur le serveur ; les deux options ne se combinent pas. Un membre qui n'a pas encore lié de compte est invité à le faire avec `/rngdle link`. Un bouton « Classement général » est proposé sous l'image.
 
 ### `/rngdle link <username>`
 
@@ -128,15 +128,19 @@ Délie son propre compte et supprime ses tirages sur ce serveur, après confirma
 
 ### `/rngdle server-stats`
 
-Image des statistiques du serveur : meilleur et pire tirage de tous les temps (avec le surnom de leur auteur, ou son pseudo RNGdle s'il est introuvable sur Discord), nombre de tirages, score moyen, score total et répartition par palier avec les trois joueurs les plus représentés dans chacun.
+Image des statistiques du serveur : meilleur et pire tirage de tous les temps (avec le surnom de leur auteur, ou son pseudo RNGdle s'il est introuvable sur Discord), nombre de tirages, score moyen, score total et répartition par palier avec les trois joueurs les plus représentés dans chacun. Deux boutons sont proposés sous l'image : « Mon profil » et « Classement général ».
 
-### `/rngdle leaderboard-all [page]`
+### Boutons de navigation
 
-Image du classement général (somme des scores), 10 joueurs par page, avec des boutons Précédent et Suivant. Si le membre qui consulte n'est pas sur la page, sa ligne est ajoutée en bas. Cliquer sur les boutons d'un message public ouvre une copie visible de soi seul, qu'on peut ensuite parcourir.
+Les boutons « Mon profil » et « Classement général » répondent par un message visible de soi seul : le profil de la personne qui clique (ou un message indiquant qu'elle n'a pas de compte RNGdle lié), ou la première page du classement général depuis toujours.
+
+### `/rngdle leaderboard-all [period] [page]`
+
+Image du classement général (somme des scores), 10 joueurs par page, avec des boutons Précédent et Suivant. L'option `period` restreint le classement aux tirages de la période : « Depuis toujours » (par défaut), « Ce mois-ci » (mois calendaire UTC) ou « Cette semaine » (semaine du lundi au dimanche, UTC). Le message rappelle la période au-dessus de l'image, par exemple « Classement de la semaine — du lun. 5 oct. au dim. 11 oct. », et les boutons conservent la période choisie. Si le membre qui consulte n'est pas sur la page, sa ligne est ajoutée en bas. Cliquer sur les boutons d'un message public ouvre une copie visible de soi seul, qu'on peut ensuite parcourir.
 
 ### Classement quotidien
 
-Chaque jour à 01:00 UTC, le bot publie le classement de la veille dans le salon configuré. Le texte au-dessus de l'image félicite le ou les meilleurs joueurs, puis donne le nombre de participants de la veille, le tirage le plus rare s'il est au moins RARE (avec son percentile), le pire tirage quand au moins deux joueurs ont tiré et qu'il ne se confond pas avec le meilleur, et les séries qui atteignent ce jour-là 7, 30, 50, 100, 200 ou 365 jours, puis chaque centaine. Seuls les meilleurs joueurs reçoivent une notification (sauf ceux qui ont désactivé leurs mentions avec `/pings`) ; les autres joueurs cités apparaissent sans être notifiés. Si les séries ne tiennent pas dans un message Discord, les dernières sont résumées en une ligne.
+Chaque jour à 01:00 UTC, le bot publie le classement de la veille dans le salon configuré. Le texte au-dessus de l'image félicite le ou les meilleurs joueurs, puis donne le nombre de participants de la veille, le tirage le plus rare s'il est au moins RARE (avec son percentile), le pire tirage quand au moins deux joueurs ont tiré et qu'il ne se confond pas avec le meilleur, et les séries qui atteignent ce jour-là 7, 30, 50, 100, 200 ou 365 jours, puis chaque centaine. Seuls les meilleurs joueurs reçoivent une notification (sauf ceux qui ont désactivé leurs mentions avec `/pings`) ; les autres joueurs cités apparaissent sans être notifiés. Si les séries ne tiennent pas dans un message Discord, les dernières sont résumées en une ligne. Les boutons « Mon profil » et « Classement général » sont proposés sous l'image.
 
 ### `/rngdle-admin`
 

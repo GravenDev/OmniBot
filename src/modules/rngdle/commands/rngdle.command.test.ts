@@ -8,6 +8,10 @@ const mocks = vi.hoisted(() => ({
   accountByUsername: vi.fn(),
   refreshIfStale: vi.fn(),
   linkOwnAccount: vi.fn(),
+  dailyLeaderboard: vi.fn(),
+  serverCard: vi.fn(),
+  profileCard: vi.fn(),
+  overallPage: vi.fn(),
 }));
 
 vi.mock("#lib/logger.js", () => {
@@ -26,36 +30,47 @@ vi.mock("#modules/rngdle/services/sync.js", () => ({
 vi.mock("#modules/rngdle/services/linking.js", () => ({
   linkOwnAccount: mocks.linkOwnAccount,
 }));
-vi.mock("#modules/rngdle/services/views.js", () => ({}));
-vi.mock("#modules/rngdle/interactions/overall-page.button.js", () => ({}));
+vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  dailyLeaderboard: mocks.dailyLeaderboard,
+  serverCard: mocks.serverCard,
+  profileCard: mocks.profileCard,
+  overallPage: mocks.overallPage,
+}));
 
 const { default: command } = await import("./rngdle.command.js");
 
 const config = {
   t: (key: string, options?: Record<string, unknown>) =>
     options ? `${key} ${JSON.stringify(options)}` : key,
+  locale: "en",
 } as unknown as ConfigProvider<RngdleConfigSchema>;
 
 interface Options {
   subcommand: string;
   username?: string;
   member?: { id: string };
+  strings?: Record<string, string>;
 }
 
-function interactionFor({ subcommand, username, member }: Options) {
+function interactionFor({ subcommand, username, member, strings }: Options) {
   return {
     guildId: "guild",
+    guild: {},
+    client: {},
     inGuild: () => true,
     user: { id: "caller" },
     options: {
       getSubcommand: () => subcommand,
-      getString: (_name: string, required?: boolean) => {
-        if (required && username === undefined) {
+      getString: (name: string, required?: boolean) => {
+        const value = name === "username" ? username : strings?.[name];
+        if (required && value === undefined) {
           throw new Error("missing option");
         }
-        return username ?? null;
+        return value ?? null;
       },
       getUser: () => member ?? null,
+      getInteger: () => null,
     },
     reply: vi.fn(),
     deferReply: vi.fn(),
@@ -74,6 +89,17 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.account.mockResolvedValue(null);
   mocks.accountByUsername.mockResolvedValue(null);
+  mocks.dailyLeaderboard.mockResolvedValue({
+    image: Buffer.from("png"),
+    winnerIds: [],
+  });
+  mocks.serverCard.mockResolvedValue(Buffer.from("png"));
+  mocks.profileCard.mockResolvedValue(Buffer.from("png"));
+  mocks.overallPage.mockResolvedValue({
+    image: Buffer.from("png"),
+    page: 1,
+    pageCount: 1,
+  });
 });
 
 describe("/rngdle link", () => {
@@ -212,6 +238,76 @@ describe("/rngdle profile without a linked account", () => {
     await run(interaction);
 
     expect(interaction.deferReply).toHaveBeenCalledWith();
-    expect(interaction.editReply).toHaveBeenCalledWith(key);
+    expect(interaction.editReply).toHaveBeenCalledWith({ content: key });
+  });
+});
+
+async function reply(options: Options) {
+  const interaction = interactionFor(options);
+  await run(interaction);
+  return interaction.editReply.mock.calls[0]![0] as {
+    components?: { toJSON(): { components: { custom_id?: string }[] } }[];
+  };
+}
+
+const customIds = (sent: Awaited<ReturnType<typeof reply>>) =>
+  (sent.components ?? []).flatMap((row) =>
+    row.toJSON().components.map((button) => button.custom_id)
+  );
+
+describe("/rngdle navigation buttons", () => {
+  beforeEach(() => {
+    mocks.account.mockResolvedValue({
+      guildId: "guild",
+      userId: "caller",
+      username: "Lucky",
+    });
+  });
+
+  it("offers the profile and the overall leaderboard under today's leaderboard", async () => {
+    expect(customIds(await reply({ subcommand: "leaderboard" }))).toEqual([
+      "rngdle-nav:profile",
+      "rngdle-nav:overall",
+    ]);
+  });
+
+  it("offers the profile and the overall leaderboard under the server stats", async () => {
+    expect(customIds(await reply({ subcommand: "server-stats" }))).toEqual([
+      "rngdle-nav:profile",
+      "rngdle-nav:overall",
+    ]);
+  });
+
+  it("offers the overall leaderboard under a profile", async () => {
+    expect(customIds(await reply({ subcommand: "profile" }))).toEqual([
+      "rngdle-nav:overall",
+    ]);
+  });
+});
+
+describe("/rngdle leaderboard-all", () => {
+  it("ranks over the chosen period", async () => {
+    await reply({
+      subcommand: "leaderboard-all",
+      strings: { period: "month" },
+    });
+
+    expect(mocks.overallPage).toHaveBeenCalledWith(
+      expect.anything(),
+      1,
+      "caller",
+      "month"
+    );
+  });
+
+  it("ranks over all time without a period", async () => {
+    await reply({ subcommand: "leaderboard-all" });
+
+    expect(mocks.overallPage).toHaveBeenCalledWith(
+      expect.anything(),
+      1,
+      "caller",
+      "all"
+    );
   });
 });

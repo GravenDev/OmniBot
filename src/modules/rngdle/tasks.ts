@@ -5,6 +5,7 @@ import moduleService from "#core/services/module.service.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
+import { navigationRow } from "./interactions/navigation.button.js";
 import type { RngdleConfigSchema } from "./rngdle.config.js";
 import { fetchScoreTable } from "./services/api.js";
 import { buildDailyMessage } from "./services/recap.js";
@@ -43,6 +44,7 @@ async function postDailyLeaderboard(
   await channel.send({
     content: buildDailyMessage(board.winnerIds, recap, config.t, config.locale),
     files: [new AttachmentBuilder(board.image, { name: "leaderboard.png" })],
+    components: [navigationRow(config.t, ["profile", "overall"])],
     allowedMentions: {
       users: await mentionService.mentionable(guildId, board.winnerIds),
     },
