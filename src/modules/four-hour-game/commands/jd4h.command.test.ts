@@ -1,6 +1,11 @@
-import type { APIEmbed, ChatInputCommandInteraction } from "discord.js";
+import {
+  AttachmentBuilder,
+  GuildMember,
+  type ChatInputCommandInteraction,
+} from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
+import type { StatCard } from "#lib/stat-card.js";
 import { initTestI18n, makeTestConfig } from "#lib/testing.js";
 import {
   type FourHourGameConfigSchema,
@@ -8,31 +13,60 @@ import {
 } from "#modules/four-hour-game/four-hour-game.config.js";
 import en from "#modules/four-hour-game/i18n/en.json" with { type: "json" };
 import fr from "#modules/four-hour-game/i18n/fr.json" with { type: "json" };
+import type { PlayerProfile } from "#modules/four-hour-game/services/four-hour-game.service.js";
 
-const mocks = vi.hoisted(() => ({
-  getLeaderboard: vi.fn(),
-  getScore: vi.fn(),
-  getRank: vi.fn(),
-  resolvePlayers: vi.fn(),
-  renderLeaderboard: vi.fn(async (..._args: unknown[]) => Buffer.from("png")),
-}));
+const getProfile = vi.hoisted(() => vi.fn());
+const getRevision = vi.hoisted(() => vi.fn());
+const getLeaderboard = vi.hoisted(() => vi.fn());
 vi.mock("#modules/four-hour-game/services/four-hour-game.service.js", () => ({
-  default: {
-    getLeaderboard: mocks.getLeaderboard,
-    getScore: mocks.getScore,
-    getRank: mocks.getRank,
-    getRevision: () => 0,
-  },
+  default: { getProfile, getRevision, getLeaderboard },
 }));
-vi.mock("#lib/players.js", () => ({ resolvePlayers: mocks.resolvePlayers }));
+
+const resolvePlayers = vi.hoisted(() => vi.fn());
+vi.mock("#lib/players.js", () => ({ resolvePlayers }));
+
+const renderLeaderboard = vi.hoisted(() =>
+  vi.fn(async (..._args: unknown[]) => Buffer.from("png"))
+);
 vi.mock("#modules/four-hour-game/rendering/leaderboard-image.js", () => ({
-  renderLeaderboard: mocks.renderLeaderboard,
+  renderLeaderboard,
+}));
+
+const renderStatCard = vi.hoisted(() => vi.fn());
+vi.mock("#lib/stat-card.js", () => ({ renderStatCard }));
+
+const fetchImage = vi.hoisted(() => vi.fn());
+vi.mock("#lib/imaging.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("#lib/imaging.js")>()),
+  fetchImage,
 }));
 
 const { default: command } = await import("./jd4h.command.js");
 
+const PNG = Buffer.from("png");
+
+const profile: PlayerProfile = {
+  score: 42,
+  rank: 3,
+  total: 17,
+  monthPoints: 5,
+  bestHoldSeconds: 4 * 3600 + 12 * 60,
+  currentStreak: 2,
+  bestStreak: 6,
+  lastPointAt: new Date("2026-10-03T22:30:00Z"),
+};
+
+let revision = 0;
+
 beforeAll(async () => {
   await initTestI18n("four-hour-game", { en, fr });
+});
+
+beforeEach(() => {
+  getProfile.mockReset();
+  getRevision.mockReset().mockReturnValue(++revision);
+  renderStatCard.mockReset().mockResolvedValue(PNG);
+  fetchImage.mockReset().mockResolvedValue(null);
 });
 
 const keyConfig = {
@@ -56,13 +90,17 @@ function leaderboardInteraction() {
 }
 
 describe("/jd4h leaderboard", () => {
+  beforeEach(() => {
+    renderLeaderboard.mockClear();
+  });
+
   it("names players after their server nickname and drops the ones nobody can find", async () => {
-    mocks.getLeaderboard.mockResolvedValue([
+    getLeaderboard.mockResolvedValue([
       { rank: 1, userId: "alice", score: 12 },
       { rank: 2, userId: "ghost", score: 8 },
       { rank: 3, userId: "bob", score: 3 },
     ]);
-    mocks.resolvePlayers.mockResolvedValue(
+    resolvePlayers.mockResolvedValue(
       new Map([
         ["alice", { name: "Alice (server)", avatar: null }],
         ["bob", { name: "Bob (server)", avatar: null }],
@@ -72,92 +110,168 @@ describe("/jd4h leaderboard", () => {
 
     await command.execute(interaction, keyConfig);
 
-    expect(mocks.resolvePlayers).toHaveBeenCalledWith(
+    expect(resolvePlayers).toHaveBeenCalledWith(
       interaction.client,
       interaction.guildId,
       ["alice", "ghost", "bob"]
     );
-    expect(mocks.renderLeaderboard.mock.calls[0]![0]).toEqual([
+    expect(renderLeaderboard.mock.calls[0]![0]).toEqual([
       { rank: 1, name: "Alice (server)", score: 12, avatar: null },
       { rank: 3, name: "Bob (server)", score: 3, avatar: null },
     ]);
   });
 
   it("answers with the empty message when no player can be found", async () => {
-    mocks.renderLeaderboard.mockClear();
-    mocks.getLeaderboard.mockResolvedValue([
-      { rank: 1, userId: "ghost", score: 5 },
-    ]);
-    mocks.resolvePlayers.mockResolvedValue(new Map());
+    getLeaderboard.mockResolvedValue([{ rank: 1, userId: "ghost", score: 5 }]);
+    resolvePlayers.mockResolvedValue(new Map());
     const interaction = leaderboardInteraction();
 
     await command.execute(interaction, keyConfig);
 
-    expect(mocks.renderLeaderboard).not.toHaveBeenCalled();
+    expect(renderLeaderboard).not.toHaveBeenCalled();
     expect(interaction.editReply).toHaveBeenCalledWith("leaderboard.empty");
   });
 });
 
-function scoreInteraction() {
+function guildMember(name: string, avatarUrl: string): GuildMember {
+  const member = Object.create(GuildMember.prototype) as GuildMember;
+  Object.defineProperty(member, "displayName", { value: name });
+  Object.defineProperty(member, "displayAvatarURL", {
+    value: () => avatarUrl,
+  });
+  return member;
+}
+
+function user(id: string, name: string) {
   return {
-    guildId: "guild",
-    inGuild: () => true,
-    user: { id: "caller" },
-    options: {
-      getSubcommand: () => "score",
-      getUser: () => ({ id: "bob" }),
-    },
-    reply: vi.fn(),
+    id,
+    displayName: name,
+    displayAvatarURL: () => `https://cdn/users/${id}.png`,
   };
 }
 
-async function runScore(locale: string) {
-  const interaction = scoreInteraction();
+interface ScoreOptions {
+  option?: ReturnType<typeof user> | null;
+  optionMember?: unknown;
+  member?: unknown;
+}
+
+function scoreInteraction({
+  option = null,
+  optionMember = null,
+  member = null,
+}: ScoreOptions) {
+  const calls: string[] = [];
+  return {
+    calls,
+    guildId: "guild",
+    inGuild: () => true,
+    user: user("caller", "Caller"),
+    member,
+    options: {
+      getSubcommand: () => "score",
+      getUser: () => option,
+      getMember: () => optionMember,
+    },
+    deferReply: vi.fn(async () => {
+      calls.push("deferReply");
+    }),
+    editReply: vi.fn(async () => {
+      calls.push("editReply");
+    }),
+  };
+}
+
+async function runScore(options: ScoreOptions, locale = "fr") {
+  const interaction = scoreInteraction(options);
   await command.execute(
     interaction as unknown as ChatInputCommandInteraction,
     makeTestConfig("four-hour-game", fourHourGameConfigSchema, {}, locale)
   );
-  return interaction.reply.mock.calls[0]![0] as {
+  expect(interaction.calls).toEqual(["deferReply", "editReply"]);
+  return interaction.editReply.mock.calls[0]![0] as {
     content?: string;
-    embeds?: { toJSON(): APIEmbed }[];
+    files?: AttachmentBuilder[];
+    allowedMentions?: unknown;
   };
 }
 
+function renderedCard(): StatCard {
+  expect(renderStatCard).toHaveBeenCalledTimes(1);
+  return renderStatCard.mock.calls[0]![0] as StatCard;
+}
+
 describe("/jd4h score", () => {
-  beforeEach(() => {
-    mocks.getScore.mockReset();
-    mocks.getRank.mockReset();
+  it("sends the member's card as an attachment", async () => {
+    getProfile.mockResolvedValue(profile);
+
+    const reply = await runScore({
+      option: user("bob", "Bob"),
+      optionMember: guildMember("Bobby", "https://cdn/guilds/bob.png"),
+    });
+
+    expect(getProfile).toHaveBeenCalledWith("guild", "bob");
+    expect(reply.content).toBeUndefined();
+    expect(reply.files).toHaveLength(1);
+    expect(reply.files![0]).toBeInstanceOf(AttachmentBuilder);
+    expect(reply.files![0]!.attachment).toBe(PNG);
+    expect(reply.files![0]!.name).toBe("profile.png");
   });
 
-  it("shows the member's score and rank", async () => {
-    mocks.getScore.mockResolvedValue(42);
-    mocks.getRank.mockResolvedValue({ rank: 3, total: 17 });
+  it("builds the card from the profile and the server member", async () => {
+    getProfile.mockResolvedValue(profile);
 
-    const reply = await runScore("fr");
+    await runScore({
+      option: user("bob", "Bob"),
+      optionMember: guildMember("Bobby", "https://cdn/guilds/bob.png"),
+    });
 
-    expect(mocks.getRank).toHaveBeenCalledWith("guild", "bob");
-    expect(reply.embeds![0]!.toJSON().description).toBe(
-      "Le score de <@bob> est **42** — 3ᵉ sur 17."
-    );
+    expect(fetchImage).toHaveBeenCalledWith("https://cdn/guilds/bob.png");
+    const card = renderedCard();
+    expect(card).toMatchObject({
+      title: "Bobby",
+      subtitle: "Jeu des 4h",
+      rank: { position: 3, total: 17 },
+    });
+    expect(card.rows.flat().map((box) => [box.value, box.subtext])).toEqual([
+      ["42", undefined],
+      ["5", undefined],
+      ["4 h 12 min", undefined],
+      ["2", "record : 6"],
+      ["3 oct. 2026", undefined],
+    ]);
   });
 
-  it("shows the score alone when the rank is unknown", async () => {
-    mocks.getScore.mockResolvedValue(42);
-    mocks.getRank.mockResolvedValue(null);
+  it("falls back to the Discord account when the member left the server", async () => {
+    getProfile.mockResolvedValue(profile);
 
-    const reply = await runScore("en");
+    await runScore({ option: user("bob", "Bob"), optionMember: null });
 
-    expect(reply.embeds![0]!.toJSON().description).toBe(
-      "<@bob>'s score is **42**."
-    );
+    expect(fetchImage).toHaveBeenCalledWith("https://cdn/users/bob.png");
+    expect(renderedCard().title).toBe("Bob");
+  });
+
+  it("shows the caller's own card by default", async () => {
+    getProfile.mockResolvedValue(profile);
+
+    await runScore({
+      member: guildMember("Captain", "https://cdn/guilds/caller.png"),
+    });
+
+    expect(getProfile).toHaveBeenCalledWith("guild", "caller");
+    expect(fetchImage).toHaveBeenCalledWith("https://cdn/guilds/caller.png");
+    expect(renderedCard().title).toBe("Captain");
   });
 
   it("says when the member has no score", async () => {
-    mocks.getScore.mockResolvedValue(null);
-    mocks.getRank.mockResolvedValue(null);
+    getProfile.mockResolvedValue(null);
 
-    const reply = await runScore("en");
+    const reply = await runScore({ option: user("bob", "Bob") }, "en");
 
-    expect(reply.content).toBe("<@bob> has no score on this server.");
+    expect(reply).toEqual({
+      content: "<@bob> has no score on this server.",
+      allowedMentions: { parse: [] },
+    });
+    expect(renderStatCard).not.toHaveBeenCalled();
   });
 });

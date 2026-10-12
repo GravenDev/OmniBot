@@ -2,6 +2,7 @@ import prisma from "#lib/database.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { declareService, type Service } from "#lib/service.js";
 import { evaluateMessage, type MessageOutcome } from "./game-rules.js";
+import { computeProfileStats, type ProfileStats } from "./profile.js";
 
 export interface GameMessage {
   guildId: string;
@@ -32,6 +33,12 @@ export type LatestMessageFetcher = () => Promise<ChannelMessage | null>;
 export type SetScoreResult = "created" | "updated" | "removed" | "absent";
 
 export interface PlayerRank {
+  rank: number;
+  total: number;
+}
+
+export interface PlayerProfile extends ProfileStats {
+  score: number;
   rank: number;
   total: number;
 }
@@ -98,6 +105,14 @@ class FourHourGameService implements Service {
         update: { score: { increment: 1 } },
       }),
       recordMessage,
+      prisma.fourHourGamePoint.create({
+        data: {
+          guildId,
+          userId: outcome.winnerId,
+          heldSeconds: outcome.heldSeconds,
+          awardedAt: sentAt,
+        },
+      }),
     ]);
 
     this.bumpRevision(guildId);
@@ -186,10 +201,11 @@ class FourHourGameService implements Service {
   }
 
   async deleteScore(guildId: string, userId: string): Promise<boolean> {
-    const { count } = await prisma.fourHourGameScore.deleteMany({
-      where: { guildId, userId },
-    });
-    if (count > 0) {
+    const [{ count }, points] = await prisma.$transaction([
+      prisma.fourHourGameScore.deleteMany({ where: { guildId, userId } }),
+      prisma.fourHourGamePoint.deleteMany({ where: { guildId, userId } }),
+    ]);
+    if (count > 0 || points.count > 0) {
       this.bumpRevision(guildId);
     }
     return count > 0;
@@ -213,6 +229,31 @@ class FourHourGameService implements Service {
       }),
     ]);
     return { rank: ahead + 1, total };
+  }
+
+  async getProfile(
+    guildId: string,
+    userId: string,
+    now: Date = new Date()
+  ): Promise<PlayerProfile | null> {
+    const [score, rank, history] = await Promise.all([
+      this.getScore(guildId, userId),
+      this.getRank(guildId, userId),
+      prisma.fourHourGamePoint.findMany({
+        where: { guildId },
+        select: { userId: true, heldSeconds: true, awardedAt: true },
+        orderBy: [{ awardedAt: "asc" }, { id: "asc" }],
+      }),
+    ]);
+    if (score === null) {
+      return null;
+    }
+    return {
+      score,
+      rank: rank?.rank ?? 0,
+      total: rank?.total ?? 0,
+      ...computeProfileStats(history, userId, now),
+    };
   }
 
   async getLeaderboard(

@@ -57,6 +57,8 @@ Repris du bot DJ4H. Dans le salon de jeu, le dernier message posté « tient » 
 
 L'annonce d'un point indique combien de temps le message est resté sans réponse (« 4 h 12 min », deux unités au plus), le nouveau total du gagnant et son rang au classement du serveur (« 3ᵉ sur 17 »), avec l'avatar de serveur du gagnant en vignette et, en pied, l'heure d'envoi du message gagnant (affichée dans le fuseau de chaque lecteur). Personne n'est notifié. Si le rang ou l'avatar ne peuvent pas être obtenus, l'annonce part sans eux.
 
+Chaque point gagné est aussi inscrit dans l'historique du serveur, avec la durée pendant laquelle le message a tenu et l'heure du message qui l'a fait gagner. Cet historique alimente la carte de `/jd4h score` ; il n'existe que pour les points gagnés depuis sa mise en place.
+
 Les messages de bots, les messages système (arrivée d'un membre, épinglage, boost…), les messages hors du salon (y compris dans ses fils) et les messages privés sont ignorés. Un message plus ancien que le dernier message enregistré (reçu dans le désordre) est ignoré lui aussi. Après un changement de salon de jeu, le dernier message de l'ancien salon ne compte plus : la partie repart du premier message posté dans le nouveau. Il en va de même quand le module est réactivé après avoir été désactivé.
 
 Un message supprimé ne compte plus : si c'était le dernier message, c'est le message de joueur précédent encore présent dans le salon qui redevient le dernier message, avec son heure d'envoi réelle. Si le salon n'en contient plus, la partie repart du prochain message.
@@ -65,7 +67,17 @@ Au démarrage, le bot relit le vrai dernier message de joueur de chaque salon de
 
 ### `/jd4h score [member]`
 
-Affiche le score du membre indiqué, ou le sien par défaut, et son rang parmi les joueurs du serveur qui ont au moins un point (« 3ᵉ sur 17 »). Le rang suit l'ordre de `/jd4h leaderboard` : score décroissant, puis identifiant Discord pour départager les égalités.
+Affiche la carte du membre indiqué, ou la sienne par défaut : une image avec son avatar et son surnom sur le serveur (à défaut, ceux de son compte Discord) et son rang parmi les joueurs du serveur qui ont au moins un point (médaille pour le podium, sinon « #3 / 17 »). Le rang suit l'ordre de `/jd4h leaderboard` : score décroissant, puis identifiant Discord pour départager les égalités.
+
+La carte montre :
+
+- **Points** : le score total ;
+- **Ce mois-ci** : les points gagnés depuis le 1ᵉʳ du mois (UTC) ;
+- **Meilleur temps tenu** : la plus longue durée pendant laquelle un de ses messages gagnants est resté sans réponse ;
+- **Série en cours** : le nombre de points d'affilée qu'il a remportés sur le serveur, sans qu'un autre joueur marque entre deux (0 si le dernier point du serveur est à quelqu'un d'autre), avec son record en dessous ;
+- **Dernier point** : la date de son dernier point (UTC).
+
+Ces valeurs viennent de l'historique : un joueur dont tous les points sont antérieurs à l'historique (ou ont été fixés par un administrateur) voit « — » à leur place. Un membre sans score reçoit un simple message texte. L'image est réutilisée pendant 15 secondes par serveur, langue et membre, et régénérée dès qu'un score change.
 
 ### `/jd4h leaderboard`
 
@@ -75,7 +87,7 @@ Génère une image du top 10 du serveur (rang, médailles pour le podium, avatar
 
 **Permission requise :** Administrateur
 
-Fixe le score d'un membre, ou le supprime. Fixer un score à 0 revient à le supprimer. Réponses éphémères.
+Fixe le score d'un membre, ou le supprime. Fixer un score à 0 revient à le supprimer. Supprimer un score efface aussi l'historique des points du membre, et les séries des autres joueurs sont alors calculées comme si ces points n'avaient pas existé ; le fixer à une autre valeur conserve l'historique. Réponses éphémères.
 
 ### Configuration — `/config four-hour-game`
 
