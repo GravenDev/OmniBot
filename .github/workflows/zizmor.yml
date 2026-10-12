@@ -1,0 +1,37 @@
+name: zizmor
+
+# Static analysis of the workflows themselves: template injection, credentials
+# left behind by checkout, unpinned or known-vulnerable actions… The findings
+# go to the Security tab (code scanning), visible only to collaborators with
+# write access, rather than to the public job log. Rules are tuned in
+# .github/zizmor.yml.
+
+on:
+  push:
+    branches: ["master"]
+    paths: &workflow-paths
+      - ".github/workflows/**"
+      - ".github/zizmor.yml"
+  pull_request:
+    paths: *workflow-paths
+  # Online audits (known-vulnerable actions, impostor commits) can turn up
+  # something new without any change here.
+  schedule:
+    - cron: "17 4 * * 1"
+
+permissions: {}
+
+jobs:
+  zizmor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
