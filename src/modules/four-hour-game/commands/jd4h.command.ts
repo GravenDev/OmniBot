@@ -7,7 +7,7 @@ import {
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
-import { fetchAvatar } from "#lib/imaging.js";
+import { resolvePlayers } from "#lib/players.js";
 import { RevisionCache } from "#lib/revision-cache.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
 import { renderLeaderboard } from "#modules/four-hour-game/rendering/leaderboard-image.js";
@@ -59,24 +59,24 @@ async function buildLeaderboardImage(
     LEADERBOARD_SIZE
   );
 
-  const rows = (
-    await Promise.all(
-      entries.map(async (entry) => {
-        const user = await interaction.client.users
-          .fetch(entry.userId)
-          .catch(() => null);
-        if (!user) {
-          return null;
-        }
-        return {
-          rank: entry.rank,
-          name: user.username,
-          score: entry.score,
-          avatar: await fetchAvatar(user),
-        };
-      })
-    )
-  ).filter((row) => row !== null);
+  const players = await resolvePlayers(
+    interaction.client,
+    interaction.guildId,
+    entries.map((entry) => entry.userId)
+  );
+  const rows = entries.flatMap((entry) => {
+    const player = players.get(entry.userId);
+    return player
+      ? [
+          {
+            rank: entry.rank,
+            name: player.name,
+            score: entry.score,
+            avatar: player.avatar,
+          },
+        ]
+      : [];
+  });
 
   if (rows.length === 0) {
     return null;

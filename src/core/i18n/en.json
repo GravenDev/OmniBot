@@ -15,7 +15,7 @@
   "config.noModule": "No module with id `{{moduleId}}`",
   "config.currentValue": "Current: {{value}}",
   "config.defaultSuffix": " _(default)_",
-  "config.notFound": "Configuration not found.",
+  "config.notFound": "This module's configuration no longer exists. Run `/config` again.",
   "config.invalidSelection": "Invalid selected value.",
   "config.number.invalid": "❌ `{{value}}` is not a valid number.",
   "config.duration.invalid": "❌ `{{value}}` is not a valid duration. Use a number followed by `s`, `m`, `h` or `d`, e.g. `30s`, `4h`, `1h30m`.",
@@ -31,15 +31,16 @@
   "setConfig.label": "Enter a value ({{type}}):",
 
   "command.notEnabled": "The command `{{commandName}}` is not enabled in this guild.",
-  "command.failed": "Something went wrong while running `{{commandName}}`. Please try again later.",
+  "command.failed": "Something went wrong while running `/{{commandName}}`. Run the command again; if it keeps failing, let a server administrator know.",
 
   "interaction.moduleNotEnabled": "This feature's module is not enabled in this server.",
-  "interaction.failed": "Something went wrong. Please try again later.",
-  "interaction.malformed": "The button is malformed. Please try again later.",
-  "interaction.moduleNotFound": "Module not found. Please try again later.",
-  "interaction.failedEnable": "Failed to enable the module. Please try again later.",
-  "interaction.failedDisable": "Failed to disable the module. Please try again later.",
-  "interaction.configOptionNotFound": "Configuration option not found.",
+  "interaction.failed": "Something went wrong. Try again; if it keeps failing, let a server administrator know.",
+  "interaction.missingPermissions": "I am missing permissions to do this. An administrator needs to check the bot's permissions in this channel.",
+  "interaction.malformed": "This button is no longer valid. Run the command again to get a fresh one.",
+  "interaction.moduleNotFound": "This module no longer exists. Run the command again to get an up-to-date message.",
+  "interaction.failedEnable": "The module could not be enabled. Try again in a few moments.",
+  "interaction.failedDisable": "The module could not be disabled. Try again in a few moments.",
+  "interaction.configOptionNotFound": "This configuration option no longer exists. Run `/config` again to see the current options.",
   "interaction.notBoolean": "This option is not a boolean toggle.",
 
   "scalarList.header": "# `{{moduleName}}` — {{entryName}}\n-# {{typeName}}\n> {{entryDesc}}",
@@ -81,7 +82,7 @@
   "modules.core.description": "The core module of the application, managing core commands and events. It is always loaded.",
 
   "modules.thread-creator.name": "Thread Creator",
-  "modules.thread-creator.description": "Automatically creates discussion threads under each new message in configured channels. Replaces Needle bot.",
+  "modules.thread-creator.description": "Automatically creates discussion threads under each new message in configured channels.",
 
   "modules.four-hour-game.name": "4h Game",
   "modules.four-hour-game.description": "Score a point when your message stays the last one in the game channel for the configured delay.",

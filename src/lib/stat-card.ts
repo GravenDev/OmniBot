@@ -18,7 +18,9 @@ const HEADER_CENTER = HEADER_HEIGHT / 2;
 const PORTRAIT_SIZE = 90;
 const TITLE_X = MARGIN + PORTRAIT_SIZE + 24;
 const TITLE_SIZE = 44;
+const TITLE_MIN_SIZE = 30;
 const SUBTITLE_SIZE = 20;
+const RANK_GAP = 24;
 
 const BODY_TOP = HEADER_HEIGHT + 30;
 const BOTTOM_MARGIN = 30;
@@ -29,6 +31,7 @@ export const PANEL_PADDING = 20;
 export const LABEL_SIZE = 19;
 const VALUE_SIZE = 32;
 const SUBTEXT_SIZE = 17;
+const SUBTEXT_MIN_SIZE = 13;
 const BOX_TITLE_Y = 16;
 const BOX_VALUE_Y = 42;
 const BOX_SUBTEXT_Y = 84;
@@ -90,13 +93,38 @@ export function drawFittedText(
   y: number,
   size: number,
   color: Rgb,
-  maxWidth: number
+  maxWidth: number,
+  minSize?: number
 ): void {
+  const fitted = fitText(ctx, value, size, maxWidth, minSize);
+  drawText(
+    ctx,
+    fitted.text,
+    x,
+    y + (size - fitted.size) * 0.5,
+    fitted.size,
+    color
+  );
+}
+
+export function fitText(
+  ctx: SKRSContext2D,
+  value: string,
+  size: number,
+  maxWidth: number,
+  minSize = 10
+): { text: string; size: number } {
   let fitted = size;
-  while (fitted > 10 && measureText(ctx, value, fitted) > maxWidth) {
+  while (fitted > minSize && measureText(ctx, value, fitted) > maxWidth) {
     fitted -= 1;
   }
-  drawText(ctx, value, x, y + (size - fitted) * 0.5, fitted, color);
+  const chars = [...value];
+  let text = value;
+  while (chars.length > 1 && measureText(ctx, text, fitted) > maxWidth) {
+    chars.pop();
+    text = `${chars.join("").trimEnd()}…`;
+  }
+  return { text, size: fitted };
 }
 
 export function measureText(
@@ -183,9 +211,25 @@ function drawStatBox(
       y + BOX_SUBTEXT_Y,
       SUBTEXT_SIZE,
       PALETTE.subtext,
-      innerWidth
+      innerWidth,
+      SUBTEXT_MIN_SIZE
     );
   }
+}
+
+function rankWidth(
+  ctx: SKRSContext2D,
+  { position, total }: { position: number; total: number },
+  medals: Image[]
+): number {
+  const medalWidth = MEDAL_WIDTHS[position - 1];
+  if (medals[position - 1] && medalWidth) {
+    return medalWidth;
+  }
+  return (
+    measureText(ctx, `#${position}`, RANK_SIZE) +
+    measureText(ctx, ` / ${total}`, TOTAL_SIZE)
+  );
 }
 
 function drawRank(
@@ -232,17 +276,37 @@ export async function renderStatCard(card: StatCard): Promise<Buffer> {
 
   const portraitY = HEADER_CENTER - PORTRAIT_SIZE / 2;
   drawCircularImage(ctx, card.image, MARGIN, portraitY, PORTRAIT_SIZE);
-  ctx.font = font(TITLE_SIZE);
+  const rank = card.rank && card.rank.position > 0 ? card.rank : undefined;
+  const titleWidth =
+    WIDTH -
+    MARGIN -
+    TITLE_X -
+    (rank ? rankWidth(ctx, rank, medals) + RANK_GAP : 0);
+  const title = fitText(
+    ctx,
+    card.title,
+    TITLE_SIZE,
+    titleWidth,
+    TITLE_MIN_SIZE
+  );
+  ctx.font = font(title.size);
   ctx.fillStyle = rgb(PALETTE.text);
   const titleY = card.subtitle ? HEADER_CENTER - 12 : HEADER_CENTER;
-  fillTextCentered(ctx, card.title, TITLE_X, titleY);
+  fillTextCentered(ctx, title.text, TITLE_X, titleY);
   if (card.subtitle) {
-    ctx.font = font(SUBTITLE_SIZE);
+    const subtitle = fitText(
+      ctx,
+      card.subtitle,
+      SUBTITLE_SIZE,
+      titleWidth,
+      SUBTITLE_SIZE
+    );
+    ctx.font = font(subtitle.size);
     ctx.fillStyle = rgb(PALETTE.subtext);
-    fillTextCentered(ctx, card.subtitle, TITLE_X, HEADER_CENTER + 26);
+    fillTextCentered(ctx, subtitle.text, TITLE_X, HEADER_CENTER + 26);
   }
-  if (card.rank && card.rank.position > 0) {
-    drawRank(ctx, card.rank, medals);
+  if (rank) {
+    drawRank(ctx, rank, medals);
   }
 
   const contentWidth = WIDTH - 2 * MARGIN;

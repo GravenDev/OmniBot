@@ -1,7 +1,8 @@
 import type { Image } from "@napi-rs/canvas";
 import type { Client, Guild } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
-import { fetchAvatar, fetchImage } from "#lib/imaging.js";
+import { fetchImage } from "#lib/imaging.js";
+import { resolvePlayers } from "#lib/players.js";
 import { RevisionCache } from "#lib/revision-cache.js";
 import {
   renderProfile,
@@ -41,34 +42,11 @@ export interface OverallPage {
   pageCount: number;
 }
 
-interface Player {
-  name: string;
-  avatar: Image | null;
-}
-
 function cached<T>(context: ViewContext, key: string, load: () => Promise<T>) {
   return cache.get(
     `${context.guildId}:${context.locale}:${key}`,
     store.revision(context.guildId),
     load
-  );
-}
-
-async function resolvePlayers(
-  client: Client,
-  userIds: Iterable<string>
-): Promise<Map<string, Player>> {
-  const entries = await Promise.all(
-    [...new Set(userIds)].map(async (userId) => {
-      const user = await client.users.fetch(userId).catch(() => null);
-      return [
-        userId,
-        user && { name: user.username, avatar: await fetchAvatar(user) },
-      ] as const;
-    })
-  );
-  return new Map(
-    entries.filter((entry): entry is [string, Player] => entry[1] !== null)
   );
 }
 
@@ -96,6 +74,7 @@ export function dailyLeaderboard(
     const usernames = new Map(accounts.map((a) => [a.userId, a.username]));
     const players = await resolvePlayers(
       context.client,
+      context.guildId,
       top.map((roll) => roll.userId)
     );
     const rows = top.map((roll, index) => {
@@ -162,6 +141,7 @@ export function overallPage(
     const shown = callerOffPage ? [...indexes, callerIndex] : indexes;
     const players = await resolvePlayers(
       context.client,
+      context.guildId,
       shown.map((index) => totals[index]!.userId)
     );
     const toRow = (index: number) => {
@@ -205,9 +185,9 @@ export function profileCard(
       return null;
     }
 
-    const player = (await resolvePlayers(context.client, [account.userId])).get(
-      account.userId
-    );
+    const player = (
+      await resolvePlayers(context.client, context.guildId, [account.userId])
+    ).get(account.userId);
     const formatDate = new Intl.DateTimeFormat(context.locale, {
       day: "2-digit",
       month: "short",
@@ -273,7 +253,7 @@ export function serverCard(
       return null;
     }
 
-    const players = await resolvePlayers(context.client, [
+    const players = await resolvePlayers(context.client, context.guildId, [
       stats.best.userId,
       stats.worst.userId,
       ...TIERS.flatMap((tier) => stats.tierLeaders[tier]),
@@ -283,7 +263,8 @@ export function serverCard(
       number: roll.number,
       score: roll.score,
       tier: table.tierOf(roll.score),
-      playerName: usernames.get(roll.userId) ?? "?",
+      playerName:
+        players.get(roll.userId)?.name ?? usernames.get(roll.userId) ?? "?",
       avatar: players.get(roll.userId)?.avatar ?? null,
     });
     const tierLeaders = Object.fromEntries(

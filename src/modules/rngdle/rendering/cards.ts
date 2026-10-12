@@ -315,7 +315,7 @@ export function renderServerStats(
 ): Promise<Buffer> {
   const rollBox = (title: string, roll: ServerStatsRoll): StatBox => ({
     ...scoreBox(title, roll.score, roll.tier),
-    subtext: `${labels.by(roll.playerName)} · ${labels.roll(formatSpaced(roll.number))}`,
+    subtext: `${labels.roll(formatSpaced(roll.number))} · ${labels.by(roll.playerName)}`,
     avatar: roll.avatar,
   });
   return renderStatCard({

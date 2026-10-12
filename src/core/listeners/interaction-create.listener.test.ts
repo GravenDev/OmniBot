@@ -1,3 +1,4 @@
+import { DiscordAPIError } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockModules } = vi.hoisted(() => ({ mockModules: [] as any[] }));
@@ -22,6 +23,17 @@ vi.mock("#lib/i18n.js", () => ({
 }));
 
 const { default: listener } = await import("./interaction-create.listener.js");
+
+function missingPermissions() {
+  return new DiscordAPIError(
+    { code: 50013, message: "Missing Permissions" },
+    50013,
+    403,
+    "POST",
+    "https://discord.com/api/v10/channels/1/messages",
+    {}
+  );
+}
 
 function fakeCommand(commandName: string, overrides: Record<string, any> = {}) {
   return {
@@ -168,6 +180,22 @@ describe("handleCommand", () => {
     );
   });
 
+  it("tells the user the bot lacks permissions when Discord refuses the action", async () => {
+    pushCommand({
+      data: { name: "boom" },
+      execute: vi.fn(async () => {
+        throw missingPermissions();
+      }),
+    });
+
+    const interaction = fakeCommand("boom", { deferred: true });
+    await listener.execute(interaction, undefined);
+
+    expect(interaction.followUp).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "interaction.missingPermissions" })
+    );
+  });
+
   it("blocks non-admins from requiresAdmin commands", async () => {
     const execute = vi.fn(async () => ({}));
     pushCommand({ data: { name: "admin" }, requiresAdmin: true, execute });
@@ -270,6 +298,24 @@ describe("component interactions", () => {
 
     expect(interaction.followUp).toHaveBeenCalledWith(
       expect.objectContaining({ content: "interaction.failed" })
+    );
+  });
+
+  it("tells the user the bot lacks permissions when the handler hits Missing Permissions", async () => {
+    pushHandler({
+      customId: "btn",
+      access: "everyone",
+      check: () => true,
+      execute: vi.fn(async () => {
+        throw missingPermissions();
+      }),
+    });
+
+    const interaction = fakeButton("btn");
+    await listener.execute(interaction, undefined);
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "interaction.missingPermissions" })
     );
   });
 
