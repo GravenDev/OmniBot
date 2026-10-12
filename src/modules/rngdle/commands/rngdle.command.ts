@@ -190,11 +190,7 @@ async function versus(interaction: Interaction, config: Config) {
   const first = interaction.options.getUser("player1", true);
   const second = interaction.options.getUser("player2") ?? interaction.user;
   const refuse = (content: string) =>
-    interaction.reply({
-      content,
-      flags: MessageFlags.Ephemeral,
-      allowedMentions: { parse: [] },
-    });
+    interaction.reply({ content, ...ephemeral, ...noPings });
   if (first.id === second.id) {
     await refuse(config.t("versus.samePlayer"));
     return;
