@@ -140,7 +140,7 @@ jobs:
       - name: Fail if the tag produced no image tag
         if: steps.meta.outputs.tags == ''
         run: |
-          echo "::error::${{ github.ref_name }} is not a valid semver tag, so no image tag could be derived. Tag a release as v<major>.<minor>.<patch> (a prerelease such as v0.0.1-rc1 is fine for testing)."
+          echo "::error::$GITHUB_REF_NAME is not a valid semver tag, so no image tag could be derived. Tag a release as v<major>.<minor>.<patch> (a prerelease such as v0.0.1-rc1 is fine for testing)."
           exit 1
 
       - *setup-buildx
