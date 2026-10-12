@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   profileCard: vi.fn(),
   overallPage: vi.fn(),
   setReminder: vi.fn(),
+  mentionable: vi.fn(),
 }));
 
 vi.mock("#lib/logger.js", () => {
@@ -25,6 +26,9 @@ vi.mock("#modules/rngdle/services/store.js", () => ({
     accountByUsername: mocks.accountByUsername,
     setReminder: mocks.setReminder,
   },
+}));
+vi.mock("#core/services/mention.service.js", () => ({
+  default: { mentionable: mocks.mentionable },
 }));
 vi.mock("#modules/rngdle/services/sync.js", () => ({
   default: { refreshIfStale: mocks.refreshIfStale },
@@ -46,6 +50,7 @@ const config = {
   t: (key: string, options?: Record<string, unknown>) =>
     options ? `${key} ${JSON.stringify(options)}` : key,
   locale: "en",
+  get: () => ({ id: "channel" }),
 } as unknown as ConfigProvider<RngdleConfigSchema>;
 
 interface Options {
@@ -205,6 +210,27 @@ describe("/rngdle remind", () => {
       content: "remind.notRegistered",
       flags: MessageFlags.Ephemeral,
     });
+  });
+
+  it("subscribes a linked caller and warns when their pings are off", async () => {
+    mocks.account.mockResolvedValue({
+      guildId: "guild",
+      userId: "caller",
+      username: "Alice",
+    });
+    mocks.mentionable.mockResolvedValue([]);
+    const interaction = interactionFor({ subcommand: "remind", enabled: true });
+    await run(interaction);
+
+    expect(mocks.setReminder).toHaveBeenCalledWith("guild", "caller", true);
+    const [reply] = interaction.reply.mock.calls[0] as [
+      { content: string; flags: number },
+    ];
+    expect(reply.flags).toBe(MessageFlags.Ephemeral);
+    expect(reply.content.split("\n")).toEqual([
+      expect.stringMatching(/^remind\.enabled .*"channel":"<#channel>"/),
+      "remind.pingsDisabled",
+    ]);
   });
 
   it("turns the reminder off without needing a linked account", async () => {

@@ -200,6 +200,16 @@ describe("reminders", () => {
     expect(db.state.reminders).toEqual([]);
   });
 
+  it("forgets a subscription left behind by an earlier account on a new link", async () => {
+    await store.setReminder("g1", "alice", true);
+    await store.register("g1", "alice", "Alice");
+    expect(db.state.reminders).toEqual([]);
+
+    await store.setReminder("g1", "alice", true);
+    await store.register("g1", "alice", "Alicia");
+    expect(db.state.reminders).toEqual([{ guildId: "g1", userId: "alice" }]);
+  });
+
   it("drops the subscription when unregistering, on that guild only", async () => {
     await seed(alice);
     await store.setReminder("g1", "alice", true);

@@ -81,6 +81,9 @@ class RngdleStore implements Service {
 
     await prisma.$transaction([
       prisma.rngdleRoll.deleteMany({ where: { guildId, userId } }),
+      ...(existing
+        ? []
+        : [prisma.rngdleReminder.deleteMany({ where: { guildId, userId } })]),
       prisma.rngdleAccount.upsert({
         where: key,
         create: { guildId, userId, username },

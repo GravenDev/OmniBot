@@ -95,7 +95,11 @@ export function rngdleTasks(module: Module<RngdleConfigSchema>) {
       id: "reminders",
       schedule: `0 ${REMINDER_HOUR_UTC} * * *`,
       async run() {
-        await sync.syncAll();
+        await sync
+          .syncAll()
+          .catch((err: unknown) =>
+            logger.warn({ err }, "Sync before the reminders failed")
+          );
         const now = new Date();
         for (const guildId of await moduleService.getActivatedGuildIds(
           module.id
