@@ -67,7 +67,7 @@ function setup() {
             guildId,
             {
               members: {
-                fetch: async (id: string) => {
+                fetch: async ({ user: id }: { user: string }) => {
                   if (!MEMBERS.has(id)) throw new Error("unknown member");
                   return { displayName: `nick-${id}` };
                 },

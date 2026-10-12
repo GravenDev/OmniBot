@@ -204,7 +204,7 @@ export function profileCard(
 
     return renderProfile(
       {
-        username: account.username,
+        username: player?.name ?? account.username,
         avatar: player?.avatar ?? null,
         serverRank:
           totals.findIndex((entry) => entry.userId === account.userId) + 1,

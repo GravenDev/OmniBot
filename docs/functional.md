@@ -34,7 +34,7 @@ Le bouton est désactivé tant qu'aucun champ n'a été personnalisé (rien à r
 
 ### Erreurs
 
-Quand une commande ou un bouton échoue, la réponse d'erreur n'est visible que du membre concerné et lui indique quoi faire : relancer la commande, et prévenir un administrateur si le problème persiste. Un bouton devenu invalide (module ou option de configuration disparus depuis l'affichage du message) invite à relancer la commande pour obtenir un message à jour. Si l'échec vient d'une permission ou d'un accès manquant au bot sur Discord, le message le dit explicitement : un administrateur doit vérifier les permissions du bot dans le salon.
+Quand une commande ou un bouton échoue, la réponse d'erreur n'est visible que du membre concerné et lui indique quoi faire : relancer la commande, et prévenir un administrateur si le problème persiste. Un bouton devenu invalide (module ou option de configuration disparus depuis l'affichage du message) invite à relancer la commande pour obtenir un message à jour. Si l'échec vient d'une permission ou d'un accès manquant au bot sur Discord, le message le dit explicitement : un administrateur doit vérifier les permissions du bot sur le serveur et dans le salon.
 
 ### Noms et avatars dans les images
 

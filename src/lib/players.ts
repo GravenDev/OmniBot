@@ -22,7 +22,9 @@ async function resolvePlayer(
   guild: Guild | null,
   userId: string
 ): Promise<Player | null> {
-  const member = await guild?.members.fetch(userId).catch(() => null);
+  const member = await guild?.members
+    .fetch({ user: userId, force: true })
+    .catch(() => null);
   if (member) {
     return { name: member.displayName, avatar: await fetchAvatar(member) };
   }

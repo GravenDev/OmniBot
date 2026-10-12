@@ -16,7 +16,7 @@ const users: Record<string, { displayName: string; avatarTag: string }> = {
   u2: { displayName: "Global Two", avatarTag: "user-avatar-u2" },
 };
 
-const membersFetch = vi.fn(async (id: string) => {
+const membersFetch = vi.fn(async ({ user: id }: { user: string }) => {
   const member = members[id];
   if (!member) throw new Error("Unknown Member");
   return member;
@@ -60,6 +60,12 @@ describe("resolvePlayers", () => {
       m1: { name: "Nick One", avatar: "guild-avatar-m1" },
       u2: { name: "Global Two", avatar: "user-avatar-u2" },
     });
+  });
+
+  it("bypasses the member cache, which no gateway event keeps fresh", async () => {
+    await resolvePlayers(fakeClient(), "g", ["m1"]);
+
+    expect(membersFetch).toHaveBeenCalledWith({ user: "m1", force: true });
   });
 
   it("fetches each distinct id once", async () => {

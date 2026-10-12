@@ -35,7 +35,7 @@
 
   "interaction.moduleNotEnabled": "This feature's module is not enabled in this server.",
   "interaction.failed": "Something went wrong. Try again; if it keeps failing, let a server administrator know.",
-  "interaction.missingPermissions": "I am missing permissions to do this. An administrator needs to check the bot's permissions in this channel.",
+  "interaction.missingPermissions": "I am missing a permission or access to do this. An administrator needs to check the bot's permissions on this server and in this channel.",
   "interaction.malformed": "This button is no longer valid. Run the command again to get a fresh one.",
   "interaction.moduleNotFound": "This module no longer exists. Run the command again to get an up-to-date message.",
   "interaction.failedEnable": "The module could not be enabled. Try again in a few moments.",
