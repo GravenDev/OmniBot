@@ -20,7 +20,7 @@ jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
-    permissions:
+    permissions: &upload-results
       contents: read
       security-events: write
     strategy:
@@ -28,7 +28,8 @@ jobs:
       matrix:
         language: ["actions", "javascript-typescript"]
     steps:
-      - name: Checkout repository
+      - &checkout
+        name: Checkout repository
         uses: actions/checkout@v7
         with:
           persist-credentials: false
@@ -53,14 +54,9 @@ jobs:
   # in the meantime.
   zizmor:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      security-events: write
+    permissions: *upload-results
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-        with:
-          persist-credentials: false
+      - *checkout
 
       - name: Run zizmor
         uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
