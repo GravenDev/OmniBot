@@ -25,6 +25,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       # Node and pnpm at the versions pinned in .mise.toml; the other tools
       # listed there (pitchfork, gh) are only for local development.
       - name: Set up Node.js and pnpm
@@ -51,6 +53,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       # Node and pnpm at the versions pinned in .mise.toml; the other tools
       # listed there (pitchfork, gh) are only for local development.
       - name: Set up Node.js and pnpm
@@ -88,6 +92,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       # Each build gets its own cache scope, per architecture — they would
@@ -160,6 +166,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # GHCR rejects upper case, and `github.repository` is GravenDev/OmniBot.
       # metadata-action lowercases the names it tags, but a push by digest
