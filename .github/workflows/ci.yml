@@ -234,3 +234,20 @@ jobs:
       # a successful deployment for as long as nobody checked the bot.
       - name: Trigger the Portainer stack redeploy
         run: curl -fsS --max-time 300 -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"
+
+  # Scans the new `latest` right away rather than at the next weekly run. The
+  # scan runs on master, through a dispatch, so that its alerts land on the
+  # default branch — uploaded from this tag run, they would sit on the tag.
+  # Same condition as `deploy`: a prerelease does not move `latest`.
+  scan:
+    needs: publish
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+
+    steps:
+      - name: Dispatch the Trivy scan
+        run: gh workflow run trivy.yml --repo "$GITHUB_REPOSITORY" --ref master
+        env:
+          GH_TOKEN: ${{ github.token }}
