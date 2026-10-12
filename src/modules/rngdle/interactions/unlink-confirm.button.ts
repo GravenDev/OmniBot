@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -15,6 +16,13 @@ const CUSTOM_ID = "rngdle-unlink";
 
 const logger = loggerMaker("rngdle");
 
+function usernameTag(username: string): string {
+  return createHash("sha256")
+    .update(username.toLowerCase())
+    .digest("hex")
+    .slice(0, 8);
+}
+
 export function unlinkConfirmMessage(
   t: TFunction,
   userId: string,
@@ -25,7 +33,9 @@ export function unlinkConfirmMessage(
     components: [
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         new ButtonBuilder()
-          .setCustomId(`${CUSTOM_ID}:confirm:${userId}`)
+          .setCustomId(
+            `${CUSTOM_ID}:confirm:${userId}:${usernameTag(username)}`
+          )
           .setLabel(t("unlink.confirmButton"))
           .setStyle(ButtonStyle.Danger),
         new ButtonBuilder()
@@ -42,7 +52,7 @@ export default declareInteractionHandler<ButtonInteraction>({
   access: "everyone",
   check: (interaction): interaction is ButtonInteraction =>
     interaction.isButton(),
-  async execute(interaction, [action, userId], config) {
+  async execute(interaction, [action, userId, tag], config) {
     if (!interaction.inGuild()) {
       return;
     }
@@ -64,16 +74,23 @@ export default declareInteractionHandler<ButtonInteraction>({
 
     await interaction.deferUpdate();
     const { guildId } = interaction;
-    const deleted = await sync.exclusive(guildId, () =>
-      store.unregister(guildId, userId)
-    );
-    if (deleted) {
+    const outcome = await sync.exclusive(guildId, async () => {
+      const account = await store.account(guildId, userId);
+      if (!account) {
+        return "none";
+      }
+      if (usernameTag(account.username) !== tag) {
+        return "stale";
+      }
+      return (await store.unregister(guildId, userId)) ? "done" : "none";
+    });
+    if (outcome === "done") {
       logger.info(
         `Account unlinked by its owner | guildId = ${guildId} | userId = ${userId}`
       );
     }
     await interaction.editReply({
-      content: config.t(deleted ? "unlink.done" : "unlink.none"),
+      content: config.t(`unlink.${outcome}`),
       components: [],
     });
   },

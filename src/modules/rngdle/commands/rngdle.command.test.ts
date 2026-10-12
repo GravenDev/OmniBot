@@ -99,6 +99,17 @@ describe("/rngdle link", () => {
     );
   });
 
+  it("rejects a blank username before anything else", async () => {
+    const interaction = interactionFor({ subcommand: "link", username: "   " });
+    await run(interaction);
+
+    expect(interaction.deferReply).not.toHaveBeenCalled();
+    expect(mocks.linkOwnAccount).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ flags: MessageFlags.Ephemeral })
+    );
+  });
+
   it("refuses to replace another linked username", async () => {
     mocks.linkOwnAccount.mockResolvedValue({
       kind: "alreadyLinked",
@@ -169,7 +180,10 @@ describe("/rngdle unlink", () => {
     expect(reply.content).toBe('unlink.confirm {"username":"Alice"}');
     expect(
       reply.components[0]!.toJSON().components.map((c) => c.custom_id)
-    ).toEqual(["rngdle-unlink:confirm:caller", "rngdle-unlink:cancel:caller"]);
+    ).toEqual([
+      "rngdle-unlink:confirm:caller:2bd806c9",
+      "rngdle-unlink:cancel:caller",
+    ]);
   });
 
   it("says so when the caller has no linked account", async () => {

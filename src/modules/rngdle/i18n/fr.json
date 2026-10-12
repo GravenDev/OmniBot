@@ -47,6 +47,7 @@
   "unlink.cancelled": "Votre compte reste lié.",
   "unlink.done": "Votre compte RNGdle n'est plus lié, et vos tirages ont été supprimés.",
   "unlink.none": "Vous n'avez pas de compte RNGdle lié.",
+  "unlink.stale": "Votre compte lié a changé depuis ce message : relancez `/rngdle unlink`.",
   "unlink.notYours": "Ce bouton ne vous est pas destiné : utilisez `/rngdle unlink` pour délier votre propre compte.",
 
   "server.title": "RNGdle - Stats du serveur",

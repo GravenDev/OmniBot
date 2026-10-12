@@ -119,6 +119,13 @@ async function link(interaction: Interaction, config: Config) {
   const { guildId } = interaction;
   const userId = interaction.user.id;
   const username = interaction.options.getString("username", true).trim();
+  if (!username) {
+    await interaction.reply({
+      content: config.t("link.notFound", { username }),
+      ...ephemeral,
+    });
+    return;
+  }
   await interaction.deferReply(ephemeral);
 
   const outcome = await linkOwnAccount(guildId, userId, username);

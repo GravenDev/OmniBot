@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   fetchUserRolls: vi.fn(),
   account: vi.fn(),
   accountByUsername: vi.fn(),
+  latestRollDate: vi.fn(),
   register: vi.fn(),
   saveRolls: vi.fn(),
 }));
@@ -21,6 +22,7 @@ vi.mock("./store.js", () => ({
   default: {
     account: mocks.account,
     accountByUsername: mocks.accountByUsername,
+    latestRollDate: mocks.latestRollDate,
     register: mocks.register,
     saveRolls: mocks.saveRolls,
   },
@@ -48,6 +50,7 @@ beforeEach(() => {
   });
   mocks.account.mockResolvedValue(null);
   mocks.accountByUsername.mockResolvedValue(null);
+  mocks.latestRollDate.mockResolvedValue(null);
   mocks.register.mockResolvedValue("created");
   mocks.saveRolls.mockResolvedValue({ inserted: 2, updated: 0 });
 });
@@ -96,6 +99,20 @@ describe("linkAccount", () => {
 
   it("refuses a username already linked to another member", async () => {
     mocks.accountByUsername.mockResolvedValue({
+      guildId: "guild",
+      userId: "other",
+      username: "alice",
+    });
+    await expect(linkAccount("guild", "user", "Alice")).resolves.toEqual({
+      kind: "conflict",
+      userId: "other",
+    });
+    expect(mocks.fetchUserRolls).not.toHaveBeenCalled();
+    expect(mocks.register).not.toHaveBeenCalled();
+  });
+
+  it("refuses a username another member links while rngdle.com answers", async () => {
+    mocks.accountByUsername.mockResolvedValueOnce(null).mockResolvedValueOnce({
       guildId: "guild",
       userId: "other",
       username: "alice",
@@ -182,6 +199,20 @@ describe("linkOwnAccount", () => {
       { guildId: "guild", userId: "user", username: "alice" },
       ROLLS
     );
+  });
+
+  it("only imports the rolls newer than the stored ones when already linked", async () => {
+    const latest = new Date("2026-10-01T00:00:00Z");
+    mocks.account.mockResolvedValue({
+      guildId: "guild",
+      userId: "user",
+      username: "Alice",
+    });
+    mocks.latestRollDate.mockResolvedValue(latest);
+    mocks.register.mockResolvedValue("unchanged");
+    await linkOwnAccount("guild", "user", "Alice");
+
+    expect(mocks.fetchUserRolls).toHaveBeenCalledWith("Alice", latest);
   });
 
   it("links a member who has no account yet", async () => {

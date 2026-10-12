@@ -52,17 +52,23 @@ async function link(
   keepExisting: boolean
 ): Promise<SelfLinkOutcome> {
   let username = requested;
+  let since: Date | null = null;
   if (keepExisting) {
     const own = await ownUsername(guildId, userId, username);
     if (typeof own !== "string") {
       return own;
     }
     username = own;
+    since = await store.latestRollDate(guildId, userId);
+  }
+  const taken = await store.accountByUsername(guildId, username);
+  if (taken && taken.userId !== userId) {
+    return { kind: "conflict", userId: taken.userId };
   }
 
   let rolls;
   try {
-    rolls = await fetchUserRolls(username, null);
+    rolls = await fetchUserRolls(username, since);
   } catch (err) {
     if (err instanceof RngdleUserNotFoundError) {
       return { kind: "notFound" };

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   order: [] as string[],
+  account: vi.fn(),
   unregister: vi.fn(),
 }));
 
@@ -11,7 +12,7 @@ vi.mock("#lib/logger.js", () => {
   return { loggerMaker: () => logger };
 });
 vi.mock("#modules/rngdle/services/store.js", () => ({
-  default: { unregister: mocks.unregister },
+  default: { account: mocks.account, unregister: mocks.unregister },
 }));
 vi.mock("#modules/rngdle/services/sync.js", () => ({
   default: {
@@ -52,6 +53,11 @@ async function run(interaction: ReturnType<typeof click>, args: string[]) {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.order.length = 0;
+  mocks.account.mockResolvedValue({
+    guildId: "guild",
+    userId: "user",
+    username: "Alice",
+  });
   mocks.unregister.mockImplementation(async () => {
     mocks.order.push("unregister");
     return true;
@@ -70,7 +76,7 @@ describe("unlinkConfirmMessage", () => {
       style: number;
     }[];
     expect(confirm).toMatchObject({
-      custom_id: "rngdle-unlink:confirm:user",
+      custom_id: "rngdle-unlink:confirm:user:2bd806c9",
       style: 4,
     });
     expect(cancel).toMatchObject({ custom_id: "rngdle-unlink:cancel:user" });
@@ -85,7 +91,7 @@ describe("rngdle-unlink button", () => {
 
   it("unlinks the clicking user under the guild's sync queue", async () => {
     const interaction = click("user");
-    await run(interaction, ["confirm", "user"]);
+    await run(interaction, ["confirm", "user", "2bd806c9"]);
 
     expect(mocks.order).toEqual(["defer", "queue", "unregister", "edit"]);
     expect(mocks.unregister).toHaveBeenCalledWith("guild", "user");
@@ -95,10 +101,26 @@ describe("rngdle-unlink button", () => {
     });
   });
 
-  it("says so when the account was already gone", async () => {
-    mocks.unregister.mockResolvedValue(false);
+  it("keeps an account linked after the confirmation was shown", async () => {
+    mocks.account.mockResolvedValue({
+      guildId: "guild",
+      userId: "user",
+      username: "Bob",
+    });
     const interaction = click("user");
-    await run(interaction, ["confirm", "user"]);
+    await run(interaction, ["confirm", "user", "2bd806c9"]);
+
+    expect(mocks.unregister).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "unlink.stale",
+      components: [],
+    });
+  });
+
+  it("says so when the account was already gone", async () => {
+    mocks.account.mockResolvedValue(null);
+    const interaction = click("user");
+    await run(interaction, ["confirm", "user", "2bd806c9"]);
 
     expect(interaction.editReply).toHaveBeenCalledWith({
       content: "unlink.none",

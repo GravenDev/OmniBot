@@ -47,6 +47,7 @@
   "unlink.cancelled": "Your account stays linked.",
   "unlink.done": "Your RNGdle account is no longer linked, and your rolls were deleted.",
   "unlink.none": "You have no linked RNGdle account.",
+  "unlink.stale": "Your linked account changed since this message: run `/rngdle unlink` again.",
   "unlink.notYours": "This button is not meant for you: use `/rngdle unlink` to unlink your own account.",
 
   "server.title": "RNGdle - Server Stats",
