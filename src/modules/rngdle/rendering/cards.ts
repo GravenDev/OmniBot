@@ -31,16 +31,17 @@ const BREAKDOWN_TOP = 52;
 const BREAKDOWN_BOTTOM = 18;
 const TIER_LABEL_SIZE = 17;
 const TIER_LABEL_WIDTH = 118;
-const COUNT_SIZE = 14;
-const COUNT_WIDTH = 40;
+const COUNT_SIZE = 17;
+const COUNT_WIDTH = 50;
+const EXPECTED_SIZE = 14;
+const EXPECTED_WIDTH = 56;
 const BAR_HEIGHT = 10;
 const BAR_TRACK: [number, number, number] = [50, 50, 50];
 const SHORTFALL_ALPHA = 0.45;
 const MAX_DEVIATION = 2;
+const PRIOR_DRAWS = 2;
 const MARKER_WIDTH = 2;
 const MARKER_OVERHANG = 4;
-const RATIO_WIDTH = 66;
-const RATIO_SIZE = 17;
 const LEGEND_SIZE = 14;
 const LEGEND_Y = 20;
 const LEGEND_GAP = 6;
@@ -86,7 +87,7 @@ export interface ProfileLabels {
   overallScore: string;
   tierBreakdown: string;
   expected: string;
-  ratio: (ratio: number) => string;
+  expectedCount: (value: number) => string;
 }
 
 export interface ServerStatsRoll extends Roll {
@@ -117,7 +118,7 @@ export interface ServerStatsLabels {
   overallScore: string;
   tierBreakdown: string;
   expected: string;
-  ratio: (ratio: number) => string;
+  expectedCount: (value: number) => string;
 }
 
 function ep(value: number): string {
@@ -151,11 +152,8 @@ function drawLeaders(
   }
 }
 
-function deviation(count: number, total: number, tier: Tier): number {
-  const ratio = count / (total * TIER_ODDS[tier]);
-  if (ratio === 0) {
-    return -1;
-  }
+function deviation(count: number, expected: number): number {
+  const ratio = (count + PRIOR_DRAWS) / (expected + PRIOR_DRAWS);
   return Math.max(-1, Math.min(1, Math.log2(ratio) / MAX_DEVIATION));
 }
 
@@ -173,7 +171,7 @@ function drawMarker(ctx: SKRSContext2D, x: number, centerY: number): void {
 function tierBreakdown(
   title: string,
   expectedLabel: string,
-  formatRatio: (ratio: number) => string,
+  formatExpected: (value: number) => string,
   counts: Record<Tier, number>,
   leaders?: Record<Tier, (Image | null)[]>
 ): CardAside {
@@ -188,16 +186,16 @@ function tierBreakdown(
         (height - BREAKDOWN_TOP - BREAKDOWN_BOTTOM) / BREAKDOWN_TIERS.length;
       const labelX = x + PANEL_PADDING;
       const barX = labelX + TIER_LABEL_WIDTH;
-      const countRight =
+      const expectedRight =
         x + width - PANEL_PADDING - (leaders ? LEADERS_WIDTH : 0);
-      const ratioRight = countRight - COUNT_WIDTH;
-      const barWidth = ratioRight - RATIO_WIDTH - barX;
+      const valueRight = expectedRight - EXPECTED_WIDTH;
+      const barWidth = valueRight - COUNT_WIDTH - barX;
       const half = barWidth / 2;
       const centerX = barX + half;
 
       if (total > 0) {
         const legendX =
-          countRight - measureText(ctx, expectedLabel, LEGEND_SIZE);
+          expectedRight - measureText(ctx, expectedLabel, LEGEND_SIZE);
         drawText(
           ctx,
           expectedLabel,
@@ -227,8 +225,9 @@ function tierBreakdown(
         ctx.fillStyle = rgb(BAR_TRACK);
         ctx.fill();
 
+        const expected = total * TIER_ODDS[tier];
         if (total > 0) {
-          const offset = deviation(count, total, tier) * half;
+          const offset = deviation(count, expected) * half;
           if (offset !== 0) {
             ctx.globalAlpha = offset > 0 ? 1 : SHORTFALL_ALPHA;
             ctx.fillStyle = rgb(TIER_COLORS[tier]);
@@ -241,16 +240,14 @@ function tierBreakdown(
             ctx.globalAlpha = 1;
           }
 
-          const ratio =
-            Math.round((count / (total * TIER_ODDS[tier])) * 10) / 10;
-          const ratioText = formatRatio(ratio);
+          const expectedText = formatExpected(expected);
           drawText(
             ctx,
-            ratioText,
-            ratioRight - measureText(ctx, ratioText, RATIO_SIZE),
-            centerY - RATIO_SIZE * 0.62,
-            RATIO_SIZE,
-            ratio > 1 ? TIER_COLORS[tier] : PALETTE.subtext
+            expectedText,
+            expectedRight - measureText(ctx, expectedText, EXPECTED_SIZE),
+            centerY - EXPECTED_SIZE * 0.62,
+            EXPECTED_SIZE,
+            PALETTE.subtext
           );
         }
         drawMarker(ctx, centerX, centerY);
@@ -259,15 +256,15 @@ function tierBreakdown(
         drawText(
           ctx,
           text,
-          countRight - measureText(ctx, text, COUNT_SIZE),
+          valueRight - measureText(ctx, text, COUNT_SIZE),
           centerY - COUNT_SIZE * 0.62,
           COUNT_SIZE,
-          PALETTE.subtext
+          total > 0 && count > expected ? TIER_COLORS[tier] : PALETTE.subtext
         );
 
         if (leaders) {
           const tierLeaders = (leaders[tier] ?? []).slice(0, MAX_LEADERS);
-          drawLeaders(ctx, tierLeaders, countRight + 12, centerY);
+          drawLeaders(ctx, tierLeaders, expectedRight + 12, centerY);
         }
       });
     },
@@ -306,7 +303,7 @@ export function renderProfile(
     aside: tierBreakdown(
       labels.tierBreakdown,
       labels.expected,
-      labels.ratio,
+      labels.expectedCount,
       data.tierCounts
     ),
   });
@@ -338,7 +335,7 @@ export function renderServerStats(
     aside: tierBreakdown(
       labels.tierBreakdown,
       labels.expected,
-      labels.ratio,
+      labels.expectedCount,
       data.tierCounts,
       data.tierLeaders
     ),

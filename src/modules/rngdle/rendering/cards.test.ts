@@ -82,7 +82,7 @@ describe("renderProfile", () => {
     overallScore: "Overall Score",
     tierBreakdown: "Tier Breakdown",
     expected: "expected",
-    ratio: (ratio: number) => `×${ratio}`,
+    expectedCount: (value: number) => `/ ${value}`,
   };
 
   it("renders a 1000x560 PNG for every kind of rank", async () => {
@@ -108,7 +108,7 @@ describe("renderServerStats", () => {
     overallScore: "Overall Score",
     tierBreakdown: "Tier Breakdown",
     expected: "expected",
-    ratio: (ratio: number) => `×${ratio}`,
+    expectedCount: (value: number) => `/ ${value}`,
   };
 
   it.each([0, 3, 5])("renders a 1000x560 PNG with %i leaders", async (n) => {
