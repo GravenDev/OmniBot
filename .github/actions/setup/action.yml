@@ -1,0 +1,32 @@
+name: Set up Node.js and pnpm
+description: >-
+  Installs Node and pnpm at the versions pinned in .mise.toml, restores the
+  pnpm store cache, then installs the dependencies.
+
+runs:
+  using: composite
+  steps:
+    # Only node and pnpm: the other tools listed in .mise.toml (pitchfork, gh)
+    # are for local development.
+    #
+    # zizmor flags both caches below (cache-poisoning) in a workflow that also
+    # publishes. The jobs using this action publish nothing themselves, though,
+    # and a pull request's caches stay scoped to its own ref: no tag or master
+    # run reads them.
+    - name: Set up Node.js and pnpm
+      uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0 # zizmor: ignore[cache-poisoning]
+      with:
+        install_args: node pnpm
+
+    # No node-version: setup-node keeps the Node mise put on the PATH and is
+    # only here for its pnpm store cache.
+    - name: Cache the pnpm store
+      uses: actions/setup-node@v6 # zizmor: ignore[cache-poisoning]
+      with:
+        cache: "pnpm"
+
+    # No --filter: it does not narrow the install here — the bot is the
+    # workspace root, and its dependencies come along either way.
+    - name: Install dependencies
+      shell: bash
+      run: pnpm ci
