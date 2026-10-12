@@ -1,0 +1,58 @@
+name: Trivy
+
+# Scans the deployed images (`latest`) for known vulnerabilities — the Alpine
+# packages as well as the npm dependencies baked in, which Renovate and
+# `pnpm audit` only see through the lockfile. Findings go to the Security tab
+# (code scanning) and nowhere else: the job log and the artifacts of a public
+# repository are readable by anyone, so the report is never printed nor
+# uploaded as an artifact.
+#
+# Runs weekly, since new CVEs land without any change here, and after every
+# release (`ci.yml` dispatches it on master so the alerts sit on the default
+# branch, not on the tag).
+
+on:
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  scan:
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [omnibot, omnibot-migrator]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      # GHCR names are lower case; `github.repository` is GravenDev/OmniBot.
+      - name: Prepare
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/$IMAGE_NAME:latest" >> "$GITHUB_ENV"
+        env:
+          IMAGE_NAME: ${{ matrix.image }}
+
+      # Pinned by hash, and Trivy by version: in March 2026 the trivy-action
+      # tags were force-pushed to credential-stealing commits and a malicious
+      # Trivy release was published (GHSA-69fq-xp46-6x23). Both releases used
+      # here are immutable. Unfixed vulnerabilities are left out: an alert
+      # nobody can act on is noise.
+      - name: Scan the image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: v0.75.0
+          image-ref: ${{ env.IMAGE }}
+          ignore-unfixed: true
+          format: sarif
+          output: trivy.sarif
+
+      # One category per image, or each upload would close the other's alerts.
+      - name: Upload the results to code scanning
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy.sarif
+          category: trivy-${{ matrix.image }}
