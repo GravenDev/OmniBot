@@ -96,34 +96,23 @@ jobs:
           persist-credentials: false
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      # Each build gets its own cache scope, per architecture — they would
-      # otherwise overwrite one another's manifest, since `mode=max` writes one
-      # per scope.
-      - name: Build the runtime image
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      # Both images in one bake call (docker-bake.hcl): the stages they share
+      # are solved once. Only the runtime image exports the cache — with
+      # `mode=max` it holds every stage the migrator is built from too, and a
+      # second export to the same scope would overwrite the first, since there
+      # is one manifest per scope. The migration image is still built: it is
+      # what the compose stack needs before the bot may start.
+      - name: Build the images
+        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
         with:
-          context: .
-          target: runtime
-          platforms: linux/${{ matrix.arch }}
-          push: false
+          source: .
           load: true
-          tags: omnibot:ci
-          cache-from: type=gha,scope=ci-runtime-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=ci-runtime-${{ matrix.arch }}
-      # Shares every layer up to `deps` with the step above, so this is cheap —
-      # but it is what catches a break in the migration image, which the compose
-      # stack needs before the bot may start.
-      - name: Build the migrator image
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          target: migrator
-          platforms: linux/${{ matrix.arch }}
-          push: false
-          load: true
-          tags: omnibot-migrator:ci
-          cache-from: type=gha,scope=ci-migrator-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=ci-migrator-${{ matrix.arch }}
+          set: |
+            *.platform=linux/${{ matrix.arch }}
+            *.cache-from=type=gha,scope=ci-${{ matrix.arch }}
+            runtime.cache-to=type=gha,mode=max,scope=ci-${{ matrix.arch }}
+            runtime.tags=omnibot:ci
+            migrator.tags=omnibot-migrator:ci
       # Building is not enough: a CMD pointing at a missing file builds fine and
       # only fails at start. Apply the migrations, then start the bot with a
       # dummy token — reaching Discord's token check proves the whole import
@@ -180,8 +169,8 @@ jobs:
             echo "MIGRATOR_IMAGE=$image-migrator"
           } >> "$GITHUB_ENV"
 
-      # Only the labels go on the image here; `merge` derives the same tags
-      # again to name the manifest.
+      # Only the labels go on the images here, through the bake file this writes;
+      # `merge` derives the same tags again to name the manifests.
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
@@ -211,59 +200,39 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Reads the layers the `docker` job just built for this architecture,
-      # when the Actions cache makes them reachable from this ref, and keeps its
-      # own cache per platform: the two builds run side by side and would otherwise overwrite
-      # each other's manifest.
-      - name: Build and push the bot image
-        id: build
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          target: runtime
-          platforms: linux/${{ matrix.arch }}
-          labels: ${{ steps.meta.outputs.labels }}
-          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: |
-            type=gha,scope=release-${{ matrix.arch }}
-            type=gha,scope=ci-runtime-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=release-${{ matrix.arch }}
-
+      # The `docker` job of this very run just built the same images for this
+      # architecture and exported their cache, so this build is mostly cache
+      # hits. Nothing is exported here: that cache is already there.
+      #
       # The migrator ships as its own package, under the same tags as the bot:
       # a deployment pulls the pair for one version, and the migration history
       # can never drift from the code that expects it.
-      - name: Extract metadata for the migrator
-        id: meta-migrator
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+      - name: Build and push the images
+        id: bake
+        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
         with:
-          images: ${{ env.MIGRATOR_IMAGE }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-
-      - name: Build and push the migrator image
-        id: build-migrator
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          target: migrator
-          platforms: linux/${{ matrix.arch }}
-          labels: ${{ steps.meta-migrator.outputs.labels }}
-          outputs: type=image,name=${{ env.MIGRATOR_IMAGE }},push-by-digest=true,name-canonical=true,push=true
-          cache-from: |
-            type=gha,scope=release-migrator-${{ matrix.arch }}
-            type=gha,scope=ci-migrator-${{ matrix.arch }}
-          cache-to: type=gha,mode=max,scope=release-migrator-${{ matrix.arch }}
+          source: .
+          files: |
+            ./docker-bake.hcl
+            ${{ steps.meta.outputs.bake-file-labels }}
+          set: |
+            *.platform=linux/${{ matrix.arch }}
+            *.cache-from=type=gha,scope=ci-${{ matrix.arch }}
+            runtime.tags=
+            migrator.tags=
+            runtime.output=type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+            migrator.output=type=image,name=${{ env.MIGRATOR_IMAGE }},push-by-digest=true,name-canonical=true,push=true
 
       # One empty file per digest, named after it: `merge` lists the folder.
       - name: Export the digests
         run: |
-          mkdir -p "$RUNNER_TEMP/digests/bot" "$RUNNER_TEMP/digests/migrator"
-          touch "$RUNNER_TEMP/digests/bot/${BOT_DIGEST#sha256:}"
-          touch "$RUNNER_TEMP/digests/migrator/${MIGRATOR_DIGEST#sha256:}"
+          for target in runtime migrator; do
+            digest=$(jq -er --arg t "$target" '.[$t]["containerimage.digest"]' <<< "$METADATA")
+            mkdir -p "$RUNNER_TEMP/digests/$target"
+            touch "$RUNNER_TEMP/digests/$target/${digest#sha256:}"
+          done
         env:
-          BOT_DIGEST: ${{ steps.build.outputs.digest }}
-          MIGRATOR_DIGEST: ${{ steps.build-migrator.outputs.digest }}
+          METADATA: ${{ steps.bake.outputs.metadata }}
 
       - name: Upload the digests
         uses: actions/upload-artifact@v7
@@ -338,7 +307,7 @@ jobs:
               $(cd "$dir" && printf "$image@sha256:%s " *)
             docker buildx imagetools inspect "$(jq -r '.tags[0]' <<< "$json")"
           }
-          merge "$IMAGE" "$RUNNER_TEMP/digests/bot" "$BOT_META"
+          merge "$IMAGE" "$RUNNER_TEMP/digests/runtime" "$BOT_META"
           merge "$MIGRATOR_IMAGE" "$RUNNER_TEMP/digests/migrator" "$MIGRATOR_META"
         env:
           BOT_META: ${{ steps.meta.outputs.json }}
