@@ -7,8 +7,11 @@ import {
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { loggerMaker } from "#lib/logger.js";
 import { overallPageMessage } from "#modules/rngdle/interactions/overall-page.button.js";
+import { unlinkConfirmMessage } from "#modules/rngdle/interactions/unlink-confirm.button.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
+import { linkOwnAccount } from "#modules/rngdle/services/linking.js";
 import store from "#modules/rngdle/services/store.js";
 import sync from "#modules/rngdle/services/sync.js";
 import {
@@ -19,6 +22,9 @@ import {
 } from "#modules/rngdle/services/views.js";
 
 const AUTOCOMPLETE_LIMIT = 25;
+const USERNAME_MAX_LENGTH = 64;
+
+const logger = loggerMaker("rngdle");
 
 type Interaction = ChatInputCommandInteraction<"cached" | "raw">;
 type Config = ConfigProvider<RngdleConfigSchema>;
@@ -31,6 +37,9 @@ function viewContext(interaction: Interaction, config: Config): ViewContext {
     locale: config.locale,
   };
 }
+
+const ephemeral = { flags: MessageFlags.Ephemeral } as const;
+const noPings = { allowedMentions: { parse: [] } } as const;
 
 async function replyWithImage(
   interaction: Interaction,
@@ -66,7 +75,13 @@ async function profile(interaction: Interaction, config: Config) {
         (interaction.options.getUser("member") ?? interaction.user).id
       );
   if (!account) {
-    await interaction.editReply(config.t("profile.notRegistered"));
+    const member = interaction.options.getUser("member");
+    const self =
+      !interaction.options.getString("username") &&
+      (!member || member.id === interaction.user.id);
+    await interaction.editReply(
+      config.t(self ? "profile.notRegisteredSelf" : "profile.notRegistered")
+    );
     return;
   }
   await replyWithImage(
@@ -99,6 +114,68 @@ async function leaderboardAll(interaction: Interaction, config: Config) {
     )
   );
 }
+
+async function link(interaction: Interaction, config: Config) {
+  const { guildId } = interaction;
+  const userId = interaction.user.id;
+  const username = interaction.options.getString("username", true).trim();
+  await interaction.deferReply(ephemeral);
+
+  const outcome = await linkOwnAccount(guildId, userId, username);
+  switch (outcome.kind) {
+    case "notFound":
+    case "unreachable":
+      await interaction.editReply(
+        config.t(`link.${outcome.kind}`, { username })
+      );
+      return;
+    case "alreadyLinked":
+      await interaction.editReply(
+        config.t("link.alreadyLinked", { username: outcome.username })
+      );
+      return;
+    case "conflict":
+      await interaction.editReply({
+        content: config.t("link.conflict", {
+          username,
+          user: `<@${outcome.userId}>`,
+        }),
+        ...noPings,
+      });
+      return;
+    default:
+      logger.info(
+        `Account ${outcome.kind} | guildId = ${guildId} | userId = ${userId} | username = ${username} | by = ${userId}`
+      );
+      await interaction.editReply(
+        config.t(
+          outcome.kind === "unchanged" ? "link.unchanged" : "link.created",
+          { username, count: outcome.count }
+        )
+      );
+  }
+}
+
+async function unlink(interaction: Interaction, config: Config) {
+  const account = await store.account(interaction.guildId, interaction.user.id);
+  await interaction.reply(
+    account
+      ? {
+          ...unlinkConfirmMessage(
+            config.t,
+            interaction.user.id,
+            account.username
+          ),
+          ...ephemeral,
+        }
+      : { content: config.t("unlink.none"), ...ephemeral }
+  );
+}
+
+const personal: Record<
+  string,
+  (interaction: Interaction, config: Config) => Promise<void>
+> = { link, unlink };
 
 const subcommands: Record<
   string,
@@ -153,6 +230,28 @@ export default declareCommand<RngdleConfigSchema>({
     )
     .addSubcommand((sub) =>
       sub
+        .setName("link")
+        .setDescription("Link your RNGdle account")
+        .setDescriptionLocalizations({ fr: "Lier votre compte RNGdle" })
+        .addStringOption((option) =>
+          option
+            .setName("username")
+            .setDescription("Your RNGdle username")
+            .setDescriptionLocalizations({ fr: "Votre pseudo RNGdle" })
+            .setMaxLength(USERNAME_MAX_LENGTH)
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("unlink")
+        .setDescription("Unlink your RNGdle account and delete your rolls")
+        .setDescriptionLocalizations({
+          fr: "Délier votre compte RNGdle et supprimer vos tirages",
+        })
+    )
+    .addSubcommand((sub) =>
+      sub
         .setName("leaderboard-all")
         .setDescription("Show the all-time leaderboard")
         .setDescriptionLocalizations({ fr: "Afficher le classement général" })
@@ -167,6 +266,11 @@ export default declareCommand<RngdleConfigSchema>({
 
   async execute(interaction, config) {
     if (!interaction.inGuild()) {
+      return;
+    }
+    const personalCommand = personal[interaction.options.getSubcommand()];
+    if (personalCommand) {
+      await personalCommand(interaction, config);
       return;
     }
     if (
