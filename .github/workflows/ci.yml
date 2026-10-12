@@ -50,9 +50,7 @@ jobs:
       - uses: actions/checkout@v7
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      # amd64 only here: the arm64 half of the release build runs under QEMU and
-      # is far too slow to sit on every pull request. `publish` covers both.
-      # Each build gets its own cache scope — they would otherwise overwrite one
+      # amd64 only here: `publish` builds arm64 on its own runner. Each build gets its own cache scope — they would otherwise overwrite one
       # another's manifest, since `mode=max` writes one per scope.
       - name: Build the runtime image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -102,17 +100,25 @@ jobs:
   publish:
     needs: [lint, build, docker]
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            arch: amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
 
-    env:
-      REGISTRY: ghcr.io
-      IMAGE_NAME: ${{ github.repository }}
-
     steps:
       - uses: actions/checkout@v7
+
+      - name: Name the images
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
       # `latest` is not listed: the default `latest=auto` flavor already adds it
       # for a non-prerelease semver tag, and only for one.
@@ -120,28 +126,21 @@ jobs:
         id: meta
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.IMAGE }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
       # The tag filter cannot express semver, so a tag like `v1.2.x` or
       # `v2-final` still reaches this job, and `type=semver` emits nothing for
-      # it. buildx would then fail with "tag is needed when pushing to
-      # registry", ten minutes in and pointing nowhere near the cause. Refuse
-      # here instead, before QEMU and the build, and say why.
+      # it. The manifest could then not be tagged, minutes in and pointing
+      # nowhere near the cause. Refuse here instead, before the build, and say
+      # why.
       - name: Fail if the tag produced no image tag
         if: steps.meta.outputs.tags == ''
         run: |
           echo "::error::${{ github.ref_name }} is not a valid semver tag, so no image tag could be derived. Tag a release as v<major>.<minor>.<patch> (a prerelease such as v0.0.1-rc1 is fine for testing)."
           exit 1
-
-      # arm64 is emulated, hence slow — acceptable on a tag, unlike on every
-      # pull request.
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
-        with:
-          platforms: linux/arm64
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -149,58 +148,120 @@ jobs:
       - name: Log in to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
-          registry: ${{ env.REGISTRY }}
+          registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Reads the amd64 layers the `docker` job just built, when the Actions
-      # cache makes them reachable from this ref, and keeps its own multi-arch
-      # cache in a separate scope.
+      # cache makes them reachable from this ref, and keeps its own cache per
+      # architecture in a separate scope.
       - name: Build and push the bot image
+        id: runtime
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           target: runtime
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          platforms: ${{ matrix.platform }}
           labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: |
-            type=gha,scope=release
+            type=gha,scope=release-${{ matrix.arch }}
             type=gha,scope=ci-runtime
-          cache-to: type=gha,mode=max,scope=release
+          cache-to: type=gha,mode=max,scope=release-${{ matrix.arch }}
 
       # The migrator ships as its own package, under the same tags as the bot:
       # a deployment pulls the pair for one version, and the migration history
       # can never drift from the code that expects it.
-      - name: Extract metadata for the migrator
-        id: meta-migrator
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-migrator
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-
       - name: Build and push the migrator image
+        id: migrator
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           target: migrator
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta-migrator.outputs.tags }}
-          labels: ${{ steps.meta-migrator.outputs.labels }}
+          platforms: ${{ matrix.platform }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.IMAGE }}-migrator,push-by-digest=true,name-canonical=true,push=true
           cache-from: |
-            type=gha,scope=release-migrator
+            type=gha,scope=release-migrator-${{ matrix.arch }}
             type=gha,scope=ci-migrator
-          cache-to: type=gha,mode=max,scope=release-migrator
+          cache-to: type=gha,mode=max,scope=release-migrator-${{ matrix.arch }}
+
+      - name: Export the digests
+        run: |
+          mkdir -p digests/runtime digests/migrator
+          touch "digests/runtime/${RUNTIME#sha256:}" "digests/migrator/${MIGRATOR#sha256:}"
+        env:
+          RUNTIME: ${{ steps.runtime.outputs.digest }}
+          MIGRATOR: ${{ steps.migrator.outputs.digest }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: digests-${{ matrix.arch }}
+          path: digests
+          if-no-files-found: error
+          retention-days: 1
+
+  manifest:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: digests-*
+          path: digests
+          merge-multiple: true
+
+      - name: Name the images
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: ${{ env.IMAGE }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag the multi-arch manifests
+        run: |
+          for target in runtime migrator; do
+            name=$IMAGE
+            [ "$target" = migrator ] && name=$IMAGE-migrator
+            args=()
+            for tag in $TAGS; do
+              args+=(--tag "$name:${tag##*:}")
+            done
+            sources=()
+            for digest in "digests/$target"/*; do
+              sources+=("$name@sha256:${digest##*/}")
+            done
+            docker buildx imagetools create "${args[@]}" "${sources[@]}"
+            docker buildx imagetools inspect "$name:$VERSION"
+          done
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+          VERSION: ${{ steps.meta.outputs.version }}
 
   # The stack is defined in Portainer against this repository; the webhook only
   # asks it to redeploy, which re-pulls `latest`. Unlike an SSH deploy key, the
   # secret it needs grants no shell on the host and can do nothing but this.
   deploy:
-    needs: publish
+    needs: manifest
     # A prerelease publishes its image but does not move `latest`, so redeploying
     # on one would restart the stack onto the version already running — a
     # deployment that reports success and changes nothing.
