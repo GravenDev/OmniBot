@@ -69,25 +69,28 @@ describe("periodText", () => {
 });
 
 describe("overallPageMessage", () => {
-  it("carries the period in every button and in the text", async () => {
+  it("carries the period and its day in every button and in the text", async () => {
+    const now = new Date("2026-10-07T12:00:00Z");
     const message = await overallPageMessage(
       context(),
       2,
       "caller",
       "public",
-      "month"
+      "month",
+      now
     );
 
     expect(mocks.overallPage).toHaveBeenCalledWith(
       expect.anything(),
       2,
       "caller",
-      "month"
+      "month",
+      now
     );
     expect(customIds(message)).toEqual([
-      "rngdle-overall:1:public:month",
-      "rngdle-overall:indicator:public:month",
-      "rngdle-overall:3:public:month",
+      "rngdle-overall:1:public:month:20733",
+      "rngdle-overall:indicator:public:month:20733",
+      "rngdle-overall:3:public:month:20733",
     ]);
     expect(message.content).toMatch(/^overall\.period\.month/);
   });
@@ -122,14 +125,15 @@ describe("overall page button", () => {
       .then(() => interaction);
   };
 
-  it("keeps the period of the clicked message", async () => {
-    await click(["3", "private", "week"]);
+  it("keeps the period of the clicked message, even once it is over", async () => {
+    await click(["3", "private", "week", "20733"]);
 
     expect(mocks.overallPage).toHaveBeenCalledWith(
       expect.anything(),
       3,
       "caller",
-      "week"
+      "week",
+      new Date("2026-10-07T00:00:00Z")
     );
   });
 
@@ -141,7 +145,8 @@ describe("overall page button", () => {
       expect.anything(),
       2,
       "caller",
-      "all"
+      "all",
+      expect.any(Date)
     );
   });
 });

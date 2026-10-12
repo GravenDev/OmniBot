@@ -296,7 +296,8 @@ describe("/rngdle leaderboard-all", () => {
       expect.anything(),
       1,
       "caller",
-      "month"
+      "month",
+      expect.any(Date)
     );
   });
 
@@ -307,7 +308,8 @@ describe("/rngdle leaderboard-all", () => {
       expect.anything(),
       1,
       "caller",
-      "all"
+      "all",
+      expect.any(Date)
     );
   });
 });

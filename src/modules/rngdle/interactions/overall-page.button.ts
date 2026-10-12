@@ -62,9 +62,10 @@ export async function overallPageMessage(
   page: number,
   callerId: string,
   visibility: Visibility,
-  period: Period = "all"
+  period: Period = "all",
+  now: Date = new Date()
 ) {
-  const result = await overallPage(context, page, callerId, period);
+  const result = await overallPage(context, page, callerId, period, now);
   if (!result) {
     return {
       content: context.t(
@@ -76,10 +77,12 @@ export async function overallPageMessage(
     };
   }
 
+  const anchor =
+    period === "all" ? "" : `:${Math.floor(now.getTime() / DAY_MS)}`;
   const id = (target: number | string) =>
-    `${CUSTOM_ID}:${target}:${visibility}:${period}`;
+    `${CUSTOM_ID}:${target}:${visibility}:${period}${anchor}`;
   return {
-    content: periodText(context, period),
+    content: periodText(context, period, now),
     files: [new AttachmentBuilder(result.image, { name: "leaderboard.png" })],
     attachments: [],
     components: [
@@ -112,8 +115,9 @@ export default declareInteractionHandler<ButtonInteraction>({
   access: "everyone",
   check: (interaction): interaction is ButtonInteraction =>
     interaction.isButton(),
-  async execute(interaction, [rawPage, visibility, period], config) {
+  async execute(interaction, [rawPage, visibility, period, anchor], config) {
     const page = Number(rawPage);
+    const anchorDay = Number(anchor);
     if (!interaction.inGuild() || !Number.isInteger(page)) {
       return;
     }
@@ -134,7 +138,10 @@ export default declareInteractionHandler<ButtonInteraction>({
         page,
         interaction.user.id,
         "private",
-        parsePeriod(period)
+        parsePeriod(period),
+        anchor && Number.isInteger(anchorDay)
+          ? new Date(anchorDay * DAY_MS)
+          : new Date()
       )
     );
   },

@@ -161,9 +161,10 @@ export function overallPage(
   context: ViewContext,
   requestedPage: number,
   callerId: string,
-  period: Period = "all"
+  period: Period = "all",
+  now: Date = new Date()
 ): Promise<OverallPage | null> {
-  const range = periodRange(period);
+  const range = periodRange(period, now);
   const key = `overall:${period}:${range.from?.toISOString() ?? ""}:${requestedPage}:${callerId}`;
   return cached(context, key, async () => {
     const [totals, accounts] = await Promise.all([
