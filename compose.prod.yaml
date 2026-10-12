@@ -10,8 +10,8 @@
 # Both images track `latest`, so deploying a release is always the same two
 # commands and an automated deploy needs no edit on the host. `latest` only ever
 # moves to a non-prerelease tag, so publishing a `-rc` does not deploy it.
-# To build and run the images locally instead, use `docker buildx bake
-# --load` — the CI builds both targets on every pull request.
+# To build and run the images locally instead, use `docker build --target
+# runtime .` — the CI builds both targets on every pull request.
 
 name: omnibot
 
