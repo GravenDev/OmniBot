@@ -30,8 +30,9 @@ export function formatShort(value: number, locale: string): string {
 }
 
 export function formatExpected(locale: string, value: number): string {
-  if (value < 10) {
-    return value.toLocaleString(locale, {
+  const tenths = Math.round(value * 10) / 10;
+  if (tenths < 10) {
+    return tenths.toLocaleString(locale, {
       minimumFractionDigits: 1,
       maximumFractionDigits: 1,
     });
