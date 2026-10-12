@@ -19,6 +19,13 @@
   "daily.moreStreaks_one": "🔥 … and {{count}} more notable streak",
   "daily.moreStreaks_other": "🔥 … and {{count}} more notable streaks",
 
+  "remind.message": "⏰ RNGdle reminder: {{users}}, you haven't rolled today yet! Today's roll ends {{deadline}}: <https://www.rngdle.com>",
+  "remind.enabled": "Done: if you haven't rolled yet, you'll be pinged every day at {{time}} in {{channel}}.",
+  "remind.enabledNoChannel": "Done. Reminders are posted in the daily leaderboard channel, which an administrator still has to set with `/config rngdle`.",
+  "remind.pingsDisabled": "You turned your mentions off with `/pings`: your name will show in the reminder, but you won't be notified.",
+  "remind.disabled": "You won't get RNGdle reminders anymore.",
+  "remind.notRegistered": "You need a linked RNGdle account to get reminders: `/rngdle link <username>`.",
+
   "overall.header.score": "Overall Score",
   "overall.empty": "No roll has been recorded on this server yet.",
   "overall.page": "Page {{current}}/{{total}}",

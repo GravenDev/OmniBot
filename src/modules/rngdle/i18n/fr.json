@@ -19,6 +19,13 @@
   "daily.moreStreaks_one": "🔥 … et {{count}} autre série remarquable",
   "daily.moreStreaks_other": "🔥 … et {{count}} autres séries remarquables",
 
+  "remind.message": "⏰ Rappel RNGdle : {{users}}, vous n'avez pas encore tiré aujourd'hui ! Le tirage du jour se termine {{deadline}} : <https://www.rngdle.com>",
+  "remind.enabled": "C'est noté : si vous n'avez pas encore tiré, vous serez mentionné chaque jour à {{time}} dans {{channel}}.",
+  "remind.enabledNoChannel": "C'est noté. Les rappels sont postés dans le salon du classement quotidien, qu'un administrateur doit encore configurer avec `/config rngdle`.",
+  "remind.pingsDisabled": "Vous avez désactivé vos mentions avec `/pings` : votre nom apparaîtra dans le rappel, mais vous ne serez pas notifié.",
+  "remind.disabled": "Vous ne recevrez plus de rappel RNGdle.",
+  "remind.notRegistered": "Il faut un compte RNGdle lié pour recevoir les rappels : `/rngdle link <pseudo>`.",
+
   "overall.header.score": "Score total",
   "overall.empty": "Aucun tirage n'est encore enregistré sur ce serveur.",
   "overall.page": "Page {{current}}/{{total}}",

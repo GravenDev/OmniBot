@@ -95,11 +95,62 @@ class RngdleStore implements Service {
     const [, deleted] = await prisma.$transaction([
       prisma.rngdleRoll.deleteMany({ where: { guildId, userId } }),
       prisma.rngdleAccount.deleteMany({ where: { guildId, userId } }),
+      prisma.rngdleReminder.deleteMany({ where: { guildId, userId } }),
     ]);
     if (deleted.count > 0) {
       this.touch(guildId);
     }
     return deleted.count > 0;
+  }
+
+  async setReminder(
+    guildId: string,
+    userId: string,
+    enabled: boolean
+  ): Promise<void> {
+    if (!enabled) {
+      await prisma.rngdleReminder.deleteMany({ where: { guildId, userId } });
+      return;
+    }
+    await prisma.rngdleReminder.upsert({
+      where: { guildId_userId: { guildId, userId } },
+      create: { guildId, userId },
+      update: {},
+    });
+  }
+
+  async pendingReminders(guildId: string, since: Date): Promise<string[]> {
+    const subscribed = (
+      await prisma.rngdleReminder.findMany({
+        where: { guildId },
+        orderBy: { userId: "asc" },
+        select: { userId: true },
+      })
+    ).map((row) => row.userId);
+    if (subscribed.length === 0) {
+      return [];
+    }
+
+    const [linked, rolled] = await Promise.all([
+      prisma.rngdleAccount.findMany({
+        where: { guildId, userId: { in: subscribed } },
+        select: { userId: true },
+      }),
+      prisma.rngdleRoll.findMany({
+        where: {
+          guildId,
+          userId: { in: subscribed },
+          rolledAt: { gte: since },
+        },
+        select: { userId: true },
+        distinct: ["userId"],
+      }),
+    ]);
+    const linkedIds = new Set(linked.map((row) => row.userId));
+    const rolledIds = new Set(rolled.map((row) => row.userId));
+    return subscribed.filter(
+      (userId) => linkedIds.has(userId) && !rolledIds.has(userId)
+    );
   }
 
   accounts(guildId: string): Promise<Account[]> {

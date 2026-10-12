@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   serverCard: vi.fn(),
   profileCard: vi.fn(),
   overallPage: vi.fn(),
+  setReminder: vi.fn(),
 }));
 
 vi.mock("#lib/logger.js", () => {
@@ -22,6 +23,7 @@ vi.mock("#modules/rngdle/services/store.js", () => ({
   default: {
     account: mocks.account,
     accountByUsername: mocks.accountByUsername,
+    setReminder: mocks.setReminder,
   },
 }));
 vi.mock("#modules/rngdle/services/sync.js", () => ({
@@ -51,9 +53,16 @@ interface Options {
   username?: string;
   member?: { id: string };
   strings?: Record<string, string>;
+  enabled?: boolean;
 }
 
-function interactionFor({ subcommand, username, member, strings }: Options) {
+function interactionFor({
+  subcommand,
+  username,
+  member,
+  strings,
+  enabled,
+}: Options) {
   return {
     guildId: "guild",
     guild: {},
@@ -71,6 +80,7 @@ function interactionFor({ subcommand, username, member, strings }: Options) {
       },
       getUser: () => member ?? null,
       getInteger: () => null,
+      getBoolean: () => enabled ?? null,
     },
     reply: vi.fn(),
     deferReply: vi.fn(),
@@ -181,6 +191,35 @@ describe("/rngdle link", () => {
       );
     }
   );
+});
+
+describe("/rngdle remind", () => {
+  it("asks an unlinked caller to link their account, privately", async () => {
+    const interaction = interactionFor({ subcommand: "remind", enabled: true });
+    await run(interaction);
+
+    expect(interaction.deferReply).not.toHaveBeenCalled();
+    expect(mocks.refreshIfStale).not.toHaveBeenCalled();
+    expect(mocks.setReminder).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: "remind.notRegistered",
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+
+  it("turns the reminder off without needing a linked account", async () => {
+    const interaction = interactionFor({
+      subcommand: "remind",
+      enabled: false,
+    });
+    await run(interaction);
+
+    expect(mocks.setReminder).toHaveBeenCalledWith("guild", "caller", false);
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: "remind.disabled",
+      flags: MessageFlags.Ephemeral,
+    });
+  });
 });
 
 describe("/rngdle unlink", () => {

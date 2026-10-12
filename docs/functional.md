@@ -108,7 +108,7 @@ Chaque tirage est classé selon le percentile de son score parmi tous les tirage
 
 ### Synchronisation
 
-Les tirages sont téléchargés à 06:00 et 18:00 UTC, avant le classement quotidien, et au plus toutes les 5 minutes par serveur quand un joueur lance une commande `/rngdle`. Si rngdle.com est lent, la commande n'attend pas plus de 10 secondes et affiche les données déjà enregistrées. Un compte qui a déjà un tirage enregistré pour le jour en cours n'est pas re-téléchargé. Un pseudo qui n'existe plus sur rngdle.com est signalé dans les journaux et ignoré.
+Les tirages sont téléchargés à 06:00 et 18:00 UTC (juste avant le rappel quotidien), avant le classement quotidien, et au plus toutes les 5 minutes par serveur quand un joueur lance une commande `/rngdle`. Si rngdle.com est lent, la commande n'attend pas plus de 10 secondes et affiche les données déjà enregistrées. Un compte qui a déjà un tirage enregistré pour le jour en cours n'est pas re-téléchargé. Un pseudo qui n'existe plus sur rngdle.com est signalé dans les journaux et ignoré.
 
 ### `/rngdle leaderboard`
 
@@ -132,7 +132,7 @@ Image des statistiques du serveur : meilleur et pire tirage de tous les temps (a
 
 ### Boutons de navigation
 
-Les boutons « Mon profil » et « Classement général » répondent par un message visible de soi seul : le profil de la personne qui clique (ou un message indiquant qu'elle n'a pas de compte RNGdle lié), ou la première page du classement général depuis toujours.
+Les boutons « Mon profil » et « Classement général » répondent par un message visible de soi seul : le profil de la personne qui clique (ou, si elle n'a pas de compte RNGdle lié, un message qui l'invite à le faire avec `/rngdle link`), ou la première page du classement général depuis toujours.
 
 ### `/rngdle leaderboard-all [period] [page]`
 
@@ -142,9 +142,17 @@ Image du classement général (somme des scores), 10 joueurs par page, avec des 
 
 Image comparant deux joueurs côte à côte, avec leur avatar et leur surnom sur le serveur (ou leur pseudo RNGdle s'ils sont introuvables sur Discord) : score total, nombre de tirages, score moyen et meilleur tirage (colorés selon leur palier), record de badges, et face-à-face sur les jours UTC où les deux ont tiré (victoires de chacun, égalités, nombre de jours en commun). Sur chaque ligne, le meilleur des deux est mis en valeur par une flèche et un fond à sa couleur ; à égalité, aucun ne l'est. Sans `player2`, compare `player1` avec soi-même. Choisir deux fois le même joueur, ou un joueur sans compte RNGdle lié, donne un message visible de soi seul ; si c'est soi-même qui n'a pas de compte lié, le message invite à le faire avec `/rngdle link`.
 
+### `/rngdle remind <enabled>`
+
+Inscrit ou désinscrit le membre au rappel quotidien. Réponse visible de lui seul. Il faut un compte RNGdle lié pour s'inscrire ; sinon, le bot invite le membre à lier le sien avec `/rngdle link`. Si le membre a désactivé ses mentions avec `/pings`, la réponse le prévient qu'il ne sera pas notifié.
+
 ### Classement quotidien
 
 Chaque jour à 01:00 UTC, le bot publie le classement de la veille dans le salon configuré. Le texte au-dessus de l'image félicite le ou les meilleurs joueurs, puis donne le nombre de participants de la veille, le tirage le plus rare s'il est au moins RARE (avec son percentile), le pire tirage quand au moins deux joueurs ont tiré et qu'il ne se confond pas avec le meilleur, et les séries qui atteignent ce jour-là 7, 30, 50, 100, 200 ou 365 jours, puis chaque centaine. Seuls les meilleurs joueurs reçoivent une notification (sauf ceux qui ont désactivé leurs mentions avec `/pings`) ; les autres joueurs cités apparaissent sans être notifiés. Si les séries ne tiennent pas dans un message Discord, les dernières sont résumées en une ligne. Les boutons « Mon profil » et « Classement général » sont proposés sous l'image.
+
+### Rappel quotidien
+
+Chaque jour à 18:00 UTC, juste après la synchronisation, le bot poste dans le salon du classement quotidien un message qui mentionne les inscrits au rappel encore liés et qui n'ont pas tiré depuis minuit UTC, avec l'heure de fin du tirage du jour et un lien vers rngdle.com. Les membres qui ont désactivé leurs mentions avec `/pings` y figurent sans être notifiés. Si personne n'est à rappeler, ou si le salon n'est pas configuré, rien n'est posté. Délier un membre annule son inscription.
 
 ### `/rngdle-admin`
 
@@ -153,16 +161,16 @@ Chaque jour à 01:00 UTC, le bot publie le classement de la veille dans le salon
 | Sous-commande                  | Effet                                                                                                                                                                                                            |
 | ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `register <member> <username>` | Lie un membre à un pseudo RNGdle, après avoir vérifié qu'il existe, et importe tous ses tirages. Un pseudo ne peut être lié qu'à un seul membre par serveur. Changer de pseudo supprime les tirages de l'ancien. |
-| `delete <member>`              | Délie le membre et supprime ses tirages sur ce serveur.                                                                                                                                                          |
+| `delete <member>`              | Délie le membre, supprime ses tirages sur ce serveur et annule son inscription au rappel.                                                                                                                        |
 | `show`                         | Liste les comptes liés sur le serveur.                                                                                                                                                                           |
 | `refresh [full]`               | Télécharge tout de suite les nouveaux tirages du serveur ; avec `full`, retélécharge tout l'historique (au plus une fois tous les quarts d'heure).                                                               |
 | `clear`                        | Supprime les tirages enregistrés sur ce serveur ; ils sont retéléchargés à la synchronisation suivante.                                                                                                          |
 
 ### Configuration — `/config rngdle`
 
-| Champ                | Type  | Description                                                                    |
-| -------------------- | ----- | ------------------------------------------------------------------------------ |
-| `leaderboardChannel` | Salon | Salon du classement quotidien. Tant qu'il n'est pas défini, rien n'est publié. |
+| Champ                | Type  | Description                                                                                  |
+| -------------------- | ----- | -------------------------------------------------------------------------------------------- |
+| `leaderboardChannel` | Salon | Salon du classement et du rappel quotidiens. Tant qu'il n'est pas défini, rien n'est publié. |
 
 ---
 

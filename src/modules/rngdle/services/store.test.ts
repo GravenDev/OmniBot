@@ -7,6 +7,7 @@ const db = vi.hoisted(() => {
   const state = {
     accounts: [] as Row[],
     rolls: [] as Row[],
+    reminders: [] as Row[],
     table: null as Row | null,
   };
 
@@ -36,7 +37,7 @@ const db = vi.hoisted(() => {
       return 0;
     });
 
-  const collection = (name: "accounts" | "rolls") => {
+  const collection = (name: "accounts" | "rolls" | "reminders") => {
     const find = ({ where, orderBy }: Row) =>
       sorted(
         state[name].filter((row) => matches(row, where)),
@@ -90,6 +91,13 @@ const db = vi.hoisted(() => {
         }));
       },
     },
+    rngdleReminder: {
+      ...collection("reminders"),
+      upsert: async ({ where, create }: Row) => {
+        if (!state.reminders.some((row) => matches(row, where)))
+          state.reminders.push({ ...create });
+      },
+    },
     rngdleScoreTable: {
       findUnique: async () => state.table,
       upsert: async ({ create }: Row) => void (state.table = { ...create }),
@@ -131,6 +139,7 @@ const scores = async (guildId = "g1", filter = {}) =>
 beforeEach(async () => {
   db.state.accounts = [];
   db.state.rolls = [];
+  db.state.reminders = [];
   db.state.table = null;
   vi.resetModules();
   store = (await import("./store.js")).default;
@@ -175,6 +184,57 @@ describe("accounts", () => {
     expect(list.map((a) => a.username)).toEqual(["Amy", "zed"]);
     expect((await store.accountByUsername("g1", "ZED"))?.userId).toBe("u2");
     expect(await store.accountByUsername("g1", "nobody")).toBeNull();
+  });
+});
+
+describe("reminders", () => {
+  const today = new Date(Date.UTC(2026, 0, 2));
+
+  it("subscribes idempotently and unsubscribes", async () => {
+    await store.setReminder("g1", "alice", true);
+    await store.setReminder("g1", "alice", true);
+    expect(db.state.reminders).toEqual([{ guildId: "g1", userId: "alice" }]);
+
+    await store.setReminder("g1", "alice", false);
+    await store.setReminder("g1", "alice", false);
+    expect(db.state.reminders).toEqual([]);
+  });
+
+  it("drops the subscription when unregistering, on that guild only", async () => {
+    await seed(alice);
+    await store.setReminder("g1", "alice", true);
+    await store.setReminder("g2", "alice", true);
+
+    await store.unregister("g1", "alice");
+
+    expect(db.state.reminders).toEqual([{ guildId: "g2", userId: "alice" }]);
+  });
+
+  it("returns linked subscribers of the guild without a roll since the given day", async () => {
+    await seed(alice, remote("r1", 10, 0, 1));
+    await seed(bob, remote("r2", 20, 0, 2));
+    await seed(account("g1", "carl"));
+    await seed(zoe);
+    for (const userId of ["carl", "bob", "alice", "ghost"]) {
+      await store.setReminder("g1", userId, true);
+    }
+    await store.setReminder("g2", "zoe", true);
+
+    expect(await store.pendingReminders("g1", today)).toEqual([
+      "alice",
+      "carl",
+    ]);
+    expect(await store.pendingReminders("g2", today)).toEqual(["zoe"]);
+    expect(await store.pendingReminders("g3", today)).toEqual([]);
+  });
+
+  it("ignores a subscription made on another guild", async () => {
+    await seed(alice);
+    await seed(account("g2", "alice"));
+    await store.setReminder("g2", "alice", true);
+
+    expect(await store.pendingReminders("g1", today)).toEqual([]);
+    expect(await store.pendingReminders("g2", today)).toEqual(["alice"]);
   });
 });
 
