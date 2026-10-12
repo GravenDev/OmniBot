@@ -496,6 +496,31 @@ describe("FourHourGameService.getProfile", () => {
     });
   });
 
+  it("caps the month's points at a score lowered by an admin", async () => {
+    scores.set(key("guild", "alice"), 1);
+    points.push(
+      {
+        id: points.length + 1,
+        guildId: "guild",
+        userId: "alice",
+        heldSeconds: DELAY,
+        awardedAt: new Date("2026-10-01T10:00:00Z"),
+      },
+      {
+        id: points.length + 2,
+        guildId: "guild",
+        userId: "alice",
+        heldSeconds: DELAY,
+        awardedAt: new Date("2026-10-02T10:00:00Z"),
+      }
+    );
+
+    expect(await service.getProfile("guild", "alice", now)).toMatchObject({
+      score: 1,
+      monthPoints: 1,
+    });
+  });
+
   it("leaves history values empty for a score set before the history existed", async () => {
     scores.set(key("guild", "alice"), 12);
 

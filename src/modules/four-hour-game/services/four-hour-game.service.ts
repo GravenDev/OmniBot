@@ -248,11 +248,13 @@ class FourHourGameService implements Service {
     if (score === null) {
       return null;
     }
+    const stats = computeProfileStats(history, userId, now);
     return {
       score,
       rank: rank?.rank ?? 0,
       total: rank?.total ?? 0,
-      ...computeProfileStats(history, userId, now),
+      ...stats,
+      monthPoints: Math.min(stats.monthPoints, score),
     };
   }
 
