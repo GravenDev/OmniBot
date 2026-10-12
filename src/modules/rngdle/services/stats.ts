@@ -22,7 +22,42 @@ export interface ServerRollStats extends RollStats {
   tierLeaders: Record<Tier, string[]>;
 }
 
+export interface Streaks {
+  current: number;
+  best: number;
+}
+
 const TIER_LEADERS = 3;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function utcDay(date: Date): number {
+  return Math.floor(date.getTime() / DAY_MS);
+}
+
+export function computeStreaks(
+  rolls: Pick<StoredRoll, "rolledAt">[],
+  now: Date
+): Streaks {
+  const days = [...new Set(rolls.map((roll) => utcDay(roll.rolledAt)))].sort(
+    (a, b) => a - b
+  );
+
+  let best = 0;
+  let run = 0;
+  let previous: number | undefined;
+  for (const day of days) {
+    run = previous !== undefined && day === previous + 1 ? run + 1 : 1;
+    best = Math.max(best, run);
+    previous = day;
+  }
+
+  const today = utcDay(now);
+  const current =
+    previous !== undefined && (previous === today || previous === today - 1)
+      ? run
+      : 0;
+  return { current, best };
+}
 
 function emptyTierCounts(): Record<Tier, number> {
   return Object.fromEntries(TIERS.map((tier) => [tier, 0])) as Record<

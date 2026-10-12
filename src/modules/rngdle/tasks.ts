@@ -7,9 +7,10 @@ import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
 import type { RngdleConfigSchema } from "./rngdle.config.js";
 import { fetchScoreTable } from "./services/api.js";
+import { buildDailyMessage } from "./services/recap.js";
 import store from "./services/store.js";
 import sync from "./services/sync.js";
-import { dailyLeaderboard } from "./services/views.js";
+import { dailyLeaderboard, dailyRecap } from "./services/views.js";
 
 const logger = loggerMaker("rngdle");
 
@@ -31,11 +32,16 @@ async function postDailyLeaderboard(
   if (!board) {
     return;
   }
+  const recap = await dailyRecap(guildId, 1).catch((err: unknown) => {
+    logger.warn(
+      { err },
+      `Failed to compute the daily recap | guildId = ${guildId}`
+    );
+    return null;
+  });
 
   await channel.send({
-    content: config.t("daily.message", {
-      winners: board.winnerIds.map((id) => `<@${id}>`).join(" "),
-    }),
+    content: buildDailyMessage(board.winnerIds, recap, config.t, config.locale),
     files: [new AttachmentBuilder(board.image, { name: "leaderboard.png" })],
     allowedMentions: {
       users: await mentionService.mentionable(guildId, board.winnerIds),

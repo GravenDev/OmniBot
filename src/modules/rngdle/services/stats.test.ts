@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { ScoreTable } from "./scoring.js";
-import { computeRollStats, computeServerStats } from "./stats.js";
+import {
+  computeRollStats,
+  computeServerStats,
+  computeStreaks,
+} from "./stats.js";
 import type { StoredRoll } from "./store.js";
 
 const table = new ScoreTable({
@@ -103,5 +107,71 @@ describe("computeServerStats", () => {
     expect(stats.tierLeaders.MYTHIC).toEqual(["a"]);
     expect(stats.tierLeaders.TRASH).toEqual([]);
     expect(Object.values(stats.tierLeaders).flat()).not.toContain("z");
+  });
+});
+
+describe("computeStreaks", () => {
+  const at = (iso: string) => ({ rolledAt: new Date(iso) });
+  const now = new Date("2026-03-02T12:00:00Z");
+
+  it("is empty without rolls", () => {
+    expect(computeStreaks([], now)).toEqual({ current: 0, best: 0 });
+  });
+
+  it("counts a streak ending today", () => {
+    const rolls = [
+      at("2026-02-28T23:59:59Z"),
+      at("2026-03-01T00:00:00Z"),
+      at("2026-03-02T08:00:00Z"),
+    ];
+
+    expect(computeStreaks(rolls, now)).toEqual({ current: 3, best: 3 });
+  });
+
+  it("keeps a streak ending yesterday, since today's roll may still come", () => {
+    const rolls = [at("2026-02-28T10:00:00Z"), at("2026-03-01T10:00:00Z")];
+
+    expect(computeStreaks(rolls, now)).toEqual({ current: 2, best: 2 });
+  });
+
+  it("drops the current streak after a missed day but keeps the record", () => {
+    const rolls = [
+      at("2026-02-25T10:00:00Z"),
+      at("2026-02-26T10:00:00Z"),
+      at("2026-02-27T10:00:00Z"),
+    ];
+
+    expect(computeStreaks(rolls, now)).toEqual({ current: 0, best: 3 });
+  });
+
+  it("restarts after a one-day gap", () => {
+    const rolls = [
+      at("2026-02-26T10:00:00Z"),
+      at("2026-02-27T10:00:00Z"),
+      at("2026-03-01T10:00:00Z"),
+      at("2026-03-02T10:00:00Z"),
+    ];
+
+    expect(computeStreaks(rolls, now)).toEqual({ current: 2, best: 2 });
+  });
+
+  it("counts several rolls of the same UTC day once, in any order", () => {
+    const rolls = [
+      at("2026-03-02T09:00:00Z"),
+      at("2026-03-01T23:00:00Z"),
+      at("2026-03-01T01:00:00Z"),
+      at("2026-03-02T00:30:00Z"),
+    ];
+
+    expect(computeStreaks(rolls, now)).toEqual({ current: 2, best: 2 });
+  });
+
+  it("chains days across a month boundary", () => {
+    const rolls = [at("2026-01-31T10:00:00Z"), at("2026-02-01T10:00:00Z")];
+
+    expect(computeStreaks(rolls, new Date("2026-02-01T18:00:00Z"))).toEqual({
+      current: 2,
+      best: 2,
+    });
   });
 });
