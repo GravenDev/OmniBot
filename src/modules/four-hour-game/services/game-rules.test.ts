@@ -34,7 +34,12 @@ describe("evaluateMessage", () => {
         msg("bob", after(FOUR_HOURS + 1)),
         FOUR_HOURS
       )
-    ).toEqual({ kind: "point", winnerId: "alice" });
+    ).toEqual({
+      kind: "point",
+      winnerId: "alice",
+      heldSeconds: FOUR_HOURS + 1,
+      heldSince: start,
+    });
   });
 
   it("awards the previous author when exactly the delay has elapsed", () => {
@@ -44,7 +49,22 @@ describe("evaluateMessage", () => {
         msg("bob", after(FOUR_HOURS)),
         FOUR_HOURS
       )
-    ).toEqual({ kind: "point", winnerId: "alice" });
+    ).toEqual({
+      kind: "point",
+      winnerId: "alice",
+      heldSeconds: FOUR_HOURS,
+      heldSince: start,
+    });
+  });
+
+  it("rounds the held time down to whole seconds", () => {
+    expect(
+      evaluateMessage(
+        msg("alice", start),
+        msg("bob", new Date(start.getTime() + FOUR_HOURS * 1000 + 999)),
+        FOUR_HOURS
+      )
+    ).toMatchObject({ kind: "point", heldSeconds: FOUR_HOURS });
   });
 
   it("awards nothing when another member replies before the delay", () => {

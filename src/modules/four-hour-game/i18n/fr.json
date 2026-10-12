@@ -6,12 +6,24 @@
   "config.delay.description": "Durée pendant laquelle un message doit rester le dernier pour que son auteur marque un point.",
 
   "point.title": "Point gagné !",
-  "point.description_one": "{{user}} marque un point ! Son total passe à {{count}} point.",
-  "point.description_other": "{{user}} marque un point ! Son total passe à {{count}} points.",
+  "point.description": "{{user}} marque un point ! Son message est resté sans réponse pendant **{{duration}}**.",
+  "point.total_one": "Total : **{{count}} point**",
+  "point.total_other": "Total : **{{count}} points**",
+  "point.postedAt": "Message posté",
 
   "score.title": "🎪 Le jeu des 4h",
   "score.value": "Le score de {{user}} est **{{score}}**.",
+  "score.valueRanked": "Le score de {{user}} est **{{score}}** — {{rank}}.",
   "score.none": "{{user}} n'a pas de score sur ce serveur.",
+
+  "rank.place_ordinal_one": "{{count}}ᵉʳ",
+  "rank.place_ordinal_other": "{{count}}ᵉ",
+  "rank.position": "{{position}} sur {{total}}",
+
+  "duration.days": "{{value}} j",
+  "duration.hours": "{{value}} h",
+  "duration.minutes": "{{value}} min",
+  "duration.seconds": "{{value}} s",
 
   "leaderboard.empty": "Personne n'a encore marqué de point.",
   "leaderboard.header.rank": "Rang",

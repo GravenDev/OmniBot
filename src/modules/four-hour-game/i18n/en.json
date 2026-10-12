@@ -6,12 +6,26 @@
   "config.delay.description": "Time a message must stay the last one for its author to score a point.",
 
   "point.title": "Point awarded!",
-  "point.description_one": "{{user}} scores a point! They now have {{count}} point.",
-  "point.description_other": "{{user}} scores a point! They now have {{count}} points.",
+  "point.description": "{{user}} scores a point! Their message went unanswered for **{{duration}}**.",
+  "point.total_one": "Total: **{{count}} point**",
+  "point.total_other": "Total: **{{count}} points**",
+  "point.postedAt": "Message posted",
 
   "score.title": "🎪 The 4h game",
   "score.value": "{{user}}'s score is **{{score}}**.",
+  "score.valueRanked": "{{user}}'s score is **{{score}}** — {{rank}}.",
   "score.none": "{{user}} has no score on this server.",
+
+  "rank.place_ordinal_one": "{{count}}st",
+  "rank.place_ordinal_two": "{{count}}nd",
+  "rank.place_ordinal_few": "{{count}}rd",
+  "rank.place_ordinal_other": "{{count}}th",
+  "rank.position": "{{position}} of {{total}}",
+
+  "duration.days": "{{value}}d",
+  "duration.hours": "{{value}}h",
+  "duration.minutes": "{{value}}m",
+  "duration.seconds": "{{value}}s",
 
   "leaderboard.empty": "Nobody has scored yet.",
   "leaderboard.header.rank": "Rank",

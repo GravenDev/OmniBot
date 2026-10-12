@@ -1,12 +1,82 @@
-import { EmbedBuilder, type Message } from "discord.js";
+import { EmbedBuilder, type Guild, type Message } from "discord.js";
+import type { ConfigProvider } from "#lib/config.js";
 import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
 import { isPlayerMessage } from "#modules/four-hour-game/services/channel-history.js";
-import fourHourGameService from "#modules/four-hour-game/services/four-hour-game.service.js";
+import {
+  formatHeldTime,
+  formatRank,
+} from "#modules/four-hour-game/services/formatting.js";
+import fourHourGameService, {
+  type PlayerRank,
+} from "#modules/four-hour-game/services/four-hour-game.service.js";
 import { Colors } from "#utils/colors.js";
 
 const logger = loggerMaker("four-hour-game");
+
+export interface PointAnnouncement {
+  winnerId: string;
+  score: number;
+  heldSeconds: number;
+  heldSince: Date;
+  rank: PlayerRank | null;
+  avatarUrl: string | null;
+}
+
+export function buildPointEmbed(
+  announcement: PointAnnouncement,
+  config: ConfigProvider<FourHourGameConfigSchema>
+): EmbedBuilder {
+  const headline = config.t("point.description", {
+    user: `<@${announcement.winnerId}>`,
+    duration: formatHeldTime(announcement.heldSeconds, config.t),
+  });
+  const total = config.t("point.total", { count: announcement.score });
+  const summary = announcement.rank
+    ? `${total} · ${formatRank(announcement.rank, config.t)}`
+    : total;
+
+  const embed = new EmbedBuilder()
+    .setTitle(config.t("point.title"))
+    .setDescription(`${headline}\n${summary}`)
+    .setFooter({ text: config.t("point.postedAt") })
+    .setTimestamp(announcement.heldSince)
+    .setColor(Colors.FullGreen);
+
+  if (announcement.avatarUrl) {
+    embed.setThumbnail(announcement.avatarUrl);
+  }
+  return embed;
+}
+
+async function fetchWinnerAvatar(
+  guild: Guild,
+  userId: string
+): Promise<string | null> {
+  try {
+    const member = await guild.members.fetch(userId).catch(() => null);
+    const owner = member ?? (await guild.client.users.fetch(userId));
+    return owner.displayAvatarURL({ size: 128 });
+  } catch {
+    return null;
+  }
+}
+
+async function fetchRank(
+  guildId: string,
+  userId: string
+): Promise<PlayerRank | null> {
+  try {
+    return await fourHourGameService.getRank(guildId, userId);
+  } catch (err) {
+    logger.warn(
+      { err },
+      `Failed to compute rank | guildId = ${guildId} | userId = ${userId}`
+    );
+    return null;
+  }
+}
 
 export default declareEventListener<"messageCreate", FourHourGameConfigSchema>({
   eventType: "messageCreate",
@@ -42,17 +112,24 @@ export default declareEventListener<"messageCreate", FourHourGameConfigSchema>({
         `Point awarded | guildId = ${message.guildId} | userId = ${result.winnerId} | score = ${result.score}`
       );
 
+      const [rank, avatarUrl] = await Promise.all([
+        fetchRank(message.guildId, result.winnerId),
+        fetchWinnerAvatar(message.guild, result.winnerId),
+      ]);
+
       await message.channel.send({
         embeds: [
-          new EmbedBuilder()
-            .setTitle(config.t("point.title"))
-            .setDescription(
-              config.t("point.description", {
-                user: `<@${result.winnerId}>`,
-                count: result.score,
-              })
-            )
-            .setColor(Colors.FullGreen),
+          buildPointEmbed(
+            {
+              winnerId: result.winnerId,
+              score: result.score,
+              heldSeconds: result.heldSeconds,
+              heldSince: result.heldSince,
+              rank,
+              avatarUrl,
+            },
+            config
+          ),
         ],
         allowedMentions: { parse: [] },
       });

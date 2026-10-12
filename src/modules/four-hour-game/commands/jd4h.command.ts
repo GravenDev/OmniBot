@@ -11,6 +11,7 @@ import { resolvePlayers } from "#lib/players.js";
 import { RevisionCache } from "#lib/revision-cache.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
 import { renderLeaderboard } from "#modules/four-hour-game/rendering/leaderboard-image.js";
+import { formatRank } from "#modules/four-hour-game/services/formatting.js";
 import fourHourGameService from "#modules/four-hour-game/services/four-hour-game.service.js";
 import { Colors } from "#utils/colors.js";
 
@@ -25,10 +26,10 @@ async function showScore(
   config: Config
 ) {
   const user = interaction.options.getUser("member") ?? interaction.user;
-  const score = await fourHourGameService.getScore(
-    interaction.guildId,
-    user.id
-  );
+  const [score, rank] = await Promise.all([
+    fourHourGameService.getScore(interaction.guildId, user.id),
+    fourHourGameService.getRank(interaction.guildId, user.id),
+  ]);
 
   if (score === null) {
     await interaction.reply({
@@ -43,7 +44,13 @@ async function showScore(
       new EmbedBuilder()
         .setTitle(config.t("score.title"))
         .setDescription(
-          config.t("score.value", { user: `<@${user.id}>`, score })
+          rank
+            ? config.t("score.valueRanked", {
+                user: `<@${user.id}>`,
+                score,
+                rank: formatRank(rank, config.t),
+              })
+            : config.t("score.value", { user: `<@${user.id}>`, score })
         )
         .setColor(Colors.SkyBlue),
     ],

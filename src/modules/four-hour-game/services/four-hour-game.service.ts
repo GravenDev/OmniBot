@@ -13,7 +13,13 @@ export interface GameMessage {
 
 export type MessageResult =
   | Exclude<MessageOutcome, { kind: "point" }>
-  | { kind: "point"; winnerId: string; score: number };
+  | {
+      kind: "point";
+      winnerId: string;
+      score: number;
+      heldSeconds: number;
+      heldSince: Date;
+    };
 
 export interface ChannelMessage {
   messageId: string;
@@ -24,6 +30,11 @@ export interface ChannelMessage {
 export type LatestMessageFetcher = () => Promise<ChannelMessage | null>;
 
 export type SetScoreResult = "created" | "updated" | "removed" | "absent";
+
+export interface PlayerRank {
+  rank: number;
+  total: number;
+}
 
 export interface LeaderboardEntry {
   userId: string;
@@ -90,7 +101,7 @@ class FourHourGameService implements Service {
     ]);
 
     this.bumpRevision(guildId);
-    return { kind: "point", winnerId: outcome.winnerId, score: winner.score };
+    return { ...outcome, score: winner.score };
   }
 
   resetRound(guildId: string): Promise<void> {
@@ -182,6 +193,26 @@ class FourHourGameService implements Service {
       this.bumpRevision(guildId);
     }
     return count > 0;
+  }
+
+  async getRank(guildId: string, userId: string): Promise<PlayerRank | null> {
+    const score = await this.getScore(guildId, userId);
+    if (score === null || score <= 0) {
+      return null;
+    }
+
+    const [ahead, total] = await Promise.all([
+      prisma.fourHourGameScore.count({
+        where: {
+          guildId,
+          OR: [{ score: { gt: score } }, { score, userId: { lt: userId } }],
+        },
+      }),
+      prisma.fourHourGameScore.count({
+        where: { guildId, score: { gt: 0 } },
+      }),
+    ]);
+    return { rank: ahead + 1, total };
   }
 
   async getLeaderboard(
