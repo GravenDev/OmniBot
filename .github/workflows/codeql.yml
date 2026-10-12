@@ -1,4 +1,12 @@
-name: "CodeQL"
+name: "Code scanning"
+
+# Static analysis whose findings go to the Security tab (code scanning),
+# visible only to collaborators with write access, rather than to the public
+# job log: CodeQL for the source and the workflows, zizmor for the workflows
+# again — it knows GitHub Actions pitfalls CodeQL does not.
+#
+# The file keeps its codeql.yml name: code scanning can take a renamed
+# workflow for a new configuration and leave the old one behind, stale.
 
 on:
   push:
@@ -36,3 +44,23 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
+
+  # Template injection, credentials left behind by checkout, unpinned or
+  # known-vulnerable actions, impostor commits… Rules are tuned in
+  # .github/zizmor.yml. It runs on every change rather than only on workflow
+  # ones: a `paths` filter applies to the whole workflow, CodeQL included, and
+  # the run takes seconds. The weekly run catches what the online audits learn
+  # in the meantime.
+  zizmor:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Run zizmor
+        uses: zizmorcore/zizmor-action@cc914d7f3750a2d13d75c7f184a1060aa0e9d482 # v0.6.4
