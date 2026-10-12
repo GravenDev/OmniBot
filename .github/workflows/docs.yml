@@ -25,7 +25,10 @@ jobs:
 
       - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
 
-      - run: pnpm install --frozen-lockfile --filter omnibot-docs
+      # No --filter: neither `pnpm ci` nor `pnpm install` narrows the install
+      # with it here — the bot is the workspace root, and its dependencies
+      # come along either way.
+      - run: pnpm ci
 
       - run: pnpm --filter omnibot-docs build
         env:
