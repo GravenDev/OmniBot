@@ -27,6 +27,7 @@ docs
 # Docker & local orchestration
 Dockerfile
 .dockerignore
+docker-bake.hcl
 compose.yaml
 compose.*.yaml
 pitchfork.toml
