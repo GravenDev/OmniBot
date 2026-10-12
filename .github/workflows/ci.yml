@@ -96,23 +96,34 @@ jobs:
       # amd64 only, like the release: the Portainer host is amd64, and nothing
       # consumes an arm64 image.
       #
-      # Both images in one bake call (docker-bake.hcl): the stages they share
-      # are solved once. Only the runtime image exports the cache — with
-      # `mode=max` it holds every stage the migrator is built from too, and a
-      # second export to the same scope would overwrite the first, since there
-      # is one manifest per scope. The migration image is still built: it is
-      # what the compose stack needs before the bot may start.
-      - name: Build the images
-        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
+      # One cache scope for both images, exported by the runtime build alone:
+      # with `mode=max` it holds every stage the migrator is built from too, and
+      # a second export to the same scope would overwrite the first, since there
+      # is one manifest per scope.
+      - name: Build the runtime image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          source: .
+          context: .
+          target: runtime
+          platforms: linux/amd64
+          push: false
           load: true
-          set: |
-            *.platform=linux/amd64
-            *.cache-from=type=gha,scope=ci
-            runtime.cache-to=type=gha,mode=max,scope=ci
-            runtime.tags=omnibot:ci
-            migrator.tags=omnibot-migrator:ci
+          tags: omnibot:ci
+          cache-from: type=gha,scope=ci
+          cache-to: type=gha,mode=max,scope=ci
+      # Shares every layer up to `deps` with the step above, so this is cheap —
+      # but it is what catches a break in the migration image, which the compose
+      # stack needs before the bot may start.
+      - name: Build the migrator image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: migrator
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: omnibot-migrator:ci
+          cache-from: type=gha,scope=ci
       # Building is not enough: a CMD pointing at a missing file builds fine and
       # only fails at start. Apply the migrations, then start the bot with a
       # dummy token — reaching Discord's token check proves the whole import
@@ -157,7 +168,6 @@ jobs:
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          bake-target: runtime
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -183,35 +193,42 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # The `docker` job of this very run just built the same images and
+      # exported their cache, so this is mostly a push. Nothing is exported
+      # here: that cache is already there.
+      - name: Build and push the bot image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          target: runtime
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=ci
+
       # The migrator ships as its own package, under the same tags as the bot:
       # a deployment pulls the pair for one version, and the migration history
-      # can never drift from the code that expects it. Each metadata step writes
-      # a bake file for its own target, carrying its tags and labels.
+      # can never drift from the code that expects it.
       - name: Extract metadata for the migrator
         id: meta-migrator
         uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-migrator
-          bake-target: migrator
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
-      # The `docker` job of this very run just built the same images and
-      # exported their cache, so this is mostly a push. Nothing is exported
-      # here: that cache is already there.
-      - name: Build and push the images
-        uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
+      - name: Build and push the migrator image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          source: .
+          context: .
+          target: migrator
+          platforms: linux/amd64
           push: true
-          files: |
-            ./docker-bake.hcl
-            ${{ steps.meta.outputs.bake-file }}
-            ${{ steps.meta-migrator.outputs.bake-file }}
-          set: |
-            *.platform=linux/amd64
-            *.cache-from=type=gha,scope=ci
+          tags: ${{ steps.meta-migrator.outputs.tags }}
+          labels: ${{ steps.meta-migrator.outputs.labels }}
+          cache-from: type=gha,scope=ci
 
   # The stack is defined in Portainer against this repository; the webhook only
   # asks it to redeploy, which re-pulls `latest`. Unlike an SSH deploy key, the

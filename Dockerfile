@@ -4,7 +4,7 @@
 # OmniBot — production image
 #
 # Stages: base → deps (dev+prod) → build → prod-deps → migrator / runtime
-# Build:  docker buildx bake --load   (both images, see docker-bake.hcl)
+# Build:  docker build -t omnibot .
 # ---------------------------------------------------------------------------
 
 # Alpine keeps the runtime small; Prisma detects `linux-musl-openssl-3.0.x` and

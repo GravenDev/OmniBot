@@ -135,11 +135,10 @@ What the stack does:
   forwards `SIGTERM`, which the bot handles by closing the Discord client and
   the Prisma pool.
 
-Building the images locally (`docker-bake.hcl` declares both):
+Building the image alone:
 
 ```bash
-docker buildx bake --load           # omnibot + omnibot-migrator
-docker buildx bake --load runtime   # the bot image alone
+docker build -t omnibot .
 ```
 
 ## Project layout
