@@ -93,8 +93,8 @@ jobs:
           persist-credentials: false
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      # amd64 only here: the arm64 half of the release build runs under QEMU and
-      # is far too slow to sit on every pull request. `publish` covers both.
+      # amd64 only, like the release: the Portainer host is amd64, and nothing
+      # consumes an arm64 image.
       #
       # Both images in one bake call (docker-bake.hcl): the stages they share
       # are solved once. Only the runtime image exports the cache — with
@@ -166,19 +166,12 @@ jobs:
       # `v2-final` still reaches this job, and `type=semver` emits nothing for
       # it. buildx would then fail with "tag is needed when pushing to
       # registry", ten minutes in and pointing nowhere near the cause. Refuse
-      # here instead, before QEMU and the build, and say why.
+      # here instead, before the build, and say why.
       - name: Fail if the tag produced no image tag
         if: steps.meta.outputs.tags == ''
         run: |
           echo "::error::${{ github.ref_name }} is not a valid semver tag, so no image tag could be derived. Tag a release as v<major>.<minor>.<patch> (a prerelease such as v0.0.1-rc1 is fine for testing)."
           exit 1
-
-      # arm64 is emulated, hence slow — acceptable on a tag, unlike on every
-      # pull request.
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
-        with:
-          platforms: linux/arm64
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -204,10 +197,9 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 
-      # Reads the amd64 layers the `docker` job just built, when the Actions
-      # cache makes them reachable from this ref, and keeps its own multi-arch
-      # cache in a separate scope — exported by the runtime image alone, for
-      # the same reason as in `docker`.
+      # The `docker` job of this very run just built the same images and
+      # exported their cache, so this is mostly a push. Nothing is exported
+      # here: that cache is already there.
       - name: Build and push the images
         uses: docker/bake-action@018cb6412ab401ebaa809aa5f85966b74628600f # v7.4.0
         with:
@@ -219,10 +211,7 @@ jobs:
             ${{ steps.meta-migrator.outputs.bake-file }}
           set: |
             *.platform=linux/amd64
-            *.platform=linux/arm64
-            *.cache-from=type=gha,scope=release
             *.cache-from=type=gha,scope=ci
-            runtime.cache-to=type=gha,mode=max,scope=release
 
   # The stack is defined in Portainer against this repository; the webhook only
   # asks it to redeploy, which re-pulls `latest`. Unlike an SSH deploy key, the
