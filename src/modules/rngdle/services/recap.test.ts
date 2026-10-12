@@ -171,6 +171,14 @@ describe("buildDailyMessage", () => {
     ]);
   });
 
+  it("keeps a very rare roll's share readable", () => {
+    const rarest = { userId: "r", tier: "MYTHIC", topPercent: 0.034 };
+
+    expect(
+      buildDailyMessage(["a"], { ...full, rarest }, t, "fr").split("\n")[2]
+    ).toBe('daily.rarest {"user":"<@r>","tier":"MYTHIC","percent":"0,034"}');
+  });
+
   it("skips the missing parts", () => {
     const message = buildDailyMessage(
       ["a"],

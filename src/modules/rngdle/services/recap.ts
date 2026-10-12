@@ -109,7 +109,7 @@ export function buildDailyMessage(
           user: mention(recap.rarest.userId),
           tier: recap.rarest.tier,
           percent: recap.rarest.topPercent.toLocaleString(locale, {
-            maximumFractionDigits: 1,
+            maximumSignificantDigits: 2,
           }),
         })
       );
