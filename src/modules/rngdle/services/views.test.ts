@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   renderDaily: vi.fn(async (..._args: unknown[]) => Buffer.from("daily")),
   renderOverall: vi.fn(async (..._args: unknown[]) => Buffer.from("overall")),
   renderServer: vi.fn(async (..._args: unknown[]) => Buffer.from("server")),
+  renderVersus: vi.fn(async (..._args: unknown[]) => Buffer.from("versus")),
+  tierOf: vi.fn((_score: number) => "COMMON"),
 }));
 
 vi.mock("./store.js", () => ({
@@ -18,7 +20,7 @@ vi.mock("./store.js", () => ({
     accounts: mocks.accounts,
     scoreTable: async () => ({
       percentOf: (score: number) => score / 10,
-      tierOf: () => "COMMON",
+      tierOf: mocks.tierOf,
     }),
   },
 }));
@@ -29,6 +31,9 @@ vi.mock("#modules/rngdle/rendering/leaderboards.js", () => ({
 vi.mock("#modules/rngdle/rendering/cards.js", () => ({
   renderProfile: vi.fn(),
   renderServerStats: mocks.renderServer,
+}));
+vi.mock("#modules/rngdle/rendering/versus.js", () => ({
+  renderVersus: mocks.renderVersus,
 }));
 vi.mock("#lib/imaging.js", () => ({
   fetchAvatar: async () => null,
@@ -45,6 +50,7 @@ import {
   profileCard,
   serverCard,
   utcDayRange,
+  versusCard,
   type ViewContext,
 } from "./views.js";
 
@@ -104,6 +110,8 @@ beforeEach(() => {
   mocks.renderDaily.mockClear();
   mocks.renderOverall.mockClear();
   mocks.renderServer.mockClear();
+  mocks.renderVersus.mockClear();
+  mocks.tierOf.mockReset().mockReturnValue("COMMON");
 });
 
 describe("utcDayRange", () => {
@@ -401,5 +409,79 @@ describe("profileCard", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("versusCard", () => {
+  const account = (userId: string) => ({
+    guildId: context.guildId,
+    userId,
+    username: `${userId}-rngdle`,
+  });
+  const fullRoll = (userId: string, day: number, score: number) => ({
+    userId,
+    number: score,
+    score,
+    badgeCount: 1,
+    rolledAt: new Date(Date.UTC(2026, 2, day, 12)),
+  });
+
+  it("returns null when neither player has a roll", async () => {
+    expect(await versusCard(context, account("a"), account("b"))).toBeNull();
+    expect(mocks.renderVersus).not.toHaveBeenCalled();
+  });
+
+  it("compares the two players, named after their nickname then their RNGdle username", async () => {
+    mocks.tierOf.mockImplementation((score) =>
+      score >= 100 ? "RARE" : "COMMON"
+    );
+    mocks.rolls.mockImplementation(async (_guildId, { userId }) =>
+      userId === "a"
+        ? [fullRoll("a", 1, 100), fullRoll("a", 2, 10)]
+        : [fullRoll("ghost", 1, 50)]
+    );
+
+    const image = await versusCard(context, account("a"), account("ghost"));
+
+    expect(image).toEqual(Buffer.from("versus"));
+    const [data] = mocks.renderVersus.mock.calls[0]! as [
+      {
+        left: {
+          name: string;
+          totalScore: number;
+          average: { tier: string };
+          best: { tier: string };
+        };
+        right: { name: string; average: { score: number } };
+        headToHead: unknown;
+        winners: { totalScore: string };
+      },
+    ];
+    expect(data.left).toMatchObject({
+      name: "nick-a",
+      totalScore: 110,
+      average: { score: 55, tier: "COMMON" },
+      best: { number: 100, score: 100, tier: "RARE" },
+    });
+    expect(data.right).toMatchObject({
+      name: "ghost-rngdle",
+      average: { score: 50, tier: "COMMON" },
+    });
+    expect(data.headToHead).toEqual({ days: 1, left: 1, right: 0, ties: 0 });
+    expect(data.winners.totalScore).toBe("left");
+  });
+
+  it("caches each pair in its own order", async () => {
+    mocks.rolls.mockImplementation(async (_guildId, { userId }) => [
+      fullRoll(userId, 1, userId === "a" ? 100 : 50),
+    ]);
+
+    await versusCard(context, account("a"), account("b"));
+    await versusCard(context, account("a"), account("b"));
+    await versusCard(context, account("b"), account("a"));
+    await versusCard(context, account("a"), account("c"));
+    await versusCard(context, account("c"), account("b"));
+
+    expect(mocks.renderVersus).toHaveBeenCalledTimes(4);
   });
 });

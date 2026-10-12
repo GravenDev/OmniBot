@@ -24,6 +24,7 @@ import {
   dailyLeaderboard,
   parsePeriod,
   serverCard,
+  versusCard,
   type ViewContext,
 } from "#modules/rngdle/services/views.js";
 
@@ -185,6 +186,44 @@ const personal: Record<
   (interaction: Interaction, config: Config) => Promise<void>
 > = { link, unlink };
 
+async function versus(interaction: Interaction, config: Config) {
+  const first = interaction.options.getUser("player1", true);
+  const second = interaction.options.getUser("player2") ?? interaction.user;
+  const refuse = (content: string) =>
+    interaction.reply({
+      content,
+      flags: MessageFlags.Ephemeral,
+      allowedMentions: { parse: [] },
+    });
+  if (first.id === second.id) {
+    await refuse(config.t("versus.samePlayer"));
+    return;
+  }
+
+  const [left, right] = await Promise.all([
+    store.account(interaction.guildId, first.id),
+    store.account(interaction.guildId, second.id),
+  ]);
+  if (!left || !right) {
+    const unlinked = left ? [second] : right ? [first] : [first, second];
+    await refuse(
+      unlinked.some((user) => user.id === interaction.user.id)
+        ? config.t("versus.notRegisteredSelf")
+        : config.t("versus.notRegistered", { user: `<@${unlinked[0]!.id}>` })
+    );
+    return;
+  }
+
+  await interaction.deferReply();
+  await sync.refreshIfStale(interaction.guildId);
+  await replyWithImage(
+    interaction,
+    await versusCard(viewContext(interaction, config), left, right),
+    "versus.png",
+    config.t("versus.noRolls")
+  );
+}
+
 const subcommands: Record<
   string,
   (interaction: Interaction, config: Config) => Promise<void>
@@ -295,6 +334,27 @@ export default declareCommand<RngdleConfigSchema>({
             .setDescriptionLocalizations({ fr: "Numéro de page" })
             .setMinValue(1)
         )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("versus")
+        .setDescription("Compare two players")
+        .setDescriptionLocalizations({ fr: "Comparer deux joueurs" })
+        .addUserOption((option) =>
+          option
+            .setName("player1")
+            .setDescription("First player")
+            .setDescriptionLocalizations({ fr: "Premier joueur" })
+            .setRequired(true)
+        )
+        .addUserOption((option) =>
+          option
+            .setName("player2")
+            .setDescription("Second player (defaults to you)")
+            .setDescriptionLocalizations({
+              fr: "Second joueur (vous par défaut)",
+            })
+        )
     ),
 
   async execute(interaction, config) {
@@ -314,6 +374,10 @@ export default declareCommand<RngdleConfigSchema>({
         content: config.t("profile.bothOptions"),
         flags: MessageFlags.Ephemeral,
       });
+      return;
+    }
+    if (interaction.options.getSubcommand() === "versus") {
+      await versus(interaction, config);
       return;
     }
 
