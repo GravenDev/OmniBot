@@ -29,14 +29,18 @@ jobs:
           persist-credentials: false
       # Node and pnpm at the versions pinned in .mise.toml; the other tools
       # listed there (pitchfork, gh) are only for local development.
+      #
+      # zizmor flags both caches below (cache-poisoning) because this workflow
+      # also publishes on a tag. This job publishes nothing, though, and a
+      # pull request's caches stay scoped to its own ref: no tag run reads them.
       - name: Set up Node.js and pnpm
-        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0 # zizmor: ignore[cache-poisoning]
         with:
           install_args: node pnpm
       # No node-version: setup-node keeps the Node mise put on the PATH and is
       # only here for its pnpm store cache.
       - name: Cache the pnpm store
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v6 # zizmor: ignore[cache-poisoning]
         with:
           cache: "pnpm"
       - name: Install dependencies
@@ -57,14 +61,18 @@ jobs:
           persist-credentials: false
       # Node and pnpm at the versions pinned in .mise.toml; the other tools
       # listed there (pitchfork, gh) are only for local development.
+      #
+      # zizmor flags both caches below (cache-poisoning) because this workflow
+      # also publishes on a tag. This job publishes nothing, though, and a
+      # pull request's caches stay scoped to its own ref: no tag run reads them.
       - name: Set up Node.js and pnpm
-        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0 # zizmor: ignore[cache-poisoning]
         with:
           install_args: node pnpm
       # No node-version: setup-node keeps the Node mise put on the PATH and is
       # only here for its pnpm store cache.
       - name: Cache the pnpm store
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v6 # zizmor: ignore[cache-poisoning]
         with:
           cache: "pnpm"
       - name: Install dependencies
