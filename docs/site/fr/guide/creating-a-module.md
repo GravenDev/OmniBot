@@ -44,8 +44,8 @@ Le `name` et `description` du module doivent être en anglais par défaut — il
 ```typescript
 // src/modules/salut/salut.module.ts
 
-import { defineModule } from "#lib/module.js";
 import logger from "#lib/logger.js";
+import { defineModule } from "#lib/module.js";
 
 export default defineModule({
   id: "salut",

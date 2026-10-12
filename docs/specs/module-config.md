@@ -113,7 +113,7 @@ config: {
 
 - `options` est **obligatoire** sur une entrée `ENUM` (le type l'exige).
 - `as const` fait que `config.get("logLevel")` est typé `"debug" | "info" |
-"warn" | "error"` (l'union littérale) ; sans `as const`, c'est `string`.
+  "warn" | "error"` (l'union littérale) ; sans `as const`, c'est `string`.
 - La valeur est stockée telle quelle (un `string`) ; aucune désérialisation.
 
 Le `ConfigProvider` est injecté automatiquement dans `execute`/`complete`/`check`
