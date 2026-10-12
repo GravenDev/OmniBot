@@ -28,3 +28,10 @@ export function formatShort(value: number, locale: string): string {
     scaled.toFixed(1).replace(".0", "")
   );
 }
+
+export function formatRatio(locale: string, value: number): string {
+  return value.toLocaleString(locale, {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  });
+}

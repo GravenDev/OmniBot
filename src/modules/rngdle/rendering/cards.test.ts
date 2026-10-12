@@ -81,6 +81,8 @@ describe("renderProfile", () => {
     maxBadgesValue: (count: number) => `${count} badges at once`,
     overallScore: "Overall Score",
     tierBreakdown: "Tier Breakdown",
+    expected: "expected",
+    ratio: (ratio: number) => `×${ratio}`,
   };
 
   it("renders a 1000x560 PNG for every kind of rank", async () => {
@@ -105,6 +107,8 @@ describe("renderServerStats", () => {
     averageScore: "Average Score",
     overallScore: "Overall Score",
     tierBreakdown: "Tier Breakdown",
+    expected: "expected",
+    ratio: (ratio: number) => `×${ratio}`,
   };
 
   it.each([0, 3, 5])("renders a 1000x560 PNG with %i leaders", async (n) => {

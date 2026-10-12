@@ -28,6 +28,8 @@
   "profile.maxBadgesValue_other": "{{count}} badges at once",
   "profile.overallScore": "Overall Score",
   "profile.tierBreakdown": "Tier Breakdown",
+  "profile.expected": "expected",
+  "profile.ratio": "×{{ratio}}",
 
   "server.title": "RNGdle - Server Stats",
   "server.bestRoll": "Best Roll OAT",
@@ -38,6 +40,8 @@
   "server.averageScore": "Average Score",
   "server.overallScore": "Overall Score",
   "server.tierBreakdown": "Tier Breakdown",
+  "server.expected": "expected",
+  "server.ratio": "×{{ratio}}",
   "server.empty": "No roll has been recorded on this server yet.",
 
   "error.generic": "Something went wrong. Try again later.",

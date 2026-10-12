@@ -28,6 +28,8 @@
   "profile.maxBadgesValue_other": "{{count}} badges d'un coup",
   "profile.overallScore": "Score total",
   "profile.tierBreakdown": "Répartition par palier",
+  "profile.expected": "attendu",
+  "profile.ratio": "×{{ratio}}",
 
   "server.title": "RNGdle - Stats du serveur",
   "server.bestRoll": "Meilleur tirage",
@@ -38,6 +40,8 @@
   "server.averageScore": "Score moyen",
   "server.overallScore": "Score total",
   "server.tierBreakdown": "Répartition par palier",
+  "server.expected": "attendu",
+  "server.ratio": "×{{ratio}}",
   "server.empty": "Aucun tirage n'est encore enregistré sur ce serveur.",
 
   "error.generic": "Une erreur est survenue. Réessayez plus tard.",

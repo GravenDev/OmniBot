@@ -25,6 +25,25 @@ export const TIER_COLORS: Record<TierOrError, Rgb> = {
   ERROR: [255, 41, 41],
 };
 
+const TIER_UPPER_PERCENT: Record<Tier, number> = {
+  TRASH: 1,
+  COMMON: 50,
+  UNCOMMON: 75,
+  RARE: 90,
+  EPIC: 95,
+  ANOMALY: 99,
+  MYTHIC: 100,
+};
+
+export const TIER_ODDS = Object.fromEntries(
+  TIERS.map((tier, index) => [
+    tier,
+    (TIER_UPPER_PERCENT[tier] -
+      (index === 0 ? 0 : TIER_UPPER_PERCENT[TIERS[index - 1]!])) /
+      100,
+  ])
+) as Record<Tier, number>;
+
 export type CompressedTable = Record<string, number>;
 
 const TABLE_START =
@@ -131,14 +150,7 @@ export class ScoreTable {
     }
     const percent = this.percentOf(score);
     if (percent < 0) return "ERROR";
-    if (percent < 1) return "TRASH";
-    if (percent < 50) return "COMMON";
-    if (percent < 75) return "UNCOMMON";
-    if (percent < 90) return "RARE";
-    if (percent < 95) return "EPIC";
-    if (percent < 99) return "ANOMALY";
-    if (percent < 100) return "MYTHIC";
-    return "ERROR";
+    return TIERS.find((tier) => percent < TIER_UPPER_PERCENT[tier]) ?? "ERROR";
   }
 
   equals(other: CompressedTable): boolean {
