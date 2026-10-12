@@ -67,11 +67,11 @@ jobs:
         with:
           context: .
           target: runtime
-          platforms: linux/amd64
+          platforms: &platform linux/amd64
           push: false
           load: true
           tags: omnibot:ci
-          cache-from: type=gha,scope=ci
+          cache-from: &ci-cache type=gha,scope=ci
           cache-to: type=gha,mode=max,scope=ci
       # Shares every layer up to `deps` with the step above, so this is cheap —
       # but it is what catches a break in the migration image, which the compose
@@ -81,11 +81,11 @@ jobs:
         with:
           context: .
           target: migrator
-          platforms: linux/amd64
+          platforms: *platform
           push: false
           load: true
           tags: omnibot-migrator:ci
-          cache-from: type=gha,scope=ci
+          cache-from: *ci-cache
       # Building is not enough: a CMD pointing at a missing file builds fine and
       # only fails at start. Apply the migrations, then start the bot with a
       # dummy token — reaching Discord's token check proves the whole import
@@ -160,11 +160,11 @@ jobs:
         with:
           context: .
           target: runtime
-          platforms: linux/amd64
+          platforms: *platform
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=ci
+          cache-from: *ci-cache
 
       # The migrator ships as its own package, under the same tags as the bot:
       # a deployment pulls the pair for one version, and the migration history
@@ -183,11 +183,11 @@ jobs:
         with:
           context: .
           target: migrator
-          platforms: linux/amd64
+          platforms: *platform
           push: true
           tags: ${{ steps.meta-migrator.outputs.tags }}
           labels: ${{ steps.meta-migrator.outputs.labels }}
-          cache-from: type=gha,scope=ci
+          cache-from: *ci-cache
 
   # The stack is defined in Portainer against this repository; the webhook only
   # asks it to redeploy, which re-pulls `latest`. Unlike an SSH deploy key, the
