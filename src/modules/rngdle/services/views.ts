@@ -8,13 +8,21 @@ import {
   renderProfile,
   renderServerStats,
 } from "#modules/rngdle/rendering/cards.js";
-import { formatExpected } from "#modules/rngdle/rendering/format.js";
+import {
+  formatExpected,
+  formatSpaced,
+} from "#modules/rngdle/rendering/format.js";
 import {
   renderDailyLeaderboard,
   renderOverallLeaderboard,
 } from "#modules/rngdle/rendering/leaderboards.js";
+import { computeDailyRecap, type DailyRecap } from "./recap.js";
 import { TIERS, type Tier } from "./scoring.js";
-import { computeRollStats, computeServerStats } from "./stats.js";
+import {
+  computeRollStats,
+  computeServerStats,
+  computeStreaks,
+} from "./stats.js";
 import store, { type Account } from "./store.js";
 
 const DAILY_SIZE = 25;
@@ -112,6 +120,18 @@ export function dailyLeaderboard(
   });
 }
 
+export async function dailyRecap(
+  guildId: string,
+  daysAgo: number
+): Promise<DailyRecap | null> {
+  const [from, to] = utcDayRange(daysAgo);
+  const [history, table] = await Promise.all([
+    store.rolls(guildId, { to }),
+    store.scoreTable(),
+  ]);
+  return computeDailyRecap(history, from, table);
+}
+
 export function overallPage(
   context: ViewContext,
   requestedPage: number,
@@ -184,6 +204,7 @@ export function profileCard(
     if (!stats) {
       return null;
     }
+    const streaks = computeStreaks(rolls, new Date());
 
     const player = (
       await resolvePlayers(context.client, context.guildId, [account.userId])
@@ -216,14 +237,20 @@ export function profileCard(
         averageTier: table.tierOf(stats.averageScore),
         maxBadges: stats.maxBadges,
         totalScore: stats.totalScore,
+        currentStreak: streaks.current,
+        bestStreak: streaks.best,
         tierCounts: stats.tierCounts,
       },
       {
         bestRoll: t("profile.bestRoll"),
         worstRoll: t("profile.worstRoll"),
         roll: (number) => t("profile.roll", { number }),
-        totalRolls: t("profile.totalRolls"),
+        averageOver: (count) =>
+          t("profile.averageOver", { count, total: formatSpaced(count) }),
         averageScore: t("profile.averageScore"),
+        streak: t("profile.streak"),
+        streakValue: (count) => t("profile.streakValue", { count }),
+        streakRecord: (count) => t("profile.streakRecord", { count }),
         maxBadges: t("profile.maxBadges"),
         maxBadgesValue: (count) => t("profile.maxBadgesValue", { count }),
         overallScore: t("profile.overallScore"),

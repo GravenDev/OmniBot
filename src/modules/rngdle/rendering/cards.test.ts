@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   renderProfile,
   renderServerStats,
@@ -38,6 +38,8 @@ function profile(serverRank: number): ProfileImageData {
     averageTier: "RARE",
     maxBadges: 4,
     totalScore: 1466007,
+    currentStreak: 12,
+    bestStreak: 30,
     tierCounts,
   };
 }
@@ -75,8 +77,11 @@ describe("renderProfile", () => {
     bestRoll: "Best Roll",
     worstRoll: "Worst Roll",
     roll: (number: string) => `roll ${number}`,
-    totalRolls: "Total Rolls",
+    averageOver: (count: number) => `over ${count} rolls`,
     averageScore: "Average Score",
+    streak: "Streak",
+    streakValue: (count: number) => `${count} days`,
+    streakRecord: (count: number) => `best: ${count}`,
     maxBadges: "Max Badges",
     maxBadgesValue: (count: number) => `${count} badges at once`,
     overallScore: "Overall Score",
@@ -93,6 +98,16 @@ describe("renderProfile", () => {
       expect(pngSize(png)).toEqual({ width: 1000, height: 560 });
     }
     expect(new Set(pngs.map((png) => png.toString("base64"))).size).toBe(5);
+  });
+
+  it("shows the current streak with the record below", async () => {
+    const streakValue = vi.fn((count: number) => `${count} days`);
+    const streakRecord = vi.fn((count: number) => `best: ${count}`);
+
+    await renderProfile(profile(3), { ...labels, streakValue, streakRecord });
+
+    expect(streakValue).toHaveBeenCalledWith(12);
+    expect(streakRecord).toHaveBeenCalledWith(30);
   });
 });
 

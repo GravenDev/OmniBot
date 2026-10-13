@@ -116,7 +116,7 @@ Image du classement des tirages du jour (UTC) : rang, avatar, surnom sur le serv
 
 ### `/rngdle profile [member] [username]`
 
-Image du profil d'un joueur : meilleur et pire tirage avec leur date, nombre de tirages, score moyen, record de badges, score total, rang au classement général du serveur et répartition par palier. Sans option, affiche son propre profil. L'option `username` propose les pseudos liés sur le serveur ; les deux options ne se combinent pas. Un membre qui n'a pas encore lié de compte est invité à le faire avec `/rngdle link`.
+Image du profil d'un joueur : meilleur et pire tirage avec leur date, score moyen avec le nombre de tirages, score total, série en cours avec son record, record de badges, rang au classement général du serveur et répartition par palier. La série compte les jours UTC consécutifs avec au moins un tirage ; elle reste en cours tant que le joueur a tiré hier ou aujourd'hui, et retombe à zéro après un jour sans tirage. Sans option, affiche son propre profil. L'option `username` propose les pseudos liés sur le serveur ; les deux options ne se combinent pas. Un membre qui n'a pas encore lié de compte est invité à le faire avec `/rngdle link`.
 
 ### `/rngdle link <username>`
 
@@ -136,7 +136,7 @@ Image du classement général (somme des scores), 10 joueurs par page, avec des 
 
 ### Classement quotidien
 
-Chaque jour à 01:00 UTC, le bot publie le classement de la veille dans le salon configuré, en mentionnant le ou les meilleurs joueurs (sauf ceux qui ont désactivé leurs mentions avec `/pings`).
+Chaque jour à 01:00 UTC, le bot publie le classement de la veille dans le salon configuré. Le texte au-dessus de l'image félicite le ou les meilleurs joueurs, puis donne le nombre de participants de la veille, le tirage le plus rare s'il est au moins RARE (avec son percentile), le pire tirage quand au moins deux joueurs ont tiré et qu'il ne se confond pas avec le meilleur, et les séries qui atteignent ce jour-là 7, 30, 50, 100, 200 ou 365 jours, puis chaque centaine. Seuls les meilleurs joueurs reçoivent une notification (sauf ceux qui ont désactivé leurs mentions avec `/pings`) ; les autres joueurs cités apparaissent sans être notifiés. Si les séries ne tiennent pas dans un message Discord, les dernières sont résumées en une ligne.
 
 ### `/rngdle-admin`
 

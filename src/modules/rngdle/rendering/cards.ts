@@ -73,6 +73,8 @@ export interface ProfileImageData {
   averageTier: TierOrError;
   maxBadges: number;
   totalScore: number;
+  currentStreak: number;
+  bestStreak: number;
   tierCounts: Record<Tier, number>;
 }
 
@@ -80,8 +82,11 @@ export interface ProfileLabels {
   bestRoll: string;
   worstRoll: string;
   roll: (number: string) => string;
-  totalRolls: string;
+  averageOver: (count: number) => string;
   averageScore: string;
+  streak: string;
+  streakValue: (count: number) => string;
+  streakRecord: (count: number) => string;
   maxBadges: string;
   maxBadgesValue: (count: number) => string;
   overallScore: string;
@@ -289,11 +294,18 @@ export function renderProfile(
         rollBox(labels.worstRoll, data.worst),
       ],
       [
-        scoreBox(labels.averageScore, data.averageScore, data.averageTier),
+        {
+          ...scoreBox(labels.averageScore, data.averageScore, data.averageTier),
+          subtext: labels.averageOver(data.totalRolls),
+        },
         { title: labels.overallScore, value: ep(data.totalScore) },
       ],
       [
-        { title: labels.totalRolls, value: formatSpaced(data.totalRolls) },
+        {
+          title: labels.streak,
+          value: labels.streakValue(data.currentStreak),
+          subtext: labels.streakRecord(data.bestStreak),
+        },
         {
           title: labels.maxBadges,
           value: labels.maxBadgesValue(data.maxBadges),

@@ -35,9 +35,12 @@ vi.mock("#lib/imaging.js", () => ({
   fetchImage: async () => null,
 }));
 
+import { renderProfile } from "#modules/rngdle/rendering/cards.js";
 import {
   dailyLeaderboard,
+  dailyRecap,
   overallPage,
+  profileCard,
   serverCard,
   utcDayRange,
   type ViewContext,
@@ -181,6 +184,33 @@ describe("dailyLeaderboard", () => {
   });
 });
 
+describe("dailyRecap", () => {
+  it("loads the history up to the end of the day and recaps that day", async () => {
+    vi.useFakeTimers({
+      now: new Date("2026-03-02T01:00:00Z"),
+      toFake: ["Date"],
+    });
+    try {
+      mocks.rolls.mockResolvedValue([
+        { userId: "a", score: 950, rolledAt: new Date("2026-03-01T10:00:00Z") },
+        { userId: "b", score: 20, rolledAt: new Date("2026-03-01T11:00:00Z") },
+      ]);
+
+      const recap = await dailyRecap("g", 1);
+
+      expect(mocks.rolls).toHaveBeenCalledWith("g", {
+        to: new Date("2026-03-02T00:00:00Z"),
+      });
+      expect(recap).toMatchObject({
+        participants: 2,
+        worst: { userId: "b", score: 20 },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("overallPage", () => {
   const totals = Array.from({ length: 25 }, (_, i) => ({
     userId: `p${i}`,
@@ -273,5 +303,43 @@ describe("serverCard", () => {
     ];
     expect(data.best.playerName).toBe("nick-a");
     expect(data.worst.playerName).toBe("ghost-rngdle");
+  });
+});
+
+describe("profileCard", () => {
+  it("passes the current streak and the record to the card", async () => {
+    vi.useFakeTimers({
+      now: new Date("2026-03-05T12:00:00Z"),
+      toFake: ["Date"],
+    });
+    try {
+      const day = (iso: string) => ({
+        userId: "a",
+        number: 1,
+        score: 100,
+        badgeCount: 0,
+        rolledAt: new Date(iso),
+      });
+      mocks.rolls.mockResolvedValue([
+        day("2026-02-20T10:00:00Z"),
+        day("2026-02-21T10:00:00Z"),
+        day("2026-02-22T10:00:00Z"),
+        day("2026-03-03T10:00:00Z"),
+        day("2026-03-04T10:00:00Z"),
+      ]);
+
+      await profileCard(context, {
+        guildId: context.guildId,
+        userId: "a",
+        username: "alice",
+      });
+
+      expect(vi.mocked(renderProfile)).toHaveBeenLastCalledWith(
+        expect.objectContaining({ currentStreak: 2, bestStreak: 3 }),
+        expect.anything()
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
