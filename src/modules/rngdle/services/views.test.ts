@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   accounts: vi.fn(),
   renderDaily: vi.fn(async (..._args: unknown[]) => Buffer.from("daily")),
   renderOverall: vi.fn(async (..._args: unknown[]) => Buffer.from("overall")),
+  renderServer: vi.fn(async (..._args: unknown[]) => Buffer.from("server")),
 }));
 
 vi.mock("./store.js", () => ({
@@ -27,7 +28,7 @@ vi.mock("#modules/rngdle/rendering/leaderboards.js", () => ({
 }));
 vi.mock("#modules/rngdle/rendering/cards.js", () => ({
   renderProfile: vi.fn(),
-  renderServerStats: vi.fn(),
+  renderServerStats: mocks.renderServer,
 }));
 vi.mock("#lib/imaging.js", () => ({
   fetchAvatar: async () => null,
@@ -37,10 +38,12 @@ vi.mock("#lib/imaging.js", () => ({
 import {
   dailyLeaderboard,
   overallPage,
+  serverCard,
   utcDayRange,
   type ViewContext,
 } from "./views.js";
 
+const MEMBERS = new Set(["a"]);
 const KNOWN = new Set([
   "a",
   "b",
@@ -52,15 +55,34 @@ let guild = 0;
 let context: ViewContext;
 
 function setup() {
+  const guildId = `g${++guild}`;
   context = {
-    guildId: `g${++guild}`,
+    guildId,
     locale: "en",
     t: ((key: string) => key) as ViewContext["t"],
     client: {
+      guilds: {
+        cache: new Map([
+          [
+            guildId,
+            {
+              members: {
+                fetch: async ({ user: id }: { user: string }) => {
+                  if (!MEMBERS.has(id)) throw new Error("unknown member");
+                  return { displayName: `nick-${id}` };
+                },
+              },
+            },
+          ],
+        ]),
+        fetch: async () => {
+          throw new Error("unknown guild");
+        },
+      },
       users: {
         fetch: async (id: string) => {
           if (!KNOWN.has(id)) throw new Error("unknown user");
-          return { username: `name-${id}` };
+          return { displayName: `name-${id}` };
         },
       },
     } as unknown as Client,
@@ -76,6 +98,7 @@ beforeEach(() => {
   mocks.accounts.mockReset().mockResolvedValue([]);
   mocks.renderDaily.mockClear();
   mocks.renderOverall.mockClear();
+  mocks.renderServer.mockClear();
 });
 
 describe("utcDayRange", () => {
@@ -111,9 +134,9 @@ describe("dailyLeaderboard", () => {
     const board = await dailyLeaderboard(context, 0);
 
     expect(rowsOf().map((row) => [row.rank, row.name])).toEqual([
-      [1, "name-a"],
+      [1, "nick-a"],
       [2, "name-b"],
-      [3, "name-a"],
+      [3, "nick-a"],
       [4, "name-c"],
     ]);
     expect(board).toEqual({
@@ -146,7 +169,7 @@ describe("dailyLeaderboard", () => {
 
     expect(rowsOf().map((row) => [row.rank, row.name])).toEqual([
       [1, "ghost-rngdle"],
-      [2, "name-a"],
+      [2, "nick-a"],
       [3, "?"],
     ]);
     expect(board?.winnerIds).toEqual(["ghost"]);
@@ -222,5 +245,33 @@ describe("overallPage", () => {
 
     const rows = mocks.renderOverall.mock.calls[0]![0] as { name: string }[];
     expect(rows.map((row) => row.name)).toEqual(["Registered", "?"]);
+  });
+});
+
+describe("serverCard", () => {
+  const fullRoll = (userId: string, score: number) => ({
+    userId,
+    number: score,
+    score,
+    badgeCount: 0,
+    rolledAt: new Date("2026-03-01T12:00:00Z"),
+  });
+
+  it("names the best and worst rolls after the server nickname, then the RNGdle username", async () => {
+    mocks.rolls.mockResolvedValue([fullRoll("a", 900), fullRoll("ghost", 5)]);
+    mocks.accounts.mockResolvedValue([
+      { userId: "ghost", username: "ghost-rngdle" },
+    ]);
+
+    await serverCard(context, {
+      id: context.guildId,
+      iconURL: () => null,
+    } as never);
+
+    const [data] = mocks.renderServer.mock.calls[0]! as [
+      { best: { playerName: string }; worst: { playerName: string } },
+    ];
+    expect(data.best.playerName).toBe("nick-a");
+    expect(data.worst.playerName).toBe("ghost-rngdle");
   });
 });

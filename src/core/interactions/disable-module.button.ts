@@ -4,6 +4,7 @@ import { modules } from "#core/runtime.js";
 import moduleService from "#core/services/module.service.js";
 import { getCoreT } from "#core/utils/core-config.js";
 import { modulesMessage } from "#core/utils/core-messages.js";
+import { errorMessageKey } from "#core/utils/error-message.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 
 export default declareInteractionHandler({
@@ -35,9 +36,9 @@ export default declareInteractionHandler({
 
     try {
       await uninstallModule(module, interaction.guild!);
-    } catch {
+    } catch (err) {
       await interaction.followUp({
-        content: coreT("interaction.failedDisable"),
+        content: coreT(errorMessageKey(err, "interaction.failedDisable")),
         flags: MessageFlags.Ephemeral,
       });
       return;

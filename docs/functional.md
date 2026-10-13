@@ -32,6 +32,14 @@ Le bouton est désactivé tant qu'aucun champ n'a été personnalisé (rien à r
 
 `/pings enabled:False` inscrit le membre sur la liste des personnes que le bot ne mentionne plus dans ses annonces sur ce serveur ; `/pings enabled:True` l'en retire. La liste est propre à chaque serveur et commune à tous les modules. Le nom du membre reste affiché dans les annonces, mais il n'en reçoit plus de notification. La réponse n'est visible que de lui.
 
+### Erreurs
+
+Quand une commande ou un bouton échoue, la réponse d'erreur n'est visible que du membre concerné et lui indique quoi faire : relancer la commande, et prévenir un administrateur si le problème persiste. Un bouton devenu invalide (module ou option de configuration disparus depuis l'affichage du message) invite à relancer la commande pour obtenir un message à jour. Si l'échec vient d'une permission ou d'un accès manquant au bot sur Discord, le message le dit explicitement : un administrateur doit vérifier les permissions du bot sur le serveur et dans le salon.
+
+### Noms et avatars dans les images
+
+Les images générées par les modules (classements, profils, statistiques) affichent chaque joueur sous son surnom sur le serveur, avec son avatar de serveur s'il en a un. Si le joueur a quitté le serveur, son nom d'affichage et son avatar Discord globaux sont utilisés à la place. Un nom trop long est écrit plus petit ; sur les fiches (profil, statistiques du serveur), s'il ne tient toujours pas, il est raccourci et terminé par « … ».
+
 ---
 
 ## Module Jeu des 4h
@@ -59,7 +67,7 @@ Affiche le score du membre indiqué, ou le sien par défaut.
 
 ### `/jd4h leaderboard`
 
-Génère une image du top 10 du serveur (rang, médailles pour le podium, avatar, pseudo, score). Les membres à 0 point et ceux dont le compte Discord est introuvable n'y figurent pas. L'image est réutilisée pendant 15 secondes par serveur et par langue, et régénérée dès qu'un score change.
+Génère une image du top 10 du serveur (rang, médailles pour le podium, avatar, surnom sur le serveur, score). Les membres à 0 point et ceux dont le compte Discord est introuvable n'y figurent pas. L'image est réutilisée pendant 15 secondes par serveur et par langue, et régénérée dès qu'un score change.
 
 ### `/jd4h-admin set <member> <score>` et `/jd4h-admin unset <member>`
 
@@ -90,7 +98,7 @@ Les tirages sont téléchargés à 06:00 et 18:00 UTC, avant le classement quoti
 
 ### `/rngdle leaderboard`
 
-Image du classement des tirages du jour (UTC) : rang, avatar, pseudo, numéro tiré coloré selon son palier, score et placement en percentile. Limité aux 25 premiers.
+Image du classement des tirages du jour (UTC) : rang, avatar, surnom sur le serveur (ou pseudo RNGdle si le membre est introuvable), numéro tiré coloré selon son palier, score et placement en percentile. Limité aux 25 premiers.
 
 ### `/rngdle profile [member] [username]`
 
@@ -98,7 +106,7 @@ Image du profil d'un joueur : meilleur et pire tirage avec leur date, nombre de 
 
 ### `/rngdle server-stats`
 
-Image des statistiques du serveur : meilleur et pire tirage de tous les temps, nombre de tirages, score moyen, score total et répartition par palier avec les trois joueurs les plus représentés dans chacun.
+Image des statistiques du serveur : meilleur et pire tirage de tous les temps (avec le surnom de leur auteur, ou son pseudo RNGdle s'il est introuvable sur Discord), nombre de tirages, score moyen, score total et répartition par palier avec les trois joueurs les plus représentés dans chacun.
 
 ### `/rngdle leaderboard-all [page]`
 
@@ -130,7 +138,7 @@ Chaque jour à 01:00 UTC, le bot publie le classement de la veille dans le salon
 
 ## Module Thread Creator
 
-Crée automatiquement un fil de discussion sous chaque nouveau message dans un salon configuré. Remplace le bot Needle.
+Crée automatiquement un fil de discussion sous chaque nouveau message dans un salon configuré.
 
 ### Comportement automatique
 

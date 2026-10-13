@@ -44,8 +44,6 @@
   "server.expectedCount": "/ {{value}}",
   "server.empty": "No roll has been recorded on this server yet.",
 
-  "error.generic": "Something went wrong. Try again later.",
-
   "admin.noPermission": "You must be an administrator to use this command.",
   "admin.register.created": "{{user}} is now linked to the RNGdle account `{{username}}` ({{count}} rolls imported).",
   "admin.register.renamed": "{{user}} is now linked to the RNGdle account `{{username}}`; the rolls of the previous account were removed ({{count}} rolls imported).",

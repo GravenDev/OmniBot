@@ -8,6 +8,7 @@ import coreModule from "#core/core.module.js";
 import { modules } from "#core/runtime.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
+import { errorMessageKey } from "#core/utils/error-message.js";
 import { requireAdmin } from "#core/utils/require-admin.js";
 import { createT } from "#lib/i18n.js";
 import type { CompatibleInteraction } from "#lib/interaction.js";
@@ -99,7 +100,7 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
   } catch (err) {
     logger.error({ err }, `Command failed | name = ${interaction.commandName}`);
     const payload = {
-      content: coreConfig.t("command.failed", {
+      content: coreConfig.t(errorMessageKey(err, "command.failed"), {
         commandName: interaction.commandName,
       }),
       flags: MessageFlags.Ephemeral,
@@ -251,7 +252,7 @@ async function handleInteraction(interaction: CompatibleInteraction) {
       `Interaction handler failed | customId = ${interaction.customId}`
     );
     const payload = {
-      content: coreConfig.t("interaction.failed"),
+      content: coreConfig.t(errorMessageKey(err, "interaction.failed")),
       flags: MessageFlags.Ephemeral,
     } as const;
     try {
