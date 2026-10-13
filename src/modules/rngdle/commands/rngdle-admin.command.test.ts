@@ -4,7 +4,12 @@ import type { ConfigProvider } from "#lib/config.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
 
 const order = vi.hoisted(() => [] as string[]);
+const linkAccount = vi.hoisted(() => vi.fn());
 
+vi.mock("#lib/logger.js", () => {
+  const logger = { info: vi.fn(), warn: vi.fn() };
+  return { loggerMaker: () => logger };
+});
 vi.mock("#core/utils/require-admin.js", () => ({
   requireAdmin: async () => true,
 }));
@@ -25,10 +30,7 @@ vi.mock("#modules/rngdle/services/sync.js", () => ({
   },
   FullSyncCooldownError: class extends Error {},
 }));
-vi.mock("#modules/rngdle/services/api.js", () => ({
-  fetchUserRolls: vi.fn(),
-  RngdleUserNotFoundError: class extends Error {},
-}));
+vi.mock("#modules/rngdle/services/linking.js", () => ({ linkAccount }));
 
 const { default: command } = await import("./rngdle-admin.command.js");
 
@@ -61,4 +63,65 @@ describe("/rngdle-admin delete", () => {
       expect.objectContaining({ content: "admin.delete.done" })
     );
   });
+});
+
+describe("/rngdle-admin register", () => {
+  const config = {
+    t: (key: string, options?: Record<string, unknown>) =>
+      options ? `${key} ${JSON.stringify(options)}` : key,
+  } as unknown as ConfigProvider<RngdleConfigSchema>;
+
+  function registerInteraction() {
+    return {
+      guildId: "guild",
+      inGuild: () => true,
+      user: { id: "admin" },
+      options: {
+        getSubcommand: () => "register",
+        getUser: () => ({ id: "member" }),
+        getString: () => " Alice ",
+      },
+      deferReply: vi.fn(),
+      editReply: vi.fn(),
+      reply: vi.fn(),
+    };
+  }
+
+  it.each([
+    [
+      { kind: "created", count: 4 },
+      {
+        content:
+          'admin.register.created {"user":"<@member>","username":"Alice","count":4}',
+        allowedMentions: { parse: [] },
+      },
+    ],
+    [
+      { kind: "conflict", userId: "holder" },
+      {
+        content:
+          'admin.register.conflict {"username":"Alice","user":"<@holder>"}',
+        allowedMentions: { parse: [] },
+      },
+    ],
+    [{ kind: "notFound" }, 'admin.register.notFound {"username":"Alice"}'],
+    [
+      { kind: "unreachable" },
+      'admin.register.unreachable {"username":"Alice"}',
+    ],
+  ])(
+    "links the member through the linking service (%o)",
+    async (outcome, reply) => {
+      linkAccount.mockResolvedValue(outcome);
+      const interaction = registerInteraction();
+
+      await command.execute(
+        interaction as unknown as ChatInputCommandInteraction,
+        config
+      );
+
+      expect(linkAccount).toHaveBeenCalledWith("guild", "member", "Alice");
+      expect(interaction.editReply).toHaveBeenCalledWith(reply);
+    }
+  );
 });

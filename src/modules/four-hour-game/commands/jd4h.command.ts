@@ -1,22 +1,24 @@
 import {
   AttachmentBuilder,
-  EmbedBuilder,
+  GuildMember,
   InteractionContextType,
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
-import { fetchAvatar } from "#lib/imaging.js";
+import { fetchImage } from "#lib/imaging.js";
+import { resolvePlayers } from "#lib/players.js";
 import { RevisionCache } from "#lib/revision-cache.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
 import { renderLeaderboard } from "#modules/four-hour-game/rendering/leaderboard-image.js";
+import { renderProfileCard } from "#modules/four-hour-game/rendering/profile-card.js";
 import fourHourGameService from "#modules/four-hour-game/services/four-hour-game.service.js";
-import { Colors } from "#utils/colors.js";
 
 const LEADERBOARD_SIZE = 10;
 
 const leaderboardCache = new RevisionCache(15_000);
+const profileCache = new RevisionCache(15_000);
 
 type Config = ConfigProvider<FourHourGameConfigSchema>;
 
@@ -24,29 +26,48 @@ async function showScore(
   interaction: ChatInputCommandInteraction<"cached" | "raw">,
   config: Config
 ) {
-  const user = interaction.options.getUser("member") ?? interaction.user;
-  const score = await fourHourGameService.getScore(
-    interaction.guildId,
-    user.id
+  const option = interaction.options.getUser("member");
+  const user = option ?? interaction.user;
+  const member = option
+    ? interaction.options.getMember("member")
+    : interaction.member;
+  const shown = member instanceof GuildMember ? member : user;
+
+  await interaction.deferReply();
+
+  const image = await profileCache.get(
+    `${interaction.guildId}:${config.locale}:${user.id}`,
+    fourHourGameService.getRevision(interaction.guildId),
+    async () => {
+      const profile = await fourHourGameService.getProfile(
+        interaction.guildId,
+        user.id
+      );
+      if (!profile) {
+        return null;
+      }
+      const avatar = await fetchImage(
+        shown.displayAvatarURL({ extension: "png", size: 128 })
+      );
+      return renderProfileCard(
+        profile,
+        { name: shown.displayName, avatar },
+        config.t,
+        config.locale
+      );
+    }
   );
 
-  if (score === null) {
-    await interaction.reply({
+  if (!image) {
+    await interaction.editReply({
       content: config.t("score.none", { user: `<@${user.id}>` }),
       allowedMentions: { parse: [] },
     });
     return;
   }
 
-  await interaction.reply({
-    embeds: [
-      new EmbedBuilder()
-        .setTitle(config.t("score.title"))
-        .setDescription(
-          config.t("score.value", { user: `<@${user.id}>`, score })
-        )
-        .setColor(Colors.SkyBlue),
-    ],
+  await interaction.editReply({
+    files: [new AttachmentBuilder(image, { name: "profile.png" })],
   });
 }
 
@@ -59,24 +80,24 @@ async function buildLeaderboardImage(
     LEADERBOARD_SIZE
   );
 
-  const rows = (
-    await Promise.all(
-      entries.map(async (entry) => {
-        const user = await interaction.client.users
-          .fetch(entry.userId)
-          .catch(() => null);
-        if (!user) {
-          return null;
-        }
-        return {
-          rank: entry.rank,
-          name: user.username,
-          score: entry.score,
-          avatar: await fetchAvatar(user),
-        };
-      })
-    )
-  ).filter((row) => row !== null);
+  const players = await resolvePlayers(
+    interaction.client,
+    interaction.guildId,
+    entries.map((entry) => entry.userId)
+  );
+  const rows = entries.flatMap((entry) => {
+    const player = players.get(entry.userId);
+    return player
+      ? [
+          {
+            rank: entry.rank,
+            name: player.name,
+            score: entry.score,
+            avatar: player.avatar,
+          },
+        ]
+      : [];
+  });
 
   if (rows.length === 0) {
     return null;

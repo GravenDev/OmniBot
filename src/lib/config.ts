@@ -168,6 +168,9 @@ export type ConfigEntry<T extends ConfigType> =
 
 export type ConfigSchema = Record<string, ConfigEntry<ConfigType>>;
 
+/** Maximum entries Discord allows a select menu to return. */
+export const MAX_SELECT_VALUES = 25;
+
 /**
  * Whether a config entry is an enum (single or list) — i.e. one whose value is
  * drawn from a declared `options` set. Narrows to the option-carrying entry

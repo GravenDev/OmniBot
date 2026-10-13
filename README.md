@@ -176,7 +176,7 @@ Contributions are welcome — staff and members alike.
   hook). A lefthook `pre-commit` hook runs oxfmt + oxlint on staged files —
   `pnpm install` sets the hooks up for you.
 - **Before opening a PR**, make sure `pnpm build`, `pnpm test`, `pnpm exec oxlint
---deny-warnings` and `pnpm exec oxfmt --check` all pass (CI runs the same).
+  --deny-warnings` and `pnpm exec oxfmt --check` all pass (CI runs the same).
 - **Agent instructions** live in [`AGENTS.md`](AGENTS.md) (also symlinked as
   `CLAUDE.md`) — a concise orientation that is handy for humans too.
 - **Known tech-debt and follow-ups** are tracked in [`AUDIT.md`](AUDIT.md).

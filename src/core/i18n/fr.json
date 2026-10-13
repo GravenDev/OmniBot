@@ -15,7 +15,7 @@
   "config.noModule": "Aucun module avec l'id `{{moduleId}}`",
   "config.currentValue": "Valeur actuelle : {{value}}",
   "config.defaultSuffix": " _(par défaut)_",
-  "config.notFound": "Configuration introuvable.",
+  "config.notFound": "La configuration de ce module n'existe plus. Relancez `/config`.",
   "config.invalidSelection": "Valeur sélectionnée invalide.",
   "config.number.invalid": "❌ `{{value}}` n'est pas un nombre valide.",
   "config.duration.invalid": "❌ `{{value}}` n'est pas une durée valide. Utilisez un nombre suivi de `s`, `m`, `h` ou `d`, par ex. `30s`, `4h`, `1h30m`.",
@@ -33,15 +33,16 @@
   "setConfig.label": "Entrez une valeur ({{type}}) :",
 
   "command.notEnabled": "La commande `{{commandName}}` n'est pas activée sur ce serveur.",
-  "command.failed": "Quelque chose s'est mal passé lors de l'exécution de `{{commandName}}`. Veuillez réessayer plus tard.",
+  "command.failed": "Quelque chose s'est mal passé pendant l'exécution de `/{{commandName}}`. Relancez la commande ; si le problème persiste, prévenez un administrateur du serveur.",
 
   "interaction.moduleNotEnabled": "Le module de cette fonctionnalité n'est pas activé sur ce serveur.",
-  "interaction.failed": "Quelque chose s'est mal passé. Veuillez réessayer plus tard.",
-  "interaction.malformed": "Le bouton est mal formé. Veuillez réessayer plus tard.",
-  "interaction.moduleNotFound": "Module introuvable. Veuillez réessayer plus tard.",
-  "interaction.failedEnable": "Échec de l'activation du module. Veuillez réessayer plus tard.",
-  "interaction.failedDisable": "Échec de la désactivation du module. Veuillez réessayer plus tard.",
-  "interaction.configOptionNotFound": "Option de configuration introuvable.",
+  "interaction.failed": "Quelque chose s'est mal passé. Réessayez ; si le problème persiste, prévenez un administrateur du serveur.",
+  "interaction.missingPermissions": "Il me manque une permission ou un accès pour faire cela. Un administrateur doit vérifier les permissions du bot sur ce serveur et dans ce salon.",
+  "interaction.malformed": "Ce bouton n'est plus valide. Relancez la commande pour en obtenir un nouveau.",
+  "interaction.moduleNotFound": "Ce module n'existe plus. Relancez la commande pour obtenir un message à jour.",
+  "interaction.failedEnable": "Le module n'a pas pu être activé. Réessayez dans quelques instants.",
+  "interaction.failedDisable": "Le module n'a pas pu être désactivé. Réessayez dans quelques instants.",
+  "interaction.configOptionNotFound": "Cette option de configuration n'existe plus. Relancez `/config` pour afficher les options à jour.",
   "interaction.notBoolean": "Cette option n'est pas un booléen.",
   "interaction.missingPermissions": "Vous n'avez pas les permissions nécessaires pour cette action.",
 
@@ -85,7 +86,7 @@
   "modules.core.description": "Le module principal de l'application, gérant les commandes et évènements principaux. Il est toujours chargé.",
 
   "modules.thread-creator.name": "Thread Creator",
-  "modules.thread-creator.description": "Crée automatiquement des fils de discussion sous chaque nouveau message dans les canaux configurés. Remplace le bot Needle.",
+  "modules.thread-creator.description": "Crée automatiquement des fils de discussion sous chaque nouveau message dans les canaux configurés.",
 
   "modules.four-hour-game.name": "Jeu des 4h",
   "modules.four-hour-game.description": "Marquez un point quand votre message reste le dernier du salon de jeu pendant le délai configuré.",

@@ -88,7 +88,7 @@ export async function fetchImage(url: string | null): Promise<Image | null> {
 }
 
 export function fetchAvatar(
-  user: User,
+  user: Pick<User, "displayAvatarURL">,
   size: 64 | 128 | 256 = 128
 ): Promise<Image | null> {
   return fetchImage(user.displayAvatarURL({ extension: "png", size }));

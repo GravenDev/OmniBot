@@ -6,6 +6,10 @@ on:
     paths: &doc-paths
       - "docs/**"
       - ".github/workflows/docs.yml"
+      - ".github/actions/setup/**"
+      - ".mise.toml"
+      - "package.json"
+      - "pnpm-lock.yaml"
   pull_request:
     paths: *doc-paths
   workflow_dispatch:

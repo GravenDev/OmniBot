@@ -8,7 +8,12 @@ import {
 } from "discord.js";
 import configService from "#core/services/config.service.js";
 import { replyWithCoreT } from "#core/utils/core-config.js";
-import type { ConfigProvider, ConfigSchema, ConfigType } from "#lib/config.js";
+import {
+  MAX_SELECT_VALUES,
+  type ConfigProvider,
+  type ConfigSchema,
+  type ConfigType,
+} from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
 import {
   declareInteractionHandler,
@@ -23,9 +28,6 @@ import {
   resolveConfigurableModule,
 } from "./config-edit.js";
 import { ConfigTypeHandler } from "./config-handler.js";
-
-/** Maximum entries Discord allows a select menu to return. */
-export const MAX_SELECT_VALUES = 25;
 
 /** Everything a subclass needs to build its select menu row for one edit. */
 export interface SelectRowContext {

@@ -41,6 +41,17 @@ model FourHourGameLastMessage {
   sentAt    DateTime
 }
 
+model FourHourGamePoint {
+  id          Int      @id @default(autoincrement())
+  guildId     String
+  userId      String
+  heldSeconds Int
+  awardedAt   DateTime @default(now())
+
+  @@index([guildId, userId])
+  @@index([guildId, awardedAt])
+}
+
 // === Modèles de modules/reports/reports.prisma ===
 model MessageReport {
   id               Int       @id @default(autoincrement())
@@ -123,4 +134,11 @@ model RngdleScoreTable {
   id        Int      @id @default(1)
   data      Json
   updatedAt DateTime @updatedAt
+}
+
+model RngdleReminder {
+  guildId String
+  userId  String
+
+  @@id([guildId, userId])
 }

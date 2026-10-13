@@ -3,7 +3,9 @@ import { loggerMaker } from "#lib/logger.js";
 import { defineModule } from "#lib/module.js";
 import rngdleAdminCommand from "./commands/rngdle-admin.command.js";
 import rngdleCommand from "./commands/rngdle.command.js";
+import navigationButton from "./interactions/navigation.button.js";
 import overallPageButton from "./interactions/overall-page.button.js";
+import unlinkConfirmButton from "./interactions/unlink-confirm.button.js";
 import { rngdleConfigSchema } from "./rngdle.config.js";
 import { rngdleTasks } from "./tasks.js";
 
@@ -25,6 +27,8 @@ const rngdleModule = defineModule({
     registry.register(rngdleCommand);
     registry.register(rngdleAdminCommand);
     registry.register(overallPageButton);
+    registry.register(unlinkConfirmButton);
+    registry.register(navigationButton);
     for (const task of rngdleTasks(rngdleModule)) {
       registry.register(task);
     }

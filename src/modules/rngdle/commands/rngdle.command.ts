@@ -1,24 +1,39 @@
 import {
+  ActionRowBuilder,
   AttachmentBuilder,
+  ButtonBuilder,
   InteractionContextType,
   MessageFlags,
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
 } from "discord.js";
+import mentionService from "#core/services/mention.service.js";
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { loggerMaker } from "#lib/logger.js";
+import {
+  navigationRow,
+  profileMessage,
+} from "#modules/rngdle/interactions/navigation.button.js";
 import { overallPageMessage } from "#modules/rngdle/interactions/overall-page.button.js";
+import { unlinkConfirmMessage } from "#modules/rngdle/interactions/unlink-confirm.button.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
+import { linkOwnAccount } from "#modules/rngdle/services/linking.js";
+import { reminderTimestamp } from "#modules/rngdle/services/reminders.js";
 import store from "#modules/rngdle/services/store.js";
 import sync from "#modules/rngdle/services/sync.js";
 import {
   dailyLeaderboard,
-  profileCard,
+  parsePeriod,
   serverCard,
+  versusCard,
   type ViewContext,
 } from "#modules/rngdle/services/views.js";
 
 const AUTOCOMPLETE_LIMIT = 25;
+const USERNAME_MAX_LENGTH = 64;
+
+const logger = loggerMaker("rngdle");
 
 type Interaction = ChatInputCommandInteraction<"cached" | "raw">;
 type Config = ConfigProvider<RngdleConfigSchema>;
@@ -32,15 +47,19 @@ function viewContext(interaction: Interaction, config: Config): ViewContext {
   };
 }
 
+const ephemeral = { flags: MessageFlags.Ephemeral } as const;
+const noPings = { allowedMentions: { parse: [] } } as const;
+
 async function replyWithImage(
   interaction: Interaction,
   image: Buffer | null,
   name: string,
-  emptyMessage: string
+  emptyMessage: string,
+  components: ActionRowBuilder<ButtonBuilder>[] = []
 ) {
   await interaction.editReply(
     image
-      ? { files: [new AttachmentBuilder(image, { name })] }
+      ? { files: [new AttachmentBuilder(image, { name })], components }
       : { content: emptyMessage }
   );
 }
@@ -51,7 +70,8 @@ async function leaderboard(interaction: Interaction, config: Config) {
     interaction,
     board?.image ?? null,
     "leaderboard.png",
-    config.t("leaderboard.empty")
+    config.t("leaderboard.empty"),
+    [navigationRow(config.t, ["profile", "overall"])]
   );
 }
 
@@ -65,15 +85,12 @@ async function profile(interaction: Interaction, config: Config) {
         interaction.guildId,
         (interaction.options.getUser("member") ?? interaction.user).id
       );
-  if (!account) {
-    await interaction.editReply(config.t("profile.notRegistered"));
-    return;
-  }
-  await replyWithImage(
-    interaction,
-    await profileCard(viewContext(interaction, config), account),
-    `profile-${account.username}.png`,
-    config.t("profile.noRolls", { username: account.username })
+  const member = interaction.options.getUser("member");
+  const self =
+    !interaction.options.getString("username") &&
+    (!member || member.id === interaction.user.id);
+  await interaction.editReply(
+    await profileMessage(viewContext(interaction, config), account, self)
   );
 }
 
@@ -85,7 +102,8 @@ async function serverStats(interaction: Interaction, config: Config) {
     interaction,
     await serverCard(viewContext(interaction, config), guild),
     "server-stats.png",
-    config.t("server.empty")
+    config.t("server.empty"),
+    [navigationRow(config.t, ["profile", "overall"])]
   );
 }
 
@@ -95,8 +113,144 @@ async function leaderboardAll(interaction: Interaction, config: Config) {
       viewContext(interaction, config),
       interaction.options.getInteger("page") ?? 1,
       interaction.user.id,
-      "public"
+      "public",
+      parsePeriod(interaction.options.getString("period"))
     )
+  );
+}
+
+async function link(interaction: Interaction, config: Config) {
+  const { guildId } = interaction;
+  const userId = interaction.user.id;
+  const username = interaction.options.getString("username", true).trim();
+  if (!username) {
+    await interaction.reply({
+      content: config.t("link.notFound", { username }),
+      ...ephemeral,
+    });
+    return;
+  }
+  await interaction.deferReply(ephemeral);
+
+  const outcome = await linkOwnAccount(guildId, userId, username);
+  switch (outcome.kind) {
+    case "notFound":
+    case "unreachable":
+      await interaction.editReply(
+        config.t(`link.${outcome.kind}`, { username })
+      );
+      return;
+    case "alreadyLinked":
+      await interaction.editReply(
+        config.t("link.alreadyLinked", { username: outcome.username })
+      );
+      return;
+    case "conflict":
+      await interaction.editReply({
+        content: config.t("link.conflict", {
+          username,
+          user: `<@${outcome.userId}>`,
+        }),
+        ...noPings,
+      });
+      return;
+    default:
+      logger.info(
+        `Account ${outcome.kind} | guildId = ${guildId} | userId = ${userId} | username = ${username} | by = ${userId}`
+      );
+      await interaction.editReply(
+        config.t(
+          outcome.kind === "unchanged" ? "link.unchanged" : "link.created",
+          { username, count: outcome.count }
+        )
+      );
+  }
+}
+
+async function unlink(interaction: Interaction, config: Config) {
+  const account = await store.account(interaction.guildId, interaction.user.id);
+  await interaction.reply(
+    account
+      ? {
+          ...unlinkConfirmMessage(
+            config.t,
+            interaction.user.id,
+            account.username
+          ),
+          ...ephemeral,
+        }
+      : { content: config.t("unlink.none"), ...ephemeral }
+  );
+}
+
+async function remind(interaction: Interaction, config: Config) {
+  const { guildId, user } = interaction;
+  const enabled = interaction.options.getBoolean("enabled", true);
+  const reply = (content: string) =>
+    interaction.reply({ content, flags: MessageFlags.Ephemeral });
+
+  if (!enabled) {
+    await store.setReminder(guildId, user.id, false);
+    await reply(config.t("remind.disabled"));
+    return;
+  }
+  if (!(await store.account(guildId, user.id))) {
+    await reply(config.t("remind.notRegistered"));
+    return;
+  }
+
+  await store.setReminder(guildId, user.id, true);
+  const channel = config.get("leaderboardChannel");
+  const lines = [
+    channel
+      ? config.t("remind.enabled", {
+          time: reminderTimestamp(new Date()),
+          channel: `<#${channel.id}>`,
+        })
+      : config.t("remind.enabledNoChannel"),
+  ];
+  if ((await mentionService.mentionable(guildId, [user.id])).length === 0) {
+    lines.push(config.t("remind.pingsDisabled"));
+  }
+  await reply(lines.join("\n"));
+}
+
+const personal: Record<
+  string,
+  (interaction: Interaction, config: Config) => Promise<void>
+> = { link, unlink, remind };
+
+async function versus(interaction: Interaction, config: Config) {
+  const first = interaction.options.getUser("player1", true);
+  const second = interaction.options.getUser("player2") ?? interaction.user;
+  const refuse = (content: string) =>
+    interaction.reply({ content, ...ephemeral, ...noPings });
+  if (first.id === second.id) {
+    await refuse(config.t("versus.samePlayer"));
+    return;
+  }
+
+  const [left, right] = await Promise.all([
+    store.account(interaction.guildId, first.id),
+    store.account(interaction.guildId, second.id),
+  ]);
+  if (!left || !right) {
+    const unlinked = left ? [second] : right ? [first] : [first, second];
+    await refuse(
+      unlinked.some((user) => user.id === interaction.user.id)
+        ? config.t("versus.notRegisteredSelf")
+        : config.t("versus.notRegistered", { user: `<@${unlinked[0]!.id}>` })
+    );
+    return;
+  }
+
+  await interaction.deferReply();
+  await sync.refreshIfStale(interaction.guildId);
+  await replyWithImage(
+    interaction,
+    await versusCard(viewContext(interaction, config), left, right),
+    "versus.png",
+    config.t("versus.noRolls")
   );
 }
 
@@ -153,9 +307,56 @@ export default declareCommand<RngdleConfigSchema>({
     )
     .addSubcommand((sub) =>
       sub
+        .setName("link")
+        .setDescription("Link your RNGdle account")
+        .setDescriptionLocalizations({ fr: "Lier votre compte RNGdle" })
+        .addStringOption((option) =>
+          option
+            .setName("username")
+            .setDescription("Your RNGdle username")
+            .setDescriptionLocalizations({ fr: "Votre pseudo RNGdle" })
+            .setMaxLength(USERNAME_MAX_LENGTH)
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("unlink")
+        .setDescription("Unlink your RNGdle account and delete your rolls")
+        .setDescriptionLocalizations({
+          fr: "Délier votre compte RNGdle et supprimer vos tirages",
+        })
+    )
+    .addSubcommand((sub) =>
+      sub
         .setName("leaderboard-all")
-        .setDescription("Show the all-time leaderboard")
+        .setDescription("Show the overall leaderboard")
         .setDescriptionLocalizations({ fr: "Afficher le classement général" })
+        .addStringOption((option) =>
+          option
+            .setName("period")
+            .setDescription("Period to rank (defaults to all time)")
+            .setDescriptionLocalizations({
+              fr: "Période classée (depuis toujours par défaut)",
+            })
+            .addChoices(
+              {
+                name: "All time",
+                name_localizations: { fr: "Depuis toujours" },
+                value: "all",
+              },
+              {
+                name: "This month",
+                name_localizations: { fr: "Ce mois-ci" },
+                value: "month",
+              },
+              {
+                name: "This week",
+                name_localizations: { fr: "Cette semaine" },
+                value: "week",
+              }
+            )
+        )
         .addIntegerOption((option) =>
           option
             .setName("page")
@@ -163,10 +364,53 @@ export default declareCommand<RngdleConfigSchema>({
             .setDescriptionLocalizations({ fr: "Numéro de page" })
             .setMinValue(1)
         )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("versus")
+        .setDescription("Compare two players")
+        .setDescriptionLocalizations({ fr: "Comparer deux joueurs" })
+        .addUserOption((option) =>
+          option
+            .setName("player1")
+            .setDescription("First player")
+            .setDescriptionLocalizations({ fr: "Premier joueur" })
+            .setRequired(true)
+        )
+        .addUserOption((option) =>
+          option
+            .setName("player2")
+            .setDescription("Second player (defaults to you)")
+            .setDescriptionLocalizations({
+              fr: "Second joueur (vous par défaut)",
+            })
+        )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("remind")
+        .setDescription("Get pinged in the evening if you haven't rolled yet")
+        .setDescriptionLocalizations({
+          fr: "Être mentionné le soir si vous n'avez pas encore tiré",
+        })
+        .addBooleanOption((option) =>
+          option
+            .setName("enabled")
+            .setDescription("Turn the daily reminder on or off")
+            .setDescriptionLocalizations({
+              fr: "Activer ou désactiver le rappel quotidien",
+            })
+            .setRequired(true)
+        )
     ),
 
   async execute(interaction, config) {
     if (!interaction.inGuild()) {
+      return;
+    }
+    const personalCommand = personal[interaction.options.getSubcommand()];
+    if (personalCommand) {
+      await personalCommand(interaction, config);
       return;
     }
     if (
@@ -177,6 +421,10 @@ export default declareCommand<RngdleConfigSchema>({
         content: config.t("profile.bothOptions"),
         flags: MessageFlags.Ephemeral,
       });
+      return;
+    }
+    if (interaction.options.getSubcommand() === "versus") {
+      await versus(interaction, config);
       return;
     }
 

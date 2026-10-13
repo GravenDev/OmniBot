@@ -7,8 +7,8 @@ Services allow you to encapsulate business logic and reuse it across your module
 ```typescript
 // src/modules/greeter/services/user.service.ts
 
-import { declareService, type Service } from "#lib/service.js";
 import prisma from "#lib/database.js";
+import { declareService, type Service } from "#lib/service.js";
 
 class UserService implements Service {
   async createUser(userId: string, username: string) {

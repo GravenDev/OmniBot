@@ -1,20 +1,34 @@
 import type { Image } from "@napi-rs/canvas";
 import type { Client, Guild } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
-import { fetchAvatar, fetchImage } from "#lib/imaging.js";
+import { fetchImage } from "#lib/imaging.js";
+import { resolvePlayers } from "#lib/players.js";
 import { RevisionCache } from "#lib/revision-cache.js";
 import {
   renderProfile,
   renderServerStats,
 } from "#modules/rngdle/rendering/cards.js";
-import { formatRatio } from "#modules/rngdle/rendering/format.js";
+import {
+  formatExpected,
+  formatSpaced,
+} from "#modules/rngdle/rendering/format.js";
 import {
   renderDailyLeaderboard,
   renderOverallLeaderboard,
 } from "#modules/rngdle/rendering/leaderboards.js";
+import {
+  renderVersus,
+  type VersusPlayer,
+} from "#modules/rngdle/rendering/versus.js";
+import { computeDailyRecap, type DailyRecap } from "./recap.js";
 import { TIERS, type Tier } from "./scoring.js";
-import { computeRollStats, computeServerStats } from "./stats.js";
-import store, { type Account } from "./store.js";
+import {
+  computeRollStats,
+  computeServerStats,
+  computeStreaks,
+} from "./stats.js";
+import store, { type Account, type DateRange } from "./store.js";
+import { computeVersus, type VersusSide } from "./versus.js";
 
 const DAILY_SIZE = 25;
 const OVERALL_PAGE_SIZE = 10;
@@ -30,6 +44,14 @@ export interface ViewContext {
   locale: string;
 }
 
+export const PERIODS = ["all", "month", "week"] as const;
+
+export type Period = (typeof PERIODS)[number];
+
+export function parsePeriod(value: string | null | undefined): Period {
+  return PERIODS.find((period) => period === value) ?? "all";
+}
+
 export interface DailyLeaderboard {
   image: Buffer;
   winnerIds: string[];
@@ -41,34 +63,11 @@ export interface OverallPage {
   pageCount: number;
 }
 
-interface Player {
-  name: string;
-  avatar: Image | null;
-}
-
 function cached<T>(context: ViewContext, key: string, load: () => Promise<T>) {
   return cache.get(
     `${context.guildId}:${context.locale}:${key}`,
     store.revision(context.guildId),
     load
-  );
-}
-
-async function resolvePlayers(
-  client: Client,
-  userIds: Iterable<string>
-): Promise<Map<string, Player>> {
-  const entries = await Promise.all(
-    [...new Set(userIds)].map(async (userId) => {
-      const user = await client.users.fetch(userId).catch(() => null);
-      return [
-        userId,
-        user && { name: user.username, avatar: await fetchAvatar(user) },
-      ] as const;
-    })
-  );
-  return new Map(
-    entries.filter((entry): entry is [string, Player] => entry[1] !== null)
   );
 }
 
@@ -79,6 +78,23 @@ export function utcDayRange(daysAgo: number, now = new Date()): [Date, Date] {
     now.getUTCDate() - daysAgo
   );
   return [new Date(start), new Date(start + DAY_MS)];
+}
+
+export function periodRange(period: Period, now = new Date()): DateRange {
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+  if (period === "month") {
+    return {
+      from: new Date(Date.UTC(year, month, 1)),
+      to: new Date(Date.UTC(year, month + 1, 1)),
+    };
+  }
+  if (period === "week") {
+    const sinceMonday = (now.getUTCDay() + 6) % 7;
+    const start = Date.UTC(year, month, now.getUTCDate() - sinceMonday);
+    return { from: new Date(start), to: new Date(start + 7 * DAY_MS) };
+  }
+  return {};
 }
 
 export function dailyLeaderboard(
@@ -96,6 +112,7 @@ export function dailyLeaderboard(
     const usernames = new Map(accounts.map((a) => [a.userId, a.username]));
     const players = await resolvePlayers(
       context.client,
+      context.guildId,
       top.map((roll) => roll.userId)
     );
     const rows = top.map((roll, index) => {
@@ -133,14 +150,30 @@ export function dailyLeaderboard(
   });
 }
 
+export async function dailyRecap(
+  guildId: string,
+  daysAgo: number
+): Promise<DailyRecap | null> {
+  const [from, to] = utcDayRange(daysAgo);
+  const [history, table] = await Promise.all([
+    store.rolls(guildId, { to }),
+    store.scoreTable(),
+  ]);
+  return computeDailyRecap(history, from, table);
+}
+
 export function overallPage(
   context: ViewContext,
   requestedPage: number,
-  callerId: string
+  callerId: string,
+  period: Period = "all",
+  now: Date = new Date()
 ): Promise<OverallPage | null> {
-  return cached(context, `overall:${requestedPage}:${callerId}`, async () => {
+  const range = periodRange(period, now);
+  const key = `overall:${period}:${range.from?.toISOString() ?? ""}:${requestedPage}:${callerId}`;
+  return cached(context, key, async () => {
     const [totals, accounts] = await Promise.all([
-      store.totals(context.guildId),
+      store.totals(context.guildId, range),
       store.accounts(context.guildId),
     ]);
     if (totals.length === 0) {
@@ -162,6 +195,7 @@ export function overallPage(
     const shown = callerOffPage ? [...indexes, callerIndex] : indexes;
     const players = await resolvePlayers(
       context.client,
+      context.guildId,
       shown.map((index) => totals[index]!.userId)
     );
     const toRow = (index: number) => {
@@ -204,10 +238,11 @@ export function profileCard(
     if (!stats) {
       return null;
     }
+    const streaks = computeStreaks(rolls, new Date());
 
-    const player = (await resolvePlayers(context.client, [account.userId])).get(
-      account.userId
-    );
+    const player = (
+      await resolvePlayers(context.client, context.guildId, [account.userId])
+    ).get(account.userId);
     const formatDate = new Intl.DateTimeFormat(context.locale, {
       day: "2-digit",
       month: "short",
@@ -224,7 +259,7 @@ export function profileCard(
 
     return renderProfile(
       {
-        username: account.username,
+        username: player?.name ?? account.username,
         avatar: player?.avatar ?? null,
         serverRank:
           totals.findIndex((entry) => entry.userId === account.userId) + 1,
@@ -236,21 +271,96 @@ export function profileCard(
         averageTier: table.tierOf(stats.averageScore),
         maxBadges: stats.maxBadges,
         totalScore: stats.totalScore,
+        currentStreak: streaks.current,
+        bestStreak: streaks.best,
         tierCounts: stats.tierCounts,
       },
       {
         bestRoll: t("profile.bestRoll"),
         worstRoll: t("profile.worstRoll"),
         roll: (number) => t("profile.roll", { number }),
-        totalRolls: t("profile.totalRolls"),
+        averageOver: (count) =>
+          t("profile.averageOver", { count, total: formatSpaced(count) }),
         averageScore: t("profile.averageScore"),
+        streak: t("profile.streak"),
+        streakValue: (count) => t("profile.streakValue", { count }),
+        streakRecord: (count) => t("profile.streakRecord", { count }),
         maxBadges: t("profile.maxBadges"),
         maxBadgesValue: (count) => t("profile.maxBadgesValue", { count }),
         overallScore: t("profile.overallScore"),
         tierBreakdown: t("profile.tierBreakdown"),
         expected: t("profile.expected"),
-        ratio: (ratio) =>
-          t("profile.ratio", { ratio: formatRatio(context.locale, ratio) }),
+        expectedCount: (value) =>
+          t("profile.expectedCount", {
+            value: formatExpected(context.locale, value),
+          }),
+      }
+    );
+  });
+}
+
+export function versusCard(
+  context: ViewContext,
+  left: Account,
+  right: Account
+): Promise<Buffer | null> {
+  return cached(context, `versus:${left.userId}:${right.userId}`, async () => {
+    const [leftRolls, rightRolls, table] = await Promise.all([
+      store.rolls(context.guildId, { userId: left.userId }),
+      store.rolls(context.guildId, { userId: right.userId }),
+      store.scoreTable(),
+    ]);
+    const versus = computeVersus(leftRolls, rightRolls);
+    if (!versus) {
+      return null;
+    }
+
+    const players = await resolvePlayers(context.client, context.guildId, [
+      left.userId,
+      right.userId,
+    ]);
+    const toPlayer = (account: Account, side: VersusSide): VersusPlayer => {
+      const player = players.get(account.userId);
+      return {
+        name: player?.name ?? account.username,
+        avatar: player?.avatar ?? null,
+        totalScore: side.totalScore,
+        totalRolls: side.totalRolls,
+        average:
+          side.averageScore === null
+            ? null
+            : {
+                score: side.averageScore,
+                tier: table.tierOf(side.averageScore),
+              },
+        best: side.best && {
+          ...side.best,
+          tier: table.tierOf(side.best.score),
+        },
+        maxBadges: side.maxBadges,
+      };
+    };
+    const { t } = context;
+
+    return renderVersus(
+      {
+        left: toPlayer(left, versus.left),
+        right: toPlayer(right, versus.right),
+        headToHead: versus.headToHead,
+        winners: versus.winners,
+      },
+      {
+        vs: t("versus.vs"),
+        totalScore: t("versus.totalScore"),
+        totalRolls: t("versus.totalRolls"),
+        averageScore: t("versus.averageScore"),
+        bestRoll: t("versus.bestRoll"),
+        maxBadges: t("versus.maxBadges"),
+        headToHead: t("versus.headToHead"),
+        wins: (count) => t("versus.wins", { count }),
+        duelDetail: (days, ties) =>
+          `${t("versus.commonDays", { count: days })} · ${t("versus.ties", { count: ties })}`,
+        noCommonDay: t("versus.noCommonDay"),
       }
     );
   });
@@ -271,7 +381,7 @@ export function serverCard(
       return null;
     }
 
-    const players = await resolvePlayers(context.client, [
+    const players = await resolvePlayers(context.client, context.guildId, [
       stats.best.userId,
       stats.worst.userId,
       ...TIERS.flatMap((tier) => stats.tierLeaders[tier]),
@@ -281,7 +391,8 @@ export function serverCard(
       number: roll.number,
       score: roll.score,
       tier: table.tierOf(roll.score),
-      playerName: usernames.get(roll.userId) ?? "?",
+      playerName:
+        players.get(roll.userId)?.name ?? usernames.get(roll.userId) ?? "?",
       avatar: players.get(roll.userId)?.avatar ?? null,
     });
     const tierLeaders = Object.fromEntries(
@@ -315,8 +426,10 @@ export function serverCard(
         overallScore: t("server.overallScore"),
         tierBreakdown: t("server.tierBreakdown"),
         expected: t("server.expected"),
-        ratio: (ratio) =>
-          t("server.ratio", { ratio: formatRatio(context.locale, ratio) }),
+        expectedCount: (value) =>
+          t("server.expectedCount", {
+            value: formatExpected(context.locale, value),
+          }),
       }
     );
   });
