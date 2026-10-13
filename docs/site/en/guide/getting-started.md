@@ -145,14 +145,14 @@ Files use suffixes to identify their role:
 Cross-directory imports use **subpath imports** with `#` prefix. Always use the `.js` extension (NodeNext resolution):
 
 ```typescript
-import { defineModule } from "#lib/module.js";
 import { declareCommand } from "#lib/command.js";
-import { declareEventListener } from "#lib/listener.js";
-import { declareInteractionHandler } from "#lib/interaction.js";
-import { declareService } from "#lib/service.js";
 import { ConfigType } from "#lib/config.js";
-import logger from "#lib/logger.js";
 import prisma from "#lib/database.js";
+import { declareInteractionHandler } from "#lib/interaction.js";
+import { declareEventListener } from "#lib/listener.js";
+import logger from "#lib/logger.js";
+import { defineModule } from "#lib/module.js";
+import { declareService } from "#lib/service.js";
 ```
 
 Same-directory imports stay relative:

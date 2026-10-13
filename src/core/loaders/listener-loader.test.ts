@@ -61,8 +61,24 @@ describe("extractGuildId", () => {
     expect(extractGuildId([{ guildId: { id: "guild-7" } }])).toBeUndefined();
   });
 
+  it("resolves a reaction through its message", () => {
+    expect(
+      extractGuildId([{ emoji: {}, message: { guild: { id: "guild-3" } } }])
+    ).toBe("guild-3");
+    expect(
+      extractGuildId([{ emoji: {}, message: { guildId: "guild-4" } }, {}])
+    ).toBe("guild-4");
+  });
+
+  it("prefers the payload's own guild over its message", () => {
+    expect(
+      extractGuildId([{ guildId: "guild-1", message: { guildId: "guild-2" } }])
+    ).toBe("guild-1");
+  });
+
   it("returns undefined for guild-less payloads", () => {
     expect(extractGuildId([{}])).toBeUndefined();
+    expect(extractGuildId([{ message: { guildId: null } }])).toBeUndefined();
     expect(extractGuildId([])).toBeUndefined();
   });
 });

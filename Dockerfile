@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.19
+# syntax=docker/dockerfile:1.28
 
 # ---------------------------------------------------------------------------
 # OmniBot — production image
@@ -30,6 +30,8 @@ WORKDIR /app
 # against the lockfile — the docs site itself is never installed nor shipped.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY docs/site/package.json ./docs/site/package.json
+
+RUN corepack install
 
 # --- deps: full dependency graph (dev included), used to build -------------
 FROM base AS deps

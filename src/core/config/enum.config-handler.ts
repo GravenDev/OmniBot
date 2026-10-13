@@ -9,13 +9,13 @@ import {
   configValueEmoji,
   formatConfigValue,
   isEnumEntry,
+  MAX_SELECT_VALUES,
 } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
 import type { CompatibleInteraction } from "#lib/interaction.js";
 import type { Module } from "#lib/module.js";
 import { getConfigEntry } from "./config-edit.js";
 import {
-  MAX_SELECT_VALUES,
   SelectConfigHandler,
   type SelectRowContext,
 } from "./select.config-handler.js";

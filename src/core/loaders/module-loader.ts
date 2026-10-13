@@ -1,6 +1,11 @@
 import * as fs from "fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "path";
+import {
+  type ConfigSchema,
+  isEnumEntry,
+  MAX_SELECT_VALUES,
+} from "#lib/config.js";
 import { DeclarationType, type Declared } from "#lib/declared.js";
 import { isDevMode } from "#lib/env.js";
 import { addTranslations } from "#lib/i18n.js";
@@ -123,12 +128,28 @@ export async function loadModule(modulePath: string): Promise<Module | null> {
     return null;
   }
 
+  for (const key of findTruncatedEnums(module)) {
+    logger.warn(
+      `\tEnum has more options than a select menu can show, the rest cannot be selected | id = ${module.id} | key = ${key} | max = ${MAX_SELECT_VALUES}`
+    );
+  }
+
   // Load translation bundles for this module
   await loadModuleI18n(module.id, modulePath);
 
   logger.info(`\tModule resolved successfully | id = ${module.id}`);
 
   return module;
+}
+
+export function findTruncatedEnums(module: Module): string[] {
+  const config: ConfigSchema = module.config ?? {};
+  return Object.entries(config)
+    .filter(
+      ([, entry]) =>
+        isEnumEntry(entry) && entry.options.length > MAX_SELECT_VALUES
+    )
+    .map(([key]) => key);
 }
 
 export function findDuplicateDeclarations(modules: Module[]): string[] {
