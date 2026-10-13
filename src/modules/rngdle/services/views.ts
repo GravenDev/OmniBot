@@ -16,6 +16,10 @@ import {
   renderDailyLeaderboard,
   renderOverallLeaderboard,
 } from "#modules/rngdle/rendering/leaderboards.js";
+import {
+  renderVersus,
+  type VersusPlayer,
+} from "#modules/rngdle/rendering/versus.js";
 import { computeDailyRecap, type DailyRecap } from "./recap.js";
 import { TIERS, type Tier } from "./scoring.js";
 import {
@@ -24,6 +28,7 @@ import {
   computeStreaks,
 } from "./stats.js";
 import store, { type Account, type DateRange } from "./store.js";
+import { computeVersus, type VersusSide } from "./versus.js";
 
 const DAILY_SIZE = 25;
 const OVERALL_PAGE_SIZE = 10;
@@ -289,6 +294,73 @@ export function profileCard(
           t("profile.expectedCount", {
             value: formatExpected(context.locale, value),
           }),
+      }
+    );
+  });
+}
+
+export function versusCard(
+  context: ViewContext,
+  left: Account,
+  right: Account
+): Promise<Buffer | null> {
+  return cached(context, `versus:${left.userId}:${right.userId}`, async () => {
+    const [leftRolls, rightRolls, table] = await Promise.all([
+      store.rolls(context.guildId, { userId: left.userId }),
+      store.rolls(context.guildId, { userId: right.userId }),
+      store.scoreTable(),
+    ]);
+    const versus = computeVersus(leftRolls, rightRolls);
+    if (!versus) {
+      return null;
+    }
+
+    const players = await resolvePlayers(context.client, context.guildId, [
+      left.userId,
+      right.userId,
+    ]);
+    const toPlayer = (account: Account, side: VersusSide): VersusPlayer => {
+      const player = players.get(account.userId);
+      return {
+        name: player?.name ?? account.username,
+        avatar: player?.avatar ?? null,
+        totalScore: side.totalScore,
+        totalRolls: side.totalRolls,
+        average:
+          side.averageScore === null
+            ? null
+            : {
+                score: side.averageScore,
+                tier: table.tierOf(side.averageScore),
+              },
+        best: side.best && {
+          ...side.best,
+          tier: table.tierOf(side.best.score),
+        },
+        maxBadges: side.maxBadges,
+      };
+    };
+    const { t } = context;
+
+    return renderVersus(
+      {
+        left: toPlayer(left, versus.left),
+        right: toPlayer(right, versus.right),
+        headToHead: versus.headToHead,
+        winners: versus.winners,
+      },
+      {
+        vs: t("versus.vs"),
+        totalScore: t("versus.totalScore"),
+        totalRolls: t("versus.totalRolls"),
+        averageScore: t("versus.averageScore"),
+        bestRoll: t("versus.bestRoll"),
+        maxBadges: t("versus.maxBadges"),
+        headToHead: t("versus.headToHead"),
+        wins: (count) => t("versus.wins", { count }),
+        duelDetail: (days, ties) =>
+          `${t("versus.commonDays", { count: days })} · ${t("versus.ties", { count: ties })}`,
+        noCommonDay: t("versus.noCommonDay"),
       }
     );
   });
