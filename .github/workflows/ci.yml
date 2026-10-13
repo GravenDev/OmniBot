@@ -17,16 +17,18 @@ concurrency:
   # one mid-push leaves a half-written manifest on the registry.
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
-permissions:
-  contents: read
-
 jobs:
   lint:
     runs-on: ubuntu-latest
+    permissions: &read-only
+      contents: read
 
     steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
+      - &checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup
       - name: Check code format
         run: pnpm exec oxfmt --check .
       - name: Run linter
@@ -34,10 +36,11 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    permissions: *read-only
 
     steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup
+      - *checkout
+      - uses: $/.github/actions/setup
       - name: Build
         run: pnpm build
       - name: Run tests
@@ -45,26 +48,31 @@ jobs:
 
   docker:
     runs-on: ubuntu-latest
+    permissions: *read-only
 
     steps:
-      - uses: actions/checkout@v7
-      - name: Set up Docker Buildx
+      - *checkout
+      - &setup-buildx
+        name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      # amd64 only here: the arm64 half of the release build runs under QEMU and
-      # is far too slow to sit on every pull request. `publish` covers both.
-      # Each build gets its own cache scope — they would otherwise overwrite one
-      # another's manifest, since `mode=max` writes one per scope.
+      # amd64 only, like the release: the Portainer host is amd64, and nothing
+      # consumes an arm64 image.
+      #
+      # One cache scope for both images, exported by the runtime build alone:
+      # with `mode=max` it holds every stage the migrator is built from too, and
+      # a second export to the same scope would overwrite the first, since there
+      # is one manifest per scope.
       - name: Build the runtime image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           target: runtime
-          platforms: linux/amd64
+          platforms: &platform linux/amd64
           push: false
           load: true
           tags: omnibot:ci
-          cache-from: type=gha,scope=ci-runtime
-          cache-to: type=gha,mode=max,scope=ci-runtime
+          cache-from: &ci-cache type=gha,scope=ci
+          cache-to: type=gha,mode=max,scope=ci
       # Shares every layer up to `deps` with the step above, so this is cheap —
       # but it is what catches a break in the migration image, which the compose
       # stack needs before the bot may start.
@@ -73,12 +81,11 @@ jobs:
         with:
           context: .
           target: migrator
-          platforms: linux/amd64
+          platforms: *platform
           push: false
           load: true
           tags: omnibot-migrator:ci
-          cache-from: type=gha,scope=ci-migrator
-          cache-to: type=gha,mode=max,scope=ci-migrator
+          cache-from: *ci-cache
       # Building is not enough: a CMD pointing at a missing file builds fine and
       # only fails at start. Apply the migrations, then start the bot with a
       # dummy token — reaching Discord's token check proves the whole import
@@ -112,7 +119,7 @@ jobs:
       IMAGE_NAME: ${{ github.repository }}
 
     steps:
-      - uses: actions/checkout@v7
+      - *checkout
 
       # `latest` is not listed: the default `latest=auto` flavor already adds it
       # for a non-prerelease semver tag, and only for one.
@@ -129,22 +136,14 @@ jobs:
       # `v2-final` still reaches this job, and `type=semver` emits nothing for
       # it. buildx would then fail with "tag is needed when pushing to
       # registry", ten minutes in and pointing nowhere near the cause. Refuse
-      # here instead, before QEMU and the build, and say why.
+      # here instead, before the build, and say why.
       - name: Fail if the tag produced no image tag
         if: steps.meta.outputs.tags == ''
         run: |
-          echo "::error::${{ github.ref_name }} is not a valid semver tag, so no image tag could be derived. Tag a release as v<major>.<minor>.<patch> (a prerelease such as v0.0.1-rc1 is fine for testing)."
+          echo "::error::$GITHUB_REF_NAME is not a valid semver tag, so no image tag could be derived. Tag a release as v<major>.<minor>.<patch> (a prerelease such as v0.0.1-rc1 is fine for testing)."
           exit 1
 
-      # arm64 is emulated, hence slow — acceptable on a tag, unlike on every
-      # pull request.
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
-        with:
-          platforms: linux/arm64
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - *setup-buildx
 
       - name: Log in to GHCR
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
@@ -153,22 +152,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Reads the amd64 layers the `docker` job just built, when the Actions
-      # cache makes them reachable from this ref, and keeps its own multi-arch
-      # cache in a separate scope.
+      # The `docker` job of this very run just built the same images and
+      # exported their cache, so this is mostly a push. Nothing is exported
+      # here: that cache is already there.
       - name: Build and push the bot image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           target: runtime
-          platforms: linux/amd64,linux/arm64
+          platforms: *platform
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: |
-            type=gha,scope=release
-            type=gha,scope=ci-runtime
-          cache-to: type=gha,mode=max,scope=release
+          cache-from: *ci-cache
 
       # The migrator ships as its own package, under the same tags as the bot:
       # a deployment pulls the pair for one version, and the migration history
@@ -187,14 +183,11 @@ jobs:
         with:
           context: .
           target: migrator
-          platforms: linux/amd64,linux/arm64
+          platforms: *platform
           push: true
           tags: ${{ steps.meta-migrator.outputs.tags }}
           labels: ${{ steps.meta-migrator.outputs.labels }}
-          cache-from: |
-            type=gha,scope=release-migrator
-            type=gha,scope=ci-migrator
-          cache-to: type=gha,mode=max,scope=release-migrator
+          cache-from: *ci-cache
 
   # The stack is defined in Portainer against this repository; the webhook only
   # asks it to redeploy, which re-pulls `latest`. Unlike an SSH deploy key, the
@@ -214,3 +207,20 @@ jobs:
       # a successful deployment for as long as nobody checked the bot.
       - name: Trigger the Portainer stack redeploy
         run: curl -fsS --max-time 300 -X POST "${{ secrets.PORTAINER_WEBHOOK_URL }}"
+
+  # Scans the new `latest` right away rather than at the next weekly run. The
+  # scan runs on master, through a dispatch, so that its alerts land on the
+  # default branch — uploaded from this tag run, they would sit on the tag.
+  # Same condition as `deploy`: a prerelease does not move `latest`.
+  scan:
+    needs: publish
+    if: ${{ !contains(github.ref_name, '-') }}
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+
+    steps:
+      - name: Dispatch the Trivy scan
+        run: gh workflow run trivy.yml --repo "$GITHUB_REPOSITORY" --ref master
+        env:
+          GH_TOKEN: ${{ github.token }}

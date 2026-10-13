@@ -1,36 +1,32 @@
-name: Setup toolchain
-description: Install pnpm, the Node version pinned in .mise.toml, and one workspace package's dependencies.
-
-inputs:
-  package:
-    description: Workspace package whose dependencies are installed.
-    default: omni-bot
+name: Set up Node.js and pnpm
+description: >-
+  Installs Node and pnpm at the versions pinned in .mise.toml, restores the
+  pnpm store cache, then installs the dependencies.
 
 runs:
   using: composite
   steps:
-    - name: Setup pnpm
-      uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+    # Only node and pnpm: the other tools listed in .mise.toml (pitchfork, gh)
+    # are for local development.
+    #
+    # zizmor flags both caches below (cache-poisoning) in a workflow that also
+    # publishes. The jobs using this action publish nothing themselves, though,
+    # and a pull request's caches stay scoped to its own ref: no tag or master
+    # run reads them.
+    - name: Set up Node.js and pnpm
+      uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0 # zizmor: ignore[cache-poisoning]
       with:
-        run_install: false
-    - name: Read Node version from .mise.toml
-      id: node-version
-      shell: bash
-      run: echo "version=$(grep '^node = ' .mise.toml | sed 's/node = \"\(.*\)\"/\1/')" >> "$GITHUB_OUTPUT"
-    - name: Use Node.js
-      uses: actions/setup-node@v6
+        install_args: node pnpm
+
+    # No node-version: setup-node keeps the Node mise put on the PATH and is
+    # only here for its pnpm store cache.
+    - name: Cache the pnpm store
+      uses: actions/setup-node@v6 # zizmor: ignore[cache-poisoning]
       with:
-        node-version: ${{ steps.node-version.outputs.version }}
-    - name: Locate pnpm store
-      id: pnpm-store
-      shell: bash
-      run: echo "path=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
-    - name: Cache pnpm store
-      uses: actions/cache@v5
-      with:
-        path: ${{ steps.pnpm-store.outputs.path }}
-        key: pnpm-${{ runner.os }}-${{ inputs.package }}-${{ hashFiles('pnpm-lock.yaml') }}
-        restore-keys: pnpm-${{ runner.os }}-${{ inputs.package }}-
+        cache: "pnpm"
+
+    # No --filter: it does not narrow the install here — the bot is the
+    # workspace root, and its dependencies come along either way.
     - name: Install dependencies
       shell: bash
-      run: pnpm install --frozen-lockfile --filter "${{ inputs.package }}"
+      run: pnpm ci
