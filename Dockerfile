@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.19
+# syntax=docker/dockerfile:1.28
 
 # ---------------------------------------------------------------------------
 # OmniBot — production image
