@@ -100,7 +100,7 @@ Fixe le score d'un membre, ou le supprime. Fixer un score à 0 revient à le sup
 
 ## Module RNGdle
 
-Repris du bot DJ4H. Suit les tirages quotidiens des membres sur [rngdle.com](https://www.rngdle.com) : un administrateur lie chaque membre à son pseudo RNGdle, puis le bot télécharge ses tirages et en tire des classements, des profils et des statistiques. Toutes les données sont propres à chaque serveur : un même joueur peut être lié sur plusieurs serveurs sans que ses tirages se mélangent.
+Repris du bot DJ4H. Suit les tirages quotidiens des membres sur [rngdle.com](https://www.rngdle.com) : chaque membre lie son pseudo RNGdle (ou un administrateur le fait pour lui), puis le bot télécharge ses tirages et en tire des classements, des profils et des statistiques. Toutes les données sont propres à chaque serveur : un même joueur peut être lié sur plusieurs serveurs sans que ses tirages se mélangent.
 
 ### Paliers
 
@@ -116,7 +116,15 @@ Image du classement des tirages du jour (UTC) : rang, avatar, surnom sur le serv
 
 ### `/rngdle profile [member] [username]`
 
-Image du profil d'un joueur : meilleur et pire tirage avec leur date, nombre de tirages, score moyen, record de badges, score total, rang au classement général du serveur et répartition par palier. Sans option, affiche son propre profil. L'option `username` propose les pseudos liés sur le serveur ; les deux options ne se combinent pas.
+Image du profil d'un joueur : meilleur et pire tirage avec leur date, nombre de tirages, score moyen, record de badges, score total, rang au classement général du serveur et répartition par palier. Sans option, affiche son propre profil. L'option `username` propose les pseudos liés sur le serveur ; les deux options ne se combinent pas. Un membre qui n'a pas encore lié de compte est invité à le faire avec `/rngdle link`.
+
+### `/rngdle link <username>`
+
+Lie son propre compte Discord à un pseudo RNGdle, avec les mêmes vérifications que `/rngdle-admin register` : le pseudo doit exister sur rngdle.com et ne pas être déjà lié à un autre membre du serveur ; tous les tirages sont importés. Un membre déjà lié à un autre pseudo doit d'abord se délier avec `/rngdle unlink` : le bot ne remplace pas un pseudo sans demander. Relancer la commande avec le même pseudo importe seulement les nouveaux tirages. Réponses visibles du membre seul.
+
+### `/rngdle unlink`
+
+Délie son propre compte et supprime ses tirages sur ce serveur, après confirmation par un bouton rouge « Délier » (ou « Annuler »). Le message et ses boutons ne sont visibles que du membre, et seul lui peut les utiliser.
 
 ### `/rngdle server-stats`
 
