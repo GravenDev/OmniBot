@@ -1,5 +1,7 @@
 import {
+  ActionRowBuilder,
   AttachmentBuilder,
+  ButtonBuilder,
   InteractionContextType,
   MessageFlags,
   SlashCommandBuilder,
@@ -8,6 +10,10 @@ import {
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
+import {
+  navigationRow,
+  profileMessage,
+} from "#modules/rngdle/interactions/navigation.button.js";
 import { overallPageMessage } from "#modules/rngdle/interactions/overall-page.button.js";
 import { unlinkConfirmMessage } from "#modules/rngdle/interactions/unlink-confirm.button.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
@@ -16,7 +22,7 @@ import store from "#modules/rngdle/services/store.js";
 import sync from "#modules/rngdle/services/sync.js";
 import {
   dailyLeaderboard,
-  profileCard,
+  parsePeriod,
   serverCard,
   type ViewContext,
 } from "#modules/rngdle/services/views.js";
@@ -45,11 +51,12 @@ async function replyWithImage(
   interaction: Interaction,
   image: Buffer | null,
   name: string,
-  emptyMessage: string
+  emptyMessage: string,
+  components: ActionRowBuilder<ButtonBuilder>[] = []
 ) {
   await interaction.editReply(
     image
-      ? { files: [new AttachmentBuilder(image, { name })] }
+      ? { files: [new AttachmentBuilder(image, { name })], components }
       : { content: emptyMessage }
   );
 }
@@ -60,7 +67,8 @@ async function leaderboard(interaction: Interaction, config: Config) {
     interaction,
     board?.image ?? null,
     "leaderboard.png",
-    config.t("leaderboard.empty")
+    config.t("leaderboard.empty"),
+    [navigationRow(config.t, ["profile", "overall"])]
   );
 }
 
@@ -74,21 +82,12 @@ async function profile(interaction: Interaction, config: Config) {
         interaction.guildId,
         (interaction.options.getUser("member") ?? interaction.user).id
       );
-  if (!account) {
-    const member = interaction.options.getUser("member");
-    const self =
-      !interaction.options.getString("username") &&
-      (!member || member.id === interaction.user.id);
-    await interaction.editReply(
-      config.t(self ? "profile.notRegisteredSelf" : "profile.notRegistered")
-    );
-    return;
-  }
-  await replyWithImage(
-    interaction,
-    await profileCard(viewContext(interaction, config), account),
-    `profile-${account.username}.png`,
-    config.t("profile.noRolls", { username: account.username })
+  const member = interaction.options.getUser("member");
+  const self =
+    !interaction.options.getString("username") &&
+    (!member || member.id === interaction.user.id);
+  await interaction.editReply(
+    await profileMessage(viewContext(interaction, config), account, self)
   );
 }
 
@@ -100,7 +99,8 @@ async function serverStats(interaction: Interaction, config: Config) {
     interaction,
     await serverCard(viewContext(interaction, config), guild),
     "server-stats.png",
-    config.t("server.empty")
+    config.t("server.empty"),
+    [navigationRow(config.t, ["profile", "overall"])]
   );
 }
 
@@ -110,7 +110,8 @@ async function leaderboardAll(interaction: Interaction, config: Config) {
       viewContext(interaction, config),
       interaction.options.getInteger("page") ?? 1,
       interaction.user.id,
-      "public"
+      "public",
+      parsePeriod(interaction.options.getString("period"))
     )
   );
 }
@@ -260,8 +261,33 @@ export default declareCommand<RngdleConfigSchema>({
     .addSubcommand((sub) =>
       sub
         .setName("leaderboard-all")
-        .setDescription("Show the all-time leaderboard")
+        .setDescription("Show the overall leaderboard")
         .setDescriptionLocalizations({ fr: "Afficher le classement général" })
+        .addStringOption((option) =>
+          option
+            .setName("period")
+            .setDescription("Period to rank (defaults to all time)")
+            .setDescriptionLocalizations({
+              fr: "Période classée (depuis toujours par défaut)",
+            })
+            .addChoices(
+              {
+                name: "All time",
+                name_localizations: { fr: "Depuis toujours" },
+                value: "all",
+              },
+              {
+                name: "This month",
+                name_localizations: { fr: "Ce mois-ci" },
+                value: "month",
+              },
+              {
+                name: "This week",
+                name_localizations: { fr: "Cette semaine" },
+                value: "week",
+              }
+            )
+        )
         .addIntegerOption((option) =>
           option
             .setName("page")

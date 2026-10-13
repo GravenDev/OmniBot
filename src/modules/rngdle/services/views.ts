@@ -23,7 +23,7 @@ import {
   computeServerStats,
   computeStreaks,
 } from "./stats.js";
-import store, { type Account } from "./store.js";
+import store, { type Account, type DateRange } from "./store.js";
 
 const DAILY_SIZE = 25;
 const OVERALL_PAGE_SIZE = 10;
@@ -37,6 +37,14 @@ export interface ViewContext {
   guildId: string;
   t: TFunction;
   locale: string;
+}
+
+export const PERIODS = ["all", "month", "week"] as const;
+
+export type Period = (typeof PERIODS)[number];
+
+export function parsePeriod(value: string | null | undefined): Period {
+  return PERIODS.find((period) => period === value) ?? "all";
 }
 
 export interface DailyLeaderboard {
@@ -65,6 +73,23 @@ export function utcDayRange(daysAgo: number, now = new Date()): [Date, Date] {
     now.getUTCDate() - daysAgo
   );
   return [new Date(start), new Date(start + DAY_MS)];
+}
+
+export function periodRange(period: Period, now = new Date()): DateRange {
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth();
+  if (period === "month") {
+    return {
+      from: new Date(Date.UTC(year, month, 1)),
+      to: new Date(Date.UTC(year, month + 1, 1)),
+    };
+  }
+  if (period === "week") {
+    const sinceMonday = (now.getUTCDay() + 6) % 7;
+    const start = Date.UTC(year, month, now.getUTCDate() - sinceMonday);
+    return { from: new Date(start), to: new Date(start + 7 * DAY_MS) };
+  }
+  return {};
 }
 
 export function dailyLeaderboard(
@@ -135,11 +160,15 @@ export async function dailyRecap(
 export function overallPage(
   context: ViewContext,
   requestedPage: number,
-  callerId: string
+  callerId: string,
+  period: Period = "all",
+  now: Date = new Date()
 ): Promise<OverallPage | null> {
-  return cached(context, `overall:${requestedPage}:${callerId}`, async () => {
+  const range = periodRange(period, now);
+  const key = `overall:${period}:${range.from?.toISOString() ?? ""}:${requestedPage}:${callerId}`;
+  return cached(context, key, async () => {
     const [totals, accounts] = await Promise.all([
-      store.totals(context.guildId),
+      store.totals(context.guildId, range),
       store.accounts(context.guildId),
     ]);
     if (totals.length === 0) {

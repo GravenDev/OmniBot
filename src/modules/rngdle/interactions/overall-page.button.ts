@@ -9,12 +9,16 @@ import {
 import { declareInteractionHandler } from "#lib/interaction.js";
 import {
   overallPage,
+  parsePeriod,
+  periodRange,
+  type Period,
   type ViewContext,
 } from "#modules/rngdle/services/views.js";
 
 const CUSTOM_ID = "rngdle-overall";
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-type Visibility = "public" | "private";
+export type Visibility = "public" | "private";
 
 function pageButton(customId: string, label: string, disabled: boolean) {
   return new ButtonBuilder()
@@ -24,26 +28,61 @@ function pageButton(customId: string, label: string, disabled: boolean) {
     .setDisabled(disabled);
 }
 
+export function periodText(
+  context: Pick<ViewContext, "t" | "locale">,
+  period: Period,
+  now = new Date()
+): string {
+  const { from, to } = periodRange(period, now);
+  if (period === "month" && from) {
+    const month = new Intl.DateTimeFormat(context.locale, {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    }).format(from);
+    return context.t("overall.period.month", { month });
+  }
+  if (period === "week" && from && to) {
+    const format = new Intl.DateTimeFormat(context.locale, {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    });
+    return context.t("overall.period.week", {
+      from: format.format(from),
+      to: format.format(new Date(to.getTime() - DAY_MS)),
+    });
+  }
+  return context.t("overall.period.all");
+}
+
 export async function overallPageMessage(
   context: ViewContext,
   page: number,
   callerId: string,
-  visibility: Visibility
+  visibility: Visibility,
+  period: Period = "all",
+  now: Date = new Date()
 ) {
-  const result = await overallPage(context, page, callerId);
+  const result = await overallPage(context, page, callerId, period, now);
   if (!result) {
     return {
-      content: context.t("overall.empty"),
+      content: context.t(
+        period === "all" ? "overall.empty" : "overall.emptyPeriod"
+      ),
       files: [],
       attachments: [],
       components: [],
     };
   }
 
+  const anchor =
+    period === "all" ? "" : `:${Math.floor(now.getTime() / DAY_MS)}`;
   const id = (target: number | string) =>
-    `${CUSTOM_ID}:${target}:${visibility}`;
+    `${CUSTOM_ID}:${target}:${visibility}:${period}${anchor}`;
   return {
-    content: "",
+    content: periodText(context, period, now),
     files: [new AttachmentBuilder(result.image, { name: "leaderboard.png" })],
     attachments: [],
     components: [
@@ -76,8 +115,9 @@ export default declareInteractionHandler<ButtonInteraction>({
   access: "everyone",
   check: (interaction): interaction is ButtonInteraction =>
     interaction.isButton(),
-  async execute(interaction, [rawPage, visibility], config) {
+  async execute(interaction, [rawPage, visibility, period, anchor], config) {
     const page = Number(rawPage);
+    const anchorDay = Number(anchor);
     if (!interaction.inGuild() || !Number.isInteger(page)) {
       return;
     }
@@ -97,7 +137,11 @@ export default declareInteractionHandler<ButtonInteraction>({
         },
         page,
         interaction.user.id,
-        "private"
+        "private",
+        parsePeriod(period),
+        anchor && Number.isInteger(anchorDay)
+          ? new Date(anchorDay * DAY_MS)
+          : new Date()
       )
     );
   },

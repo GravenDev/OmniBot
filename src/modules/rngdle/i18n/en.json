@@ -22,6 +22,13 @@
   "overall.header.score": "Overall Score",
   "overall.empty": "No roll has been recorded on this server yet.",
   "overall.page": "Page {{current}}/{{total}}",
+  "overall.emptyPeriod": "No roll has been recorded for this period yet.",
+  "overall.period.all": "🏆 Overall leaderboard — all time",
+  "overall.period.month": "📅 Monthly leaderboard — {{month}}",
+  "overall.period.week": "📅 Weekly leaderboard — {{from}} to {{to}}",
+
+  "nav.profile": "My profile",
+  "nav.overall": "Overall leaderboard",
 
   "profile.bothOptions": "Choose either a member or an RNGdle username, not both.",
   "profile.notRegistered": "This player has not linked an RNGdle account.",

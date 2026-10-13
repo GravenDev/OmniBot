@@ -257,6 +257,24 @@ describe("rolls", () => {
     ]);
   });
 
+  it("sums totals within a date range only, end excluded", async () => {
+    await seed(alice, remote("a1", 5, 0, 1), remote("a2", 7, 0, 5));
+    await seed(bob, remote("b1", 100, 0, 8), remote("b2", 3, 0, 4));
+
+    expect(
+      await store.totals("g1", {
+        from: new Date(Date.UTC(2026, 0, 2)),
+        to: new Date(Date.UTC(2026, 0, 8)),
+      })
+    ).toEqual([
+      { userId: "alice", total: 7 },
+      { userId: "bob", total: 3 },
+    ]);
+    expect(
+      await store.totals("g1", { from: new Date(Date.UTC(2026, 0, 6)) })
+    ).toEqual([{ userId: "bob", total: 100 }]);
+  });
+
   it("clears the rolls of one guild only, keeping the accounts", async () => {
     await seed(alice, remote("a1", 5));
     await seed(zoe, remote("z1", 5));
