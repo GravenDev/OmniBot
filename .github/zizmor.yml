@@ -1,0 +1,10 @@
+# zizmor — static analysis of the GitHub Actions workflows (zizmor.yml).
+rules:
+  # Same policy as .renovaterc.json: third-party actions are pinned by commit
+  # hash, GitHub's own (actions/*, github/*) by tag on purpose.
+  unpinned-uses:
+    config:
+      policies:
+        "actions/*": ref-pin
+        "github/*": ref-pin
+        "*": hash-pin
