@@ -26,9 +26,11 @@ const { default: listener } = await import("./interaction-create.listener.js");
 function fakeCommand(commandName: string, overrides: Record<string, any> = {}) {
   return {
     commandName,
+    commandType: 1,
     guild: { id: "guild-1" },
     guildId: "guild-1",
     isChatInputCommand: () => true,
+    isContextMenuCommand: () => false,
     isAutocomplete: () => false,
     isMessageComponent: () => false,
     isModalSubmit: () => false,
@@ -46,6 +48,7 @@ function fakeAutocomplete(commandName: string) {
     guild: { id: "guild-1" },
     guildId: "guild-1",
     isChatInputCommand: () => false,
+    isContextMenuCommand: () => false,
     isAutocomplete: () => true,
     isMessageComponent: () => false,
     isModalSubmit: () => false,
@@ -209,6 +212,31 @@ describe("handleCommand", () => {
     expect(getConfigForModuleIn).not.toHaveBeenCalled();
     expect(interaction.reply).not.toHaveBeenCalled();
   });
+
+  it("routes a message context menu to the command of that type, not a namesake", async () => {
+    const slash = vi.fn(async () => ({}));
+    const menu = vi.fn(async () => ({}));
+    mockModules.push({
+      id: "mod-a",
+      registry: {
+        commands: [
+          { data: { name: "Report" }, execute: slash },
+          { data: { name: "Report", type: 3 }, execute: menu },
+        ],
+        interactionHandlers: [],
+      },
+    });
+
+    const interaction = fakeCommand("Report", {
+      commandType: 3,
+      isChatInputCommand: () => false,
+      isContextMenuCommand: () => true,
+    });
+    await listener.execute(interaction, undefined);
+
+    expect(menu).toHaveBeenCalledOnce();
+    expect(slash).not.toHaveBeenCalled();
+  });
 });
 
 describe("component interactions", () => {
@@ -225,6 +253,7 @@ describe("component interactions", () => {
       guild: { id: "guild-1" },
       guildId: "guild-1",
       isChatInputCommand: () => false,
+      isContextMenuCommand: () => false,
       isAutocomplete: () => false,
       isMessageComponent: () => true,
       isModalSubmit: () => false,
@@ -290,6 +319,43 @@ describe("component interactions", () => {
       ["a", "b"],
       expect.anything()
     );
+  });
+
+  it("blocks a member lacking the handler's permissions", async () => {
+    const execute = vi.fn(async () => {});
+    pushHandler({
+      customId: "btn",
+      access: { permissions: 1n << 13n },
+      check: () => true,
+      execute,
+    });
+    const has = vi.fn(() => false);
+
+    const interaction = fakeButton("btn", { memberPermissions: { has } });
+    await listener.execute(interaction, undefined);
+
+    expect(has).toHaveBeenCalledWith(1n << 13n);
+    expect(execute).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "interaction.missingPermissions" })
+    );
+  });
+
+  it("runs the handler for a member holding its permissions", async () => {
+    const execute = vi.fn(async () => {});
+    pushHandler({
+      customId: "btn",
+      access: { permissions: 1n << 13n },
+      check: () => true,
+      execute,
+    });
+
+    const interaction = fakeButton("btn", {
+      memberPermissions: { has: () => true },
+    });
+    await listener.execute(interaction, undefined);
+
+    expect(execute).toHaveBeenCalledOnce();
   });
 });
 

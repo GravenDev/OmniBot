@@ -41,6 +41,61 @@ model FourHourGameLastMessage {
   sentAt    DateTime
 }
 
+// === Modèles de modules/reports/reports.prisma ===
+model MessageReport {
+  id               Int       @id @default(autoincrement())
+  guildId          String
+  channelId        String
+  messageId        String
+  authorId         String
+  content          String
+  attachments      Json
+  messageCreatedAt DateTime
+  messageState     String    @default("present")
+  editedContent    String?
+  reactionKept     Boolean   @default(false)
+  alertChannelId   String?
+  alertMessageId   String?
+  status           String    @default("open")
+  handledBy        String?
+  handledAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  reporters MessageReporter[]
+  actions   ReportAction[]
+
+  @@unique([guildId, messageId])
+  @@index([guildId, authorId])
+  @@index([status, handledAt])
+}
+
+model MessageReporter {
+  reportId   Int
+  userId     String
+  source     String
+  reason     String?
+  reportedAt DateTime @default(now())
+
+  report MessageReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@id([reportId, userId])
+}
+
+model ReportAction {
+  id          Int      @id @default(autoincrement())
+  reportId    Int
+  moderatorId String
+  action      String
+  reason      String?
+  duration    Int?
+  failed      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  report MessageReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  @@index([reportId])
+}
+
 // === Modèles de modules/rngdle/rngdle.prisma ===
 model RngdleAccount {
   guildId  String

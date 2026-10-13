@@ -1,19 +1,31 @@
-import type {
-  AutocompleteInteraction,
-  ChatInputCommandInteraction,
-  SlashCommandBuilder,
-  SlashCommandOptionsOnlyBuilder,
-  SlashCommandSubcommandBuilder,
-  SlashCommandSubcommandGroupBuilder,
-  SlashCommandSubcommandsOnlyBuilder,
+import {
+  ApplicationCommandType,
+  type AutocompleteInteraction,
+  type ChatInputCommandInteraction,
+  type ContextMenuCommandBuilder,
+  type MessageContextMenuCommandInteraction,
+  type SlashCommandBuilder,
+  type SlashCommandOptionsOnlyBuilder,
+  type SlashCommandSubcommandBuilder,
+  type SlashCommandSubcommandGroupBuilder,
+  type SlashCommandSubcommandsOnlyBuilder,
+  type UserContextMenuCommandInteraction,
 } from "discord.js";
 import type { ConfigProvider, ConfigSchema } from "./config.js";
 import { DeclarationType, type Declared } from "./declared.js";
 
+export type CommandInteraction =
+  | ChatInputCommandInteraction
+  | MessageContextMenuCommandInteraction
+  | UserContextMenuCommandInteraction;
+
 /**
  * Represents a command
  */
-export interface Command<ConfigType extends ConfigSchema = {}> {
+export interface Command<
+  ConfigType extends ConfigSchema = {},
+  Interaction extends CommandInteraction = ChatInputCommandInteraction,
+> {
   /**
    * The command data used to register the command with Discord.
    */
@@ -22,7 +34,8 @@ export interface Command<ConfigType extends ConfigSchema = {}> {
     | SlashCommandSubcommandBuilder
     | SlashCommandSubcommandGroupBuilder
     | SlashCommandSubcommandsOnlyBuilder
-    | SlashCommandOptionsOnlyBuilder;
+    | SlashCommandOptionsOnlyBuilder
+    | ContextMenuCommandBuilder;
 
   /**
    * When true, the command is only executed for guild administrators; the
@@ -38,7 +51,7 @@ export interface Command<ConfigType extends ConfigSchema = {}> {
    * @param config The configuration for the module that registered the command.
    */
   execute: (
-    interaction: ChatInputCommandInteraction,
+    interaction: Interaction,
     config: ConfigProvider<ConfigType>
   ) => Promise<void>;
 
@@ -59,11 +72,21 @@ export interface Command<ConfigType extends ConfigSchema = {}> {
  *
  * @param command
  */
-export function declareCommand<ConfigType extends ConfigSchema>(
-  command: Command<ConfigType>
-): Declared<Command<ConfigType>> {
+export function declareCommand<
+  ConfigType extends ConfigSchema,
+  Interaction extends CommandInteraction = ChatInputCommandInteraction,
+>(
+  command: Command<ConfigType, Interaction>
+): Declared<Command<ConfigType, Interaction>> {
   return {
     type: DeclarationType.Command,
     ...command,
   };
+}
+
+export function commandType(
+  command: Pick<Command<any, any>, "data">
+): ApplicationCommandType {
+  const data = command.data as { type?: ApplicationCommandType };
+  return data.type ?? ApplicationCommandType.ChatInput;
 }

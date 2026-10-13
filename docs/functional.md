@@ -128,6 +128,57 @@ Chaque jour à 01:00 UTC, le bot publie le classement de la veille dans le salon
 
 ---
 
+## Module Signalements
+
+Permet aux membres de signaler un message aux modérateurs, qui reçoivent une alerte avec les actions possibles. Rien n'est signalé tant que le salon des alertes n'est pas configuré.
+
+### Signaler un message
+
+- **Par réaction** : réagir avec l'emoji configuré (🚩 par défaut). Le bot retire la réaction aussitôt, pour que personne ne voie qui a signalé ; elle reste visible le temps que le bot la retire. Celui qui signale ne reçoit aucune confirmation.
+- **Par le menu contextuel** : clic droit sur le message, _Applications_ → _Signaler le message_. Une fenêtre propose un motif facultatif, puis une confirmation visible de soi seul s'affiche.
+
+Ne peuvent pas être signalés : ses propres messages, les messages de bots et du système, et ceux du salon des alertes et de ses fils. Un même membre ne compte qu'une fois par message.
+
+### L'alerte
+
+Un message signalé donne **une seule alerte**, quel que soit le nombre de signalements. Le premier signalement publie l'alerte en mentionnant le rôle modérateur ; les suivants la mettent à jour (« Signalé par 3 membres ») sans mentionner à nouveau.
+
+L'alerte montre l'auteur, le salon avec un lien vers le message, sa date, une **copie du message** (texte et liens des pièces jointes), les membres qui ont signalé avec leurs motifs, le nombre de signalements précédents de l'auteur et combien ont été sanctionnés (les signalements jugés abusifs ne comptent pas). Si l'auteur modifie son message, la nouvelle version s'ajoute sous la copie ; s'il le supprime, l'alerte l'indique et garde la copie. Si le bot n'a pas pu retirer une réaction, l'alerte le signale.
+
+Un nouveau signalement sur une alerte close la rouvre et mentionne le rôle modérateur en réponse à l'alerte. Si l'alerte a été supprimée, une nouvelle est publiée.
+
+### Actions
+
+| Bouton               | Effet                                                                                                   | Permission requise     |
+| -------------------- | ------------------------------------------------------------------------------------------------------- | ---------------------- |
+| Supprimer le message | Supprime le message signalé ; l'alerte reste ouverte. Disponible aussi une fois l'alerte close.         | Gérer les messages     |
+| Avertir              | Envoie en MP à l'auteur le message saisi, avec le lien du message. Clôt l'alerte.                       | Exclure temporairement |
+| Exclure…             | Exclusion temporaire de la durée saisie (`1h` par défaut, 28 jours maximum). Clôt l'alerte.             | Exclure temporairement |
+| Expulser             | Expulse l'auteur. Clôt l'alerte.                                                                        | Expulser des membres   |
+| Bannir               | Bannit l'auteur, avec suppression facultative de ses messages récents (7 jours maximum). Clôt l'alerte. | Bannir des membres     |
+| Classer sans suite   | Clôt l'alerte sans action.                                                                              | Gérer les messages     |
+| Signalement abusif   | Clôt l'alerte ; le signalement ne compte pas dans l'historique de l'auteur.                             | Gérer les messages     |
+| Rouvrir              | Rouvre une alerte close.                                                                                | Gérer les messages     |
+
+Les sanctions ont un motif facultatif (obligatoire pour l'avertissement), repris dans le journal d'audit du serveur. Elles sont refusées avec une explication si l'auteur est le propriétaire du serveur, si le modérateur n'a pas un rôle plus haut que l'auteur, ou si le bot ne peut pas l'atteindre. Un auteur qui a quitté le serveur ne peut plus qu'être banni. Une action qui échoue est inscrite au journal de l'alerte avec la mention « échec » et l'alerte reste ouverte. Deux modérateurs qui agissent en même temps ne peuvent pas sanctionner deux fois : le second est prévenu que l'alerte est déjà close.
+
+Le bot a besoin des permissions Gérer les messages (dans les salons surveillés), Exclure temporairement, Expulser et Bannir des membres, et de pouvoir écrire dans le salon des alertes.
+
+### Conservation
+
+Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la durée de conservation sont supprimés, et leur alerte est remplacée par une mention « purgé ».
+
+### Configuration — `/config reports`
+
+| Champ           | Type  | Description                                                                     |
+| --------------- | ----- | ------------------------------------------------------------------------------- |
+| `alertChannel`  | Salon | Salon où arrivent les alertes. Tant qu'il n'est pas défini, rien n'est signalé. |
+| `emoji`         | Emoji | Emoji de signalement, standard ou personnalisé (🚩 par défaut).                 |
+| `moderatorRole` | Rôle  | Rôle mentionné à chaque nouvelle alerte. Sans rôle, personne n'est mentionné.   |
+| `retention`     | Durée | Durée de conservation d'un signalement clos (90 jours par défaut).              |
+
+---
+
 ## Module Thread Creator
 
 Crée automatiquement un fil de discussion sous chaque nouveau message dans un salon configuré. Remplace le bot Needle.

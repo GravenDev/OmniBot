@@ -57,6 +57,15 @@ describe("extractGuildId", () => {
     expect(extractGuildId([{ guildId: "guild-7" }])).toBe("guild-7");
   });
 
+  it("resolves a reaction through its message", () => {
+    expect(
+      extractGuildId([
+        { emoji: { name: "🚩" }, message: { guildId: "guild-3" } },
+        { id: "user-1" },
+      ])
+    ).toBe("guild-3");
+  });
+
   it("ignores a non-string guildId instead of passing garbage down", () => {
     expect(extractGuildId([{ guildId: { id: "guild-7" } }])).toBeUndefined();
   });

@@ -39,6 +39,12 @@ export default defineModule({
       type: ConfigType.DURATION,
       defaultValue: 4 * 60 * 60,
     },
+    emoji: {
+      name: "Emoji",
+      description: "A single emoji, standard or custom.",
+      type: ConfigType.EMOJI,
+      defaultValue: "🚩",
+    },
     toggle: {
       name: "Boolean",
       description: "An on/off toggle.",

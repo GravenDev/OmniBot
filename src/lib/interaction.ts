@@ -13,7 +13,7 @@ export type CompatibleInteraction =
  * Who may trigger an interaction. Declared per handler with no default, so a
  * new handler cannot silently end up public by omission.
  */
-export type InteractionAccess = "admin" | "everyone";
+export type InteractionAccess = "admin" | "everyone" | { permissions: bigint };
 
 export interface InteractionHandler<
   Interaction extends CompatibleInteraction,
@@ -39,9 +39,12 @@ export interface InteractionHandler<
   ) => Promise<void>;
 }
 
-export function declareInteractionHandler<T extends CompatibleInteraction>(
-  handler: InteractionHandler<T>
-): Declared<InteractionHandler<T>> {
+export function declareInteractionHandler<
+  T extends CompatibleInteraction,
+  ConfigType extends ConfigSchema = {},
+>(
+  handler: InteractionHandler<T, ConfigType>
+): Declared<InteractionHandler<T, ConfigType>> {
   return {
     type: DeclarationType.Interaction,
     ...handler,

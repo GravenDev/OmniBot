@@ -36,12 +36,19 @@ export function loadGlobalEvents(client: Client) {
 export function extractGuildId(args: unknown[]): string | undefined {
   for (const arg of args) {
     if (!arg || typeof arg !== "object") continue;
-    const record = arg as { guild?: { id?: unknown }; guildId?: unknown };
+    const record = arg as {
+      guild?: { id?: unknown };
+      guildId?: unknown;
+      message?: { guildId?: unknown };
+    };
     if (record.guild && typeof record.guild.id === "string") {
       return record.guild.id;
     }
     if (typeof record.guildId === "string") {
       return record.guildId;
+    }
+    if (record.message && typeof record.message.guildId === "string") {
+      return record.message.guildId;
     }
   }
   return undefined;
