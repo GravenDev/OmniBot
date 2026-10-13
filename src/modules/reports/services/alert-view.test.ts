@@ -2,7 +2,12 @@ import { readFileSync } from "node:fs";
 import { beforeAll, describe, expect, it } from "vitest";
 import { createT } from "#lib/i18n.js";
 import { initTestI18n } from "#lib/testing.js";
-import { alertMessage, CONTENT_LIMIT, purgedMessage } from "./alert-view.js";
+import {
+  alertMessage,
+  CONTENT_LIMIT,
+  purgedMessage,
+  TEXT_LIMIT,
+} from "./alert-view.js";
 import type { Report } from "./store.js";
 
 beforeAll(async () => {
@@ -66,7 +71,7 @@ function render(value: Report, history = noHistory, role?: string) {
   const message = alertMessage(value, { t, history, moderatorRoleId: role });
   const json = message.components.map((component) => component.toJSON());
   const { texts, buttons } = flatten(json, { texts: [], buttons: [] });
-  return { message, text: texts.join("\n"), buttons };
+  return { message, texts, text: texts.join("\n"), buttons };
 }
 
 describe("alertMessage", () => {
@@ -139,6 +144,44 @@ describe("alertMessage", () => {
 
     expect(text).toContain(`${"a".repeat(CONTENT_LIMIT - 1)}…`);
     expect(text).not.toContain("a".repeat(CONTENT_LIMIT));
+  });
+
+  it("keeps the whole alert within Discord's text limit", () => {
+    const longReason = "r".repeat(400);
+    const { texts, text, buttons } = render(
+      report({
+        content: "a\n".repeat(CONTENT_LIMIT),
+        attachments: Array.from({ length: 13 }, (_, i) => ({
+          name: `[file-${i}](https://evil.example)`.padEnd(120, "x"),
+          url: `https://cdn.discordapp.com/attachments/1/2/${"f".repeat(200)}`,
+        })),
+        reporters: Array.from({ length: 15 }, (_, i) => ({
+          userId: `rep-${i}`,
+          source: "menu" as const,
+          reason: longReason,
+          reportedAt: new Date(),
+        })),
+        messageState: "edited",
+        editedContent: "b\n".repeat(600),
+        reactionKept: true,
+        actions: Array.from({ length: 8 }, () => ({
+          moderatorId: "mod-1",
+          action: "timeout" as const,
+          reason: longReason,
+          duration: 3600,
+          failed: true,
+          createdAt: new Date(),
+        })),
+      }),
+      { total: 3, sanctioned: 1 },
+      "role-9"
+    );
+
+    const total = texts.reduce((sum, content) => sum + content.length, 0);
+    expect(total).toBeLessThanOrEqual(TEXT_LIMIT);
+    expect(text).toContain("Report #7");
+    expect(text).not.toContain("](https://evil.example)");
+    expect(buttons.length).toBeGreaterThan(0);
   });
 
   it("lists reasons, history, edits and the action log", () => {

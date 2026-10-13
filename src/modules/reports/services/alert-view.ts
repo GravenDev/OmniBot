@@ -11,6 +11,7 @@ import type { TFunction } from "#lib/i18n.js";
 import type { Action, AuthorHistory, Report, ReportStatus } from "./store.js";
 
 export const CONTENT_LIMIT = 1500;
+export const TEXT_LIMIT = 4000;
 const EDITED_LIMIT = 600;
 const REASON_LIMIT = 200;
 const SHOWN_REPORTERS = 10;
@@ -46,6 +47,24 @@ export function messageUrl(
 
 export function truncate(text: string, limit: number): string {
   return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
+}
+
+function fitText(texts: string[], limit: number): string[] {
+  const result = [...texts];
+  const total = () => result.reduce((sum, text) => sum + text.length, 0);
+  for (let excess = total() - limit; excess > 0; excess = total() - limit) {
+    const longest = result.reduce(
+      (best, text, index) =>
+        text.length > result[best]!.length ? index : best,
+      0
+    );
+    const length = result[longest]!.length;
+    result[longest] = truncate(
+      result[longest]!,
+      Math.max(length - excess, Math.ceil(length / 2))
+    );
+  }
+  return result;
 }
 
 function quote(text: string): string {
@@ -117,7 +136,10 @@ function contentBlock(report: Report, t: TFunction): string {
     lines.push(
       t("alert.attachments", {
         list: report.attachments
-          .map((attachment) => `[${attachment.name}](${attachment.url})`)
+          .map(
+            (attachment) =>
+              `[${attachment.name.replace(/[[\]]/g, "")}](${attachment.url})`
+          )
           .join(", "),
       })
     );
@@ -201,14 +223,10 @@ export interface AlertOptions {
 
 export function alertMessage(report: Report, options: AlertOptions) {
   const { t, history, moderatorRoleId } = options;
-  const container = new ContainerBuilder().setAccentColor(
-    ACCENTS[report.status]
-  );
+  const blocks: { content: string; divider: boolean }[] = [];
 
   if (moderatorRoleId) {
-    container.addTextDisplayComponents((text) =>
-      text.setContent(`<@&${moderatorRoleId}>`)
-    );
+    blocks.push({ content: `<@&${moderatorRoleId}>`, divider: false });
   }
 
   const header = [
@@ -232,21 +250,15 @@ export function alertMessage(report: Report, options: AlertOptions) {
       : t("alert.noHistory"),
   ].join("\n");
 
-  container
-    .addTextDisplayComponents(
-      (text) => text.setContent(header),
-      (text) => text.setContent(details)
-    )
-    .addSeparatorComponents((separator) => separator.setDivider(true))
-    .addTextDisplayComponents((text) =>
-      text.setContent(contentBlock(report, t))
-    );
+  blocks.push(
+    { content: header, divider: false },
+    { content: details, divider: false },
+    { content: contentBlock(report, t), divider: true }
+  );
 
   const extra = notes(report, t);
   if (extra.length > 0) {
-    container.addTextDisplayComponents((text) =>
-      text.setContent(extra.join("\n"))
-    );
+    blocks.push({ content: extra.join("\n"), divider: false });
   }
 
   if (report.actions.length > 0) {
@@ -257,12 +269,29 @@ export function alertMessage(report: Report, options: AlertOptions) {
         t("alert.olderActions", { count: report.actions.length - shown.length })
       );
     }
-    container
-      .addSeparatorComponents((separator) => separator.setDivider(true))
-      .addTextDisplayComponents((text) =>
-        text.setContent([t("alert.log"), ...lines].join("\n"))
-      );
+    blocks.push({
+      content: [t("alert.log"), ...lines].join("\n"),
+      divider: true,
+    });
   }
+
+  const contents = fitText(
+    blocks.map((block) => block.content),
+    TEXT_LIMIT
+  );
+  const container = new ContainerBuilder().setAccentColor(
+    ACCENTS[report.status]
+  );
+  blocks.forEach((block, index) => {
+    if (block.divider) {
+      container.addSeparatorComponents((separator) =>
+        separator.setDivider(true)
+      );
+    }
+    container.addTextDisplayComponents((text) =>
+      text.setContent(contents[index]!)
+    );
+  });
 
   container.addActionRowComponents(...actionRows(report, t));
 
