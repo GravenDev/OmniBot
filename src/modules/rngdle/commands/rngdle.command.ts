@@ -7,6 +7,7 @@ import {
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
 } from "discord.js";
+import mentionService from "#core/services/mention.service.js";
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
@@ -18,6 +19,7 @@ import { overallPageMessage } from "#modules/rngdle/interactions/overall-page.bu
 import { unlinkConfirmMessage } from "#modules/rngdle/interactions/unlink-confirm.button.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
 import { linkOwnAccount } from "#modules/rngdle/services/linking.js";
+import { reminderTimestamp } from "#modules/rngdle/services/reminders.js";
 import store from "#modules/rngdle/services/store.js";
 import sync from "#modules/rngdle/services/sync.js";
 import {
@@ -181,10 +183,42 @@ async function unlink(interaction: Interaction, config: Config) {
   );
 }
 
+async function remind(interaction: Interaction, config: Config) {
+  const { guildId, user } = interaction;
+  const enabled = interaction.options.getBoolean("enabled", true);
+  const reply = (content: string) =>
+    interaction.reply({ content, flags: MessageFlags.Ephemeral });
+
+  if (!enabled) {
+    await store.setReminder(guildId, user.id, false);
+    await reply(config.t("remind.disabled"));
+    return;
+  }
+  if (!(await store.account(guildId, user.id))) {
+    await reply(config.t("remind.notRegistered"));
+    return;
+  }
+
+  await store.setReminder(guildId, user.id, true);
+  const channel = config.get("leaderboardChannel");
+  const lines = [
+    channel
+      ? config.t("remind.enabled", {
+          time: reminderTimestamp(new Date()),
+          channel: `<#${channel.id}>`,
+        })
+      : config.t("remind.enabledNoChannel"),
+  ];
+  if ((await mentionService.mentionable(guildId, [user.id])).length === 0) {
+    lines.push(config.t("remind.pingsDisabled"));
+  }
+  await reply(lines.join("\n"));
+}
+
 const personal: Record<
   string,
   (interaction: Interaction, config: Config) => Promise<void>
-> = { link, unlink };
+> = { link, unlink, remind };
 
 async function versus(interaction: Interaction, config: Config) {
   const first = interaction.options.getUser("player1", true);
@@ -350,6 +384,23 @@ export default declareCommand<RngdleConfigSchema>({
             .setDescriptionLocalizations({
               fr: "Second joueur (vous par défaut)",
             })
+        )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("remind")
+        .setDescription("Get pinged in the evening if you haven't rolled yet")
+        .setDescriptionLocalizations({
+          fr: "Être mentionné le soir si vous n'avez pas encore tiré",
+        })
+        .addBooleanOption((option) =>
+          option
+            .setName("enabled")
+            .setDescription("Turn the daily reminder on or off")
+            .setDescriptionLocalizations({
+              fr: "Activer ou désactiver le rappel quotidien",
+            })
+            .setRequired(true)
         )
     ),
 

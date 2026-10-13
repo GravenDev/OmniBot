@@ -1,9 +1,14 @@
 import type { Client } from "discord.js";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
 import type { RngdleConfigSchema } from "./rngdle.config.js";
 
-const send = vi.hoisted(() => vi.fn());
+const { send, syncAll, pendingReminders, mentionable } = vi.hoisted(() => ({
+  send: vi.fn(),
+  syncAll: vi.fn(),
+  pendingReminders: vi.fn(),
+  mentionable: vi.fn(),
+}));
 
 vi.mock("#core/services/config.service.js", () => ({
   default: {
@@ -15,14 +20,17 @@ vi.mock("#core/services/config.service.js", () => ({
   },
 }));
 vi.mock("#core/services/mention.service.js", () => ({
-  default: { mentionable: async (_guildId: string, ids: string[]) => ids },
+  default: { mentionable },
 }));
 vi.mock("#core/services/module.service.js", () => ({
   default: { getActivatedGuildIds: async () => ["guild"] },
 }));
-vi.mock("./services/sync.js", () => ({
-  default: { syncAll: async () => undefined },
-}));
+vi.mock("./services/sync.js", () => ({ default: { syncAll } }));
+vi.mock("./services/store.js", () => ({ default: { pendingReminders } }));
+vi.mock("#lib/logger.js", () => {
+  const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+  return { loggerMaker: () => logger };
+});
 vi.mock("./services/views.js", () => ({
   dailyLeaderboard: async () => ({
     image: Buffer.from("png"),
@@ -37,6 +45,23 @@ vi.mock("./services/views.js", () => ({
 }));
 
 const { rngdleTasks } = await import("./tasks.js");
+
+function task(id: string) {
+  return rngdleTasks({
+    id: "rngdle",
+  } as unknown as Module<RngdleConfigSchema>).find(
+    (declared) => declared.id === id
+  )!;
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  syncAll.mockResolvedValue(undefined);
+  pendingReminders.mockResolvedValue([]);
+  mentionable.mockImplementation(
+    async (_guildId: string, ids: string[]) => ids
+  );
+});
 
 describe("daily leaderboard task", () => {
   it("posts the recap text with the profile and overall leaderboard buttons", async () => {
@@ -63,5 +88,35 @@ describe("daily leaderboard task", () => {
         row.toJSON().components.map((button) => button.custom_id)
       )
     ).toEqual(["rngdle-nav:profile", "rngdle-nav:overall"]);
+  });
+});
+
+describe("reminders task", () => {
+  it("mentions the pending subscribers, notifying only those who accept pings", async () => {
+    pendingReminders.mockResolvedValue(["a", "b"]);
+    mentionable.mockResolvedValue(["b"]);
+
+    await task("reminders").run({} as Client<true>);
+
+    expect(syncAll).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledExactlyOnceWith({
+      content: "remind.message",
+      allowedMentions: { users: ["b"] },
+    });
+  });
+
+  it("posts nothing when everyone already rolled", async () => {
+    await task("reminders").run({} as Client<true>);
+
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("still reminds from the stored rolls when the sync fails", async () => {
+    syncAll.mockRejectedValue(new Error("database down"));
+    pendingReminders.mockResolvedValue(["a"]);
+
+    await task("reminders").run({} as Client<true>);
+
+    expect(send).toHaveBeenCalledOnce();
   });
 });

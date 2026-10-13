@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   serverCard: vi.fn(),
   profileCard: vi.fn(),
   overallPage: vi.fn(),
+  setReminder: vi.fn(),
+  mentionable: vi.fn(),
 }));
 
 vi.mock("#lib/logger.js", () => {
@@ -22,7 +24,11 @@ vi.mock("#modules/rngdle/services/store.js", () => ({
   default: {
     account: mocks.account,
     accountByUsername: mocks.accountByUsername,
+    setReminder: mocks.setReminder,
   },
+}));
+vi.mock("#core/services/mention.service.js", () => ({
+  default: { mentionable: mocks.mentionable },
 }));
 vi.mock("#modules/rngdle/services/sync.js", () => ({
   default: { refreshIfStale: mocks.refreshIfStale },
@@ -44,6 +50,7 @@ const config = {
   t: (key: string, options?: Record<string, unknown>) =>
     options ? `${key} ${JSON.stringify(options)}` : key,
   locale: "en",
+  get: () => ({ id: "channel" }),
 } as unknown as ConfigProvider<RngdleConfigSchema>;
 
 interface Options {
@@ -51,9 +58,16 @@ interface Options {
   username?: string;
   member?: { id: string };
   strings?: Record<string, string>;
+  enabled?: boolean;
 }
 
-function interactionFor({ subcommand, username, member, strings }: Options) {
+function interactionFor({
+  subcommand,
+  username,
+  member,
+  strings,
+  enabled,
+}: Options) {
   return {
     guildId: "guild",
     guild: {},
@@ -71,6 +85,7 @@ function interactionFor({ subcommand, username, member, strings }: Options) {
       },
       getUser: () => member ?? null,
       getInteger: () => null,
+      getBoolean: () => enabled ?? null,
     },
     reply: vi.fn(),
     deferReply: vi.fn(),
@@ -181,6 +196,56 @@ describe("/rngdle link", () => {
       );
     }
   );
+});
+
+describe("/rngdle remind", () => {
+  it("asks an unlinked caller to link their account, privately", async () => {
+    const interaction = interactionFor({ subcommand: "remind", enabled: true });
+    await run(interaction);
+
+    expect(interaction.deferReply).not.toHaveBeenCalled();
+    expect(mocks.refreshIfStale).not.toHaveBeenCalled();
+    expect(mocks.setReminder).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: "remind.notRegistered",
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+
+  it("subscribes a linked caller and warns when their pings are off", async () => {
+    mocks.account.mockResolvedValue({
+      guildId: "guild",
+      userId: "caller",
+      username: "Alice",
+    });
+    mocks.mentionable.mockResolvedValue([]);
+    const interaction = interactionFor({ subcommand: "remind", enabled: true });
+    await run(interaction);
+
+    expect(mocks.setReminder).toHaveBeenCalledWith("guild", "caller", true);
+    const [reply] = interaction.reply.mock.calls[0] as [
+      { content: string; flags: number },
+    ];
+    expect(reply.flags).toBe(MessageFlags.Ephemeral);
+    expect(reply.content.split("\n")).toEqual([
+      expect.stringMatching(/^remind\.enabled .*"channel":"<#channel>"/),
+      "remind.pingsDisabled",
+    ]);
+  });
+
+  it("turns the reminder off without needing a linked account", async () => {
+    const interaction = interactionFor({
+      subcommand: "remind",
+      enabled: false,
+    });
+    await run(interaction);
+
+    expect(mocks.setReminder).toHaveBeenCalledWith("guild", "caller", false);
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: "remind.disabled",
+      flags: MessageFlags.Ephemeral,
+    });
+  });
 });
 
 describe("/rngdle unlink", () => {
