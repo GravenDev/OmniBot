@@ -25,3 +25,10 @@ model RngdleScoreTable {
   data      Json
   updatedAt DateTime @updatedAt
 }
+
+model RngdleReminder {
+  guildId String
+  userId  String
+
+  @@id([guildId, userId])
+}

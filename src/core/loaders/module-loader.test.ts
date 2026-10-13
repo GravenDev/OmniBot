@@ -2,8 +2,9 @@ import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { ConfigType, MAX_SELECT_VALUES } from "#lib/config.js";
 
-const { loadModule, findDuplicateDeclarations } =
+const { loadModule, findDuplicateDeclarations, findTruncatedEnums } =
   await import("./module-loader.js");
 
 async function tempModuleDir(): Promise<string> {
@@ -53,5 +54,29 @@ describe("findDuplicateDeclarations", () => {
         fakeModule("mod-b", ["pong"], ["btn-b"]),
       ])
     ).toEqual([]);
+  });
+});
+
+describe("findTruncatedEnums", () => {
+  function enumEntry(count: number) {
+    return {
+      name: "",
+      description: "",
+      type: ConfigType.ENUM,
+      options: Array.from({ length: count }, (_, i) => `opt-${i}`),
+    };
+  }
+
+  it("reports enum keys with more options than a select menu holds", () => {
+    const module = {
+      id: "mod",
+      config: {
+        small: enumEntry(MAX_SELECT_VALUES),
+        big: enumEntry(MAX_SELECT_VALUES + 1),
+        text: { name: "", description: "", type: ConfigType.STRING },
+      },
+    } as never;
+
+    expect(findTruncatedEnums(module)).toEqual(["big"]);
   });
 });

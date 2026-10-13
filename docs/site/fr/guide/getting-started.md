@@ -145,14 +145,14 @@ Les fichiers utilisent des suffixes pour identifier leur rôle :
 Les imports entre répertoires utilisent des **subpath imports** avec le préfixe `#`. L'extension `.js` est toujours présente (résolution NodeNext) :
 
 ```typescript
-import { defineModule } from "#lib/module.js";
 import { declareCommand } from "#lib/command.js";
-import { declareEventListener } from "#lib/listener.js";
-import { declareInteractionHandler } from "#lib/interaction.js";
-import { declareService } from "#lib/service.js";
 import { ConfigType } from "#lib/config.js";
-import logger from "#lib/logger.js";
 import prisma from "#lib/database.js";
+import { declareInteractionHandler } from "#lib/interaction.js";
+import { declareEventListener } from "#lib/listener.js";
+import logger from "#lib/logger.js";
+import { defineModule } from "#lib/module.js";
+import { declareService } from "#lib/service.js";
 ```
 
 Les imports dans le même répertoire restent relatifs :

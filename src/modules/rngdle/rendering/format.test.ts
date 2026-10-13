@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatCompact,
-  formatRatio,
+  formatExpected,
   formatShort,
   formatSpaced,
 } from "./format.js";
@@ -45,13 +45,17 @@ describe("formatShort", () => {
   });
 });
 
-describe("formatRatio", () => {
+describe("formatExpected", () => {
   it.each([
-    ["fr", 2.38, "2,4"],
-    ["en", 2.38, "2.4"],
-    ["fr", 1, "1,0"],
-    ["en", 0, "0.0"],
+    ["fr", 1.25, "1,3"],
+    ["en", 1.25, "1.3"],
+    ["fr", 0, "0,0"],
+    ["en", 9.94, "9.9"],
+    ["fr", 9.96, "10"],
+    ["en", 61.25, "61"],
+    ["fr", 61_728, "61 728"],
+    ["fr", 3_086_400, "3.1M"],
   ])("formats %s %s as %s", (locale, value, text) => {
-    expect(formatRatio(locale, value)).toBe(text);
+    expect(formatExpected(locale, value)).toBe(text);
   });
 });

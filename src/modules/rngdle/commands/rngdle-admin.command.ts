@@ -10,10 +10,7 @@ import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
-import {
-  fetchUserRolls,
-  RngdleUserNotFoundError,
-} from "#modules/rngdle/services/api.js";
+import { linkAccount } from "#modules/rngdle/services/linking.js";
 import store from "#modules/rngdle/services/store.js";
 import sync, { FullSyncCooldownError } from "#modules/rngdle/services/sync.js";
 import { Colors } from "#utils/colors.js";
@@ -35,37 +32,19 @@ async function register(interaction: Interaction, config: Config) {
   const username = interaction.options.getString("username", true).trim();
   await interaction.deferReply(ephemeral);
 
-  const rolls = await fetchUserRolls(username, null).catch((err: unknown) => {
-    if (!(err instanceof RngdleUserNotFoundError)) {
-      logger.warn({ err }, `rngdle.com unreachable | username = ${username}`);
-    }
-    return err instanceof RngdleUserNotFoundError ? "notFound" : "unreachable";
-  });
-  if (typeof rolls === "string") {
+  const outcome = await linkAccount(guildId, member.id, username);
+  if (outcome.kind === "notFound" || outcome.kind === "unreachable") {
     await interaction.editReply(
-      config.t(`admin.register.${rolls}`, { username })
+      config.t(`admin.register.${outcome.kind}`, { username })
     );
     return;
   }
 
-  const outcome = await sync.exclusive(guildId, async () => {
-    const holder = await store.accountByUsername(guildId, username);
-    if (holder && holder.userId !== member.id) {
-      return { conflict: holder.userId };
-    }
-    const result = await store.register(guildId, member.id, username);
-    const { inserted } = await store.saveRolls(
-      { guildId, userId: member.id, username },
-      rolls
-    );
-    return { result, inserted };
-  });
-
-  if ("conflict" in outcome) {
+  if (outcome.kind === "conflict") {
     await interaction.editReply({
       content: config.t("admin.register.conflict", {
         username,
-        user: `<@${outcome.conflict}>`,
+        user: `<@${outcome.userId}>`,
       }),
       ...noPings,
     });
@@ -73,13 +52,13 @@ async function register(interaction: Interaction, config: Config) {
   }
 
   logger.info(
-    `Account ${outcome.result} | guildId = ${guildId} | userId = ${member.id} | username = ${username} | by = ${interaction.user.id}`
+    `Account ${outcome.kind} | guildId = ${guildId} | userId = ${member.id} | username = ${username} | by = ${interaction.user.id}`
   );
   await interaction.editReply({
-    content: config.t(`admin.register.${outcome.result}`, {
+    content: config.t(`admin.register.${outcome.kind}`, {
       user: `<@${member.id}>`,
       username,
-      count: outcome.inserted,
+      count: outcome.count,
     }),
     ...noPings,
   });

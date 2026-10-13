@@ -44,7 +44,9 @@ valeur lue est alors un tableau (`X[]`). L'édition dépend du type de base :
   (jusqu'à 25 éléments, pré-sélection des valeurs courantes).
 - **`ENUM`** (`[ConfigType.ENUM]`) → **multi-select** sur les `options` déclarées
   (min 0 pour autoriser le vidage, max = nombre d'options) ; pré-sélection des
-  valeurs courantes.
+  valeurs courantes. Un select Discord affiche au plus **25** options : au-delà, les
+  options suivantes ne sont pas sélectionnables et le chargement du module
+  émet un avertissement (vaut aussi pour l'`ENUM` scalaire).
 - **Scalaires** (`STRING`/`NUMBER`) → **éditeur dédié** : un message listant
   chaque élément avec un bouton _Supprimer_, plus un bouton _Ajouter_ qui ouvre
   une modale validée par le type.
@@ -111,7 +113,7 @@ config: {
 
 - `options` est **obligatoire** sur une entrée `ENUM` (le type l'exige).
 - `as const` fait que `config.get("logLevel")` est typé `"debug" | "info" |
-"warn" | "error"` (l'union littérale) ; sans `as const`, c'est `string`.
+  "warn" | "error"` (l'union littérale) ; sans `as const`, c'est `string`.
 - La valeur est stockée telle quelle (un `string`) ; aucune désérialisation.
 
 Le `ConfigProvider` est injecté automatiquement dans `execute`/`complete`/`check`

@@ -29,9 +29,16 @@ export function formatShort(value: number, locale: string): string {
   );
 }
 
-export function formatRatio(locale: string, value: number): string {
-  return value.toLocaleString(locale, {
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  });
+export function formatExpected(locale: string, value: number): string {
+  const tenths = Math.round(value * 10) / 10;
+  if (tenths < 10) {
+    return tenths.toLocaleString(locale, {
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    });
+  }
+  const rounded = Math.round(value);
+  return rounded < 100_000
+    ? formatSpaced(rounded)
+    : formatShort(rounded, locale);
 }

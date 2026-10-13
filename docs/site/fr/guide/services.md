@@ -7,8 +7,8 @@ Les services vous permettent d'encapsuler la logique métier et de la réutilise
 ```typescript
 // src/modules/salut/services/utilisateur.service.ts
 
-import { declareService, type Service } from "#lib/service.js";
 import prisma from "#lib/database.js";
+import { declareService, type Service } from "#lib/service.js";
 
 class UtilisateurService implements Service {
   async creerUtilisateur(userId: string, nom: string) {

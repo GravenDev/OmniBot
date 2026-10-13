@@ -24,11 +24,25 @@ export interface StoredRoll {
   rolledAt: Date;
 }
 
-export interface RollFilter {
-  userId?: string;
+export interface DateRange {
   from?: Date;
   to?: Date;
+}
+
+export interface RollFilter extends DateRange {
+  userId?: string;
   byScore?: boolean;
+}
+
+function rolledAtWhere({ from, to }: DateRange) {
+  return (
+    (from || to) && {
+      rolledAt: {
+        ...(from && { gte: from }),
+        ...(to && { lt: to }),
+      },
+    }
+  );
 }
 
 export type RegisterResult = "created" | "renamed" | "unchanged";
@@ -67,6 +81,9 @@ class RngdleStore implements Service {
 
     await prisma.$transaction([
       prisma.rngdleRoll.deleteMany({ where: { guildId, userId } }),
+      ...(existing
+        ? []
+        : [prisma.rngdleReminder.deleteMany({ where: { guildId, userId } })]),
       prisma.rngdleAccount.upsert({
         where: key,
         create: { guildId, userId, username },
@@ -81,11 +98,62 @@ class RngdleStore implements Service {
     const [, deleted] = await prisma.$transaction([
       prisma.rngdleRoll.deleteMany({ where: { guildId, userId } }),
       prisma.rngdleAccount.deleteMany({ where: { guildId, userId } }),
+      prisma.rngdleReminder.deleteMany({ where: { guildId, userId } }),
     ]);
     if (deleted.count > 0) {
       this.touch(guildId);
     }
     return deleted.count > 0;
+  }
+
+  async setReminder(
+    guildId: string,
+    userId: string,
+    enabled: boolean
+  ): Promise<void> {
+    if (!enabled) {
+      await prisma.rngdleReminder.deleteMany({ where: { guildId, userId } });
+      return;
+    }
+    await prisma.rngdleReminder.upsert({
+      where: { guildId_userId: { guildId, userId } },
+      create: { guildId, userId },
+      update: {},
+    });
+  }
+
+  async pendingReminders(guildId: string, since: Date): Promise<string[]> {
+    const subscribed = (
+      await prisma.rngdleReminder.findMany({
+        where: { guildId },
+        orderBy: { userId: "asc" },
+        select: { userId: true },
+      })
+    ).map((row) => row.userId);
+    if (subscribed.length === 0) {
+      return [];
+    }
+
+    const [linked, rolled] = await Promise.all([
+      prisma.rngdleAccount.findMany({
+        where: { guildId, userId: { in: subscribed } },
+        select: { userId: true },
+      }),
+      prisma.rngdleRoll.findMany({
+        where: {
+          guildId,
+          userId: { in: subscribed },
+          rolledAt: { gte: since },
+        },
+        select: { userId: true },
+        distinct: ["userId"],
+      }),
+    ]);
+    const linkedIds = new Set(linked.map((row) => row.userId));
+    const rolledIds = new Set(rolled.map((row) => row.userId));
+    return subscribed.filter(
+      (userId) => linkedIds.has(userId) && !rolledIds.has(userId)
+    );
   }
 
   accounts(guildId: string): Promise<Account[]> {
@@ -185,12 +253,7 @@ class RngdleStore implements Service {
       where: {
         guildId,
         ...(filter.userId && { userId: filter.userId }),
-        ...((filter.from || filter.to) && {
-          rolledAt: {
-            ...(filter.from && { gte: filter.from }),
-            ...(filter.to && { lt: filter.to }),
-          },
-        }),
+        ...rolledAtWhere(filter),
       },
       orderBy: filter.byScore
         ? [{ score: "desc" }, { rolledAt: "asc" }]
@@ -206,10 +269,13 @@ class RngdleStore implements Service {
     return rolls.map((roll) => ({ ...roll, score: Number(roll.score) }));
   }
 
-  async totals(guildId: string): Promise<{ userId: string; total: number }[]> {
+  async totals(
+    guildId: string,
+    range: DateRange = {}
+  ): Promise<{ userId: string; total: number }[]> {
     const groups = await prisma.rngdleRoll.groupBy({
       by: ["userId"],
-      where: { guildId },
+      where: { guildId, ...rolledAtWhere(range) },
       _sum: { score: true },
     });
     return groups

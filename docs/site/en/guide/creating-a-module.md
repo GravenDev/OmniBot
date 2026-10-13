@@ -46,8 +46,8 @@ The module's `name` and `description` should be in English by default. They serv
 ```typescript
 // src/modules/greeter/greeter.module.ts
 
-import { defineModule } from "#lib/module.js";
 import logger from "#lib/logger.js";
+import { defineModule } from "#lib/module.js";
 
 export default defineModule({
   id: "greeter",
