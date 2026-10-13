@@ -383,7 +383,9 @@ describe("component interactions", () => {
     expect(has).toHaveBeenCalledWith(1n << 13n);
     expect(execute).not.toHaveBeenCalled();
     expect(interaction.reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: "interaction.missingPermissions" })
+      expect.objectContaining({
+        content: "interaction.memberMissingPermissions",
+      })
     );
   });
 

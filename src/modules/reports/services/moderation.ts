@@ -1,4 +1,9 @@
-import type { Guild, GuildMember } from "discord.js";
+import {
+  DiscordAPIError,
+  RESTJSONErrorCodes,
+  type Guild,
+  type GuildMember,
+} from "discord.js";
 
 export type Sanction = "warn" | "timeout" | "kick" | "ban";
 
@@ -71,8 +76,14 @@ export async function fetchMember(
 ): Promise<GuildMember | null> {
   try {
     return await guild.members.fetch(userId);
-  } catch {
-    return null;
+  } catch (error) {
+    if (
+      error instanceof DiscordAPIError &&
+      error.code === RESTJSONErrorCodes.UnknownMember
+    ) {
+      return null;
+    }
+    throw error;
   }
 }
 

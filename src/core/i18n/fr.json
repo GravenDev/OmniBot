@@ -44,7 +44,7 @@
   "interaction.failedDisable": "Le module n'a pas pu être désactivé. Réessayez dans quelques instants.",
   "interaction.configOptionNotFound": "Cette option de configuration n'existe plus. Relancez `/config` pour afficher les options à jour.",
   "interaction.notBoolean": "Cette option n'est pas un booléen.",
-  "interaction.missingPermissions": "Vous n'avez pas les permissions nécessaires pour cette action.",
+  "interaction.memberMissingPermissions": "Vous n'avez pas les permissions nécessaires pour cette action.",
 
   "scalarList.header": "# `{{moduleName}}` — {{entryName}}\n-# {{typeName}}\n> {{entryDesc}}",
   "scalarList.valueText": "Valeur (texte)",

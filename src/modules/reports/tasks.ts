@@ -6,6 +6,7 @@ import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
 import type { ReportsConfigSchema } from "./reports.config.js";
 import { purgedMessage } from "./services/alert-view.js";
+import reportService from "./services/report.service.js";
 import store from "./services/store.js";
 
 const logger = loggerMaker("reports");
@@ -18,27 +19,40 @@ async function purgeGuild(
   const config = await configService.getConfigForModuleIn(module, guildId);
   const before = new Date(Date.now() - config.get("retention") * 1000);
 
-  const expired = await store.closedBefore(guildId, before);
-  for (const report of expired) {
-    if (report.alertChannelId && report.alertMessageId) {
-      try {
-        const channel = await client.channels.fetch(report.alertChannelId);
-        if (channel?.isTextBased()) {
-          await channel.messages.edit(
-            report.alertMessageId,
-            purgedMessage(report.id, config.t)
+  let purged = 0;
+  for (const { id } of await store.closedBefore(guildId, before)) {
+    const done = await reportService.withReport(guildId, id, async (report) => {
+      if (
+        report.status === "open" ||
+        !report.handledAt ||
+        report.handledAt >= before
+      ) {
+        return false;
+      }
+      if (report.alertChannelId && report.alertMessageId) {
+        try {
+          const channel = await client.channels.fetch(report.alertChannelId);
+          if (channel?.isTextBased()) {
+            await channel.messages.edit(
+              report.alertMessageId,
+              purgedMessage(report.id, config.t)
+            );
+          }
+        } catch (err) {
+          logger.debug(
+            { err },
+            `Alert not purged, already gone | reportId = ${report.id}`
           );
         }
-      } catch (err) {
-        logger.debug(
-          { err },
-          `Alert not purged, already gone | reportId = ${report.id}`
-        );
       }
+      await store.delete(report.id);
+      return true;
+    });
+    if (done) {
+      purged++;
     }
-    await store.delete(report.id);
   }
-  return expired.length;
+  return purged;
 }
 
 export function reportsTasks(module: Module<ReportsConfigSchema>) {

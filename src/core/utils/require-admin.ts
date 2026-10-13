@@ -33,7 +33,7 @@ export async function requirePermissions(
 ): Promise<boolean> {
   if (!interaction.memberPermissions?.has(permissions)) {
     await interaction.reply({
-      content: t("interaction.missingPermissions"),
+      content: t("interaction.memberMissingPermissions"),
       flags: MessageFlags.Ephemeral,
     });
     return false;
