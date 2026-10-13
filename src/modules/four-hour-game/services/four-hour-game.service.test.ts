@@ -53,6 +53,33 @@ vi.mock("#lib/database.js", () => ({
         const count = scores.delete(key(where.guildId, where.userId)) ? 1 : 0;
         return { count };
       },
+      async count({
+        where,
+      }: {
+        where: {
+          guildId: string;
+          score?: { gt: number };
+          OR?: (
+            | { score: { gt: number } }
+            | { score: number; userId: { lt: string } }
+          )[];
+        };
+      }) {
+        return [...scores].filter(([k, score]) => {
+          const [guildId, userId] = k.split(":") as [string, string];
+          if (guildId !== where.guildId) return false;
+          if (where.score && !(score > where.score.gt)) return false;
+          if (where.OR) {
+            return where.OR.some((clause) =>
+              typeof clause.score === "number"
+                ? score === clause.score &&
+                  userId < (clause as { userId: { lt: string } }).userId.lt
+                : score > clause.score.gt
+            );
+          }
+          return true;
+        }).length;
+      },
       async findMany({
         where,
         take,
@@ -102,6 +129,13 @@ const { default: service } = await import("./four-hour-game.service.js");
 const DELAY = 4 * 60 * 60;
 const start = new Date("2026-10-02T10:00:00Z");
 const at = (seconds: number) => new Date(start.getTime() + seconds * 1000);
+const point = (score: number) => ({
+  kind: "point",
+  winnerId: "alice",
+  score,
+  heldSeconds: DELAY,
+  heldSince: start,
+});
 
 function message(
   authorId: string,
@@ -130,7 +164,7 @@ describe("FourHourGameService.handleMessage", () => {
       DELAY
     );
 
-    expect(result).toEqual({ kind: "point", winnerId: "alice", score: 1 });
+    expect(result).toEqual(point(1));
     expect(scores.get(key("guild", "alice"))).toBe(1);
     expect(lastMessages.get("guild")?.authorId).toBe("bob");
   });
@@ -143,7 +177,7 @@ describe("FourHourGameService.handleMessage", () => {
       DELAY
     );
 
-    expect(result).toEqual({ kind: "point", winnerId: "alice", score: 42 });
+    expect(result).toEqual(point(42));
   });
 
   it("keeps the original message when its author posts again", async () => {
@@ -154,7 +188,7 @@ describe("FourHourGameService.handleMessage", () => {
       DELAY
     );
 
-    expect(result).toEqual({ kind: "point", winnerId: "alice", score: 1 });
+    expect(result).toEqual(point(1));
   });
 
   it("replaces the last message without scoring when the reply is too soon", async () => {
@@ -174,10 +208,7 @@ describe("FourHourGameService.handleMessage", () => {
       service.handleMessage(message("carol", at(DELAY)), DELAY),
     ]);
 
-    expect(results).toEqual([
-      { kind: "point", winnerId: "alice", score: 1 },
-      { kind: "tooSoon" },
-    ]);
+    expect(results).toEqual([point(1), { kind: "tooSoon" }]);
     expect(scores.get(key("guild", "alice"))).toBe(1);
   });
 
@@ -196,7 +227,7 @@ describe("FourHourGameService.handleMessage", () => {
       message("carol", at(DELAY)),
       DELAY
     );
-    expect(result).toEqual({ kind: "point", winnerId: "alice", score: 1 });
+    expect(result).toEqual(point(1));
   });
 
   it("keeps the newest message when an older one is processed after it", async () => {
@@ -250,6 +281,43 @@ describe("FourHourGameService.getLeaderboard", () => {
       { userId: "carol", score: 5, rank: 1 },
       { userId: "alice", score: 2, rank: 2 },
     ]);
+  });
+});
+
+describe("FourHourGameService.getRank", () => {
+  beforeEach(() => {
+    scores.set(key("guild", "alice"), 5);
+    scores.set(key("guild", "bob"), 3);
+    scores.set(key("guild", "carol"), 3);
+    scores.set(key("guild", "dave"), 1);
+    scores.set(key("guild", "erin"), 0);
+    scores.set(key("other", "zack"), 9);
+  });
+
+  it.each([
+    ["alice", 1],
+    ["bob", 2],
+    ["carol", 3],
+    ["dave", 4],
+  ])("ranks %s at %d among the players who scored", async (userId, rank) => {
+    expect(await service.getRank("guild", userId)).toEqual({
+      rank,
+      total: 4,
+    });
+  });
+
+  it("matches the leaderboard order", async () => {
+    const leaderboard = await service.getLeaderboard("guild", 10);
+    const ranks = await Promise.all(
+      leaderboard.map((entry) => service.getRank("guild", entry.userId))
+    );
+
+    expect(ranks.map((r) => r?.rank)).toEqual(leaderboard.map((e) => e.rank));
+  });
+
+  it("returns null for a player without a score", async () => {
+    expect(await service.getRank("guild", "nobody")).toBeNull();
+    expect(await service.getRank("guild", "erin")).toBeNull();
   });
 });
 
@@ -314,7 +382,7 @@ describe("FourHourGameService deletions and resync", () => {
       message("carol", at(DELAY)),
       DELAY
     );
-    expect(result).toEqual({ kind: "point", winnerId: "alice", score: 1 });
+    expect(result).toEqual(point(1));
   });
 
   it("ignores deletions of messages other than the stored last one", async () => {

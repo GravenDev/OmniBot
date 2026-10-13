@@ -52,8 +52,10 @@ Repris du bot DJ4H. Dans le salon de jeu, le dernier message posté « tient » 
 
 1. Si c'est le premier message suivi, il devient le dernier message, sans point.
 2. S'il vient de l'auteur du dernier message, il est ignoré : le dernier message ne change pas, et un joueur ne peut donc pas relancer son propre délai.
-3. Si le délai s'est écoulé depuis le dernier message, **l'auteur du dernier message** marque un point ; le bot l'annonce dans le salon avec son nouveau total.
+3. Si le délai s'est écoulé depuis le dernier message, **l'auteur du dernier message** marque un point ; le bot l'annonce dans le salon (voir ci-dessous).
 4. Dans tous les autres cas, le nouveau message devient le dernier message.
+
+L'annonce d'un point indique combien de temps le message est resté sans réponse (« 4 h 12 min », deux unités au plus), le nouveau total du gagnant et son rang au classement du serveur (« 3ᵉ sur 17 »), avec l'avatar de serveur du gagnant en vignette et, en pied, l'heure d'envoi du message gagnant (affichée dans le fuseau de chaque lecteur). Personne n'est notifié. Si le rang ou l'avatar ne peuvent pas être obtenus, l'annonce part sans eux.
 
 Les messages de bots, les messages système (arrivée d'un membre, épinglage, boost…), les messages hors du salon (y compris dans ses fils) et les messages privés sont ignorés. Un message plus ancien que le dernier message enregistré (reçu dans le désordre) est ignoré lui aussi. Après un changement de salon de jeu, le dernier message de l'ancien salon ne compte plus : la partie repart du premier message posté dans le nouveau. Il en va de même quand le module est réactivé après avoir été désactivé.
 
@@ -63,7 +65,7 @@ Au démarrage, le bot relit le vrai dernier message de joueur de chaque salon de
 
 ### `/jd4h score [member]`
 
-Affiche le score du membre indiqué, ou le sien par défaut.
+Affiche le score du membre indiqué, ou le sien par défaut, et son rang parmi les joueurs du serveur qui ont au moins un point (« 3ᵉ sur 17 »). Le rang suit l'ordre de `/jd4h leaderboard` : score décroissant, puis identifiant Discord pour départager les égalités.
 
 ### `/jd4h leaderboard`
 

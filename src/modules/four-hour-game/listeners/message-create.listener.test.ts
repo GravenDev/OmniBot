@@ -1,14 +1,27 @@
-import type { Message } from "discord.js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { EmbedBuilder, Message } from "discord.js";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
-import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
+import { initTestI18n, makeTestConfig, silenceLogs } from "#lib/testing.js";
+import {
+  fourHourGameConfigSchema,
+  type FourHourGameConfigSchema,
+} from "#modules/four-hour-game/four-hour-game.config.js";
+import en from "#modules/four-hour-game/i18n/en.json" with { type: "json" };
+import fr from "#modules/four-hour-game/i18n/fr.json" with { type: "json" };
 
 const handleMessage = vi.hoisted(() => vi.fn());
+const getRank = vi.hoisted(() => vi.fn());
 vi.mock("#modules/four-hour-game/services/four-hour-game.service.js", () => ({
-  default: { handleMessage },
+  default: { handleMessage, getRank },
 }));
 
-const { default: listener } = await import("./message-create.listener.js");
+const { default: listener, buildPointEmbed } =
+  await import("./message-create.listener.js");
+
+beforeAll(async () => {
+  silenceLogs();
+  await initTestI18n("four-hour-game", { en, fr });
+});
 
 const GAME_CHANNEL = "game-channel";
 
@@ -22,8 +35,15 @@ function fakeConfig(
   } as unknown as ConfigProvider<FourHourGameConfigSchema>;
 }
 
+const memberFetch = vi.fn();
+const userFetch = vi.fn();
+
 function fakeMessage(overrides: Record<string, unknown> = {}) {
   return {
+    guild: {
+      members: { fetch: memberFetch },
+      client: { users: { fetch: userFetch } },
+    },
     id: "message-1",
     guildId: "guild-1",
     channelId: GAME_CHANNEL,
@@ -39,7 +59,35 @@ function fakeMessage(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   handleMessage.mockReset();
   handleMessage.mockResolvedValue({ kind: "first" });
+  getRank.mockReset();
+  getRank.mockResolvedValue({ rank: 3, total: 17 });
+  memberFetch.mockReset();
+  memberFetch.mockResolvedValue({
+    displayAvatarURL: () => "https://cdn/member.png",
+  });
+  userFetch.mockReset();
+  userFetch.mockResolvedValue({
+    displayAvatarURL: () => "https://cdn/user.png",
+  });
 });
+
+const heldSince = new Date("2026-10-02T05:48:00Z");
+
+function pointResult() {
+  return {
+    kind: "point",
+    winnerId: "bob",
+    score: 42,
+    heldSeconds: 4 * 3600 + 12 * 60,
+    heldSince,
+  };
+}
+
+function sentEmbed(message: Message) {
+  const send = vi.mocked(message.channel.send);
+  const [args] = send.mock.calls[0] as [{ embeds: EmbedBuilder[] }];
+  return args.embeds[0]!.toJSON();
+}
 
 describe("four-hour-game messageCreate listener", () => {
   it("hands a player's message in the game channel to the game", async () => {
@@ -78,11 +126,7 @@ describe("four-hour-game messageCreate listener", () => {
   });
 
   it("announces a point in the channel without pinging anyone", async () => {
-    handleMessage.mockResolvedValue({
-      kind: "point",
-      winnerId: "bob",
-      score: 3,
-    });
+    handleMessage.mockResolvedValue(pointResult());
     const message = fakeMessage();
 
     await listener.execute(message, fakeConfig());
@@ -90,5 +134,80 @@ describe("four-hour-game messageCreate listener", () => {
     expect(message.channel.send).toHaveBeenCalledWith(
       expect.objectContaining({ allowedMentions: { parse: [] } })
     );
+    expect(getRank).toHaveBeenCalledWith("guild-1", "bob");
+    expect(memberFetch).toHaveBeenCalledWith("bob");
+    expect(sentEmbed(message).thumbnail?.url).toBe("https://cdn/member.png");
+  });
+
+  it("falls back to the user's avatar when the winner left the server", async () => {
+    handleMessage.mockResolvedValue(pointResult());
+    memberFetch.mockRejectedValue(new Error("Unknown Member"));
+    const message = fakeMessage();
+
+    await listener.execute(message, fakeConfig());
+
+    expect(sentEmbed(message).thumbnail?.url).toBe("https://cdn/user.png");
+  });
+
+  it("still announces the point when the rank and avatar are unavailable", async () => {
+    handleMessage.mockResolvedValue(pointResult());
+    getRank.mockRejectedValue(new Error("database unavailable"));
+    memberFetch.mockRejectedValue(new Error("Unknown Member"));
+    userFetch.mockRejectedValue(new Error("Unknown User"));
+    const message = fakeMessage();
+
+    await listener.execute(message, fakeConfig());
+
+    const embed = sentEmbed(message);
+    expect(embed.thumbnail).toBeUndefined();
+    expect(embed.description).toBe("point.description\npoint.total");
+  });
+});
+
+describe("buildPointEmbed", () => {
+  const announcement = {
+    winnerId: "bob",
+    score: 42,
+    heldSeconds: 4 * 3600 + 12 * 60 + 5,
+    heldSince,
+    rank: { rank: 3, total: 17 },
+    avatarUrl: "https://cdn/bob.png",
+  };
+  const config = (locale: string) =>
+    makeTestConfig("four-hour-game", fourHourGameConfigSchema, {}, locale);
+
+  it("tells how long the message held, the new total and the rank", () => {
+    const embed = buildPointEmbed(announcement, config("fr")).toJSON();
+
+    expect(embed.title).toBe("Point gagné !");
+    expect(embed.description).toBe(
+      "<@bob> marque un point ! Son message est resté sans réponse pendant **4 h 12 min**.\n" +
+        "Total : **42 points** · 3ᵉ sur 17"
+    );
+    expect(embed.thumbnail?.url).toBe("https://cdn/bob.png");
+    expect(embed.footer?.text).toBe("Message posté");
+    expect(embed.timestamp).toBe(heldSince.toISOString());
+  });
+
+  it("speaks English and handles a first point", () => {
+    const embed = buildPointEmbed(
+      { ...announcement, score: 1, rank: { rank: 1, total: 1 } },
+      config("en")
+    ).toJSON();
+
+    expect(embed.description).toBe(
+      "<@bob> scores a point! Their message went unanswered for **4h 12m**.\n" +
+        "Total: **1 point** · 1st of 1"
+    );
+  });
+
+  it("leaves out the rank and thumbnail when they are unknown", () => {
+    const embed = buildPointEmbed(
+      { ...announcement, rank: null, avatarUrl: null },
+      config("fr")
+    ).toJSON();
+
+    expect(embed.description).toMatch(/\nTotal : \*\*42 points\*\*$/);
+    expect(embed.thumbnail).toBeUndefined();
   });
 });

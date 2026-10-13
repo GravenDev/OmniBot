@@ -9,7 +9,12 @@ export type MessageOutcome =
   | { kind: "outdated" }
   | { kind: "sameAuthor" }
   | { kind: "tooSoon" }
-  | { kind: "point"; winnerId: string };
+  | {
+      kind: "point";
+      winnerId: string;
+      heldSeconds: number;
+      heldSince: Date;
+    };
 
 export function evaluateMessage(
   last: GameMessageInfo | null,
@@ -29,7 +34,14 @@ export function evaluateMessage(
     last.sentAt.getTime() + delaySeconds * 1000 <=
     incoming.sentAt.getTime()
   ) {
-    return { kind: "point", winnerId: last.authorId };
+    return {
+      kind: "point",
+      winnerId: last.authorId,
+      heldSeconds: Math.floor(
+        (incoming.sentAt.getTime() - last.sentAt.getTime()) / 1000
+      ),
+      heldSince: last.sentAt,
+    };
   }
   return { kind: "tooSoon" };
 }
