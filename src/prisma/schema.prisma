@@ -41,6 +41,17 @@ model FourHourGameLastMessage {
   sentAt    DateTime
 }
 
+model FourHourGamePoint {
+  id          Int      @id @default(autoincrement())
+  guildId     String
+  userId      String
+  heldSeconds Int
+  awardedAt   DateTime @default(now())
+
+  @@index([guildId, userId])
+  @@index([guildId, awardedAt])
+}
+
 // === Modèles de modules/rngdle/rngdle.prisma ===
 model RngdleAccount {
   guildId  String

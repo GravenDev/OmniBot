@@ -11,10 +11,15 @@
   "point.total_other": "Total: **{{count}} points**",
   "point.postedAt": "Message posted",
 
-  "score.title": "🎪 The 4h game",
-  "score.value": "{{user}}'s score is **{{score}}**.",
-  "score.valueRanked": "{{user}}'s score is **{{score}}** — {{rank}}.",
   "score.none": "{{user}} has no score on this server.",
+
+  "profile.subtitle": "4h game",
+  "profile.points": "Points",
+  "profile.month": "This month",
+  "profile.bestHold": "Longest hold",
+  "profile.streak": "Current streak",
+  "profile.streakRecord": "best: {{record}}",
+  "profile.lastPoint": "Last point",
 
   "rank.place_ordinal_one": "{{count}}st",
   "rank.place_ordinal_two": "{{count}}nd",

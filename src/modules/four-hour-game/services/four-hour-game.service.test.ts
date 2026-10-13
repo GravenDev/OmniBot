@@ -9,8 +9,17 @@ interface LastMessageRow {
   sentAt: Date;
 }
 
+interface PointRow {
+  id: number;
+  guildId: string;
+  userId: string;
+  heldSeconds: number;
+  awardedAt: Date;
+}
+
 const lastMessages = new Map<string, LastMessageRow>();
 const scores = new Map<string, number>();
+const points: PointRow[] = [];
 const key = (guildId: string, userId: string) => `${guildId}:${userId}`;
 
 vi.mock("#lib/database.js", () => ({
@@ -119,6 +128,48 @@ vi.mock("#lib/database.js", () => ({
         return { ...create, score };
       },
     },
+    fourHourGamePoint: {
+      async create({ data }: { data: Omit<PointRow, "id"> }) {
+        const row = { id: points.length + 1, ...data };
+        points.push(row);
+        return row;
+      },
+      async deleteMany({
+        where,
+      }: {
+        where: { guildId: string; userId: string };
+      }) {
+        const kept = points.filter(
+          (row) => row.guildId !== where.guildId || row.userId !== where.userId
+        );
+        const count = points.length - kept.length;
+        points.splice(0, points.length, ...kept);
+        return { count };
+      },
+      async findMany({
+        where,
+        orderBy,
+      }: {
+        where: { guildId: string };
+        orderBy?: unknown;
+      }) {
+        const chronological =
+          JSON.stringify(orderBy) ===
+          JSON.stringify([{ awardedAt: "asc" }, { id: "asc" }]);
+        return points
+          .filter((row) => row.guildId === where.guildId)
+          .sort((a, b) =>
+            chronological
+              ? a.awardedAt.getTime() - b.awardedAt.getTime() || a.id - b.id
+              : 0
+          )
+          .map(({ userId, heldSeconds, awardedAt }) => ({
+            userId,
+            heldSeconds,
+            awardedAt,
+          }));
+      },
+    },
     $transaction: (operations: Promise<unknown>[]) => Promise.all(operations),
   },
 }));
@@ -154,6 +205,7 @@ function message(
 beforeEach(() => {
   lastMessages.clear();
   scores.clear();
+  points.length = 0;
 });
 
 describe("FourHourGameService.handleMessage", () => {
@@ -167,6 +219,28 @@ describe("FourHourGameService.handleMessage", () => {
     expect(result).toEqual(point(1));
     expect(scores.get(key("guild", "alice"))).toBe(1);
     expect(lastMessages.get("guild")?.authorId).toBe("bob");
+  });
+
+  it("records the point in the history, dated by the message that awarded it", async () => {
+    await service.handleMessage(message("alice", start), DELAY);
+    await service.handleMessage(message("bob", at(DELAY + 90)), DELAY);
+
+    expect(points).toEqual([
+      {
+        id: 1,
+        guildId: "guild",
+        userId: "alice",
+        heldSeconds: DELAY + 90,
+        awardedAt: at(DELAY + 90),
+      },
+    ]);
+  });
+
+  it("records nothing when no point is scored", async () => {
+    await service.handleMessage(message("alice", start), DELAY);
+    await service.handleMessage(message("bob", at(60)), DELAY);
+
+    expect(points).toEqual([]);
   });
 
   it("increments an existing score", async () => {
@@ -335,6 +409,131 @@ describe("FourHourGameService.setScore", () => {
     expect(scores.has(key("guild", "alice"))).toBe(false);
     expect(await service.setScore("guild", "alice", 0)).toBe("absent");
     expect(scores.has(key("guild", "alice"))).toBe(false);
+  });
+});
+
+describe("FourHourGameService history removal", () => {
+  const seed = (guildId: string, userId: string) =>
+    points.push({
+      id: points.length + 1,
+      guildId,
+      userId,
+      heldSeconds: DELAY,
+      awardedAt: start,
+    });
+
+  beforeEach(() => {
+    scores.set(key("guild", "alice"), 2);
+    seed("guild", "alice");
+    seed("guild", "bob");
+    seed("other", "alice");
+  });
+
+  it("deletes the member's history with their score", async () => {
+    expect(await service.deleteScore("guild", "alice")).toBe(true);
+
+    expect(points.map((row) => `${row.guildId}:${row.userId}`)).toEqual([
+      "guild:bob",
+      "other:alice",
+    ]);
+  });
+
+  it("deletes the history when the score is set to zero", async () => {
+    expect(await service.setScore("guild", "alice", 0)).toBe("removed");
+
+    expect(
+      points.some((row) => row.guildId === "guild" && row.userId === "alice")
+    ).toBe(false);
+  });
+
+  it("keeps the history when the score is set to another value", async () => {
+    expect(await service.setScore("guild", "alice", 10)).toBe("updated");
+
+    expect(points).toHaveLength(3);
+  });
+});
+
+describe("FourHourGameService.getProfile", () => {
+  const now = new Date("2026-10-12T12:00:00Z");
+
+  it("returns null for a member without a score", async () => {
+    expect(await service.getProfile("guild", "nobody", now)).toBeNull();
+  });
+
+  it("combines the score, the rank and the history of the guild", async () => {
+    scores.set(key("guild", "alice"), 7);
+    scores.set(key("guild", "bob"), 9);
+    const award = (userId: string, iso: string, heldSeconds = DELAY) =>
+      points.push({
+        id: points.length + 1,
+        guildId: "guild",
+        userId,
+        heldSeconds,
+        awardedAt: new Date(iso),
+      });
+    award("bob", "2026-10-03T10:00:00Z");
+    award("alice", "2026-10-03T10:00:00Z");
+    award("alice", "2026-10-01T10:00:00Z");
+    award("alice", "2026-09-30T10:00:00Z", 30_000);
+    award("bob", "2026-10-02T10:00:00Z");
+    points.push({
+      id: points.length + 1,
+      guildId: "other",
+      userId: "zack",
+      heldSeconds: DELAY,
+      awardedAt: new Date("2026-10-04T10:00:00Z"),
+    });
+
+    expect(await service.getProfile("guild", "alice", now)).toEqual({
+      score: 7,
+      rank: 2,
+      total: 2,
+      monthPoints: 2,
+      bestHoldSeconds: 30_000,
+      currentStreak: 1,
+      bestStreak: 2,
+      lastPointAt: new Date("2026-10-03T10:00:00Z"),
+    });
+  });
+
+  it("caps the month's points at a score lowered by an admin", async () => {
+    scores.set(key("guild", "alice"), 1);
+    points.push(
+      {
+        id: points.length + 1,
+        guildId: "guild",
+        userId: "alice",
+        heldSeconds: DELAY,
+        awardedAt: new Date("2026-10-01T10:00:00Z"),
+      },
+      {
+        id: points.length + 2,
+        guildId: "guild",
+        userId: "alice",
+        heldSeconds: DELAY,
+        awardedAt: new Date("2026-10-02T10:00:00Z"),
+      }
+    );
+
+    expect(await service.getProfile("guild", "alice", now)).toMatchObject({
+      score: 1,
+      monthPoints: 1,
+    });
+  });
+
+  it("leaves history values empty for a score set before the history existed", async () => {
+    scores.set(key("guild", "alice"), 12);
+
+    expect(await service.getProfile("guild", "alice", now)).toEqual({
+      score: 12,
+      rank: 1,
+      total: 1,
+      monthPoints: 0,
+      bestHoldSeconds: null,
+      currentStreak: 0,
+      bestStreak: 0,
+      lastPointAt: null,
+    });
   });
 });
 
