@@ -1,5 +1,6 @@
 import type { Message } from "discord.js";
 import logger from "#lib/logger.js";
+import type { Service } from "#lib/service.js";
 
 /** Pacing window and cap — mirrors Discord's thread-creation rate limit. */
 const RATE_LIMIT_WINDOW_MS = 10_000;
@@ -20,8 +21,12 @@ export interface ThreadJob {
  * In-memory only: pending jobs are lost on restart, queues are per-guild (no
  * cross-guild sharing), and there is no size cap — see
  * `docs/specs/thread-creator-queue.md`.
+ *
+ * Internal collaborator of `ThreadCreatorService` (which owns the single
+ * instance): imported directly, never registered, instantiated with `new` in
+ * tests and by its owning service.
  */
-export class ThreadCreationQueue {
+export class ThreadCreationQueue implements Service {
   private readonly queues = new Map<string, ThreadJob[]>();
   private readonly recentCreations = new Map<string, number[]>();
   private readonly draining = new Set<string>();
