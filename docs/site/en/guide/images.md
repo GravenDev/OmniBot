@@ -2,13 +2,15 @@
 
 Leaderboards and stat cards are rendered as PNG images with [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas) (prebuilt binaries, nothing to install). Two ready-made renderers cover most needs; lower-level helpers are there for anything else.
 
-| Module                   | Provides                                                                                                 |
-| ------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `#lib/leaderboard-table` | `renderLeaderboardTable`: ranked table with medals, avatars, names and your own columns                  |
-| `#lib/stat-card`         | `renderStatCard`: card with a portrait, a title, an optional rank, a grid of stat boxes and a side panel |
-| `#lib/imaging`           | Shared palette and font, avatar download, circular images, fitted text, assets                           |
+| Module                   | Provides                                                                                                                                                                                |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `#lib/leaderboard-table` | `renderLeaderboardTable`: ranked table with medals, avatars, names and your own columns                                                                                                 |
+| `#lib/stat-card`         | `renderStatCard`: card with a portrait, a title, an optional rank, a grid of stat boxes and a side panel                                                                                |
+| `#lib/imaging`           | Shared palette and font, default accent (`DEFAULT_ACCENT`), avatar download, circular images and ringed portraits (`drawPortrait`), highlighting (`drawHighlight`), fitted text, assets |
 
 The Outfit font and the gold, silver and bronze medals ship in `src/lib/assets/` and are loaded for you.
+
+Each module declares its accent color in `rendering/theme.ts` (`export const ACCENT: Rgb = [77, 163, 255];`) and passes it as `accent` to every renderer, so all its images look alike. Without `accent`, `DEFAULT_ACCENT` applies.
 
 ## A Leaderboard
 

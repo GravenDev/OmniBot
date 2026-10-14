@@ -107,6 +107,29 @@ describe("renderVersus", () => {
     expect(first.equals(second)).toBe(false);
   });
 
+  it("paints the winner's share of the duel bar in the accent", async () => {
+    const png = await renderVersus(
+      {
+        left: active,
+        right: { ...active, name: "Alice" },
+        headToHead: { days: 10, left: 2, right: 8, ties: 0 },
+        winners: {
+          totalScore: "tie",
+          totalRolls: "tie",
+          averageScore: "tie",
+          bestRoll: "tie",
+          maxBadges: "tie",
+          headToHead: "right",
+        },
+      },
+      labels
+    );
+
+    const barY = 890 - 30 - 30 + 5;
+    expect(await accentAt(png, 900, 920, barY)).toBe(true);
+    expect(await accentAt(png, 70, 90, barY)).toBe(false);
+  });
+
   const leftEdge = [MARGIN, MARGIN + 12] as const;
   const rightEdge = [
     DEFAULT_WIDTH - MARGIN - 12,

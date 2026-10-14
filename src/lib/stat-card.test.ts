@@ -91,6 +91,24 @@ describe("renderStatCard", () => {
     expect(draw).toHaveBeenCalledWith(expect.anything(), 660, 160, 300, 240);
   });
 
+  it("lays a wider card out across its whole width", async () => {
+    const draw = vi.fn();
+    centeredTexts.length = 0;
+
+    await renderStatCard(
+      card({
+        width: 1200,
+        rank: { position: 7, total: 12 },
+        rows: [[box], [box]],
+        aside: { width: 300, draw },
+      })
+    );
+
+    expect(draw).toHaveBeenCalledWith(expect.anything(), 860, 160, 300, 240);
+    const total = centeredTexts.find((entry) => entry.text === " / 12")!;
+    expect(total.right).toBeCloseTo(1200 - 40, 0);
+  });
+
   it("renders a subtitle and a rank, with or without a medal", async () => {
     for (const position of [1, 7]) {
       const png = await renderStatCard(

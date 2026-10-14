@@ -2,13 +2,15 @@
 
 Les classements et les fiches de statistiques sont rendus en images PNG avec [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas) (binaires précompilés, rien à installer). Deux générateurs prêts à l'emploi couvrent l'essentiel des besoins ; des fonctions de plus bas niveau sont là pour le reste.
 
-| Module                   | Fournit                                                                                                           |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `#lib/leaderboard-table` | `renderLeaderboardTable` : tableau classé avec médailles, avatars, pseudos et vos propres colonnes                |
-| `#lib/stat-card`         | `renderStatCard` : fiche avec portrait, titre, rang optionnel, grille de cases de statistiques et panneau latéral |
-| `#lib/imaging`           | Palette et police communes, téléchargement d'avatars, images rondes, texte ajusté, ressources                     |
+| Module                   | Fournit                                                                                                                                                                                                    |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `#lib/leaderboard-table` | `renderLeaderboardTable` : tableau classé avec médailles, avatars, pseudos et vos propres colonnes                                                                                                         |
+| `#lib/stat-card`         | `renderStatCard` : fiche avec portrait, titre, rang optionnel, grille de cases de statistiques et panneau latéral                                                                                          |
+| `#lib/imaging`           | Palette et police communes, accent par défaut (`DEFAULT_ACCENT`), téléchargement d'avatars, images rondes et portraits cerclés (`drawPortrait`), mise en avant (`drawHighlight`), texte ajusté, ressources |
 
 La police Outfit et les médailles or, argent et bronze sont fournies dans `src/lib/assets/` et chargées pour vous.
+
+Chaque module déclare sa couleur d'accent dans `rendering/theme.ts` (`export const ACCENT: Rgb = [77, 163, 255];`) et la passe en `accent` à chaque générateur, pour que toutes ses images se ressemblent. Sans `accent`, c'est `DEFAULT_ACCENT` qui s'applique.
 
 ## Un classement
 

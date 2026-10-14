@@ -148,16 +148,26 @@ export function drawPanel(
   height: number,
   highlight?: Rgb
 ): void {
-  ctx.beginPath();
-  ctx.roundRect(x, y, width, height, PANEL_RADIUS);
-  ctx.fillStyle = rgb(PALETTE.box);
-  ctx.fill();
+  fillPanel(ctx, x, y, width, height);
   if (highlight) {
     drawHighlight(ctx, x, y, width, height, highlight, {
       radius: PANEL_RADIUS,
     });
   }
   strokePanel(ctx, x, y, width, height);
+}
+
+export function fillPanel(
+  ctx: SKRSContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+): void {
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, PANEL_RADIUS);
+  ctx.fillStyle = rgb(PALETTE.box);
+  ctx.fill();
 }
 
 export function strokePanel(

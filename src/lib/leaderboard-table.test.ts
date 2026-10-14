@@ -16,13 +16,14 @@ async function pixels(png: Buffer) {
 
 const row = (rank: number) => ({ rank, name: `Player ${rank}`, avatar: null });
 
-function render(caller?: ReturnType<typeof row>) {
+function render(caller?: ReturnType<typeof row>, width?: number) {
   return renderLeaderboardTable({
     headers: { rank: "#", player: "Player" },
     columns: [],
     rows: [row(4), row(5)],
     caller,
     accent: ACCENT,
+    ...(width && { width }),
   });
 }
 
@@ -32,6 +33,14 @@ describe("renderLeaderboardTable", () => {
 
     expect(pixel(1, 100 + 2 * 90 + 20 + 45)).toEqual([...ACCENT]);
     expect(pixel(1, 100 + 45)).toEqual([...PALETTE.rowEven]);
+  });
+
+  it("tints the caller's row across a wider table", async () => {
+    const pixel = await pixels(await render(row(40), 1000));
+
+    expect(pixel(950, 100 + 2 * 90 + 20 + 45)).not.toEqual([
+      ...PALETTE.rowEven,
+    ]);
   });
 
   it("separates the caller's row with a visible line", async () => {

@@ -14,6 +14,7 @@ import {
   BOTTOM_MARGIN,
   DEFAULT_WIDTH,
   drawPanel,
+  fillPanel,
   fitText,
   GAP,
   HEADER_HEIGHT,
@@ -221,10 +222,11 @@ function drawRow(
   winner: Winner | null
 ): void {
   const width = WIDTH - 2 * MARGIN;
-  drawPanel(ctx, MARGIN, y, width, height);
   if (winner !== "left" && winner !== "right") {
+    drawPanel(ctx, MARGIN, y, width, height);
     return;
   }
+  fillPanel(ctx, MARGIN, y, width, height);
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(MARGIN, y, width, height, PANEL_RADIUS);
