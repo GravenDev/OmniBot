@@ -12,29 +12,20 @@ import {
 import { describe, expect, it, vi } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
 import type { MessageQuoteConfigSchema } from "#modules/message-quote/message-quote.config.js";
-import {
-  canRead,
-  isExcluded,
-  isNsfw,
-  MAX_QUOTES,
-  parseMessageLinks,
-  quoteEmbed,
-  quoteLinks,
-  quoteReply,
-  resolveQuote,
-  truncate,
-} from "./quote.js";
+import quoteService, { MAX_QUOTES } from "./quote.service.js";
 
 describe("truncate", () => {
   it("never splits an emoji and stays within the UTF-16 limit", () => {
-    const truncated = truncate("😀".repeat(600), 1024);
+    const truncated = quoteService.truncate("😀".repeat(600), 1024);
     expect(truncated.length).toBeLessThanOrEqual(1024);
     expect(truncated.endsWith("😀…")).toBe(true);
   });
 
   it("drops a spoiler the cut would leave open", () => {
-    expect(truncate(`intro ||${"secret ".repeat(20)}||`, 30)).toBe("intro …");
-    expect(truncate(`||a|| ${"b".repeat(40)}`, 20)).toBe(
+    expect(quoteService.truncate(`intro ||${"secret ".repeat(20)}||`, 30)).toBe(
+      "intro …"
+    );
+    expect(quoteService.truncate(`||a|| ${"b".repeat(40)}`, 20)).toBe(
       `||a|| ${"b".repeat(13)}…`
     );
   });
@@ -282,9 +273,9 @@ function fakeConfig(
 
 describe("parseMessageLinks", () => {
   it("extracts the channel and message ids", () => {
-    expect(parseMessageLinks(`look ${link("200", "300")}`, GUILD)).toEqual([
-      { channelId: "200", messageId: "300" },
-    ]);
+    expect(
+      quoteService.parseMessageLinks(`look ${link("200", "300")}`, GUILD)
+    ).toEqual([{ channelId: "200", messageId: "300" }]);
   });
 
   it("accepts the ptb, canary and discordapp hosts", () => {
@@ -293,19 +284,21 @@ describe("parseMessageLinks", () => {
       "https://canary.discord.com/channels/100/1/3",
       "https://discordapp.com/channels/100/1/4",
     ].join(" ");
-    expect(parseMessageLinks(content, GUILD).map((l) => l.messageId)).toEqual([
-      "2",
-      "3",
-      "4",
-    ]);
+    expect(
+      quoteService.parseMessageLinks(content, GUILD).map((l) => l.messageId)
+    ).toEqual(["2", "3", "4"]);
   });
 
   it("ignores links to another server", () => {
-    expect(parseMessageLinks(link("200", "300", "555"), GUILD)).toEqual([]);
+    expect(
+      quoteService.parseMessageLinks(link("200", "300", "555"), GUILD)
+    ).toEqual([]);
   });
 
   it("ignores links whose preview is suppressed with angle brackets", () => {
-    expect(parseMessageLinks(`<${link("200", "300")}>`, GUILD)).toEqual([]);
+    expect(
+      quoteService.parseMessageLinks(`<${link("200", "300")}>`, GUILD)
+    ).toEqual([]);
   });
 
   it("ignores links in code and spoilers", () => {
@@ -315,7 +308,7 @@ describe("parseMessageLinks", () => {
       `||${link("1", "3")}||`,
       `\`\`${link("1", "4")}\`\``,
     ].join(" ");
-    expect(parseMessageLinks(content, GUILD)).toEqual([]);
+    expect(quoteService.parseMessageLinks(content, GUILD)).toEqual([]);
   });
 
   it("deduplicates and caps the number of links", () => {
@@ -326,11 +319,9 @@ describe("parseMessageLinks", () => {
       link("1", "3"),
       link("1", "4"),
     ].join(" ");
-    expect(parseMessageLinks(content, GUILD).map((l) => l.messageId)).toEqual([
-      "1",
-      "2",
-      "3",
-    ]);
+    expect(
+      quoteService.parseMessageLinks(content, GUILD).map((l) => l.messageId)
+    ).toEqual(["1", "2", "3"]);
     expect(MAX_QUOTES).toBe(3);
   });
 });
@@ -339,14 +330,20 @@ describe("isExcluded", () => {
   const excluded = new Set(["10"]);
 
   it("matches the channel itself and its category", () => {
-    expect(isExcluded(fakeChannel({ id: "10" }), excluded)).toBe(true);
-    expect(isExcluded(fakeChannel({ parentId: "10" }), excluded)).toBe(true);
-    expect(isExcluded(fakeChannel({ parentId: "11" }), excluded)).toBe(false);
+    expect(quoteService.isExcluded(fakeChannel({ id: "10" }), excluded)).toBe(
+      true
+    );
+    expect(
+      quoteService.isExcluded(fakeChannel({ parentId: "10" }), excluded)
+    ).toBe(true);
+    expect(
+      quoteService.isExcluded(fakeChannel({ parentId: "11" }), excluded)
+    ).toBe(false);
   });
 
   it("matches a thread through its parent channel and category", () => {
     expect(
-      isExcluded(
+      quoteService.isExcluded(
         fakeChannel({
           thread: true,
           parentId: "10",
@@ -356,7 +353,7 @@ describe("isExcluded", () => {
       )
     ).toBe(true);
     expect(
-      isExcluded(
+      quoteService.isExcluded(
         fakeChannel({
           thread: true,
           parentId: "12",
@@ -370,10 +367,10 @@ describe("isExcluded", () => {
 
 describe("isNsfw", () => {
   it("reads the flag of the channel, or of the parent for a thread", () => {
-    expect(isNsfw(fakeChannel({ nsfw: true }))).toBe(true);
-    expect(isNsfw(fakeChannel())).toBe(false);
+    expect(quoteService.isNsfw(fakeChannel({ nsfw: true }))).toBe(true);
+    expect(quoteService.isNsfw(fakeChannel())).toBe(false);
     expect(
-      isNsfw(
+      quoteService.isNsfw(
         fakeChannel({ thread: true, parent: { parentId: null, nsfw: true } })
       )
     ).toBe(true);
@@ -382,14 +379,16 @@ describe("isNsfw", () => {
 
 describe("canRead", () => {
   it("requires both viewing the channel and reading its history", async () => {
-    expect(await canRead(member, fakeChannel())).toBe(true);
+    expect(await quoteService.canRead(member, fakeChannel())).toBe(true);
     expect(
-      await canRead(
+      await quoteService.canRead(
         member,
         fakeChannel({ permissions: [PermissionFlagsBits.ViewChannel] })
       )
     ).toBe(false);
-    expect(await canRead(member, fakeChannel({ permissions: [] }))).toBe(false);
+    expect(
+      await quoteService.canRead(member, fakeChannel({ permissions: [] }))
+    ).toBe(false);
   });
 
   it("requires membership of a private thread", async () => {
@@ -399,8 +398,10 @@ describe("canRead", () => {
         type: ChannelType.PrivateThread,
         threadMembers,
       });
-    expect(await canRead(member, privateThread([]))).toBe(false);
-    expect(await canRead(member, privateThread([member.id]))).toBe(true);
+    expect(await quoteService.canRead(member, privateThread([]))).toBe(false);
+    expect(await quoteService.canRead(member, privateThread([member.id]))).toBe(
+      true
+    );
   });
 
   it("asks Discord instead of trusting a stale thread member cache", async () => {
@@ -409,7 +410,7 @@ describe("canRead", () => {
       type: ChannelType.PrivateThread,
       cachedThreadMembers: [member.id],
     });
-    expect(await canRead(member, channel)).toBe(false);
+    expect(await quoteService.canRead(member, channel)).toBe(false);
   });
 
   it("lets thread managers read private threads", async () => {
@@ -418,7 +419,7 @@ describe("canRead", () => {
       type: ChannelType.PrivateThread,
       permissions: [...READ, PermissionFlagsBits.ManageThreads],
     });
-    expect(await canRead(member, channel)).toBe(true);
+    expect(await quoteService.canRead(member, channel)).toBe(true);
   });
 });
 
@@ -430,21 +431,27 @@ describe("resolveQuote", () => {
     const { message } = fakeSource("", {
       "200": fakeChannel({ messages: { "300": quoted } }),
     });
-    expect(await resolveQuote(message, member, target, new Set())).toBe(quoted);
+    expect(
+      await quoteService.resolveQuote(message, member, target, new Set())
+    ).toBe(quoted);
   });
 
   it("refuses a channel the member cannot read", async () => {
     const { message } = fakeSource("", {
       "200": fakeChannel({ permissions: [], messages: { "300": quoted } }),
     });
-    expect(await resolveQuote(message, member, target, new Set())).toBeNull();
+    expect(
+      await quoteService.resolveQuote(message, member, target, new Set())
+    ).toBeNull();
   });
 
   it("refuses to bring a NSFW message into a SFW channel", async () => {
     const { message } = fakeSource("", {
       "200": fakeChannel({ nsfw: true, messages: { "300": quoted } }),
     });
-    expect(await resolveQuote(message, member, target, new Set())).toBeNull();
+    expect(
+      await quoteService.resolveQuote(message, member, target, new Set())
+    ).toBeNull();
   });
 
   it("allows a NSFW message in a NSFW channel", async () => {
@@ -453,14 +460,18 @@ describe("resolveQuote", () => {
       { "200": fakeChannel({ nsfw: true, messages: { "300": quoted } }) },
       fakeChannel({ id: "999", nsfw: true })
     );
-    expect(await resolveQuote(message, member, target, new Set())).toBe(quoted);
+    expect(
+      await quoteService.resolveQuote(message, member, target, new Set())
+    ).toBe(quoted);
   });
 
   it("refuses to bring a private channel into a public one", async () => {
     const { message } = fakeSource("", {
       "200": fakeChannel({ public: false, messages: { "300": quoted } }),
     });
-    expect(await resolveQuote(message, member, target, new Set())).toBeNull();
+    expect(
+      await quoteService.resolveQuote(message, member, target, new Set())
+    ).toBeNull();
   });
 
   it("allows a private channel to be quoted in a private one", async () => {
@@ -469,7 +480,9 @@ describe("resolveQuote", () => {
       { "200": fakeChannel({ public: false, messages: { "300": quoted } }) },
       fakeChannel({ id: "999", public: false })
     );
-    expect(await resolveQuote(message, member, target, new Set())).toBe(quoted);
+    expect(
+      await quoteService.resolveQuote(message, member, target, new Set())
+    ).toBe(quoted);
   });
 
   it("compares audiences role by role when @everyone sees nothing", async () => {
@@ -490,12 +503,22 @@ describe("resolveQuote", () => {
 
     const intoGeneral = fakeSource("", { "200": staff("200") }, general("999"));
     expect(
-      await resolveQuote(intoGeneral.message, member, target, new Set())
+      await quoteService.resolveQuote(
+        intoGeneral.message,
+        member,
+        target,
+        new Set()
+      )
     ).toBeNull();
 
     const intoStaff = fakeSource("", { "200": general("200") }, staff("999"));
     expect(
-      await resolveQuote(intoStaff.message, member, target, new Set())
+      await quoteService.resolveQuote(
+        intoStaff.message,
+        member,
+        target,
+        new Set()
+      )
     ).toBe(quoted);
   });
 
@@ -514,9 +537,11 @@ describe("resolveQuote", () => {
         { "200": channel("200", ["member", "staff"]) },
         channel("999", ["member", "player"])
       );
-      expect(await resolveQuote(message, member, target, new Set())).toBeNull();
       expect(
-        await resolveQuote(
+        await quoteService.resolveQuote(message, member, target, new Set())
+      ).toBeNull();
+      expect(
+        await quoteService.resolveQuote(
           message,
           member,
           target,
@@ -532,9 +557,9 @@ describe("resolveQuote", () => {
         { "200": channel("200", ["member"]) },
         channel("999", ["member", "music-bot"])
       );
-      expect(await resolveQuote(message, member, target, new Set())).toBe(
-        quoted
-      );
+      expect(
+        await quoteService.resolveQuote(message, member, target, new Set())
+      ).toBe(quoted);
     });
 
     it("lets administrators see every channel", async () => {
@@ -543,9 +568,9 @@ describe("resolveQuote", () => {
         { "200": channel("200", ["staff"]) },
         channel("999", ["staff", "admin"])
       );
-      expect(await resolveQuote(message, member, target, new Set())).toBe(
-        quoted
-      );
+      expect(
+        await quoteService.resolveQuote(message, member, target, new Set())
+      ).toBe(quoted);
     });
   });
 
@@ -553,7 +578,9 @@ describe("resolveQuote", () => {
     const { message } = fakeSource("", {
       "200": fakeChannel({ hideHistory: true, messages: { "300": quoted } }),
     });
-    expect(await resolveQuote(message, member, target, new Set())).toBeNull();
+    expect(
+      await quoteService.resolveQuote(message, member, target, new Set())
+    ).toBeNull();
   });
 
   it("counts @everyone's access for every role", async () => {
@@ -562,7 +589,9 @@ describe("resolveQuote", () => {
       { "200": fakeChannel({ messages: { "300": quoted } }) },
       fakeChannel({ id: "999", viewers: ["member"] })
     );
-    expect(await resolveQuote(message, member, target, new Set())).toBe(quoted);
+    expect(
+      await quoteService.resolveQuote(message, member, target, new Set())
+    ).toBe(quoted);
   });
 
   it("refuses a public thread of a private channel in a public channel", async () => {
@@ -574,7 +603,9 @@ describe("resolveQuote", () => {
         messages: { "300": quoted },
       }),
     });
-    expect(await resolveQuote(message, member, target, new Set())).toBeNull();
+    expect(
+      await quoteService.resolveQuote(message, member, target, new Set())
+    ).toBeNull();
   });
 
   it("quotes a private thread only inside that thread", async () => {
@@ -592,7 +623,12 @@ describe("resolveQuote", () => {
       fakeChannel({ id: "999", public: false })
     );
     expect(
-      await resolveQuote(elsewhere.message, member, target, new Set())
+      await quoteService.resolveQuote(
+        elsewhere.message,
+        member,
+        target,
+        new Set()
+      )
     ).toBeNull();
 
     const inside = fakeSource(
@@ -600,9 +636,9 @@ describe("resolveQuote", () => {
       { "200": privateThread("200") },
       privateThread("200")
     );
-    expect(await resolveQuote(inside.message, member, target, new Set())).toBe(
-      quoted
-    );
+    expect(
+      await quoteService.resolveQuote(inside.message, member, target, new Set())
+    ).toBe(quoted);
   });
 
   it("does not quote its own quotes but quotes its other messages", async () => {
@@ -619,9 +655,11 @@ describe("resolveQuote", () => {
         messages: { "300": ownQuote, "301": announcement },
       }),
     });
-    expect(await resolveQuote(message, member, target, new Set())).toBeNull();
     expect(
-      await resolveQuote(
+      await quoteService.resolveQuote(message, member, target, new Set())
+    ).toBeNull();
+    expect(
+      await quoteService.resolveQuote(
         message,
         member,
         { channelId: "200", messageId: "301" },
@@ -638,9 +676,9 @@ describe("resolveQuote", () => {
     const { message } = fakeSource("", {
       "200": fakeChannel({ messages: { "300": lookalike } }),
     });
-    expect(await resolveQuote(message, member, target, new Set())).toBe(
-      lookalike
-    );
+    expect(
+      await quoteService.resolveQuote(message, member, target, new Set())
+    ).toBe(lookalike);
   });
 
   it("refuses an excluded channel", async () => {
@@ -648,15 +686,17 @@ describe("resolveQuote", () => {
       "200": fakeChannel({ messages: { "300": quoted } }),
     });
     expect(
-      await resolveQuote(message, member, target, new Set(["200"]))
+      await quoteService.resolveQuote(message, member, target, new Set(["200"]))
     ).toBeNull();
   });
 
   it("returns null for an unknown channel or message", async () => {
     const { message } = fakeSource("", { "200": fakeChannel() });
-    expect(await resolveQuote(message, member, target, new Set())).toBeNull();
     expect(
-      await resolveQuote(
+      await quoteService.resolveQuote(message, member, target, new Set())
+    ).toBeNull();
+    expect(
+      await quoteService.resolveQuote(
         message,
         member,
         { channelId: "404", messageId: "1" },
@@ -668,7 +708,11 @@ describe("resolveQuote", () => {
 
 describe("quoteEmbed", () => {
   it("shows the author, the content, the channel and the quoter", () => {
-    const embed = quoteEmbed(fakeQuoted({ content: "hello" }), member, t).data;
+    const embed = quoteService.quoteEmbed(
+      fakeQuoted({ content: "hello" }),
+      member,
+      t
+    ).data;
     expect(embed.author).toMatchObject({
       name: "Nick",
       url: "https://discord.com/channels/100/200/300",
@@ -682,13 +726,17 @@ describe("quoteEmbed", () => {
   });
 
   it("falls back to the user when the author left", () => {
-    const embed = quoteEmbed(fakeQuoted({ withMember: false }), member, t).data;
+    const embed = quoteService.quoteEmbed(
+      fakeQuoted({ withMember: false }),
+      member,
+      t
+    ).data;
     expect(embed.author?.name).toBe("Author");
     expect(embed.color).toBeUndefined();
   });
 
   it("shows the first image and lists the other files", () => {
-    const embed = quoteEmbed(
+    const embed = quoteService.quoteEmbed(
       fakeQuoted({
         attachments: [
           {
@@ -707,7 +755,7 @@ describe("quoteEmbed", () => {
   });
 
   it("never displays a spoilered image", () => {
-    const embed = quoteEmbed(
+    const embed = quoteService.quoteEmbed(
       fakeQuoted({
         attachments: [
           {
@@ -726,7 +774,7 @@ describe("quoteEmbed", () => {
   });
 
   it("quotes the content of a forwarded message", () => {
-    const embed = quoteEmbed(
+    const embed = quoteService.quoteEmbed(
       fakeQuoted({ snapshot: { content: "forwarded" } }),
       member,
       t
@@ -736,7 +784,7 @@ describe("quoteEmbed", () => {
   });
 
   it("uses the embed of a message without text", () => {
-    const embed = quoteEmbed(
+    const embed = quoteService.quoteEmbed(
       fakeQuoted({
         embeds: [
           { description: "from a bot", image: { url: "https://cdn/i" } },
@@ -750,7 +798,7 @@ describe("quoteEmbed", () => {
   });
 
   it("does not reveal a link preview hidden behind a spoiler", () => {
-    const embed = quoteEmbed(
+    const embed = quoteService.quoteEmbed(
       fakeQuoted({
         content: "||https://example.com/i.png||",
         embeds: [{ image: { url: "https://example.com/i.png" } }],
@@ -762,7 +810,7 @@ describe("quoteEmbed", () => {
   });
 
   it("uses the embed of a forwarded message without text", () => {
-    const embed = quoteEmbed(
+    const embed = quoteService.quoteEmbed(
       fakeQuoted({
         snapshot: { content: "", embeds: [{ description: "forwarded embed" }] },
       }),
@@ -773,13 +821,13 @@ describe("quoteEmbed", () => {
   });
 
   it("says when there is nothing to show", () => {
-    expect(quoteEmbed(fakeQuoted(), member, t).data.description).toBe(
-      "quote.noContent"
-    );
+    expect(
+      quoteService.quoteEmbed(fakeQuoted(), member, t).data.description
+    ).toBe("quote.noContent");
   });
 
   it("truncates to the embed description limit", () => {
-    const description = quoteEmbed(
+    const description = quoteService.quoteEmbed(
       fakeQuoted({ content: "a".repeat(5000) }),
       member,
       t
@@ -791,7 +839,7 @@ describe("quoteEmbed", () => {
 
 describe("quoteReply", () => {
   it("adds a jump button per quote and a delete button for the people involved", () => {
-    const reply = quoteReply(
+    const reply = quoteService.quoteReply(
       [fakeQuoted({ authorId: "2" }), fakeQuoted({ authorId: "2" })],
       member,
       t
@@ -817,7 +865,7 @@ describe("quoteReply", () => {
       id: "1",
       displayName: "q".repeat(32),
     } as unknown as GuildMember;
-    const reply = quoteReply(
+    const reply = quoteService.quoteReply(
       [1, 2, 3].map(() => fakeQuoted({ content: "a".repeat(4000) })),
       longQuoter,
       t
@@ -848,7 +896,7 @@ describe("quoteLinks", () => {
         "201": fakeChannel({ permissions: [], messages: { "301": quoted } }),
       }
     );
-    await quoteLinks(message, fakeConfig());
+    await quoteService.quoteLinks(message, fakeConfig());
     expect(reply).toHaveBeenCalledOnce();
     expect(
       (reply.mock.calls[0] as unknown as [{ embeds: unknown[] }])[0].embeds
@@ -859,7 +907,7 @@ describe("quoteLinks", () => {
     const { message, reply } = fakeSource(link("200", "300"), {
       "200": fakeChannel({ permissions: [], messages: { "300": quoted } }),
     });
-    await quoteLinks(message, fakeConfig());
+    await quoteService.quoteLinks(message, fakeConfig());
     expect(reply).not.toHaveBeenCalled();
   });
 
@@ -867,7 +915,7 @@ describe("quoteLinks", () => {
     const { message, reply } = fakeSource(link("200", "300"), {
       "200": fakeChannel({ messages: { "300": quoted } }),
     });
-    await quoteLinks(message, fakeConfig(["999"]));
+    await quoteService.quoteLinks(message, fakeConfig(["999"]));
     expect(reply).not.toHaveBeenCalled();
   });
 
@@ -887,11 +935,14 @@ describe("quoteLinks", () => {
       );
 
     const refused = post();
-    await quoteLinks(refused.message, fakeConfig());
+    await quoteService.quoteLinks(refused.message, fakeConfig());
     expect(refused.reply).not.toHaveBeenCalled();
 
     const allowed = post();
-    await quoteLinks(allowed.message, fakeConfig([], [], ["player"]));
+    await quoteService.quoteLinks(
+      allowed.message,
+      fakeConfig([], [], ["player"])
+    );
     expect(allowed.reply).toHaveBeenCalledWith(
       expect.objectContaining({ failIfNotExists: false })
     );
@@ -901,7 +952,7 @@ describe("quoteLinks", () => {
     const { message, reply } = fakeSource(link("200", "300"), {
       "200": fakeChannel({ parentId: "cat", messages: { "300": quoted } }),
     });
-    await quoteLinks(message, fakeConfig([], ["cat"]));
+    await quoteService.quoteLinks(message, fakeConfig([], ["cat"]));
     expect(reply).not.toHaveBeenCalled();
   });
 });
