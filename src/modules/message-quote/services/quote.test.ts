@@ -29,6 +29,8 @@ const GUILD = "100";
 const t = (key: string, options?: Record<string, unknown>) =>
   options ? `${key} ${JSON.stringify(options)}` : key;
 
+const everyone = { id: GUILD };
+
 const READ = [
   PermissionFlagsBits.ViewChannel,
   PermissionFlagsBits.ReadMessageHistory,
@@ -47,7 +49,9 @@ function fakeChannel(
     type?: ChannelType;
     nsfw?: boolean;
     permissions?: bigint[];
+    public?: boolean;
     threadMembers?: string[];
+    cachedThreadMembers?: string[];
     messages?: Record<string, unknown>;
   } = {}
 ) {
@@ -58,13 +62,23 @@ function fakeChannel(
     type: options.type ?? ChannelType.GuildText,
     nsfw: options.nsfw ?? false,
     name: "general",
+    guild: { roles: { everyone } },
     isThread: () => options.thread ?? false,
     isTextBased: () => true,
-    permissionsFor: () => new PermissionsBitField(options.permissions ?? READ),
+    permissionsFor: (target: unknown) =>
+      target === everyone
+        ? new PermissionsBitField(
+            options.public === false ? [] : [PermissionFlagsBits.ViewChannel]
+          )
+        : new PermissionsBitField(options.permissions ?? READ),
     members: {
-      fetch: async (id: string) => {
-        if (!options.threadMembers?.includes(id)) throw new Error("unknown");
-        return { id };
+      fetch: async (fetchOptions: { member: string; force?: boolean }) => {
+        const known =
+          options.threadMembers?.includes(fetchOptions.member) ||
+          (!fetchOptions.force &&
+            options.cachedThreadMembers?.includes(fetchOptions.member));
+        if (!known) throw new Error("unknown");
+        return { id: fetchOptions.member };
       },
     },
     messages: {
@@ -91,7 +105,7 @@ function fakeQuoted(
       contentType: string;
       spoiler: boolean;
     }>[];
-    snapshot?: { content: string };
+    snapshot?: { content: string; embeds?: unknown[] };
     embeds?: unknown[];
     authorId?: string;
     withMember?: boolean;
@@ -113,7 +127,16 @@ function fakeQuoted(
     attachments,
     messageSnapshots: new Collection(
       options.snapshot
-        ? [["s", { ...options.snapshot, attachments: new Collection() }]]
+        ? [
+            [
+              "s",
+              {
+                embeds: [],
+                ...options.snapshot,
+                attachments: new Collection(),
+              },
+            ],
+          ]
         : []
     ),
     embeds: options.embeds ?? [],
@@ -140,6 +163,7 @@ function fakeSource(
     channel,
     member,
     author: { id: member.id },
+    client: { user: { id: "bot" } },
     guild: {
       channels: {
         fetch: async (id: string) => {
@@ -155,10 +179,17 @@ function fakeSource(
   return { message, reply };
 }
 
-function fakeConfig(excluded: string[] = []) {
+function fakeConfig(
+  excluded: string[] = [],
+  excludedCategories: string[] = []
+) {
+  const values: Record<string, { id: string }[]> = {
+    excludedChannels: excluded.map((id) => ({ id })),
+    excludedCategories: excludedCategories.map((id) => ({ id })),
+  };
   return {
     t,
-    get: () => excluded.map((id) => ({ id })),
+    get: (key: string) => values[key],
   } as unknown as ConfigProvider<MessageQuoteConfigSchema>;
 }
 
@@ -195,6 +226,7 @@ describe("parseMessageLinks", () => {
       `\`${link("1", "1")}\``,
       `\`\`\`\n${link("1", "2")}\n\`\`\``,
       `||${link("1", "3")}||`,
+      `\`\`${link("1", "4")}\`\``,
     ].join(" ");
     expect(parseMessageLinks(content, GUILD)).toEqual([]);
   });
@@ -284,6 +316,15 @@ describe("canRead", () => {
     expect(await canRead(member, privateThread([member.id]))).toBe(true);
   });
 
+  it("asks Discord instead of trusting a stale thread member cache", async () => {
+    const channel = fakeChannel({
+      thread: true,
+      type: ChannelType.PrivateThread,
+      cachedThreadMembers: [member.id],
+    });
+    expect(await canRead(member, channel)).toBe(false);
+  });
+
   it("lets thread managers read private threads", async () => {
     const channel = fakeChannel({
       thread: true,
@@ -326,6 +367,30 @@ describe("resolveQuote", () => {
       fakeChannel({ id: "999", nsfw: true })
     );
     expect(await resolveQuote(message, member, target, new Set())).toBe(quoted);
+  });
+
+  it("refuses to bring a private channel into a public one", async () => {
+    const { message } = fakeSource("", {
+      "200": fakeChannel({ public: false, messages: { "300": quoted } }),
+    });
+    expect(await resolveQuote(message, member, target, new Set())).toBeNull();
+  });
+
+  it("allows a private channel to be quoted in a private one", async () => {
+    const { message } = fakeSource(
+      "",
+      { "200": fakeChannel({ public: false, messages: { "300": quoted } }) },
+      fakeChannel({ id: "999", public: false })
+    );
+    expect(await resolveQuote(message, member, target, new Set())).toBe(quoted);
+  });
+
+  it("never quotes the bot's own messages", async () => {
+    const own = fakeQuoted({ authorId: "bot" });
+    const { message } = fakeSource("", {
+      "200": fakeChannel({ messages: { "300": own } }),
+    });
+    expect(await resolveQuote(message, member, target, new Set())).toBeNull();
   });
 
   it("refuses an excluded channel", async () => {
@@ -434,6 +499,29 @@ describe("quoteEmbed", () => {
     expect(embed.image?.url).toBe("https://cdn/i");
   });
 
+  it("does not reveal a link preview hidden behind a spoiler", () => {
+    const embed = quoteEmbed(
+      fakeQuoted({
+        content: "||https://example.com/i.png||",
+        embeds: [{ image: { url: "https://example.com/i.png" } }],
+      }),
+      member,
+      t
+    ).data;
+    expect(embed.image).toBeUndefined();
+  });
+
+  it("uses the embed of a forwarded message without text", () => {
+    const embed = quoteEmbed(
+      fakeQuoted({
+        snapshot: { content: "", embeds: [{ description: "forwarded embed" }] },
+      }),
+      member,
+      t
+    ).data;
+    expect(embed.description).toBe("forwarded embed");
+  });
+
   it("says when there is nothing to show", () => {
     expect(quoteEmbed(fakeQuoted(), member, t).data.description).toBe(
       "quote.noContent"
@@ -473,6 +561,30 @@ describe("quoteReply", () => {
     );
     expect(reply.allowedMentions).toEqual({ parse: [], repliedUser: false });
   });
+
+  it("keeps several long quotes under Discord's total embed size", () => {
+    const longQuoter = {
+      id: "1",
+      displayName: "q".repeat(32),
+    } as unknown as GuildMember;
+    const reply = quoteReply(
+      [1, 2, 3].map(() => fakeQuoted({ content: "a".repeat(4000) })),
+      longQuoter,
+      t
+    );
+    const total = reply.embeds
+      .map((embed) => embed.data)
+      .reduce(
+        (sum, data) =>
+          sum +
+          (data.title?.length ?? 0) +
+          (data.description?.length ?? 0) +
+          (data.footer?.text.length ?? 0) +
+          (data.author?.name.length ?? 0),
+        0
+      );
+    expect(total).toBeLessThanOrEqual(6000);
+  });
 });
 
 describe("quoteLinks", () => {
@@ -506,6 +618,14 @@ describe("quoteLinks", () => {
       "200": fakeChannel({ messages: { "300": quoted } }),
     });
     await quoteLinks(message, fakeConfig(["999"]));
+    expect(reply).not.toHaveBeenCalled();
+  });
+
+  it("ignores messages from an excluded category", async () => {
+    const { message, reply } = fakeSource(link("200", "300"), {
+      "200": fakeChannel({ parentId: "cat", messages: { "300": quoted } }),
+    });
+    await quoteLinks(message, fakeConfig([], ["cat"]));
     expect(reply).not.toHaveBeenCalled();
   });
 });

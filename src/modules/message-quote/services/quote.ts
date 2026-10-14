@@ -19,10 +19,15 @@ export const MAX_QUOTES = 3;
 
 const DESCRIPTION_LIMIT = 4096;
 
+const EMBEDS_LIMIT = 6000;
+
+const EMBED_OVERHEAD = 300;
+
 const LINK_PATTERN =
   /(<)?https?:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)(>)?/g;
 
-const HIDDEN_PATTERN = /```[\s\S]*?```|`[^`\n]*`|\|\|[\s\S]*?\|\|/g;
+const HIDDEN_PATTERN =
+  /```[\s\S]*?```|``[\s\S]*?``|`[^`\n]*`|\|\|[\s\S]*?\|\|/g;
 
 const READ_PERMISSIONS = [
   PermissionFlagsBits.ViewChannel,
@@ -78,6 +83,17 @@ export function isNsfw(channel: GuildBasedChannel): boolean {
   return !!base && "nsfw" in base && base.nsfw;
 }
 
+export function isPublic(channel: GuildBasedChannel): boolean {
+  if (channel.type === ChannelType.PrivateThread) {
+    return false;
+  }
+  return (
+    channel
+      .permissionsFor(channel.guild.roles.everyone)
+      ?.has(PermissionFlagsBits.ViewChannel) ?? false
+  );
+}
+
 export async function canRead(
   member: GuildMember,
   channel: GuildBasedChannel
@@ -92,7 +108,11 @@ export async function canRead(
   ) {
     return true;
   }
-  return (await channel.members.fetch(member.id).catch(() => null)) !== null;
+  return (
+    (await channel.members
+      .fetch({ member: member.id, force: true, cache: false })
+      .catch(() => null)) !== null
+  );
 }
 
 export async function resolveQuote(
@@ -108,11 +128,13 @@ export async function resolveQuote(
     !channel?.isTextBased() ||
     isExcluded(channel, excludedIds) ||
     (isNsfw(channel) && !isNsfw(source.channel)) ||
+    (!isPublic(channel) && isPublic(source.channel)) ||
     !(await canRead(member, channel))
   ) {
     return null;
   }
-  return channel.messages.fetch(link.messageId).catch(() => null);
+  const quoted = await channel.messages.fetch(link.messageId).catch(() => null);
+  return quoted?.author.id === source.client.user.id ? null : quoted;
 }
 
 function truncate(text: string, limit: number): string {
@@ -126,7 +148,8 @@ function isImage(attachment: Attachment): boolean {
 export function quoteEmbed(
   quoted: Message<true>,
   quoter: GuildMember,
-  t: TFunction
+  t: TFunction,
+  descriptionLimit = DESCRIPTION_LIMIT
 ): EmbedBuilder {
   const snapshot = quoted.messageSnapshots.first();
   const attachments = [
@@ -137,7 +160,7 @@ export function quoteEmbed(
   const files = attachments
     .filter((attachment) => attachment !== image)
     .map((attachment) => `📎 [${attachment.name}](${attachment.url})`);
-  const firstEmbed = quoted.embeds[0];
+  const firstEmbed = quoted.embeds[0] ?? snapshot?.embeds[0];
   const text =
     quoted.content ||
     snapshot?.content ||
@@ -146,7 +169,10 @@ export function quoteEmbed(
     "";
   const description = [text, ...files].filter(Boolean).join("\n");
   const imageUrl =
-    image?.url ?? firstEmbed?.image?.url ?? firstEmbed?.thumbnail?.url;
+    image?.url ??
+    (text.includes("||")
+      ? undefined
+      : (firstEmbed?.image?.url ?? firstEmbed?.thumbnail?.url));
 
   const author = quoted.member ?? quoted.author;
   const embed = new EmbedBuilder()
@@ -157,7 +183,7 @@ export function quoteEmbed(
     })
     .setDescription(
       description
-        ? truncate(description, DESCRIPTION_LIMIT)
+        ? truncate(description, descriptionLimit)
         : t("quote.noContent")
     )
     .setFooter({
@@ -191,12 +217,18 @@ export function quoteReply(
           : t("quote.jump")
       )
   );
+  const descriptionLimit = Math.min(
+    DESCRIPTION_LIMIT,
+    Math.floor(EMBEDS_LIMIT / quotes.length) - EMBED_OVERHEAD
+  );
   const allowedUserIds = [
     quoter.id,
     ...quotes.map((quoted) => quoted.author.id),
   ];
   return {
-    embeds: quotes.map((quoted) => quoteEmbed(quoted, quoter, t)),
+    embeds: quotes.map((quoted) =>
+      quoteEmbed(quoted, quoter, t, descriptionLimit)
+    ),
     components: [
       new ActionRowBuilder<ButtonBuilder>().addComponents(
         ...jumpButtons,
@@ -217,7 +249,10 @@ export async function quoteLinks(
   }
 
   const excludedIds = new Set(
-    (config.get("excludedChannels") ?? []).map((channel) => channel.id)
+    [
+      ...(config.get("excludedChannels") ?? []),
+      ...(config.get("excludedCategories") ?? []),
+    ].map((channel) => channel.id)
   );
   if (isExcluded(message.channel, excludedIds)) {
     return;
