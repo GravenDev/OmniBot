@@ -9,10 +9,15 @@ import {
   type GuildMember,
   type Message,
   PermissionFlagsBits,
+  PermissionsBitField,
+  type Role,
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
-import { deleteButton } from "#modules/message-quote/interactions/delete.button.js";
+import {
+  deleteButton,
+  QUOTE_CUSTOM_ID,
+} from "#modules/message-quote/interactions/delete.button.js";
 import type { MessageQuoteConfigSchema } from "#modules/message-quote/message-quote.config.js";
 
 export const MAX_QUOTES = 3;
@@ -83,14 +88,53 @@ export function isNsfw(channel: GuildBasedChannel): boolean {
   return !!base && "nsfw" in base && base.nsfw;
 }
 
-export function isPublic(channel: GuildBasedChannel): boolean {
-  if (channel.type === ChannelType.PrivateThread) {
+function viewableBy(channel: GuildBasedChannel, role: Role): boolean {
+  const base = channel.isThread() ? channel.parent : channel;
+  if (!base) {
     return false;
   }
+  const everyone = channel.guild.roles.everyone;
+  const permissions = new PermissionsBitField([
+    everyone.permissions,
+    role.permissions,
+  ]);
+  for (const id of [everyone.id, role.id]) {
+    const overwrite = base.permissionOverwrites.cache.get(id);
+    if (overwrite) {
+      permissions.remove(overwrite.deny).add(overwrite.allow);
+    }
+  }
+  return permissions.has(PermissionFlagsBits.ViewChannel);
+}
+
+export function widensAudience(
+  quotedChannel: GuildBasedChannel,
+  destination: GuildBasedChannel
+): boolean {
+  if (quotedChannel.id === destination.id) {
+    return false;
+  }
+  if (quotedChannel.type === ChannelType.PrivateThread) {
+    return true;
+  }
+  return quotedChannel.guild.roles.cache.some(
+    (role) => viewableBy(destination, role) && !viewableBy(quotedChannel, role)
+  );
+}
+
+function isOwnQuote(quoted: Message<true>): boolean {
   return (
-    channel
-      .permissionsFor(channel.guild.roles.everyone)
-      ?.has(PermissionFlagsBits.ViewChannel) ?? false
+    quoted.author.id === quoted.client.user.id &&
+    quoted.components.some(
+      (row) =>
+        "components" in row &&
+        row.components.some(
+          (component) =>
+            "customId" in component &&
+            typeof component.customId === "string" &&
+            component.customId.startsWith(`${QUOTE_CUSTOM_ID}:`)
+        )
+    )
   );
 }
 
@@ -128,13 +172,13 @@ export async function resolveQuote(
     !channel?.isTextBased() ||
     isExcluded(channel, excludedIds) ||
     (isNsfw(channel) && !isNsfw(source.channel)) ||
-    (!isPublic(channel) && isPublic(source.channel)) ||
+    widensAudience(channel, source.channel) ||
     !(await canRead(member, channel))
   ) {
     return null;
   }
   const quoted = await channel.messages.fetch(link.messageId).catch(() => null);
-  return quoted?.author.id === source.client.user.id ? null : quoted;
+  return quoted && !isOwnQuote(quoted) ? quoted : null;
 }
 
 function truncate(text: string, limit: number): string {

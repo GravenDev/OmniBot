@@ -249,14 +249,14 @@ Un message transféré est cité avec son contenu transféré. Un message sans t
 
 - Les liens vers un autre serveur
 - Les messages d'un salon que le membre qui poste le lien ne peut pas lire (voir le salon et lire l'historique ; pour un fil privé, en être membre ou pouvoir gérer les fils). Le bot ne révèle jamais un salon auquel le membre n'a pas accès.
-- Les messages d'un salon que `@everyone` ne voit pas, quand le lien est posté dans un salon que `@everyone` voit : un message du staff n'est cité que dans un autre salon privé
-- Les messages du bot lui-même
+- Les messages qui seraient montrés à un public plus large que celui du salon d'origine : le bot compare, rôle par rôle (chaque rôle avec `@everyone`), qui voit le salon d'origine et qui voit le salon où le lien est posté. Si un rôle voit le second sans voir le premier, le message n'est pas cité. Un message de `#staff` n'est donc jamais cité dans `#général`, même quand l'accès au serveur passe par un rôle de membre. Un message d'un fil privé n'est cité que dans ce même fil. Les autorisations accordées à un membre précis (et non à un rôle) ne sont pas prises en compte.
+- Les citations publiées par le bot lui-même (ses autres messages, comme les annonces, restent citables)
 - Les messages d'un salon NSFW, sauf si le lien est posté dans un salon NSFW
 - Les liens entre chevrons (`<https://…>`), dans du code ou sous spoiler
 - Les messages des salons et catégories exclus, et les liens postés dans un salon exclu
 - Les liens postés par des bots
 
-Au plus 3 messages sont cités par message, les doublons sont ignorés. Si aucun lien n'est citable, le bot ne répond pas. Une image sous spoiler n'est jamais affichée, seulement listée en lien.
+Au plus 3 messages sont cités par message, les doublons sont ignorés. Si aucun lien n'est citable, le bot ne répond pas. Une pièce jointe image sous spoiler n'est jamais affichée, seulement listée en lien. Dès que le texte cité contient un spoiler (`||`), l'aperçu de lien n'est pas repris.
 
 ### Bouton « Supprimer »
 
