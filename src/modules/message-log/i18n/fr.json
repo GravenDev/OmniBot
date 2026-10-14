@@ -1,0 +1,27 @@
+{
+  "config.logChannel.name": "Salon des logs",
+  "config.logChannel.description": "Salon où les messages supprimés et modifiés sont consignés. Rien n'est consigné tant qu'il n'est pas défini.",
+  "config.excludedChannels.name": "Salons exclus",
+  "config.excludedChannels.description": "Salons ou catégories dont les messages ne sont pas consignés.",
+  "config.logEdits.name": "Consigner les modifications",
+  "config.logEdits.description": "Consigne aussi les messages modifiés, avec leur contenu avant et après.",
+
+  "unknownAuthor": "un auteur inconnu",
+  "sentAt": "Envoyé le {{sentAt}}",
+
+  "deleted.title": "🗑️ Message supprimé, envoyé par {{author}} dans {{channel}}",
+  "deleted.by": "Supprimé par {{moderator}}",
+  "deleted.unknownContent": "*Contenu inconnu : le message a été envoyé avant le démarrage du bot.*",
+
+  "edited.title": "✏️ Message modifié par {{author}} dans {{channel}}",
+  "edited.jump": "[Aller au message]({{url}})",
+  "edited.before": "Avant",
+  "edited.after": "Après",
+  "edited.empty": "*Pas de texte*",
+
+  "bulk.title": "🗑️ {{count}} messages supprimés d'un coup dans {{channel}}",
+  "bulk.known": "Contenus connus : {{count}} (fichier joint).",
+
+  "footer.full": "ID auteur : {{authorId}} | ID message : {{messageId}}",
+  "footer.message": "ID message : {{messageId}}"
+}

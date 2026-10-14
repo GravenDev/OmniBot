@@ -1,0 +1,27 @@
+{
+  "config.logChannel.name": "Log channel",
+  "config.logChannel.description": "Channel where deleted and edited messages are logged. Nothing is logged until it is set.",
+  "config.excludedChannels.name": "Excluded channels",
+  "config.excludedChannels.description": "Channels or categories whose messages are not logged.",
+  "config.logEdits.name": "Log edits",
+  "config.logEdits.description": "Also logs edited messages, with their content before and after.",
+
+  "unknownAuthor": "an unknown author",
+  "sentAt": "Sent {{sentAt}}",
+
+  "deleted.title": "🗑️ Deleted message, sent by {{author}} in {{channel}}",
+  "deleted.by": "Deleted by {{moderator}}",
+  "deleted.unknownContent": "*Content unknown: the message was sent before the bot started.*",
+
+  "edited.title": "✏️ Message edited by {{author}} in {{channel}}",
+  "edited.jump": "[Go to message]({{url}})",
+  "edited.before": "Before",
+  "edited.after": "After",
+  "edited.empty": "*No text*",
+
+  "bulk.title": "🗑️ {{count}} messages deleted at once in {{channel}}",
+  "bulk.known": "Known content: {{count}} (attached file).",
+
+  "footer.full": "Author ID: {{authorId}} | Message ID: {{messageId}}",
+  "footer.message": "Message ID: {{messageId}}"
+}
