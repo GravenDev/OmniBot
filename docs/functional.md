@@ -449,7 +449,7 @@ Les bots, les messages système, les salons et catégories exclus et, par défau
 
 ### Bilan quotidien
 
-Chaque jour à minuit (heure de Paris), le bot publie dans le salon configuré le bilan de la veille : nombre de membres, nouveaux membres, départs, messages postés, membres actifs, salons actifs, réactions ajoutées, et les 5 réactions, salons et membres les plus actifs. La description indique depuis quand le comptage a commencé (premier événement compté sur le serveur ; une désactivation temporaire du module ne remet pas cette date à zéro). Les membres cités ne sont pas notifiés. Tant que le salon n'est pas défini, ou si rien n'a encore été compté, rien n'est publié.
+Chaque jour à minuit (heure de Paris), le bot publie dans le salon configuré le bilan de la veille : nombre de membres (bots compris), nouveaux membres et départs (hors bots), messages postés, membres actifs, salons actifs, réactions ajoutées, et les 5 réactions, salons et membres les plus actifs. La description indique depuis quand le comptage a commencé (premier événement compté sur le serveur ; une désactivation temporaire du module ne remet pas cette date à zéro). Les membres cités ne sont pas notifiés. Tant que le salon n'est pas défini, ou si rien n'a encore été compté, rien n'est publié.
 
 ### Configuration — `/config server-stats`
 
