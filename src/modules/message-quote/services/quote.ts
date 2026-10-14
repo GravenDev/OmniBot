@@ -88,7 +88,11 @@ export function isNsfw(channel: GuildBasedChannel): boolean {
   return !!base && "nsfw" in base && base.nsfw;
 }
 
-function viewableBy(channel: GuildBasedChannel, role: Role): boolean {
+function grants(
+  channel: GuildBasedChannel,
+  role: Role,
+  required: bigint[]
+): boolean {
   const base = channel.isThread() ? channel.parent : channel;
   if (!base) {
     return false;
@@ -104,12 +108,13 @@ function viewableBy(channel: GuildBasedChannel, role: Role): boolean {
       permissions.remove(overwrite.deny).add(overwrite.allow);
     }
   }
-  return permissions.has(PermissionFlagsBits.ViewChannel);
+  return permissions.has(required);
 }
 
 export function widensAudience(
   quotedChannel: GuildBasedChannel,
-  destination: GuildBasedChannel
+  destination: GuildBasedChannel,
+  ignoredRoleIds: ReadonlySet<string> = new Set()
 ): boolean {
   if (quotedChannel.id === destination.id) {
     return false;
@@ -118,7 +123,11 @@ export function widensAudience(
     return true;
   }
   return quotedChannel.guild.roles.cache.some(
-    (role) => viewableBy(destination, role) && !viewableBy(quotedChannel, role)
+    (role) =>
+      !role.managed &&
+      !ignoredRoleIds.has(role.id) &&
+      grants(destination, role, [PermissionFlagsBits.ViewChannel]) &&
+      !grants(quotedChannel, role, READ_PERMISSIONS)
   );
 }
 
@@ -163,7 +172,8 @@ export async function resolveQuote(
   source: Message<true>,
   member: GuildMember,
   link: MessageLink,
-  excludedIds: ReadonlySet<string>
+  excludedIds: ReadonlySet<string>,
+  ignoredRoleIds: ReadonlySet<string> = new Set()
 ): Promise<Message<true> | null> {
   const channel = await source.guild.channels
     .fetch(link.channelId)
@@ -172,7 +182,7 @@ export async function resolveQuote(
     !channel?.isTextBased() ||
     isExcluded(channel, excludedIds) ||
     (isNsfw(channel) && !isNsfw(source.channel)) ||
-    widensAudience(channel, source.channel) ||
+    widensAudience(channel, source.channel, ignoredRoleIds) ||
     !(await canRead(member, channel))
   ) {
     return null;
@@ -302,6 +312,10 @@ export async function quoteLinks(
     return;
   }
 
+  const ignoredRoleIds = new Set(
+    (config.get("ignoredRoles") ?? []).map((role) => role.id)
+  );
+
   const member =
     message.member ??
     (await message.guild.members.fetch(message.author.id).catch(() => null));
@@ -311,7 +325,9 @@ export async function quoteLinks(
 
   const quotes = (
     await Promise.all(
-      links.map((link) => resolveQuote(message, member, link, excludedIds))
+      links.map((link) =>
+        resolveQuote(message, member, link, excludedIds, ignoredRoleIds)
+      )
     )
   ).filter((quoted) => quoted !== null);
   if (quotes.length === 0) {
