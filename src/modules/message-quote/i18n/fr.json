@@ -1,13 +1,13 @@
 {
   "config.excludedChannels.name": "Salons exclus",
-  "config.excludedChannels.description": "Salons ou catégories dont les messages ne sont jamais cités, et où les liens postés ne sont pas cités.",
-
+  "config.excludedChannels.description": "Salons dont les messages ne sont jamais cités, et où les liens postés ne sont pas cités.",
+  "config.excludedCategories.name": "Catégories exclues",
+  "config.excludedCategories.description": "Catégories dont les salons sont traités comme des salons exclus.",
   "quote.footer": "Cité par {{quoter}} | dans #{{channel}}",
   "quote.footerForwarded": "Cité par {{quoter}} | transféré dans #{{channel}}",
   "quote.noContent": "*Message sans texte*",
   "quote.jump": "Aller au message",
   "quote.jumpNumbered": "Message {{number}}",
-
   "delete.button": "Supprimer",
   "delete.notAllowed": "Seuls le membre qui a posté le lien, les auteurs cités et les modérateurs peuvent supprimer cette citation."
 }
