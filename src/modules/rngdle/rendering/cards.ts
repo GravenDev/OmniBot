@@ -18,8 +18,9 @@ import {
   type TierOrError,
 } from "#modules/rngdle/services/scoring.js";
 import { formatSpaced } from "./format.js";
+import { ACCENT } from "./theme.js";
 
-const OUTLINED_TIERS = new Set<TierOrError>([
+const HIGHLIGHTED_TIERS = new Set<TierOrError>([
   "MYTHIC",
   "ANOMALY",
   "EPIC",
@@ -36,7 +37,6 @@ const COUNT_WIDTH = 50;
 const EXPECTED_SIZE = 14;
 const EXPECTED_WIDTH = 56;
 const BAR_HEIGHT = 10;
-const BAR_TRACK: [number, number, number] = [50, 50, 50];
 const SHORTFALL_ALPHA = 0.45;
 const MAX_DEVIATION = 2;
 const PRIOR_DRAWS = 2;
@@ -135,7 +135,7 @@ function scoreBox(title: string, score: number, tier: TierOrError): StatBox {
     title,
     value: ep(score),
     color: TIER_COLORS[tier],
-    outline: OUTLINED_TIERS.has(tier),
+    highlight: HIGHLIGHTED_TIERS.has(tier),
   };
 }
 
@@ -227,7 +227,7 @@ function tierBreakdown(
 
         ctx.beginPath();
         ctx.roundRect(barX, centerY - BAR_HEIGHT / 2, barWidth, BAR_HEIGHT, 5);
-        ctx.fillStyle = rgb(BAR_TRACK);
+        ctx.fillStyle = rgb(PALETTE.track);
         ctx.fill();
 
         const expected = total * TIER_ODDS[tier];
@@ -285,6 +285,7 @@ export function renderProfile(
     subtext: `${labels.roll(formatSpaced(roll.number))} · ${roll.dateText}`,
   });
   return renderStatCard({
+    accent: ACCENT,
     image: data.avatar,
     title: data.username,
     rank: { position: data.serverRank, total: data.totalPlayers },
@@ -331,6 +332,7 @@ export function renderServerStats(
     avatar: roll.avatar,
   });
   return renderStatCard({
+    accent: ACCENT,
     image: data.icon,
     title: labels.title,
     rows: [

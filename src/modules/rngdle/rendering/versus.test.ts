@@ -82,7 +82,7 @@ describe("renderVersus", () => {
       renderVersus(lonely, labels),
     ]);
 
-    expect(size(first)).toEqual({ width: 1000, height: 962 });
+    expect(size(first)).toEqual({ width: 1000, height: 890 });
     expect(size(second)).toEqual(size(first));
     expect(first.equals(second)).toBe(false);
   });

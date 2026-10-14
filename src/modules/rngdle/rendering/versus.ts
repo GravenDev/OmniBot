@@ -1,14 +1,30 @@
 import type { Image, SKRSContext2D } from "@napi-rs/canvas";
 import {
   createBoard,
-  drawCircularImage,
+  drawHighlight,
+  drawPortrait,
   fillTextCentered,
   font,
   PALETTE,
   rgb,
   type Rgb,
 } from "#lib/imaging.js";
-import { fitText } from "#lib/stat-card.js";
+import {
+  BODY_TOP,
+  BOTTOM_MARGIN,
+  drawPanel,
+  fitText,
+  GAP,
+  HEADER_HEIGHT,
+  LABEL_SIZE,
+  PANEL_PADDING,
+  PORTRAIT_SIZE,
+  SUBTEXT_MIN_SIZE,
+  SUBTEXT_SIZE,
+  TITLE_MIN_SIZE,
+  TITLE_SIZE,
+  VALUE_SIZE,
+} from "#lib/stat-card.js";
 import {
   TIER_COLORS,
   type TierOrError,
@@ -20,50 +36,31 @@ import type {
   Winner,
 } from "#modules/rngdle/services/versus.js";
 import { formatSpaced } from "./format.js";
+import { ACCENT } from "./theme.js";
 
 const WIDTH = 1000;
 const MARGIN = 40;
 const CENTER = WIDTH / 2;
-const HEADER_HEIGHT = 240;
-const AVATAR_SIZE = 124;
-const AVATAR_TOP = 28;
-const AVATAR_RING = 5;
-const PLAYER_CENTER = 250;
-const NAME_SIZE = 32;
-const NAME_Y = 196;
-const NAME_MAX_WIDTH = 330;
-const VS_RADIUS = 48;
-const VS_SIZE = 40;
+const HEADER_CENTER = HEADER_HEIGHT / 2;
+const NAME_GAP = 24;
+const VS_SIZE = 28;
+const VS_HALF_WIDTH = 40;
+const NAME_MAX_WIDTH =
+  CENTER - VS_HALF_WIDTH - MARGIN - PORTRAIT_SIZE - 2 * NAME_GAP;
 
-const BODY_TOP = HEADER_HEIGHT + 24;
-const BOTTOM_MARGIN = 28;
 const ROW_HEIGHT = 92;
-const DUEL_HEIGHT = 150;
-const DUEL_CENTER = 58;
-const ROW_GAP = 12;
-const ROW_RADIUS = 12;
-const ACCENT_WIDTH = 6;
-const LABEL_SIZE = 17;
+const DUEL_HEIGHT = 140;
+const DUEL_CENTER = 56;
 const LABEL_HALF_WIDTH = 118;
 const VALUE_OFFSET = 150;
-const VALUE_MAX_WIDTH = CENTER - VALUE_OFFSET - MARGIN - 28;
-const VALUE_SIZE = 36;
-const SUBTEXT_SIZE = 17;
-const ARROW_SIZE = 9;
+const VALUE_MAX_WIDTH = CENTER - VALUE_OFFSET - MARGIN - PANEL_PADDING;
+const ARROW_SIZE = 7;
 const MIN_SCALE = 0.7;
-const LOSER_ALPHA = 0.7;
-const HIGHLIGHT_ALPHA = 0.13;
+const LOSER_ALPHA = 0.5;
 const DUEL_DETAIL_SIZE = 16;
-const DUEL_BAR_HEIGHT = 12;
-const DUEL_BAR_INSET = 28;
+const DUEL_BAR_HEIGHT = 10;
 const DUEL_BAR_GAP = 4;
-
-const SIDE_COLORS: Record<Side, Rgb> = {
-  left: [77, 144, 254],
-  right: [255, 82, 110],
-};
-const TIE_COLOR: Rgb = [110, 110, 110];
-const SEPARATOR_COLOR: Rgb = [70, 70, 70];
+const PANEL_RADIUS = 12;
 
 export interface VersusPlayer {
   name: string;
@@ -143,86 +140,66 @@ function sideSign(side: Side): number {
   return side === "left" ? -1 : 1;
 }
 
+function isLoser(winner: Winner | null, side: Side): boolean {
+  return winner !== null && winner !== "tie" && winner !== side;
+}
+
+function sideColor(winner: Winner | null, side: Side): Rgb {
+  if (winner === side) {
+    return ACCENT;
+  }
+  return isLoser(winner, side) ? PALETTE.subtext : PALETTE.text;
+}
+
 function drawHeader(
   ctx: SKRSContext2D,
   data: VersusImageData,
   labels: VersusLabels
 ): void {
+  const portraitY = HEADER_CENTER - PORTRAIT_SIZE / 2;
   for (const side of SIDES) {
     const player = data[side];
-    const centerX = CENTER + sideSign(side) * PLAYER_CENTER;
-    const radius = AVATAR_SIZE / 2;
-    ctx.beginPath();
-    ctx.arc(centerX, AVATAR_TOP + radius, radius + AVATAR_RING, 0, Math.PI * 2);
-    ctx.fillStyle = rgb(SIDE_COLORS[side]);
-    ctx.fill();
-    drawCircularImage(
+    const left = side === "left";
+    const portraitX = left ? MARGIN : WIDTH - MARGIN - PORTRAIT_SIZE;
+    drawPortrait(
       ctx,
       player.avatar,
-      centerX - radius,
-      AVATAR_TOP,
-      AVATAR_SIZE
+      portraitX,
+      portraitY,
+      PORTRAIT_SIZE,
+      ACCENT
     );
 
-    const name = fit(ctx, player.name, NAME_SIZE, NAME_MAX_WIDTH);
+    const name = fitText(
+      ctx,
+      player.name,
+      TITLE_SIZE,
+      NAME_MAX_WIDTH,
+      TITLE_MIN_SIZE
+    );
+    const nameX = left
+      ? portraitX + PORTRAIT_SIZE + NAME_GAP
+      : portraitX - NAME_GAP;
     drawCentered(
       ctx,
       name.text,
-      centerX,
-      NAME_Y,
+      nameX,
+      HEADER_CENTER,
       name.size,
       PALETTE.text,
-      "center"
+      left ? "left" : "right"
     );
   }
 
-  const vsCenterY = AVATAR_TOP + AVATAR_SIZE / 2;
-  ctx.beginPath();
-  ctx.arc(CENTER, vsCenterY, VS_RADIUS, 0, Math.PI * 2);
-  ctx.fillStyle = rgb(PALETTE.background);
-  ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = rgb(SEPARATOR_COLOR);
-  ctx.stroke();
   drawCentered(
     ctx,
     labels.vs,
     CENTER,
-    vsCenterY,
+    HEADER_CENTER,
     VS_SIZE,
-    PALETTE.text,
+    PALETTE.subtext,
     "center"
   );
-}
-
-function drawRowBackground(
-  ctx: SKRSContext2D,
-  y: number,
-  height: number,
-  winner: Winner | null
-): void {
-  const width = WIDTH - 2 * MARGIN;
-  ctx.save();
-  ctx.beginPath();
-  ctx.roundRect(MARGIN, y, width, height, ROW_RADIUS);
-  ctx.fillStyle = rgb(PALETTE.box);
-  ctx.fill();
-  ctx.clip();
-  if (winner === "left" || winner === "right") {
-    const color = SIDE_COLORS[winner];
-    const x = winner === "left" ? MARGIN : CENTER;
-    ctx.globalAlpha = HIGHLIGHT_ALPHA;
-    ctx.fillStyle = rgb(color);
-    ctx.fillRect(x, y, width / 2, height);
-    ctx.globalAlpha = 1;
-    ctx.fillRect(
-      winner === "left" ? MARGIN : WIDTH - MARGIN - ACCENT_WIDTH,
-      y,
-      ACCENT_WIDTH,
-      height
-    );
-  }
-  ctx.restore();
 }
 
 function drawArrow(ctx: SKRSContext2D, side: Side, centerY: number): void {
@@ -234,8 +211,35 @@ function drawArrow(ctx: SKRSContext2D, side: Side, centerY: number): void {
   ctx.lineTo(base, centerY - ARROW_SIZE);
   ctx.lineTo(base, centerY + ARROW_SIZE);
   ctx.closePath();
-  ctx.fillStyle = rgb(SIDE_COLORS[side]);
+  ctx.fillStyle = rgb(ACCENT);
   ctx.fill();
+}
+
+function drawRow(
+  ctx: SKRSContext2D,
+  y: number,
+  height: number,
+  winner: Winner | null
+): void {
+  const width = WIDTH - 2 * MARGIN;
+  drawPanel(ctx, MARGIN, y, width, height);
+  if (winner !== "left" && winner !== "right") {
+    return;
+  }
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(MARGIN, y, width, height, PANEL_RADIUS);
+  ctx.clip();
+  drawHighlight(
+    ctx,
+    winner === "left" ? MARGIN : CENTER,
+    y,
+    width / 2,
+    height,
+    ACCENT,
+    { edge: winner }
+  );
+  ctx.restore();
 }
 
 function drawValue(
@@ -252,8 +256,7 @@ function drawValue(
     return;
   }
 
-  const losing = winner !== null && winner !== "tie" && winner !== side;
-  ctx.globalAlpha = losing ? LOSER_ALPHA : 1;
+  ctx.globalAlpha = isLoser(winner, side) ? LOSER_ALPHA : 1;
   const fitted = fit(ctx, value.text, VALUE_SIZE, VALUE_MAX_WIDTH);
   const valueY = value.subtext ? centerY - 11 : centerY;
   drawCentered(
@@ -266,7 +269,13 @@ function drawValue(
     align
   );
   if (value.subtext) {
-    const subtext = fit(ctx, value.subtext, SUBTEXT_SIZE, VALUE_MAX_WIDTH);
+    const subtext = fitText(
+      ctx,
+      value.subtext,
+      SUBTEXT_SIZE,
+      VALUE_MAX_WIDTH,
+      SUBTEXT_MIN_SIZE
+    );
     drawCentered(
       ctx,
       subtext.text,
@@ -281,12 +290,7 @@ function drawValue(
 }
 
 function drawLabel(ctx: SKRSContext2D, label: string, centerY: number): void {
-  const fitted = fit(
-    ctx,
-    label.toUpperCase(),
-    LABEL_SIZE,
-    LABEL_HALF_WIDTH * 2 - 8
-  );
+  const fitted = fit(ctx, label, LABEL_SIZE, LABEL_HALF_WIDTH * 2 - 8);
   drawCentered(
     ctx,
     fitted.text,
@@ -299,7 +303,7 @@ function drawLabel(ctx: SKRSContext2D, label: string, centerY: number): void {
 }
 
 function drawLine(ctx: SKRSContext2D, line: Line, y: number): void {
-  drawRowBackground(ctx, y, ROW_HEIGHT, line.winner);
+  drawRow(ctx, y, ROW_HEIGHT, line.winner);
   const centerY = y + ROW_HEIGHT / 2;
   drawLabel(ctx, line.label, centerY);
   for (const side of SIDES) {
@@ -310,20 +314,27 @@ function drawLine(ctx: SKRSContext2D, line: Line, y: number): void {
   }
 }
 
-function drawDuelBar(ctx: SKRSContext2D, duel: HeadToHead, y: number): void {
-  const left = MARGIN + DUEL_BAR_INSET;
-  const width = WIDTH - 2 * (MARGIN + DUEL_BAR_INSET);
-  const segments = [
-    { count: duel.left, color: SIDE_COLORS.left },
-    { count: duel.ties, color: TIE_COLOR },
-    { count: duel.right, color: SIDE_COLORS.right },
-  ].filter((segment) => segment.count > 0);
-  const available = width - DUEL_BAR_GAP * (segments.length - 1);
-
+function drawDuelBar(
+  ctx: SKRSContext2D,
+  duel: HeadToHead,
+  winner: Winner | null,
+  y: number
+): void {
+  const left = MARGIN + PANEL_PADDING;
+  const width = WIDTH - 2 * left;
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(left, y, width, DUEL_BAR_HEIGHT, DUEL_BAR_HEIGHT / 2);
   ctx.clip();
+  ctx.fillStyle = rgb(PALETTE.track);
+  ctx.fillRect(left, y, width, DUEL_BAR_HEIGHT);
+
+  const segments = [
+    { count: duel.left, color: sideColor(winner, "left") },
+    { count: duel.ties, color: PALETTE.placeholder },
+    { count: duel.right, color: sideColor(winner, "right") },
+  ].filter((segment) => segment.count > 0);
+  const available = width - DUEL_BAR_GAP * (segments.length - 1);
   let x = left;
   segments.forEach((segment, index) => {
     const segmentWidth =
@@ -344,7 +355,7 @@ function drawDuel(
   labels: VersusLabels,
   y: number
 ): void {
-  drawRowBackground(ctx, y, DUEL_HEIGHT, winner);
+  drawRow(ctx, y, DUEL_HEIGHT, winner);
   const centerY = y + DUEL_CENTER;
   const hasDays = duel.days > 0;
   drawLabel(ctx, labels.headToHead, centerY - 11);
@@ -368,11 +379,7 @@ function drawDuel(
     drawValue(
       ctx,
       hasDays
-        ? {
-            text: formatSpaced(duel[side]),
-            color: duel[side] > 0 ? SIDE_COLORS[side] : PALETTE.text,
-            subtext: labels.wins(duel[side]),
-          }
+        ? { text: formatSpaced(duel[side]), subtext: labels.wins(duel[side]) }
         : null,
       side,
       centerY,
@@ -383,21 +390,7 @@ function drawDuel(
     drawArrow(ctx, winner, centerY - 11);
   }
 
-  const barY = y + DUEL_HEIGHT - 32;
-  if (hasDays) {
-    drawDuelBar(ctx, duel, barY);
-  } else {
-    ctx.beginPath();
-    ctx.roundRect(
-      MARGIN + DUEL_BAR_INSET,
-      barY,
-      WIDTH - 2 * (MARGIN + DUEL_BAR_INSET),
-      DUEL_BAR_HEIGHT,
-      DUEL_BAR_HEIGHT / 2
-    );
-    ctx.fillStyle = rgb(SEPARATOR_COLOR);
-    ctx.fill();
-  }
+  drawDuelBar(ctx, duel, winner, y + DUEL_HEIGHT - 30);
 }
 
 function lines(data: VersusImageData, labels: VersusLabels): Line[] {
@@ -457,22 +450,19 @@ export async function renderVersus(
 ): Promise<Buffer> {
   const rows = lines(data, labels);
   const height =
-    BODY_TOP +
-    rows.length * (ROW_HEIGHT + ROW_GAP) +
-    DUEL_HEIGHT +
-    BOTTOM_MARGIN;
-  const ctx = createBoard(WIDTH, height, HEADER_HEIGHT);
+    BODY_TOP + rows.length * (ROW_HEIGHT + GAP) + DUEL_HEIGHT + BOTTOM_MARGIN;
+  const ctx = createBoard(WIDTH, height, HEADER_HEIGHT, ACCENT);
   drawHeader(ctx, data, labels);
 
   rows.forEach((line, index) => {
-    drawLine(ctx, line, BODY_TOP + index * (ROW_HEIGHT + ROW_GAP));
+    drawLine(ctx, line, BODY_TOP + index * (ROW_HEIGHT + GAP));
   });
   drawDuel(
     ctx,
     data.headToHead,
     data.winners.headToHead,
     labels,
-    BODY_TOP + rows.length * (ROW_HEIGHT + ROW_GAP)
+    BODY_TOP + rows.length * (ROW_HEIGHT + GAP)
   );
 
   return ctx.canvas.encode("png");

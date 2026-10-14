@@ -9,6 +9,7 @@ import {
   type TierOrError,
 } from "#modules/rngdle/services/scoring.js";
 import { formatCompact, formatShort, formatSpaced } from "./format.js";
+import { ACCENT } from "./theme.js";
 
 const ASSETS = new URL("../assets/", import.meta.url);
 const MONO_FONT = "SpaceMonoBold";
@@ -54,6 +55,7 @@ export async function renderDailyLeaderboard(
   return renderLeaderboardTable({
     headers: labels,
     rows,
+    accent: ACCENT,
     width: DAILY_WIDTH,
     columns: [
       {
@@ -98,6 +100,7 @@ export function renderOverallLeaderboard(
   return renderLeaderboardTable({
     headers: labels,
     rows,
+    accent: ACCENT,
     caller,
     columns: [
       {
