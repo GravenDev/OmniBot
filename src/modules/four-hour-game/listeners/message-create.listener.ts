@@ -3,11 +3,8 @@ import type { ConfigProvider } from "#lib/config.js";
 import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
-import { isPlayerMessage } from "#modules/four-hour-game/services/channel-history.js";
-import {
-  formatHeldTime,
-  formatRank,
-} from "#modules/four-hour-game/services/formatting.js";
+import channelHistory from "#modules/four-hour-game/services/channel-history.service.js";
+import formatting from "#modules/four-hour-game/services/formatting.service.js";
 import fourHourGameService, {
   type PlayerRank,
 } from "#modules/four-hour-game/services/four-hour-game.service.js";
@@ -30,11 +27,11 @@ export function buildPointEmbed(
 ): EmbedBuilder {
   const headline = config.t("point.description", {
     user: `<@${announcement.winnerId}>`,
-    duration: formatHeldTime(announcement.heldSeconds, config.t),
+    duration: formatting.formatHeldTime(announcement.heldSeconds, config.t),
   });
   const total = config.t("point.total", { count: announcement.score });
   const summary = announcement.rank
-    ? `${total} · ${formatRank(announcement.rank, config.t)}`
+    ? `${total} · ${formatting.formatRank(announcement.rank, config.t)}`
     : total;
 
   const embed = new EmbedBuilder()
@@ -82,7 +79,11 @@ export default declareEventListener<"messageCreate", FourHourGameConfigSchema>({
   eventType: "messageCreate",
 
   async execute(message: Message, config) {
-    if (!config || !isPlayerMessage(message) || !message.inGuild()) {
+    if (
+      !config ||
+      !channelHistory.isPlayerMessage(message) ||
+      !message.inGuild()
+    ) {
       return;
     }
 

@@ -1,6 +1,6 @@
 import type { TextBasedChannel } from "discord.js";
 import { describe, expect, it } from "vitest";
-import { fetchLatestPlayerMessage } from "./channel-history.js";
+import channelHistory from "./channel-history.service.js";
 
 function channelWith(
   messages: { id: string; bot?: boolean; system?: boolean; at: number }[]
@@ -29,7 +29,7 @@ describe("fetchLatestPlayerMessage", () => {
       { id: "recent", at: 3_000 },
     ]);
 
-    expect(await fetchLatestPlayerMessage(channel)).toEqual({
+    expect(await channelHistory.fetchLatestPlayerMessage(channel)).toEqual({
       messageId: "recent",
       authorId: "author-recent",
       sentAt: new Date(3_000),
@@ -39,6 +39,6 @@ describe("fetchLatestPlayerMessage", () => {
   it("returns null when no player message is left", async () => {
     const channel = channelWith([{ id: "bot", bot: true, at: 1_000 }]);
 
-    expect(await fetchLatestPlayerMessage(channel)).toBeNull();
+    expect(await channelHistory.fetchLatestPlayerMessage(channel)).toBeNull();
   });
 });

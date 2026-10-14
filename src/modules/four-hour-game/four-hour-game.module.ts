@@ -8,7 +8,7 @@ import messageCreateListener from "./listeners/message-create.listener.js";
 import messageDeleteBulkListener from "./listeners/message-delete-bulk.listener.js";
 import messageDeleteListener from "./listeners/message-delete.listener.js";
 import fourHourGameService from "./services/four-hour-game.service.js";
-import { syncAllRounds } from "./services/round-sync.js";
+import roundSync from "./services/round-sync.service.js";
 
 const logger = loggerMaker("four-hour-game");
 
@@ -33,9 +33,11 @@ const fourHourGameModule = defineModule({
     registry.register(jd4hCommand);
     registry.register(jd4hAdminCommand);
 
-    syncAllRounds(fourHourGameModule).catch((err: unknown) =>
-      logger.error({ err }, "Failed to sync rounds at startup")
-    );
+    roundSync
+      .syncAllRounds(fourHourGameModule)
+      .catch((err: unknown) =>
+        logger.error({ err }, "Failed to sync rounds at startup")
+      );
   },
 
   onInstall(_client, guild) {

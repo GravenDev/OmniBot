@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeProfileStats, type AwardedPoint } from "./profile.js";
+import profileService, { type AwardedPoint } from "./profile.service.js";
 
 const now = new Date("2026-10-12T12:00:00Z");
 
@@ -16,7 +16,7 @@ function history(
 describe("computeProfileStats", () => {
   it("returns empty values when the player has no recorded point", () => {
     expect(
-      computeProfileStats(
+      profileService.computeProfileStats(
         history(["bob", "2026-10-01T00:00:00Z"]),
         "alice",
         now
@@ -31,11 +31,13 @@ describe("computeProfileStats", () => {
   });
 
   it("handles an empty history", () => {
-    expect(computeProfileStats([], "alice", now).currentStreak).toBe(0);
+    expect(
+      profileService.computeProfileStats([], "alice", now).currentStreak
+    ).toBe(0);
   });
 
   it("counts only the points of the current UTC calendar month", () => {
-    const stats = computeProfileStats(
+    const stats = profileService.computeProfileStats(
       history(
         ["alice", "2026-09-30T23:59:59Z"],
         ["alice", "2026-10-01T00:00:00Z"],
@@ -50,7 +52,7 @@ describe("computeProfileStats", () => {
   });
 
   it("keeps the longest hold and the latest point", () => {
-    const stats = computeProfileStats(
+    const stats = profileService.computeProfileStats(
       history(
         ["alice", "2026-10-01T00:00:00Z", 20_000],
         ["alice", "2026-10-02T00:00:00Z", 90_000],
@@ -65,7 +67,7 @@ describe("computeProfileStats", () => {
   });
 
   it("counts the current streak back from the last point of the server", () => {
-    const stats = computeProfileStats(
+    const stats = profileService.computeProfileStats(
       history(
         ["alice", "2026-10-01T00:00:00Z"],
         ["alice", "2026-10-02T00:00:00Z"],
@@ -83,7 +85,7 @@ describe("computeProfileStats", () => {
   });
 
   it("has no current streak when someone else scored last", () => {
-    const stats = computeProfileStats(
+    const stats = profileService.computeProfileStats(
       history(
         ["alice", "2026-10-01T00:00:00Z"],
         ["alice", "2026-10-02T00:00:00Z"],
@@ -98,7 +100,7 @@ describe("computeProfileStats", () => {
   });
 
   it("lets the current streak be the record", () => {
-    const stats = computeProfileStats(
+    const stats = profileService.computeProfileStats(
       history(
         ["bob", "2026-10-01T00:00:00Z"],
         ["alice", "2026-10-02T00:00:00Z"],

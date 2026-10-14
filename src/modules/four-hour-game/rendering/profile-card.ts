@@ -1,7 +1,7 @@
 import type { Image } from "@napi-rs/canvas";
 import type { TFunction } from "#lib/i18n.js";
 import { renderStatCard, type StatCard } from "#lib/stat-card.js";
-import { formatHeldTime } from "#modules/four-hour-game/services/formatting.js";
+import formatting from "#modules/four-hour-game/services/formatting.service.js";
 import type { PlayerProfile } from "#modules/four-hour-game/services/four-hour-game.service.js";
 
 const MISSING = "—";
@@ -52,7 +52,7 @@ export function buildProfileCard(
           value:
             profile.bestHoldSeconds === null
               ? MISSING
-              : formatHeldTime(profile.bestHoldSeconds, t),
+              : formatting.formatHeldTime(profile.bestHoldSeconds, t),
         },
       ],
       [

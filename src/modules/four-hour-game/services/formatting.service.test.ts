@@ -3,7 +3,7 @@ import { createT } from "#lib/i18n.js";
 import { initTestI18n } from "#lib/testing.js";
 import en from "#modules/four-hour-game/i18n/en.json" with { type: "json" };
 import fr from "#modules/four-hour-game/i18n/fr.json" with { type: "json" };
-import { formatHeldTime, formatRank } from "./formatting.js";
+import formatting from "./formatting.service.js";
 
 const NAMESPACE = "four-hour-game";
 const frT = createT("fr", NAMESPACE);
@@ -28,13 +28,13 @@ describe("formatHeldTime", () => {
     [2 * DAY + 5 * MINUTE, "2 j", "2d"],
     [0, "0 s", "0s"],
   ])("formats %d seconds", (seconds, french, english) => {
-    expect(formatHeldTime(seconds, frT)).toBe(french);
-    expect(formatHeldTime(seconds, enT)).toBe(english);
+    expect(formatting.formatHeldTime(seconds, frT)).toBe(french);
+    expect(formatting.formatHeldTime(seconds, enT)).toBe(english);
   });
 
   it("treats negative or invalid values as zero", () => {
-    expect(formatHeldTime(-5, enT)).toBe("0s");
-    expect(formatHeldTime(Number.NaN, enT)).toBe("0s");
+    expect(formatting.formatHeldTime(-5, enT)).toBe("0s");
+    expect(formatting.formatHeldTime(Number.NaN, enT)).toBe("0s");
   });
 });
 
@@ -45,7 +45,7 @@ describe("formatRank", () => {
     [3, "3ᵉ sur 17"],
     [11, "11ᵉ sur 17"],
   ])("formats rank %d in French", (rank, expected) => {
-    expect(formatRank({ rank, total: 17 }, frT)).toBe(expected);
+    expect(formatting.formatRank({ rank, total: 17 }, frT)).toBe(expected);
   });
 
   it.each([
@@ -60,6 +60,6 @@ describe("formatRank", () => {
     [22, "22nd of 120"],
     [103, "103rd of 120"],
   ])("formats rank %d in English", (rank, expected) => {
-    expect(formatRank({ rank, total: 120 }, enT)).toBe(expected);
+    expect(formatting.formatRank({ rank, total: 120 }, enT)).toBe(expected);
   });
 });
