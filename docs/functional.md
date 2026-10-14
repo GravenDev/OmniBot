@@ -243,7 +243,7 @@ Cite les messages Discord dont le lien est posté sur le serveur.
 
 Quand un membre poste un lien vers un message (`https://discord.com/channels/…`, y compris `ptb.` et `canary.`), le bot répond avec une citation : auteur et avatar, texte, première image, autres pièces jointes en liens, salon d'origine, membre qui cite et date du message. Un bouton « Aller au message » ouvre l'original. Les mentions présentes dans le message cité ne notifient personne.
 
-Un message transféré est cité avec son contenu transféré. Un message sans texte reprend la description de son premier embed, à défaut le bot indique qu'il n'a pas de texte.
+Un message transféré est cité avec son contenu transféré. Un message sans texte reprend la description (ou le titre) de son premier embed, à défaut le bot indique qu'il n'a pas de texte.
 
 **Ce qui n'est pas cité :**
 
@@ -256,7 +256,7 @@ Un message transféré est cité avec son contenu transféré. Un message sans t
 - Les messages des salons et catégories exclus, et les liens postés dans un salon exclu
 - Les liens postés par des bots
 
-Au plus 3 messages sont cités par message, les doublons sont ignorés. Si aucun lien n'est citable, le bot ne répond pas. Une pièce jointe image sous spoiler n'est jamais affichée, seulement listée en lien. Dès que le texte cité contient un spoiler (`||`), l'aperçu de lien n'est pas repris.
+Au plus 3 messages sont cités par message, les doublons sont ignorés. Un texte trop long est coupé, sans jamais laisser un spoiler à moitié ouvert. Si le message contenant le lien a été supprimé entre-temps, la citation est publiée sans y répondre. Si aucun lien n'est citable, le bot ne répond pas. Une pièce jointe image sous spoiler n'est jamais affichée, seulement listée en lien. Dès que le texte cité contient un spoiler (`||`), l'aperçu de lien n'est pas repris.
 
 ### Bouton « Supprimer »
 

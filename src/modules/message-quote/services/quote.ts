@@ -191,8 +191,21 @@ export async function resolveQuote(
   return quoted && !isOwnQuote(quoted) ? quoted : null;
 }
 
-function truncate(text: string, limit: number): string {
-  return text.length <= limit ? text : `${text.slice(0, limit - 1)}…`;
+export function truncate(text: string, limit: number): string {
+  if (text.length <= limit) {
+    return text;
+  }
+  let kept = "";
+  for (const character of text) {
+    if (kept.length + character.length > limit - 1) {
+      break;
+    }
+    kept += character;
+  }
+  if (kept.split("||").length % 2 === 0) {
+    kept = kept.slice(0, kept.lastIndexOf("||"));
+  }
+  return `${kept}…`;
 }
 
 function isImage(attachment: Attachment): boolean {
@@ -334,5 +347,8 @@ export async function quoteLinks(
     return;
   }
 
-  await message.reply(quoteReply(quotes, member, config.t));
+  await message.reply({
+    ...quoteReply(quotes, member, config.t),
+    failIfNotExists: false,
+  });
 }
