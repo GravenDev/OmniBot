@@ -87,3 +87,49 @@ model RngdleReminder {
 
   @@id([guildId, userId])
 }
+
+// === Modèles de modules/server-stats/server-stats.prisma ===
+model ServerStatsGuild {
+  guildId   String   @id
+  startedAt DateTime @default(now())
+}
+
+model ServerStatsDay {
+  guildId String
+  day     DateTime @db.Date
+  joins   Int      @default(0)
+  leaves  Int      @default(0)
+
+  @@id([guildId, day])
+  @@index([day])
+}
+
+model ServerStatsChannel {
+  guildId   String
+  day       DateTime @db.Date
+  channelId String
+  messages  Int      @default(0)
+
+  @@id([guildId, day, channelId])
+  @@index([day])
+}
+
+model ServerStatsMember {
+  guildId  String
+  day      DateTime @db.Date
+  userId   String
+  messages Int      @default(0)
+
+  @@id([guildId, day, userId])
+  @@index([day])
+}
+
+model ServerStatsReaction {
+  guildId   String
+  day       DateTime @db.Date
+  emoji     String
+  reactions Int      @default(0)
+
+  @@id([guildId, day, emoji])
+  @@index([day])
+}

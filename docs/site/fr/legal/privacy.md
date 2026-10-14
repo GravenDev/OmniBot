@@ -30,6 +30,10 @@ OmniBot collecte uniquement les données nécessaires à son fonctionnement :
 - Quels modules sont activés ou désactivés sur chaque serveur
 - La version à laquelle chaque module a été installé pour la dernière fois
 
+### Statistiques d'activité
+
+Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, jamais le contenu des messages. Ces compteurs sont supprimés au bout de 90 jours.
+
 ## Stockage des données
 
 Les données sont stockées dans une base de données PostgreSQL gérée par l'opérateur de l'instance du bot. La base de données n'est partagée avec aucun tiers. L'opérateur est responsable de la sécurisation de son instance de base de données.
