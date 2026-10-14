@@ -24,7 +24,7 @@ model ModuleActivation {
   @@id([moduleId, guildId])
 }
 
-// === Modèles de modules/four-hour-game/four-hour-game.prisma ===
+// === Modèles de modules/four-hour-game/models/four-hour-game.prisma ===
 model FourHourGameScore {
   guildId String
   userId  String
@@ -52,7 +52,7 @@ model FourHourGamePoint {
   @@index([guildId, awardedAt])
 }
 
-// === Modèles de modules/rngdle/rngdle.prisma ===
+// === Modèles de modules/rngdle/models/rngdle.prisma ===
 model RngdleAccount {
   guildId  String
   userId   String
