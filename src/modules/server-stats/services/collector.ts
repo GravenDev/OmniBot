@@ -51,14 +51,22 @@ export async function collectReaction(
   if (!message.inGuild() || !isTracked(message.channel, config)) {
     return;
   }
-  if (await isBot(user)) {
+  const emoji = emojiKey(reaction.emoji);
+  if (!emoji || (await isBot(user))) {
     return;
   }
-  await store.recordReaction(
-    message.guildId,
-    dayOf(now),
-    reaction.emoji.toString()
-  );
+  await store.recordReaction(message.guildId, dayOf(now), emoji);
+}
+
+export function emojiKey(emoji: {
+  id: string | null;
+  name: string | null;
+  animated?: boolean | null;
+}): string | null {
+  if (emoji.id) {
+    return `<${emoji.animated ? "a" : ""}:e:${emoji.id}>`;
+  }
+  return emoji.name;
 }
 
 export async function collectMemberChange(

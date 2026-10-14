@@ -26,10 +26,9 @@ async function ensureStarted(guildId: string): Promise<void> {
   if (startedGuilds.has(guildId)) {
     return;
   }
-  await prisma.serverStatsGuild.upsert({
-    where: { guildId },
-    create: { guildId },
-    update: {},
+  await prisma.serverStatsGuild.createMany({
+    data: [{ guildId }],
+    skipDuplicates: true,
   });
   startedGuilds.add(guildId);
 }

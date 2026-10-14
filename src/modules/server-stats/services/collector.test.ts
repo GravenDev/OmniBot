@@ -39,8 +39,7 @@ function fakeChannel(options: { public?: boolean; thread?: boolean } = {}) {
 }
 
 const config = {
-  get: (key: string) =>
-    key === "excludedChannels" ? [] : key === "includePrivateChannels" && false,
+  get: (key: string) => (key.startsWith("excluded") ? [] : false),
 } as unknown as ConfigProvider<ServerStatsConfigSchema>;
 
 function fakeMessage(
@@ -102,12 +101,33 @@ describe("collectMessage", () => {
 describe("collectReaction", () => {
   const now = new Date("2026-10-13T12:00:00Z");
 
-  function fakeReaction(channel = fakeChannel()) {
+  function fakeReaction(
+    channel = fakeChannel(),
+    emoji: { id: string | null; name: string | null; animated?: boolean } = {
+      id: null,
+      name: "👍",
+    }
+  ) {
     return {
-      emoji: { toString: () => "👍" },
+      emoji,
       message: { guildId: "guild-1", channel, inGuild: () => true },
     } as unknown as MessageReaction;
   }
+
+  it("keys custom emojis by id so renaming them keeps one counter", async () => {
+    const user = { partial: false, bot: false } as unknown as User;
+    await collectReaction(
+      fakeReaction(fakeChannel(), { id: "123", name: "old", animated: true }),
+      user,
+      config,
+      now
+    );
+    expect(store.recordReaction).toHaveBeenCalledWith(
+      "guild-1",
+      expect.any(Date),
+      "<a:e:123>"
+    );
+  });
 
   it("counts a member's reaction", async () => {
     const user = { partial: false, bot: false } as unknown as User;

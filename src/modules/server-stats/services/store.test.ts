@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const prisma = vi.hoisted(() => {
   const model = () => ({
     upsert: vi.fn((args: unknown) => ({ op: "upsert", args })),
+    createMany: vi.fn(async () => ({ count: 1 })),
     findUnique: vi.fn(async (): Promise<unknown> => null),
     findMany: vi.fn(async (): Promise<unknown[]> => []),
     aggregate: vi.fn(async (): Promise<unknown> => ({})),
@@ -51,11 +52,10 @@ describe("recording", () => {
   it("records the start of counting once per guild", async () => {
     await store.recordReaction("guild-2", day, "👍");
     await store.recordReaction("guild-2", day, "👍");
-    expect(prisma.serverStatsGuild.upsert).toHaveBeenCalledOnce();
-    expect(prisma.serverStatsGuild.upsert).toHaveBeenCalledWith({
-      where: { guildId: "guild-2" },
-      create: { guildId: "guild-2" },
-      update: {},
+    expect(prisma.serverStatsGuild.createMany).toHaveBeenCalledOnce();
+    expect(prisma.serverStatsGuild.createMany).toHaveBeenCalledWith({
+      data: [{ guildId: "guild-2" }],
+      skipDuplicates: true,
     });
   });
 

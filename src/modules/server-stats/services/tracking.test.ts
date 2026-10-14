@@ -38,10 +38,17 @@ function fakeChannel(
 }
 
 function fakeConfig(
-  values: { excluded?: string[]; includePrivate?: boolean } = {}
+  values: {
+    excluded?: string[];
+    excludedCategories?: string[];
+    includePrivate?: boolean;
+  } = {}
 ) {
   const data: Record<string, unknown> = {
     excludedChannels: (values.excluded ?? []).map((id) => ({ id })),
+    excludedCategories: (values.excludedCategories ?? []).map((id) => ({
+      id,
+    })),
     includePrivateChannels: values.includePrivate ?? false,
     showTopMembers: true,
   };
@@ -102,5 +109,22 @@ describe("countedChannelId", () => {
     expect(
       countedChannelId(fakeChannel({ id: "2", thread: true, parentId: "1" }))
     ).toBe("1");
+  });
+});
+
+describe("excluded categories", () => {
+  it("skips the channels and threads of an excluded category", () => {
+    const config = fakeConfig({ excludedCategories: ["cat"] });
+    expect(isTracked(fakeChannel({ parentId: "cat" }), config)).toBe(false);
+    expect(
+      isTracked(
+        fakeChannel({
+          thread: true,
+          parentId: "200",
+          parent: { parentId: "cat" },
+        }),
+        config
+      )
+    ).toBe(false);
   });
 });
