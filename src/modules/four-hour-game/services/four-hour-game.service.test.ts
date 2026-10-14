@@ -269,6 +269,16 @@ vi.mock("#lib/database.js", () => ({
         closedDays.set(data.guildId, data.closedDay);
         return data;
       },
+      async update({
+        where,
+        data,
+      }: {
+        where: { guildId: string };
+        data: { closedDay: string };
+      }) {
+        closedDays.set(where.guildId, data.closedDay);
+        return { guildId: where.guildId, ...data };
+      },
       async updateMany({
         where,
         data,
@@ -678,7 +688,7 @@ describe("FourHourGameService.resetRound", () => {
     expect(lastMessages.has("other")).toBe(true);
   });
 
-  it("forgets the days not closed yet, but keeps the closed ones", async () => {
+  it("forgets the days not closed yet, but keeps the closed ones visible", async () => {
     closedDays.set("guild", "2026-10-13");
     for (const day of ["2026-10-13", "2026-10-14"]) {
       dailyBests.set(key("guild", day), {
@@ -688,11 +698,17 @@ describe("FourHourGameService.resetRound", () => {
         heldSeconds: 3600,
       });
     }
+    const revision = service.getRevision("guild");
 
-    await service.resetRound("guild");
+    await service.resetRound("guild", new Date("2026-11-20T12:00:00+01:00"));
 
     expect([...dailyBests.keys()]).toEqual([key("guild", "2026-10-13")]);
-    expect(closedDays.has("guild")).toBe(false);
+    expect(closedDays.get("guild")).toBe("2026-11-19");
+    expect(service.getRevision("guild")).toBeGreaterThan(revision);
+    expect(await service.getDailyStandings("guild")).toEqual([
+      { userId: "alice", score: 1, rank: 1 },
+    ]);
+    expect(await service.deleteScore("guild", "alice")).toBe(true);
   });
 });
 
@@ -793,7 +809,7 @@ describe("FourHourGameService deletions and resync", () => {
     ]);
   });
 
-  it("credits nothing on resync when the latest message is the stored one's author", async () => {
+  it("keeps the stored message on resync when only its author posted since", async () => {
     const paris = (iso: string) => new Date(`${iso}+02:00`);
     await service.handleMessage(
       message("zed", paris("2026-10-14T08:00:00")),
@@ -807,10 +823,53 @@ describe("FourHourGameService deletions and resync", () => {
     await service.resyncLastMessage(
       "guild",
       "game",
-      latest("alice", paris("2026-10-14T22:00:00"))
+      latest("alice", paris("2026-10-14T20:00:00"))
+    );
+    const closed = await service.closeDays(
+      "guild",
+      "game",
+      paris("2026-10-15T08:00:00")
     );
 
-    expect(dailyBests.get(key("guild", "2026-10-14"))?.userId).toBe("zed");
+    expect(lastMessages.get("guild")?.sentAt).toEqual(
+      paris("2026-10-14T09:00:00")
+    );
+    expect(closed).toEqual([
+      { day: "2026-10-14", userId: "alice", heldSeconds: 15 * 3600 },
+    ]);
+  });
+
+  it("credits nothing on resync for a message stored in another channel", async () => {
+    await service.handleMessage(
+      message("alice", start, { channelId: "old" }),
+      DELAY
+    );
+
+    await service.resyncLastMessage("guild", "game", latest("bob", at(3600)));
+
+    expect(dailyBests.size).toBe(0);
+    expect(lastMessages.get("guild")?.authorId).toBe("bob");
+  });
+
+  it("starts counting on the first startup, not on the day of a reply missed while down", async () => {
+    const paris = (iso: string) => new Date(`${iso}+02:00`);
+    lastMessages.set("guild", {
+      guildId: "guild",
+      channelId: "game",
+      messageId: "old",
+      authorId: "alice",
+      sentAt: paris("2026-10-10T09:00:00"),
+    });
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      latest("bob", paris("2026-10-11T09:00:00")),
+      paris("2026-10-14T10:00:00")
+    );
+
+    expect(closedDays.get("guild")).toBe("2026-10-13");
+    expect(dailyBests.size).toBe(0);
   });
 
   it("replaces the stored last message with the channel's real one on resync", async () => {
@@ -970,6 +1029,28 @@ describe("daily points", () => {
 
     await service.closeDays("guild", "game", now);
     expect(await service.closeDays("guild", "game", now)).toEqual([]);
+  });
+
+  it("refreshes the cached images when it closes a day", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    await send("bob", "2026-10-14T09:00:00");
+    const revision = service.getRevision("guild");
+
+    await service.closeDays("guild", "game", paris("2026-10-15T00:00:00"));
+
+    expect(service.getRevision("guild")).toBeGreaterThan(revision);
+  });
+
+  it("still reports a 4h point when its daily hold cannot be recorded", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    const findUnique = vi
+      .spyOn(prisma.fourHourGameDailyBest, "findUnique")
+      .mockRejectedValueOnce(new Error("database down"));
+
+    const result = await send("bob", "2026-10-14T13:00:00");
+
+    findUnique.mockRestore();
+    expect(result).toMatchObject({ kind: "point", winnerId: "alice" });
   });
 
   it("returns nothing when another process closed the day first", async () => {

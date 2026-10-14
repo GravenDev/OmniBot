@@ -159,6 +159,27 @@ describe("/jd4h leaderboard", () => {
     );
   });
 
+  it("keeps the two leaderboards apart in the cache", async () => {
+    getRevision.mockReturnValue(-1);
+    getLeaderboard.mockResolvedValue([{ rank: 1, userId: "alice", score: 12 }]);
+    getDailyStandings.mockResolvedValue([
+      { rank: 1, userId: "alice", score: 3 },
+    ]);
+    resolvePlayers.mockResolvedValue(
+      new Map([["alice", { name: "Alice", avatar: null }]])
+    );
+
+    const hold = leaderboardInteraction();
+    const daily = { ...leaderboardInteraction("daily"), guildId: hold.guildId };
+    await command.execute(hold, keyConfig);
+    await command.execute(daily, keyConfig);
+
+    expect(renderLeaderboard.mock.calls.map(([rows]) => rows)).toEqual([
+      [{ rank: 1, name: "Alice", score: 12, avatar: null }],
+      [{ rank: 1, name: "Alice", score: 3, avatar: null }],
+    ]);
+  });
+
   it("answers with the daily empty message when nobody won a day", async () => {
     getDailyStandings.mockResolvedValue([]);
     resolvePlayers.mockResolvedValue(new Map());

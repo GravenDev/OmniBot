@@ -107,9 +107,13 @@ async function closeDays(
 
 export async function closeAllDays(
   client: Client,
-  module: Module<FourHourGameConfigSchema>
+  module: Module<FourHourGameConfigSchema>,
+  skipped: ReadonlySet<string> = new Set()
 ): Promise<void> {
   for (const guildId of await moduleService.getActivatedGuildIds(module.id)) {
+    if (skipped.has(guildId)) {
+      continue;
+    }
     await closeDays(client, module, guildId).catch((err: unknown) =>
       logger.error({ err }, `Failed to close the day | guildId = ${guildId}`)
     );

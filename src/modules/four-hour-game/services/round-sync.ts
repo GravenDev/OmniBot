@@ -25,16 +25,19 @@ export async function syncRound(
 
 export async function syncAllRounds(
   module: Module<FourHourGameConfigSchema>
-): Promise<void> {
+): Promise<Set<string>> {
   const guildIds = await moduleService.getActivatedGuildIds(module.id);
+  const failed = new Set<string>();
 
   for (const guildId of guildIds) {
     try {
       await syncRound(module, guildId);
     } catch (err) {
+      failed.add(guildId);
       logger.warn({ err }, `Could not sync the round | guildId = ${guildId}`);
     }
   }
 
   logger.info(`Rounds synced | guilds = ${guildIds.length}`);
+  return failed;
 }

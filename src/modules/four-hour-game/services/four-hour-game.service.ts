@@ -1,5 +1,6 @@
 import prisma from "#lib/database.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
+import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
 import {
   dayOf,
@@ -10,6 +11,8 @@ import {
 } from "./daily.js";
 import { evaluateMessage, type MessageOutcome } from "./game-rules.js";
 import { computeProfileStats, type ProfileStats } from "./profile.js";
+
+const logger = loggerMaker("four-hour-game");
 
 export interface GameMessage {
   guildId: string;
@@ -116,7 +119,7 @@ class FourHourGameService implements Service {
 
     if (outcome.kind !== "point") {
       await recordMessage;
-      await this.creditHolds(guildId, last?.authorId, holds);
+      await this.creditHoldsBestEffort(guildId, last?.authorId, holds);
       return outcome;
     }
 
@@ -137,7 +140,7 @@ class FourHourGameService implements Service {
       }),
     ]);
 
-    await this.creditHolds(guildId, outcome.winnerId, holds);
+    await this.creditHoldsBestEffort(guildId, outcome.winnerId, holds);
     this.bumpRevision(guildId);
     return { ...outcome, score: winner.score };
   }
@@ -154,6 +157,21 @@ class FourHourGameService implements Service {
       data: { guildId, closedDay },
     });
     return closedDay;
+  }
+
+  private async creditHoldsBestEffort(
+    guildId: string,
+    userId: string | undefined,
+    holds: readonly DayHold[]
+  ): Promise<void> {
+    try {
+      await this.creditHolds(guildId, userId, holds);
+    } catch (err) {
+      logger.error(
+        { err },
+        `Failed to record the daily hold | guildId = ${guildId}`
+      );
+    }
   }
 
   private async creditHolds(
@@ -273,45 +291,53 @@ class FourHourGameService implements Service {
       : { score: 0, rank: null };
   }
 
-  resetRound(guildId: string): Promise<void> {
+  resetRound(guildId: string, now: Date = new Date()): Promise<void> {
     return this.queue.run(guildId, async () => {
       const state = await prisma.fourHourGameDailyState.findUnique({
         where: { guildId },
       });
+      if (!state) {
+        await prisma.fourHourGameLastMessage.deleteMany({ where: { guildId } });
+        return;
+      }
       await prisma.$transaction([
         prisma.fourHourGameLastMessage.deleteMany({ where: { guildId } }),
         prisma.fourHourGameDailyBest.deleteMany({
-          where: state
-            ? { guildId, day: { gt: state.closedDay } }
-            : { guildId },
+          where: { guildId, day: { gt: state.closedDay } },
         }),
-        prisma.fourHourGameDailyState.deleteMany({ where: { guildId } }),
+        prisma.fourHourGameDailyState.update({
+          where: { guildId },
+          data: { closedDay: previousDay(dayOf(now)) },
+        }),
       ]);
+      this.bumpRevision(guildId);
     });
   }
 
   resyncLastMessage(
     guildId: string,
     channelId: string,
-    fetchLatest: LatestMessageFetcher
+    fetchLatest: LatestMessageFetcher,
+    now: Date = new Date()
   ): Promise<void> {
     return this.queue.run(guildId, async () => {
       const last = await prisma.fourHourGameLastMessage.findUnique({
         where: { guildId },
       });
-      const latest = await this.replaceLastMessage(
-        guildId,
-        channelId,
-        fetchLatest
-      );
+      const latest = await fetchLatest();
+      const sameChannel = last?.channelId === channelId;
       if (
         last &&
         latest &&
-        last.channelId === channelId &&
-        last.authorId !== latest.authorId &&
-        last.sentAt < latest.sentAt
+        sameChannel &&
+        last.authorId === latest.authorId &&
+        last.sentAt <= latest.sentAt
       ) {
-        const closedDay = await this.getClosedDay(guildId, latest.sentAt);
+        return;
+      }
+      await this.storeLastMessage(guildId, channelId, latest);
+      if (last && latest && sameChannel && last.sentAt < latest.sentAt) {
+        const closedDay = await this.getClosedDay(guildId, now);
         await this.creditHolds(
           guildId,
           last.authorId,
@@ -347,18 +373,24 @@ class FourHourGameService implements Service {
     guildId: string,
     channelId: string,
     fetchLatest: LatestMessageFetcher
-  ): Promise<ChannelMessage | null> {
-    const latest = await fetchLatest();
+  ): Promise<void> {
+    await this.storeLastMessage(guildId, channelId, await fetchLatest());
+  }
+
+  private async storeLastMessage(
+    guildId: string,
+    channelId: string,
+    latest: ChannelMessage | null
+  ): Promise<void> {
     if (!latest) {
       await prisma.fourHourGameLastMessage.deleteMany({ where: { guildId } });
-      return null;
+      return;
     }
     await prisma.fourHourGameLastMessage.upsert({
       where: { guildId },
       create: { guildId, channelId, ...latest },
       update: { channelId, ...latest },
     });
-    return latest;
   }
 
   async getScore(guildId: string, userId: string): Promise<number | null> {

@@ -165,6 +165,15 @@ describe("closeAllDays", () => {
     expect(send).not.toHaveBeenCalled();
   });
 
+  it("skips the guilds it is told to", async () => {
+    getActivatedGuildIds.mockResolvedValue(["unsynced", "guild"]);
+    closeDays.mockResolvedValue([]);
+
+    await closeAllDays(client, module, new Set(["unsynced"]));
+
+    expect(closeDays.mock.calls.map(([guildId]) => guildId)).toEqual(["guild"]);
+  });
+
   it("closes the other guilds when one fails", async () => {
     getActivatedGuildIds.mockResolvedValue(["broken", "guild"]);
     closeDays.mockImplementation(async (guildId: string) => {

@@ -38,12 +38,9 @@ const fourHourGameModule = defineModule({
     }
 
     syncAllRounds(fourHourGameModule)
+      .then((unsynced) => closeAllDays(client, fourHourGameModule, unsynced))
       .catch((err: unknown) =>
-        logger.error({ err }, "Failed to sync rounds at startup")
-      )
-      .then(() => closeAllDays(client, fourHourGameModule))
-      .catch((err: unknown) =>
-        logger.error({ err }, "Failed to close the days at startup")
+        logger.error({ err }, "Failed to sync rounds and close days at startup")
       );
   },
 
