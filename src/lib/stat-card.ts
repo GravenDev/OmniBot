@@ -21,7 +21,7 @@ const HEADER_CENTER = HEADER_HEIGHT / 2;
 export const PORTRAIT_SIZE = 90;
 const TITLE_X = MARGIN + PORTRAIT_SIZE + 24;
 export const TITLE_SIZE = 44;
-export const TITLE_MIN_SIZE = 30;
+const TITLE_MIN_SIZE = 30;
 const SUBTITLE_SIZE = 20;
 const RANK_GAP = 24;
 
@@ -146,8 +146,7 @@ export function drawPanel(
   y: number,
   width: number,
   height: number,
-  highlight?: Rgb,
-  edge?: "left" | "right"
+  highlight?: Rgb
 ): void {
   ctx.beginPath();
   ctx.roundRect(x, y, width, height, PANEL_RADIUS);
@@ -156,7 +155,6 @@ export function drawPanel(
   if (highlight) {
     drawHighlight(ctx, x, y, width, height, highlight, {
       radius: PANEL_RADIUS,
-      ...(edge && { edge }),
     });
   }
   strokePanel(ctx, x, y, width, height);

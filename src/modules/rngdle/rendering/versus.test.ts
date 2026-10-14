@@ -1,5 +1,6 @@
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { describe, expect, it } from "vitest";
+import { BODY_TOP, DEFAULT_WIDTH, MARGIN } from "#lib/stat-card.js";
 import { ACCENT } from "./theme.js";
 import {
   renderVersus,
@@ -45,11 +46,21 @@ const newcomer: VersusPlayer = {
   maxBadges: null,
 };
 
-async function pixel(png: Buffer, x: number, y: number): Promise<number[]> {
+async function accentAt(png: Buffer, from: number, to: number, y: number) {
   const image = await loadImage(png);
   const ctx = createCanvas(image.width, image.height).getContext("2d");
   ctx.drawImage(image, 0, 0);
-  return [...ctx.getImageData(x, y, 1, 1).data.subarray(0, 3)];
+  const data = ctx.getImageData(from, y, to - from, 1).data;
+  for (let index = 0; index < data.length; index += 4) {
+    if (
+      data[index] === ACCENT[0] &&
+      data[index + 1] === ACCENT[1] &&
+      data[index + 2] === ACCENT[2]
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function size(png: Buffer) {
@@ -96,12 +107,18 @@ describe("renderVersus", () => {
     expect(first.equals(second)).toBe(false);
   });
 
+  const leftEdge = [MARGIN, MARGIN + 12] as const;
+  const rightEdge = [
+    DEFAULT_WIDTH - MARGIN - 12,
+    DEFAULT_WIDTH - MARGIN,
+  ] as const;
+
   it.each([
-    { winner: "left", edgeX: 42, otherX: 957 },
-    { winner: "right", edgeX: 957, otherX: 42 },
+    { winner: "left", edge: leftEdge, other: rightEdge },
+    { winner: "right", edge: rightEdge, other: leftEdge },
   ] as const)(
     "marks the $winner side as the winner of a line",
-    async ({ winner, edgeX, otherX }) => {
+    async ({ winner, edge, other }) => {
       const png = await renderVersus(
         {
           left: active,
@@ -119,9 +136,9 @@ describe("renderVersus", () => {
         labels
       );
 
-      const rowCenter = 160 + 46;
-      expect(await pixel(png, edgeX, rowCenter)).toEqual([...ACCENT]);
-      expect(await pixel(png, otherX, rowCenter)).not.toEqual([...ACCENT]);
+      const y = BODY_TOP + 30;
+      expect(await accentAt(png, ...edge, y)).toBe(true);
+      expect(await accentAt(png, ...other, y)).toBe(false);
     }
   );
 });

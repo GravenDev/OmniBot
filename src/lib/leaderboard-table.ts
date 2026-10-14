@@ -130,7 +130,7 @@ export async function renderLeaderboardTable<Row extends LeaderboardEntry>({
     color: Rgb,
     highlight?: Rgb
   ): void => {
-    fillBand(ctx, color, top, top + ROW_HEIGHT);
+    fillBand(ctx, color, top, top + ROW_HEIGHT - 1);
     if (highlight) {
       drawHighlight(ctx, 0, top, width, ROW_HEIGHT, highlight);
     }
@@ -159,7 +159,7 @@ export async function renderLeaderboardTable<Row extends LeaderboardEntry>({
   if (caller) {
     const separatorTop = bottom + CALLER_GAP / 2;
     const separatorBottom = separatorTop + SEPARATOR_HEIGHT - 1;
-    fillBand(ctx, PALETTE.border, separatorTop, separatorBottom);
+    fillBand(ctx, PALETTE.separator, separatorTop, separatorBottom);
     drawRow(caller, callerTop, PALETTE.rowEven, accent);
   }
 

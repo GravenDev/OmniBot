@@ -25,6 +25,7 @@ export const PALETTE = {
   rowOdd: [45, 45, 45],
   box: [35, 35, 35],
   border: [52, 52, 52],
+  separator: [80, 80, 80],
   track: [50, 50, 50],
   text: [255, 255, 255],
   title: [200, 200, 200],
