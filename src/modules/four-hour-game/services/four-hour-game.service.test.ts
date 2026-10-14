@@ -823,7 +823,7 @@ describe("FourHourGameService deletions and resync", () => {
     await service.resyncLastMessage(
       "guild",
       "game",
-      latest("alice", paris("2026-10-14T20:00:00"))
+      latest("alice", paris("2026-10-14T09:00:00"))
     );
     const closed = await service.closeDays(
       "guild",
@@ -837,6 +837,33 @@ describe("FourHourGameService deletions and resync", () => {
     expect(closed).toEqual([
       { day: "2026-10-14", userId: "alice", heldSeconds: 15 * 3600 },
     ]);
+  });
+
+  it("moves to the author's later run on resync when someone replied in between", async () => {
+    const paris = (iso: string) => new Date(`${iso}+02:00`);
+    await service.handleMessage(
+      message("zed", paris("2026-10-14T09:00:00")),
+      DELAY
+    );
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T10:00:00")),
+      DELAY
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      latest("alice", paris("2026-10-14T11:30:00"))
+    );
+    expect(dailyBests.get(key("guild", "2026-10-14"))?.userId).toBe("zed");
+    const result = await service.handleMessage(
+      message("carol", paris("2026-10-14T14:05:00")),
+      DELAY
+    );
+
+    expect(lastMessages.get("guild")?.authorId).toBe("carol");
+    expect(result.kind).not.toBe("point");
+    expect(scores.size).toBe(0);
   });
 
   it("credits nothing on resync for a message stored in another channel", async () => {
@@ -1051,6 +1078,19 @@ describe("daily points", () => {
 
     findUnique.mockRestore();
     expect(result).toMatchObject({ kind: "point", winnerId: "alice" });
+  });
+
+  it("still plays the 4h game when the daily state cannot be read", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    const findUnique = vi
+      .spyOn(prisma.fourHourGameDailyState, "findUnique")
+      .mockRejectedValueOnce(new Error("database down"));
+
+    const result = await send("bob", "2026-10-14T13:00:00");
+
+    findUnique.mockRestore();
+    expect(result).toMatchObject({ kind: "point", winnerId: "alice" });
+    expect(lastMessages.get("guild")?.authorId).toBe("bob");
   });
 
   it("returns nothing when another process closed the day first", async () => {

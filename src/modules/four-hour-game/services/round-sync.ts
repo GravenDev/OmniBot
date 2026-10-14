@@ -3,7 +3,7 @@ import moduleService from "#core/services/module.service.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
-import { fetchLatestPlayerMessage } from "./channel-history.js";
+import { fetchStandingMessage } from "./channel-history.js";
 import fourHourGameService from "./four-hour-game.service.js";
 
 const logger = loggerMaker("four-hour-game");
@@ -19,25 +19,22 @@ export async function syncRound(
   }
 
   await fourHourGameService.resyncLastMessage(guildId, channel.id, () =>
-    fetchLatestPlayerMessage(channel)
+    fetchStandingMessage(channel)
   );
 }
 
 export async function syncAllRounds(
   module: Module<FourHourGameConfigSchema>
-): Promise<Set<string>> {
+): Promise<void> {
   const guildIds = await moduleService.getActivatedGuildIds(module.id);
-  const failed = new Set<string>();
 
   for (const guildId of guildIds) {
     try {
       await syncRound(module, guildId);
     } catch (err) {
-      failed.add(guildId);
       logger.warn({ err }, `Could not sync the round | guildId = ${guildId}`);
     }
   }
 
   logger.info(`Rounds synced | guilds = ${guildIds.length}`);
-  return failed;
 }

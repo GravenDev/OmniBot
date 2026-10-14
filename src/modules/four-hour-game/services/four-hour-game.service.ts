@@ -111,15 +111,11 @@ class FourHourGameService implements Service {
       update: { channelId, messageId, authorId, sentAt },
     });
 
-    const closedDay = await this.getClosedDay(guildId, sentAt);
-    const holds =
-      last && outcome.kind !== "first"
-        ? splitHold(last.sentAt, sentAt, closedDay)
-        : [];
+    const held = outcome.kind === "first" ? null : last;
 
     if (outcome.kind !== "point") {
       await recordMessage;
-      await this.creditHoldsBestEffort(guildId, last?.authorId, holds);
+      await this.recordDailyHold(guildId, held, sentAt);
       return outcome;
     }
 
@@ -140,7 +136,7 @@ class FourHourGameService implements Service {
       }),
     ]);
 
-    await this.creditHoldsBestEffort(guildId, outcome.winnerId, holds);
+    await this.recordDailyHold(guildId, held, sentAt);
     this.bumpRevision(guildId);
     return { ...outcome, score: winner.score };
   }
@@ -159,13 +155,20 @@ class FourHourGameService implements Service {
     return closedDay;
   }
 
-  private async creditHoldsBestEffort(
+  private async recordDailyHold(
     guildId: string,
-    userId: string | undefined,
-    holds: readonly DayHold[]
+    held: { authorId: string; sentAt: Date } | null,
+    until: Date
   ): Promise<void> {
     try {
-      await this.creditHolds(guildId, userId, holds);
+      const closedDay = await this.getClosedDay(guildId, until);
+      if (held) {
+        await this.creditHolds(
+          guildId,
+          held.authorId,
+          splitHold(held.sentAt, until, closedDay)
+        );
+      }
     } catch (err) {
       logger.error(
         { err },
@@ -325,18 +328,14 @@ class FourHourGameService implements Service {
         where: { guildId },
       });
       const latest = await fetchLatest();
-      const sameChannel = last?.channelId === channelId;
+      await this.storeLastMessage(guildId, channelId, latest);
       if (
         last &&
         latest &&
-        sameChannel &&
-        last.authorId === latest.authorId &&
-        last.sentAt <= latest.sentAt
+        last.channelId === channelId &&
+        last.authorId !== latest.authorId &&
+        last.sentAt < latest.sentAt
       ) {
-        return;
-      }
-      await this.storeLastMessage(guildId, channelId, latest);
-      if (last && latest && sameChannel && last.sentAt < latest.sentAt) {
         const closedDay = await this.getClosedDay(guildId, now);
         await this.creditHolds(
           guildId,

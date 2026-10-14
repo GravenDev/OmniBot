@@ -9,19 +9,27 @@ export function isPlayerMessage(
   return !message.author.bot && !message.system;
 }
 
-export async function fetchLatestPlayerMessage(
+export async function fetchStandingMessage(
   channel: TextBasedChannel
 ): Promise<ChannelMessage | null> {
   const messages = await channel.messages.fetch({ limit: HISTORY_DEPTH });
-  const latest = [...messages.values()]
+  const [latest, ...older] = [...messages.values()]
     .filter(isPlayerMessage)
-    .sort((a, b) => b.createdTimestamp - a.createdTimestamp)[0];
+    .sort((a, b) => b.createdTimestamp - a.createdTimestamp);
+  if (!latest) {
+    return null;
+  }
 
-  return latest
-    ? {
-        messageId: latest.id,
-        authorId: latest.author.id,
-        sentAt: latest.createdAt,
-      }
-    : null;
+  let standing = latest;
+  for (const message of older) {
+    if (message.author.id !== latest.author.id) {
+      break;
+    }
+    standing = message;
+  }
+  return {
+    messageId: standing.id,
+    authorId: standing.author.id,
+    sentAt: standing.createdAt,
+  };
 }
