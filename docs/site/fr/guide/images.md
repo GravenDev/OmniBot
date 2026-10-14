@@ -48,7 +48,7 @@ const png = await renderLeaderboardTable({
 });
 ```
 
-Une colonne peut être alignée à droite (`align: "right"`, `x` est alors son bord droit), et chaque cellule peut fixer sa `color`, sa police (`family`) ou une petite `icon` dessinée avant le texte. Passez `caller` pour ajouter, sous un séparateur, la ligne de la personne qui consulte quand elle n'est pas sur la page, et `width` pour un tableau plus large que les 800 px par défaut.
+Une colonne peut être alignée à droite (`align: "right"`, `x` est alors son bord droit), et chaque cellule peut fixer sa `color`, sa police (`family`) ou une petite `icon` dessinée avant le texte. Passez `caller` pour ajouter, sous un séparateur, la ligne de la personne qui consulte quand elle n'est pas sur la page, `width` pour un tableau plus large que les 800 px par défaut, et `accent`, la couleur du module, pour le liseré sous l'en-tête et la ligne de l'appelant.
 
 ## Une fiche de statistiques
 
@@ -76,11 +76,11 @@ const png = await renderStatCard({
 });
 ```
 
-La fiche fait 1000 px de large, en paysage, pour que Discord l'affiche assez grande pour être lue.
+La fiche fait 1000 px de large par défaut (`width` pour l'élargir), en paysage, pour que Discord l'affiche assez grande pour être lue. Son `accent`, la couleur du module, colore le liseré sous l'en-tête, l'anneau du portrait et le rang.
 
 - **L'en-tête** affiche l'`image` ronde, le `title`, un `subtitle` optionnel et un `rank` optionnel : une médaille pour le podium, `#N / total` sinon, masqué quand `position` vaut 0.
 - **Les lignes** contiennent une à trois cases, qui se partagent la largeur de la ligne.
-- **Une case** a un `title` et une `value`, et éventuellement une `color` (valeur et contour ; `outline: false` garde la couleur sans le cadre), un `subtext` et un petit `avatar` dans le coin. Un texte trop long rétrécit pour tenir dans la case.
+- **Une case** a un `title` et une `value`, et éventuellement une `color` (valeur, teinte légère et liseré sur le bord gauche ; `highlight: false` colore la valeur sans mettre la case en avant), un `subtext` et un petit `avatar` dans le coin. Un texte trop long rétrécit pour tenir dans la case.
 - **Un panneau latéral** (`{ width, draw(ctx, x, y, width, height) }`) ajoute un panneau personnalisé à droite des cases, de la même hauteur qu'elles. `drawPanel`, `drawPanelTitle`, `drawText`, `drawFittedText` et `measureText` de `#lib/stat-card` le gardent cohérent avec le reste de la fiche ; la répartition par palier de RNGdle est construite ainsi (`src/modules/rngdle/rendering/cards.ts`).
 
 ## Bonnes pratiques

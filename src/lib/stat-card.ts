@@ -14,8 +14,8 @@ import {
   type Rgb,
 } from "./imaging.js";
 
-const DEFAULT_WIDTH = 1000;
-const MARGIN = 40;
+export const DEFAULT_WIDTH = 1000;
+export const MARGIN = 40;
 export const HEADER_HEIGHT = 130;
 const HEADER_CENTER = HEADER_HEIGHT / 2;
 export const PORTRAIT_SIZE = 90;
@@ -29,7 +29,7 @@ export const BODY_TOP = HEADER_HEIGHT + 30;
 export const BOTTOM_MARGIN = 30;
 export const GAP = 20;
 const BOX_HEIGHT = 110;
-const PANEL_RADIUS = 12;
+export const PANEL_RADIUS = 12;
 export const PANEL_PADDING = 20;
 export const LABEL_SIZE = 19;
 export const VALUE_SIZE = 32;
@@ -159,6 +159,16 @@ export function drawPanel(
       ...(edge && { edge }),
     });
   }
+  strokePanel(ctx, x, y, width, height);
+}
+
+export function strokePanel(
+  ctx: SKRSContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+): void {
   ctx.beginPath();
   ctx.roundRect(x + 0.5, y + 0.5, width - 1, height - 1, PANEL_RADIUS);
   ctx.lineWidth = 1;

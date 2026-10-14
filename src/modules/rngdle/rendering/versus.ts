@@ -12,16 +12,19 @@ import {
 import {
   BODY_TOP,
   BOTTOM_MARGIN,
+  DEFAULT_WIDTH,
   drawPanel,
   fitText,
   GAP,
   HEADER_HEIGHT,
   LABEL_SIZE,
+  MARGIN,
   PANEL_PADDING,
+  PANEL_RADIUS,
   PORTRAIT_SIZE,
+  strokePanel,
   SUBTEXT_MIN_SIZE,
   SUBTEXT_SIZE,
-  TITLE_MIN_SIZE,
   TITLE_SIZE,
   VALUE_SIZE,
 } from "#lib/stat-card.js";
@@ -38,13 +41,13 @@ import type {
 import { formatSpaced } from "./format.js";
 import { ACCENT } from "./theme.js";
 
-const WIDTH = 1000;
-const MARGIN = 40;
+const WIDTH = DEFAULT_WIDTH;
 const CENTER = WIDTH / 2;
 const HEADER_CENTER = HEADER_HEIGHT / 2;
 const NAME_GAP = 24;
 const VS_SIZE = 28;
 const VS_HALF_WIDTH = 40;
+const NAME_MIN_SIZE = 22;
 const NAME_MAX_WIDTH =
   CENTER - VS_HALF_WIDTH - MARGIN - PORTRAIT_SIZE - 2 * NAME_GAP;
 
@@ -56,11 +59,10 @@ const VALUE_OFFSET = 150;
 const VALUE_MAX_WIDTH = CENTER - VALUE_OFFSET - MARGIN - PANEL_PADDING;
 const ARROW_SIZE = 7;
 const MIN_SCALE = 0.7;
-const LOSER_ALPHA = 0.5;
+const LOSER_ALPHA = 0.7;
 const DUEL_DETAIL_SIZE = 16;
 const DUEL_BAR_HEIGHT = 10;
 const DUEL_BAR_GAP = 4;
-const PANEL_RADIUS = 12;
 
 export interface VersusPlayer {
   name: string;
@@ -144,11 +146,8 @@ function isLoser(winner: Winner | null, side: Side): boolean {
   return winner !== null && winner !== "tie" && winner !== side;
 }
 
-function sideColor(winner: Winner | null, side: Side): Rgb {
-  if (winner === side) {
-    return ACCENT;
-  }
-  return isLoser(winner, side) ? PALETTE.subtext : PALETTE.text;
+function barColor(winner: Winner | null, side: Side): Rgb {
+  return winner === side ? ACCENT : PALETTE.text;
 }
 
 function drawHeader(
@@ -175,7 +174,7 @@ function drawHeader(
       player.name,
       TITLE_SIZE,
       NAME_MAX_WIDTH,
-      TITLE_MIN_SIZE
+      NAME_MIN_SIZE
     );
     const nameX = left
       ? portraitX + PORTRAIT_SIZE + NAME_GAP
@@ -240,6 +239,7 @@ function drawRow(
     { edge: winner }
   );
   ctx.restore();
+  strokePanel(ctx, MARGIN, y, width, height);
 }
 
 function drawValue(
@@ -330,9 +330,9 @@ function drawDuelBar(
   ctx.fillRect(left, y, width, DUEL_BAR_HEIGHT);
 
   const segments = [
-    { count: duel.left, color: sideColor(winner, "left") },
+    { count: duel.left, color: barColor(winner, "left") },
     { count: duel.ties, color: PALETTE.placeholder },
-    { count: duel.right, color: sideColor(winner, "right") },
+    { count: duel.right, color: barColor(winner, "right") },
   ].filter((segment) => segment.count > 0);
   const available = width - DUEL_BAR_GAP * (segments.length - 1);
   let x = left;

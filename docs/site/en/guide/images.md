@@ -48,7 +48,7 @@ const png = await renderLeaderboardTable({
 });
 ```
 
-A column can be right-aligned (`align: "right"`, `x` is then its right edge), and each cell can set its own `color`, font `family` or a small `icon` drawn before the text. Pass `caller` to add the viewer's own row under a separator when they are not on the page, and `width` for a table wider than the default 800 px.
+A column can be right-aligned (`align: "right"`, `x` is then its right edge), and each cell can set its own `color`, font `family` or a small `icon` drawn before the text. Pass `caller` to add the viewer's own row under a separator when they are not on the page, `width` for a table wider than the default 800 px, and `accent`, the module's color, for the line under the header and the caller's row.
 
 ## A Stat Card
 
@@ -76,11 +76,11 @@ const png = await renderStatCard({
 });
 ```
 
-The card is 1000 px wide, landscape, so Discord displays it large enough to read.
+The card is 1000 px wide by default (`width` widens it), landscape, so Discord displays it large enough to read. Its `accent`, the module's color, colors the line under the header, the portrait ring and the rank.
 
 - **The header** shows the round `image`, the `title`, an optional `subtitle` and an optional `rank`: a medal for the podium, `#N / total` otherwise, hidden when `position` is 0.
 - **Rows** hold one to three boxes, which share the row's width.
-- **A box** has a `title` and a `value`, and optionally a `color` (value and outline; `outline: false` keeps the color without the frame), a `subtext` and a small corner `avatar`. Text that is too long shrinks to fit the box.
+- **A box** has a `title` and a `value`, and optionally a `color` (value, light tint and an edge on the left; `highlight: false` colors the value without highlighting the box), a `subtext` and a small corner `avatar`. Text that is too long shrinks to fit the box.
 - **An aside** (`{ width, draw(ctx, x, y, width, height) }`) adds a custom panel on the right of the boxes, as tall as them. `drawPanel`, `drawPanelTitle`, `drawText`, `drawFittedText` and `measureText` from `#lib/stat-card` keep it consistent with the rest of the card; the RNGdle tier breakdown is built this way (`src/modules/rngdle/rendering/cards.ts`).
 
 ## Good Practices

@@ -140,7 +140,7 @@ Image du classement général (somme des scores), 10 joueurs par page, avec des 
 
 ### `/rngdle versus <player1> [player2]`
 
-Image comparant deux joueurs côte à côte, avec leur avatar et leur surnom sur le serveur (ou leur pseudo RNGdle s'ils sont introuvables sur Discord) : score total, nombre de tirages, score moyen et meilleur tirage (colorés selon leur palier), record de badges, et face-à-face sur les jours UTC où les deux ont tiré (victoires de chacun, égalités, nombre de jours en commun). Sur chaque ligne, le meilleur des deux est mis en valeur par une flèche et un fond à sa couleur ; à égalité, aucun ne l'est. Sans `player2`, compare `player1` avec soi-même. Choisir deux fois le même joueur, ou un joueur sans compte RNGdle lié, donne un message visible de soi seul ; si c'est soi-même qui n'a pas de compte lié, le message invite à le faire avec `/rngdle link`.
+Image comparant deux joueurs côte à côte, avec leur avatar et leur surnom sur le serveur (ou leur pseudo RNGdle s'ils sont introuvables sur Discord) : score total, nombre de tirages, score moyen et meilleur tirage (colorés selon leur palier), record de badges, et face-à-face sur les jours UTC où les deux ont tiré (victoires de chacun, égalités, nombre de jours en commun). Sur chaque ligne, le meilleur des deux est mis en valeur par une flèche, une teinte et un liseré à la couleur de RNGdle ; à égalité, aucun ne l'est. Sans `player2`, compare `player1` avec soi-même. Choisir deux fois le même joueur, ou un joueur sans compte RNGdle lié, donne un message visible de soi seul ; si c'est soi-même qui n'a pas de compte lié, le message invite à le faire avec `/rngdle link`.
 
 ### `/rngdle remind <enabled>`
 
