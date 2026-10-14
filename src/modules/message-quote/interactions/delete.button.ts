@@ -8,17 +8,17 @@ import {
 import type { TFunction } from "#lib/i18n.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 
-const CUSTOM_ID = "message-quote";
+export const QUOTE_CUSTOM_ID = "message-quote";
 
 export function deleteButton(t: TFunction, allowedUserIds: string[]) {
   return new ButtonBuilder()
-    .setCustomId([CUSTOM_ID, ...new Set(allowedUserIds)].join(":"))
+    .setCustomId([QUOTE_CUSTOM_ID, ...new Set(allowedUserIds)].join(":"))
     .setLabel(t("delete.button"))
     .setStyle(ButtonStyle.Secondary);
 }
 
 export default declareInteractionHandler<ButtonInteraction>({
-  customId: CUSTOM_ID,
+  customId: QUOTE_CUSTOM_ID,
   access: "everyone",
   check: (interaction): interaction is ButtonInteraction =>
     interaction.isButton(),

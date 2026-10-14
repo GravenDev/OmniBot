@@ -1,4 +1,8 @@
-import { PermissionFlagsBits, type ButtonInteraction } from "discord.js";
+import {
+  MessageFlags,
+  PermissionFlagsBits,
+  type ButtonInteraction,
+} from "discord.js";
 import { describe, expect, it, vi } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
 import handler, { deleteButton } from "./delete.button.js";
@@ -49,7 +53,10 @@ describe("delete handler", () => {
     await handler.execute(interaction, ["1", "2"], config);
     expect(remove).not.toHaveBeenCalled();
     expect(reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: "delete.notAllowed" })
+      expect.objectContaining({
+        content: "delete.notAllowed",
+        flags: MessageFlags.Ephemeral,
+      })
     );
   });
 });

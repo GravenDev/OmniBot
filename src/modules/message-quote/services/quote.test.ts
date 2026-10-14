@@ -29,7 +29,46 @@ const GUILD = "100";
 const t = (key: string, options?: Record<string, unknown>) =>
   options ? `${key} ${JSON.stringify(options)}` : key;
 
-const everyone = { id: GUILD };
+function fakeRole(id: string, permissions: bigint[] = []) {
+  return { id, permissions: new PermissionsBitField(permissions) };
+}
+
+const everyone = fakeRole(GUILD, [PermissionFlagsBits.ViewChannel]);
+
+const roles = new Collection(
+  [everyone, fakeRole("member"), fakeRole("staff")].map((role) => [
+    role.id,
+    role,
+  ])
+);
+
+function fakeGuild(everyoneRole = everyone) {
+  const cache = new Collection(roles);
+  cache.set(everyoneRole.id, everyoneRole);
+  return { roles: { everyone: everyoneRole, cache } };
+}
+
+const lockedServer = fakeGuild(fakeRole(GUILD));
+
+function overwrites(viewers?: string[]) {
+  const cache = new Map<
+    string,
+    { allow: PermissionsBitField; deny: PermissionsBitField }
+  >();
+  if (viewers) {
+    cache.set(GUILD, {
+      allow: new PermissionsBitField(),
+      deny: new PermissionsBitField([PermissionFlagsBits.ViewChannel]),
+    });
+    for (const viewer of viewers) {
+      cache.set(viewer, {
+        allow: new PermissionsBitField([PermissionFlagsBits.ViewChannel]),
+        deny: new PermissionsBitField(),
+      });
+    }
+  }
+  return { cache };
+}
 
 const READ = [
   PermissionFlagsBits.ViewChannel,
@@ -50,27 +89,31 @@ function fakeChannel(
     nsfw?: boolean;
     permissions?: bigint[];
     public?: boolean;
+    viewers?: string[];
+    guild?: ReturnType<typeof fakeGuild>;
     threadMembers?: string[];
     cachedThreadMembers?: string[];
     messages?: Record<string, unknown>;
   } = {}
 ) {
+  const permissionOverwrites = overwrites(
+    options.viewers ?? (options.public === false ? ["staff"] : undefined)
+  );
+  const thread = options.thread ?? false;
   return {
     id: options.id ?? "200",
     parentId: options.parentId ?? null,
-    parent: options.parent ?? null,
+    parent: thread
+      ? { parentId: null, ...options.parent, permissionOverwrites }
+      : (options.parent ?? null),
     type: options.type ?? ChannelType.GuildText,
     nsfw: options.nsfw ?? false,
     name: "general",
-    guild: { roles: { everyone } },
-    isThread: () => options.thread ?? false,
+    guild: options.guild ?? fakeGuild(),
+    permissionOverwrites,
+    isThread: () => thread,
     isTextBased: () => true,
-    permissionsFor: (target: unknown) =>
-      target === everyone
-        ? new PermissionsBitField(
-            options.public === false ? [] : [PermissionFlagsBits.ViewChannel]
-          )
-        : new PermissionsBitField(options.permissions ?? READ),
+    permissionsFor: () => new PermissionsBitField(options.permissions ?? READ),
     members: {
       fetch: async (fetchOptions: { member: string; force?: boolean }) => {
         const known =
@@ -109,6 +152,7 @@ function fakeQuoted(
     embeds?: unknown[];
     authorId?: string;
     withMember?: boolean;
+    buttonIds?: string[];
   } = {}
 ) {
   const attachments = new Collection(
@@ -148,6 +192,14 @@ function fakeQuoted(
     url: "https://discord.com/channels/100/200/300",
     createdAt: new Date("2026-10-14T19:58:00Z"),
     channel: { name: "general" },
+    client: { user: { id: "bot" } },
+    components: options.buttonIds
+      ? [
+          {
+            components: options.buttonIds.map((customId) => ({ customId })),
+          },
+        ]
+      : [],
   } as unknown as Message<true>;
 }
 
@@ -385,12 +437,105 @@ describe("resolveQuote", () => {
     expect(await resolveQuote(message, member, target, new Set())).toBe(quoted);
   });
 
-  it("never quotes the bot's own messages", async () => {
-    const own = fakeQuoted({ authorId: "bot" });
+  it("compares audiences role by role when @everyone sees nothing", async () => {
+    const general = (id: string) =>
+      fakeChannel({
+        id,
+        guild: lockedServer,
+        viewers: ["member", "staff"],
+        messages: { "300": quoted },
+      });
+    const staff = (id: string) =>
+      fakeChannel({
+        id,
+        guild: lockedServer,
+        viewers: ["staff"],
+        messages: { "300": quoted },
+      });
+
+    const intoGeneral = fakeSource("", { "200": staff("200") }, general("999"));
+    expect(
+      await resolveQuote(intoGeneral.message, member, target, new Set())
+    ).toBeNull();
+
+    const intoStaff = fakeSource("", { "200": general("200") }, staff("999"));
+    expect(
+      await resolveQuote(intoStaff.message, member, target, new Set())
+    ).toBe(quoted);
+  });
+
+  it("counts @everyone's access for every role", async () => {
+    const { message } = fakeSource(
+      "",
+      { "200": fakeChannel({ messages: { "300": quoted } }) },
+      fakeChannel({ id: "999", viewers: ["member"] })
+    );
+    expect(await resolveQuote(message, member, target, new Set())).toBe(quoted);
+  });
+
+  it("refuses a public thread of a private channel in a public channel", async () => {
     const { message } = fakeSource("", {
-      "200": fakeChannel({ messages: { "300": own } }),
+      "200": fakeChannel({
+        thread: true,
+        type: ChannelType.PublicThread,
+        public: false,
+        messages: { "300": quoted },
+      }),
     });
     expect(await resolveQuote(message, member, target, new Set())).toBeNull();
+  });
+
+  it("quotes a private thread only inside that thread", async () => {
+    const privateThread = (id: string) =>
+      fakeChannel({
+        id,
+        thread: true,
+        type: ChannelType.PrivateThread,
+        threadMembers: [member.id],
+        messages: { "300": quoted },
+      });
+    const elsewhere = fakeSource(
+      "",
+      { "200": privateThread("200") },
+      fakeChannel({ id: "999", public: false })
+    );
+    expect(
+      await resolveQuote(elsewhere.message, member, target, new Set())
+    ).toBeNull();
+
+    const inside = fakeSource(
+      "",
+      { "200": privateThread("200") },
+      privateThread("200")
+    );
+    expect(await resolveQuote(inside.message, member, target, new Set())).toBe(
+      quoted
+    );
+  });
+
+  it("does not quote its own quotes but quotes its other messages", async () => {
+    const ownQuote = fakeQuoted({
+      authorId: "bot",
+      buttonIds: ["message-quote:1:2"],
+    });
+    const announcement = fakeQuoted({
+      authorId: "bot",
+      buttonIds: ["rngdle-nav:profile"],
+    });
+    const { message } = fakeSource("", {
+      "200": fakeChannel({
+        messages: { "300": ownQuote, "301": announcement },
+      }),
+    });
+    expect(await resolveQuote(message, member, target, new Set())).toBeNull();
+    expect(
+      await resolveQuote(
+        message,
+        member,
+        { channelId: "200", messageId: "301" },
+        new Set()
+      )
+    ).toBe(announcement);
   });
 
   it("refuses an excluded channel", async () => {
