@@ -9,7 +9,6 @@ import {
   font,
   FONT,
   loadMedals,
-  MEDAL_COLORS,
   PALETTE,
   rgb,
   type Rgb,
@@ -155,12 +154,7 @@ export async function renderLeaderboardTable<Row extends LeaderboardEntry>({
 
   rows.forEach((row, index) => {
     const color = index % 2 === 0 ? PALETTE.rowEven : PALETTE.rowOdd;
-    drawRow(
-      row,
-      HEADER_HEIGHT + index * ROW_HEIGHT,
-      color,
-      MEDAL_COLORS[row.rank - 1]
-    );
+    drawRow(row, HEADER_HEIGHT + index * ROW_HEIGHT, color);
   });
   if (caller) {
     const separatorTop = bottom + CALLER_GAP / 2;

@@ -33,11 +33,6 @@ export const PALETTE = {
 } as const satisfies Record<string, Rgb>;
 
 export const DEFAULT_ACCENT: Rgb = [124, 140, 255];
-export const MEDAL_COLORS: readonly Rgb[] = [
-  [247, 201, 72],
-  [196, 204, 218],
-  [214, 137, 72],
-];
 
 const ACCENT_LINE = 3;
 const RING_WIDTH = 4;

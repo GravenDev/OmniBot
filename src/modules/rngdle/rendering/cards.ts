@@ -30,26 +30,56 @@ const HIGHLIGHTED_TIERS = new Set<TierOrError>([
 const BREAKDOWN_TIERS = [...TIERS].reverse();
 const BREAKDOWN_TOP = 52;
 const BREAKDOWN_BOTTOM = 18;
-const TIER_LABEL_SIZE = 17;
-const TIER_LABEL_WIDTH = 118;
-const COUNT_SIZE = 17;
-const COUNT_WIDTH = 50;
-const EXPECTED_SIZE = 14;
-const EXPECTED_WIDTH = 56;
 const BAR_HEIGHT = 10;
 const SHORTFALL_ALPHA = 0.45;
 const MAX_DEVIATION = 2;
 const PRIOR_DRAWS = 2;
 const MARKER_WIDTH = 2;
 const MARKER_OVERHANG = 4;
-const LEGEND_SIZE = 14;
 const LEGEND_Y = 20;
 const LEGEND_GAP = 6;
-const LEADER_SIZE = 22;
-const LEADER_STEP = 14;
 const LEADER_BORDER = 2;
 const MAX_LEADERS = 3;
-const LEADERS_WIDTH = LEADER_SIZE + (MAX_LEADERS - 1) * LEADER_STEP + 8;
+const SERVER_STATS_WIDTH = 1200;
+
+interface BreakdownSizes {
+  width: number;
+  label: number;
+  labelWidth: number;
+  count: number;
+  countWidth: number;
+  expected: number;
+  expectedWidth: number;
+  legend: number;
+  leader: number;
+  leaderStep: number;
+}
+
+const PROFILE_BREAKDOWN: BreakdownSizes = {
+  width: 390,
+  label: 17,
+  labelWidth: 118,
+  count: 17,
+  countWidth: 50,
+  expected: 14,
+  expectedWidth: 56,
+  legend: 14,
+  leader: 22,
+  leaderStep: 14,
+};
+
+const SERVER_BREAKDOWN: BreakdownSizes = {
+  width: 660,
+  label: 19,
+  labelWidth: 140,
+  count: 22,
+  countWidth: 80,
+  expected: 17,
+  expectedWidth: 76,
+  legend: 16,
+  leader: 24,
+  leaderStep: 16,
+};
 
 interface Roll {
   number: number;
@@ -143,17 +173,19 @@ function drawLeaders(
   ctx: SKRSContext2D,
   leaders: (Image | null)[],
   x: number,
-  centerY: number
+  centerY: number,
+  size: number,
+  step: number
 ): void {
-  const radius = LEADER_SIZE / 2;
+  const radius = size / 2;
   const top = centerY - radius;
   for (let index = leaders.length - 1; index >= 0; index--) {
-    const left = x + index * LEADER_STEP;
+    const left = x + index * step;
     ctx.beginPath();
     ctx.arc(left + radius, centerY, radius + LEADER_BORDER, 0, Math.PI * 2);
     ctx.fillStyle = rgb(PALETTE.box);
     ctx.fill();
-    drawCircularImage(ctx, leaders[index] ?? null, left, top, LEADER_SIZE);
+    drawCircularImage(ctx, leaders[index] ?? null, left, top, size);
   }
 }
 
@@ -178,10 +210,14 @@ function tierBreakdown(
   expectedLabel: string,
   formatExpected: (value: number) => string,
   counts: Record<Tier, number>,
+  sizes: BreakdownSizes,
   leaders?: Record<Tier, (Image | null)[]>
 ): CardAside {
+  const leadersWidth = leaders
+    ? sizes.leader + (MAX_LEADERS - 1) * sizes.leaderStep + 8
+    : 0;
   return {
-    width: leaders ? 460 : 390,
+    width: sizes.width,
     draw(ctx, x, y, width, height) {
       drawPanel(ctx, x, y, width, height);
       drawPanelTitle(ctx, title, x, y);
@@ -190,23 +226,22 @@ function tierBreakdown(
       const step =
         (height - BREAKDOWN_TOP - BREAKDOWN_BOTTOM) / BREAKDOWN_TIERS.length;
       const labelX = x + PANEL_PADDING;
-      const barX = labelX + TIER_LABEL_WIDTH;
-      const expectedRight =
-        x + width - PANEL_PADDING - (leaders ? LEADERS_WIDTH : 0);
-      const valueRight = expectedRight - EXPECTED_WIDTH;
-      const barWidth = valueRight - COUNT_WIDTH - barX;
+      const barX = labelX + sizes.labelWidth;
+      const expectedRight = x + width - PANEL_PADDING - leadersWidth;
+      const valueRight = expectedRight - sizes.expectedWidth;
+      const barWidth = valueRight - sizes.countWidth - barX;
       const half = barWidth / 2;
       const centerX = barX + half;
 
       if (total > 0) {
         const legendX =
-          expectedRight - measureText(ctx, expectedLabel, LEGEND_SIZE);
+          expectedRight - measureText(ctx, expectedLabel, sizes.legend);
         drawText(
           ctx,
           expectedLabel,
           legendX,
           y + LEGEND_Y,
-          LEGEND_SIZE,
+          sizes.legend,
           PALETTE.subtext
         );
         ctx.fillStyle = rgb(PALETTE.subtext);
@@ -214,7 +249,7 @@ function tierBreakdown(
           legendX - LEGEND_GAP - MARKER_WIDTH,
           y + LEGEND_Y,
           MARKER_WIDTH,
-          LEGEND_SIZE
+          sizes.legend
         );
       }
 
@@ -222,8 +257,8 @@ function tierBreakdown(
         const count = counts[tier] ?? 0;
         const centerY = y + BREAKDOWN_TOP + step * (index + 0.5);
         const color = count > 0 ? TIER_COLORS[tier] : PALETTE.subtext;
-        const labelTop = centerY - TIER_LABEL_SIZE * 0.62;
-        drawText(ctx, tier, labelX, labelTop, TIER_LABEL_SIZE, color);
+        const labelTop = centerY - sizes.label * 0.62;
+        drawText(ctx, tier, labelX, labelTop, sizes.label, color);
 
         ctx.beginPath();
         ctx.roundRect(barX, centerY - BAR_HEIGHT / 2, barWidth, BAR_HEIGHT, 5);
@@ -249,9 +284,9 @@ function tierBreakdown(
           drawText(
             ctx,
             expectedText,
-            expectedRight - measureText(ctx, expectedText, EXPECTED_SIZE),
-            centerY - EXPECTED_SIZE * 0.62,
-            EXPECTED_SIZE,
+            expectedRight - measureText(ctx, expectedText, sizes.expected),
+            centerY - sizes.expected * 0.62,
+            sizes.expected,
             PALETTE.subtext
           );
         }
@@ -261,15 +296,22 @@ function tierBreakdown(
         drawText(
           ctx,
           text,
-          valueRight - measureText(ctx, text, COUNT_SIZE),
-          centerY - COUNT_SIZE * 0.62,
-          COUNT_SIZE,
+          valueRight - measureText(ctx, text, sizes.count),
+          centerY - sizes.count * 0.62,
+          sizes.count,
           total > 0 && count > expected ? TIER_COLORS[tier] : PALETTE.subtext
         );
 
         if (leaders) {
           const tierLeaders = (leaders[tier] ?? []).slice(0, MAX_LEADERS);
-          drawLeaders(ctx, tierLeaders, expectedRight + 12, centerY);
+          drawLeaders(
+            ctx,
+            tierLeaders,
+            expectedRight + 12,
+            centerY,
+            sizes.leader,
+            sizes.leaderStep
+          );
         }
       });
     },
@@ -317,7 +359,8 @@ export function renderProfile(
       labels.tierBreakdown,
       labels.expected,
       labels.expectedCount,
-      data.tierCounts
+      data.tierCounts,
+      PROFILE_BREAKDOWN
     ),
   });
 }
@@ -333,6 +376,7 @@ export function renderServerStats(
   });
   return renderStatCard({
     accent: ACCENT,
+    width: SERVER_STATS_WIDTH,
     image: data.icon,
     title: labels.title,
     rows: [
@@ -351,6 +395,7 @@ export function renderServerStats(
       labels.expected,
       labels.expectedCount,
       data.tierCounts,
+      SERVER_BREAKDOWN,
       data.tierLeaders
     ),
   });

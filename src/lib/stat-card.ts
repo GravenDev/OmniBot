@@ -14,7 +14,7 @@ import {
   type Rgb,
 } from "./imaging.js";
 
-const WIDTH = 1000;
+const DEFAULT_WIDTH = 1000;
 const MARGIN = 40;
 export const HEADER_HEIGHT = 130;
 const HEADER_CENTER = HEADER_HEIGHT / 2;
@@ -74,6 +74,7 @@ export interface StatCard {
   rows: StatBox[][];
   aside?: CardAside;
   accent?: Rgb;
+  width?: number;
 }
 
 export function drawText(
@@ -244,9 +245,9 @@ function drawRank(
   ctx: SKRSContext2D,
   { position, total }: { position: number; total: number },
   medals: Image[],
-  accent: Rgb
+  accent: Rgb,
+  right: number
 ): void {
-  const right = WIDTH - MARGIN;
   const medal = medals[position - 1];
   const medalWidth = MEDAL_WIDTHS[position - 1];
   if (medal && medalWidth) {
@@ -275,10 +276,11 @@ function drawRank(
 export async function renderStatCard(card: StatCard): Promise<Buffer> {
   const medals = card.rank ? await loadMedals() : [];
   const accent = card.accent ?? DEFAULT_ACCENT;
+  const width = card.width ?? DEFAULT_WIDTH;
   const bodyHeight =
     card.rows.length * BOX_HEIGHT + (card.rows.length - 1) * GAP;
   const ctx = createBoard(
-    WIDTH,
+    width,
     BODY_TOP + bodyHeight + BOTTOM_MARGIN,
     HEADER_HEIGHT,
     accent
@@ -289,7 +291,7 @@ export async function renderStatCard(card: StatCard): Promise<Buffer> {
   drawPortrait(ctx, card.image, MARGIN, portraitY, PORTRAIT_SIZE, accent);
   const rank = card.rank && card.rank.position > 0 ? card.rank : undefined;
   const titleWidth =
-    WIDTH -
+    width -
     MARGIN -
     TITLE_X -
     (rank ? rankWidth(ctx, rank, medals) + RANK_GAP : 0);
@@ -317,10 +319,10 @@ export async function renderStatCard(card: StatCard): Promise<Buffer> {
     fillTextCentered(ctx, subtitle.text, TITLE_X, HEADER_CENTER + 26);
   }
   if (rank) {
-    drawRank(ctx, rank, medals, accent);
+    drawRank(ctx, rank, medals, accent, width - MARGIN);
   }
 
-  const contentWidth = WIDTH - 2 * MARGIN;
+  const contentWidth = width - 2 * MARGIN;
   const asideWidth = card.aside ? card.aside.width + GAP : 0;
   const boxesWidth = contentWidth - asideWidth;
   card.rows.forEach((boxes, row) => {
@@ -329,13 +331,13 @@ export async function renderStatCard(card: StatCard): Promise<Buffer> {
         `A stat card row holds 1 to 3 boxes, got ${boxes.length}`
       );
     }
-    const width = (boxesWidth - GAP * (boxes.length - 1)) / boxes.length;
+    const boxWidth = (boxesWidth - GAP * (boxes.length - 1)) / boxes.length;
     boxes.forEach((box, index) => {
       drawStatBox(
         ctx,
-        MARGIN + index * (width + GAP),
+        MARGIN + index * (boxWidth + GAP),
         BODY_TOP + row * (BOX_HEIGHT + GAP),
-        width,
+        boxWidth,
         box
       );
     });
