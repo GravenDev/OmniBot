@@ -232,3 +232,38 @@ plus de commande dédiée : la configuration se fait via `/config thread-creator
 
 Il n'y a plus de flag `actif` : désactiver le module via `/modules` arrête la
 surveillance sans effacer la configuration.
+
+---
+
+## Module Message Quote
+
+Cite les messages Discord dont le lien est posté sur le serveur.
+
+### Comportement automatique
+
+Quand un membre poste un lien vers un message (`https://discord.com/channels/…`, y compris `ptb.` et `canary.`), le bot répond avec une citation : auteur et avatar, texte, première image, autres pièces jointes en liens, salon d'origine, membre qui cite et date du message. Un bouton « Aller au message » ouvre l'original. Les mentions présentes dans le message cité ne notifient personne.
+
+Un message transféré est cité avec son contenu transféré. Un message sans texte reprend la description de son premier embed, à défaut le bot indique qu'il n'a pas de texte.
+
+**Ce qui n'est pas cité :**
+
+- Les liens vers un autre serveur
+- Les messages d'un salon que le membre qui poste le lien ne peut pas lire (voir le salon et lire l'historique ; pour un fil privé, en être membre ou pouvoir gérer les fils). Le bot ne révèle jamais un salon auquel le membre n'a pas accès.
+- Les messages d'un salon NSFW, sauf si le lien est posté dans un salon NSFW
+- Les liens entre chevrons (`<https://…>`), dans du code ou sous spoiler
+- Les messages des salons exclus, et les liens postés dans un salon exclu
+- Les liens postés par des bots
+
+Au plus 3 messages sont cités par message, les doublons sont ignorés. Si aucun lien n'est citable, le bot ne répond pas. Une image sous spoiler n'est jamais affichée, seulement listée en lien.
+
+### Bouton « Supprimer »
+
+Supprime la citation. Il est réservé au membre qui a posté le lien, aux auteurs des messages cités et aux membres qui peuvent gérer les messages du salon ; les autres reçoivent une réponse visible d'eux seuls.
+
+### Configuration — `/config message-quote`
+
+| Champ              | Type           | Description                                                                                            |
+| ------------------ | -------------- | ------------------------------------------------------------------------------------------------------ |
+| `excludedChannels` | Salons (liste) | Salons ou catégories dont les messages ne sont jamais cités, et où les liens postés ne sont pas cités. |
+
+Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
