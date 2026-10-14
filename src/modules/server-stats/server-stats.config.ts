@@ -9,13 +9,18 @@ export const serverStatsConfigSchema = {
   },
   excludedChannels: {
     name: "Excluded channels",
-    description: "Channels or categories whose activity is not counted.",
+    description: "Channels whose activity is not counted.",
     type: [ConfigType.CHANNEL],
+  },
+  excludedCategories: {
+    name: "Excluded categories",
+    description: "Categories whose channels' activity is not counted.",
+    type: [ConfigType.CATEGORY],
   },
   includePrivateChannels: {
     name: "Include private channels",
     description:
-      "Also count the channels that @everyone cannot see. Their names then appear in the public report.",
+      "Also count the channels that @everyone cannot see. Enable it when @everyone sees no channel (access through a member role).",
     type: ConfigType.BOOLEAN,
     defaultValue: false,
   },

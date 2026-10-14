@@ -32,7 +32,7 @@ OmniBot collecte uniquement les données nécessaires à son fonctionnement :
 
 ### Statistiques d'activité
 
-Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, jamais le contenu des messages. Ces compteurs sont supprimés au bout de 90 jours.
+Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, jamais le contenu des messages. Ces compteurs sont supprimés au bout de 90 jours. Le bilan quotidien publié sur le serveur peut citer les membres les plus actifs ; les administrateurs peuvent le désactiver.
 
 ## Stockage des données
 
