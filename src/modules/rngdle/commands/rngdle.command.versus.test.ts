@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   versusCard: vi.fn(async (): Promise<Buffer | null> => Buffer.from("png")),
 }));
 
-vi.mock("#modules/rngdle/services/store.js", () => ({
+vi.mock("#modules/rngdle/services/store.service.js", () => ({
   default: {
     account: async (guildId: string, userId: string) =>
       mocks.linked.has(userId)
@@ -18,11 +18,11 @@ vi.mock("#modules/rngdle/services/store.js", () => ({
         : null,
   },
 }));
-vi.mock("#modules/rngdle/services/sync.js", () => ({
+vi.mock("#modules/rngdle/services/sync.service.js", () => ({
   default: { refreshIfStale: mocks.refreshIfStale },
 }));
-vi.mock("#modules/rngdle/services/views.js", () => ({
-  versusCard: mocks.versusCard,
+vi.mock("#modules/rngdle/services/views.service.js", () => ({
+  default: { versusCard: mocks.versusCard },
 }));
 vi.mock("#modules/rngdle/interactions/overall-page.button.js", () => ({
   overallPageMessage: vi.fn(),

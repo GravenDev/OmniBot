@@ -4,7 +4,7 @@ import { declareService, type Service } from "#lib/service.js";
 import type { ThreadCreatorConfigSchema } from "#modules/thread-creator/thread-creator.config.js";
 import { ThreadCreationQueue } from "./thread-creation-queue.js";
 
-class ThreadCreatorService implements Service {
+export class ThreadCreatorService implements Service {
   private readonly queue = new ThreadCreationQueue();
 
   /**

@@ -13,7 +13,7 @@ vi.mock("#lib/logger.js", () => {
 vi.mock("#core/utils/require-admin.js", () => ({
   requireAdmin: async () => true,
 }));
-vi.mock("#modules/rngdle/services/store.js", () => ({
+vi.mock("#modules/rngdle/services/store.service.js", () => ({
   default: {
     unregister: async () => {
       order.push("unregister");
@@ -21,7 +21,7 @@ vi.mock("#modules/rngdle/services/store.js", () => ({
     },
   },
 }));
-vi.mock("#modules/rngdle/services/sync.js", () => ({
+vi.mock("#modules/rngdle/services/sync.service.js", () => ({
   default: {
     exclusive: async (_guildId: string, task: () => Promise<unknown>) => {
       order.push("queue");
@@ -30,7 +30,9 @@ vi.mock("#modules/rngdle/services/sync.js", () => ({
   },
   FullSyncCooldownError: class extends Error {},
 }));
-vi.mock("#modules/rngdle/services/linking.js", () => ({ linkAccount }));
+vi.mock("#modules/rngdle/services/linking.service.js", () => ({
+  default: { linkAccount },
+}));
 
 const { default: command } = await import("./rngdle-admin.command.js");
 

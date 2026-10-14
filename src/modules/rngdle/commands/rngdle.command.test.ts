@@ -20,7 +20,7 @@ vi.mock("#lib/logger.js", () => {
   const logger = { info: vi.fn(), warn: vi.fn() };
   return { loggerMaker: () => logger };
 });
-vi.mock("#modules/rngdle/services/store.js", () => ({
+vi.mock("#modules/rngdle/services/store.service.js", () => ({
   default: {
     account: mocks.account,
     accountByUsername: mocks.accountByUsername,
@@ -30,19 +30,39 @@ vi.mock("#modules/rngdle/services/store.js", () => ({
 vi.mock("#core/services/mention.service.js", () => ({
   default: { mentionable: mocks.mentionable },
 }));
-vi.mock("#modules/rngdle/services/sync.js", () => ({
+vi.mock("#modules/rngdle/services/sync.service.js", () => ({
   default: { refreshIfStale: mocks.refreshIfStale },
 }));
-vi.mock("#modules/rngdle/services/linking.js", () => ({
-  linkOwnAccount: mocks.linkOwnAccount,
-}));
-vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  dailyLeaderboard: mocks.dailyLeaderboard,
-  serverCard: mocks.serverCard,
-  profileCard: mocks.profileCard,
-  overallPage: mocks.overallPage,
-}));
+vi.mock(
+  "#modules/rngdle/services/linking.service.js",
+  async (importOriginal) => {
+    const orig =
+      await importOriginal<
+        typeof import("#modules/rngdle/services/linking.service.js")
+      >();
+    return {
+      ...orig,
+      default: Object.assign(new orig.LinkingService(), {
+        linkOwnAccount: mocks.linkOwnAccount,
+      }),
+    };
+  }
+);
+vi.mock("#modules/rngdle/services/views.service.js", async (importOriginal) => {
+  const orig =
+    await importOriginal<
+      typeof import("#modules/rngdle/services/views.service.js")
+    >();
+  return {
+    ...orig,
+    default: Object.assign(new orig.ViewsService(), {
+      dailyLeaderboard: mocks.dailyLeaderboard,
+      serverCard: mocks.serverCard,
+      profileCard: mocks.profileCard,
+      overallPage: mocks.overallPage,
+    }),
+  };
+});
 
 const { default: command } = await import("./rngdle.command.js");
 

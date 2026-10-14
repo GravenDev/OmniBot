@@ -1,8 +1,8 @@
 import prisma from "#lib/database.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { declareService, type Service } from "#lib/service.js";
-import { evaluateMessage, type MessageOutcome } from "./game-rules.js";
-import { computeProfileStats, type ProfileStats } from "./profile.js";
+import gameRules, { type MessageOutcome } from "./game-rules.service.js";
+import profileService, { type ProfileStats } from "./profile.service.js";
 
 export interface GameMessage {
   guildId: string;
@@ -49,7 +49,7 @@ export interface LeaderboardEntry {
   rank: number;
 }
 
-class FourHourGameService implements Service {
+export class FourHourGameService implements Service {
   private readonly queue = new KeyedQueue();
   private readonly revisions = new Map<string, number>();
 
@@ -78,7 +78,7 @@ class FourHourGameService implements Service {
       where: { guildId },
     });
 
-    const outcome = evaluateMessage(
+    const outcome = gameRules.evaluateMessage(
       last,
       { channelId, authorId, sentAt },
       delaySeconds
@@ -248,7 +248,7 @@ class FourHourGameService implements Service {
     if (score === null) {
       return null;
     }
-    const stats = computeProfileStats(history, userId, now);
+    const stats = profileService.computeProfileStats(history, userId, now);
     return {
       score,
       rank: rank?.rank ?? 0,

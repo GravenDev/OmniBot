@@ -55,6 +55,7 @@ The docs are also published as a VitePress site (sources in `docs/site/`) — ru
 - Never edit `src/prisma/schema.prisma` directly — edit the module's own `*.prisma` file and run `pnpm prisma:consolidate`.
 - Run `pnpm prisma:generate` before building after any schema change.
 - Import across directories with `#…` subpath imports (e.g. `#lib/config.js`, `#core/…`), not deep relative paths (`../../…`); keep same-directory imports relative (`./x.js`). Always keep the `.js` extension (NodeNext).
+- Keep `services/` compliant with the [Services guide](docs/site/en/guide/services.md) — one `services/<name>.service.ts` per service, with an exported `class X implements Service` plus a default `declareService(new X())` singleton; import the singleton directly where needed (services are never auto-discovered nor registered).
 
 ## Environment
 

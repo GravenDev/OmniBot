@@ -8,12 +8,11 @@ import {
 } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
-import store, { type Account } from "#modules/rngdle/services/store.js";
-import sync from "#modules/rngdle/services/sync.js";
-import {
-  profileCard,
+import store, { type Account } from "#modules/rngdle/services/store.service.js";
+import sync from "#modules/rngdle/services/sync.service.js";
+import views, {
   type ViewContext,
-} from "#modules/rngdle/services/views.js";
+} from "#modules/rngdle/services/views.service.js";
 import { overallPageMessage } from "./overall-page.button.js";
 
 const CUSTOM_ID = "rngdle-nav";
@@ -45,7 +44,7 @@ export async function profileMessage(
       ),
     };
   }
-  const image = await profileCard(context, account);
+  const image = await views.profileCard(context, account);
   return image
     ? {
         files: [

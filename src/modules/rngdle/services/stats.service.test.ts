@@ -1,0 +1,175 @@
+import { describe, expect, it } from "vitest";
+import { ScoreTable } from "./scoring.service.js";
+import stats from "./stats.service.js";
+import type { StoredRoll } from "./store.service.js";
+
+const table = new ScoreTable({
+  "0": 0,
+  "100": 10,
+  "200": 60,
+  "300": 80,
+  "400": 92,
+  "500": 97,
+  "600": 99.5,
+});
+
+let counter = 0;
+function roll(userId: string, score: number, badgeCount = 0): StoredRoll {
+  const number = ++counter;
+  return {
+    userId,
+    number,
+    score,
+    badgeCount,
+    rolledAt: new Date(Date.UTC(2026, 0, number)),
+  };
+}
+
+describe("computeRollStats", () => {
+  it("returns null without rolls", () => {
+    expect(stats.computeRollStats([], table)).toBeNull();
+  });
+
+  it("computes totals, truncated average, extremes (first on ties) and max badges", () => {
+    const rolls = [
+      roll("a", 100, 1),
+      roll("b", 601, 5),
+      roll("a", 50, 3),
+      roll("c", 10, 0),
+      roll("d", 601, 0),
+      roll("e", 10, 0),
+    ];
+
+    const result = stats.computeRollStats(rolls, table)!;
+
+    expect(result).toMatchObject({
+      totalRolls: 6,
+      totalScore: 1372,
+      averageScore: 228,
+      maxBadges: 5,
+    });
+    expect(result.best).toEqual({
+      userId: "b",
+      number: rolls[1]!.number,
+      score: 601,
+      rolledAt: rolls[1]!.rolledAt,
+    });
+    expect(result.worst.userId).toBe("c");
+  });
+
+  it("counts every tier, with zeros, and leaves ERROR rolls out of the tiers", () => {
+    const scores = [0, 5, 100, 250, 350, 450, 550, 650, 700, -1];
+
+    const result = stats.computeRollStats(
+      scores.map((score) => roll("a", score)),
+      table
+    )!;
+
+    expect(result.totalRolls).toBe(10);
+    expect(result.tierCounts).toEqual({
+      TRASH: 2,
+      COMMON: 1,
+      UNCOMMON: 1,
+      RARE: 1,
+      EPIC: 1,
+      ANOMALY: 1,
+      MYTHIC: 2,
+    });
+  });
+});
+
+describe("computeServerStats", () => {
+  it("returns null without rolls", () => {
+    expect(stats.computeServerStats([], table)).toBeNull();
+  });
+
+  it("includes the roll stats and orders tier leaders by count, at most 3, skipping ERROR rolls", () => {
+    const rolls = [
+      roll("a", 100),
+      roll("b", 100),
+      roll("b", 100),
+      roll("c", 100),
+      roll("c", 100),
+      roll("c", 100),
+      roll("d", 100),
+      roll("a", 650),
+      roll("z", -10),
+    ];
+
+    const result = stats.computeServerStats(rolls, table)!;
+
+    expect(result.totalRolls).toBe(9);
+    expect(result.tierLeaders.COMMON).toEqual(["c", "b", "a"]);
+    expect(result.tierLeaders.MYTHIC).toEqual(["a"]);
+    expect(result.tierLeaders.TRASH).toEqual([]);
+    expect(Object.values(result.tierLeaders).flat()).not.toContain("z");
+  });
+});
+
+describe("computeStreaks", () => {
+  const at = (iso: string) => ({ rolledAt: new Date(iso) });
+  const now = new Date("2026-03-02T12:00:00Z");
+
+  it("is empty without rolls", () => {
+    expect(stats.computeStreaks([], now)).toEqual({ current: 0, best: 0 });
+  });
+
+  it("counts a streak ending today", () => {
+    const rolls = [
+      at("2026-02-28T23:59:59Z"),
+      at("2026-03-01T00:00:00Z"),
+      at("2026-03-02T08:00:00Z"),
+    ];
+
+    expect(stats.computeStreaks(rolls, now)).toEqual({ current: 3, best: 3 });
+  });
+
+  it("keeps a streak ending yesterday, since today's roll may still come", () => {
+    const rolls = [at("2026-02-28T10:00:00Z"), at("2026-03-01T10:00:00Z")];
+
+    expect(stats.computeStreaks(rolls, now)).toEqual({ current: 2, best: 2 });
+  });
+
+  it("drops the current streak after a missed day but keeps the record", () => {
+    const rolls = [
+      at("2026-02-25T10:00:00Z"),
+      at("2026-02-26T10:00:00Z"),
+      at("2026-02-27T10:00:00Z"),
+    ];
+
+    expect(stats.computeStreaks(rolls, now)).toEqual({ current: 0, best: 3 });
+  });
+
+  it("restarts after a one-day gap", () => {
+    const rolls = [
+      at("2026-02-26T10:00:00Z"),
+      at("2026-02-27T10:00:00Z"),
+      at("2026-03-01T10:00:00Z"),
+      at("2026-03-02T10:00:00Z"),
+    ];
+
+    expect(stats.computeStreaks(rolls, now)).toEqual({ current: 2, best: 2 });
+  });
+
+  it("counts several rolls of the same UTC day once, in any order", () => {
+    const rolls = [
+      at("2026-03-02T09:00:00Z"),
+      at("2026-03-01T23:00:00Z"),
+      at("2026-03-01T01:00:00Z"),
+      at("2026-03-02T00:30:00Z"),
+    ];
+
+    expect(stats.computeStreaks(rolls, now)).toEqual({ current: 2, best: 2 });
+  });
+
+  it("chains days across a month boundary", () => {
+    const rolls = [at("2026-01-31T10:00:00Z"), at("2026-02-01T10:00:00Z")];
+
+    expect(
+      stats.computeStreaks(rolls, new Date("2026-02-01T18:00:00Z"))
+    ).toEqual({
+      current: 2,
+      best: 2,
+    });
+  });
+});

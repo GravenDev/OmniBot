@@ -10,9 +10,11 @@ import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
-import { linkAccount } from "#modules/rngdle/services/linking.js";
-import store from "#modules/rngdle/services/store.js";
-import sync, { FullSyncCooldownError } from "#modules/rngdle/services/sync.js";
+import linking from "#modules/rngdle/services/linking.service.js";
+import store from "#modules/rngdle/services/store.service.js";
+import sync, {
+  FullSyncCooldownError,
+} from "#modules/rngdle/services/sync.service.js";
 import { Colors } from "#utils/colors.js";
 
 const PERMISSION_ADMINISTRATOR = 0x8;
@@ -32,7 +34,7 @@ async function register(interaction: Interaction, config: Config) {
   const username = interaction.options.getString("username", true).trim();
   await interaction.deferReply(ephemeral);
 
-  const outcome = await linkAccount(guildId, member.id, username);
+  const outcome = await linking.linkAccount(guildId, member.id, username);
   if (outcome.kind === "notFound" || outcome.kind === "unreachable") {
     await interaction.editReply(
       config.t(`admin.register.${outcome.kind}`, { username })

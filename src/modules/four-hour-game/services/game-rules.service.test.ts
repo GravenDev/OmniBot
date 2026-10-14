@@ -1,0 +1,101 @@
+import { describe, expect, it } from "vitest";
+import gameRules from "./game-rules.service.js";
+
+const FOUR_HOURS = 4 * 60 * 60;
+const start = new Date("2026-10-02T10:00:00Z");
+const after = (seconds: number) => new Date(start.getTime() + seconds * 1000);
+const msg = (authorId: string, sentAt: Date, channelId = "game") => ({
+  channelId,
+  authorId,
+  sentAt,
+});
+
+describe("evaluateMessage", () => {
+  it("records the very first message without awarding anything", () => {
+    expect(
+      gameRules.evaluateMessage(null, msg("alice", start), FOUR_HOURS)
+    ).toEqual({
+      kind: "first",
+    });
+  });
+
+  it("ignores a message from the author of the last message", () => {
+    expect(
+      gameRules.evaluateMessage(
+        msg("alice", start),
+        msg("alice", after(FOUR_HOURS * 2)),
+        FOUR_HOURS
+      )
+    ).toEqual({ kind: "sameAuthor" });
+  });
+
+  it("awards the previous author once the delay has elapsed", () => {
+    expect(
+      gameRules.evaluateMessage(
+        msg("alice", start),
+        msg("bob", after(FOUR_HOURS + 1)),
+        FOUR_HOURS
+      )
+    ).toEqual({
+      kind: "point",
+      winnerId: "alice",
+      heldSeconds: FOUR_HOURS + 1,
+      heldSince: start,
+    });
+  });
+
+  it("awards the previous author when exactly the delay has elapsed", () => {
+    expect(
+      gameRules.evaluateMessage(
+        msg("alice", start),
+        msg("bob", after(FOUR_HOURS)),
+        FOUR_HOURS
+      )
+    ).toEqual({
+      kind: "point",
+      winnerId: "alice",
+      heldSeconds: FOUR_HOURS,
+      heldSince: start,
+    });
+  });
+
+  it("rounds the held time down to whole seconds", () => {
+    expect(
+      gameRules.evaluateMessage(
+        msg("alice", start),
+        msg("bob", new Date(start.getTime() + FOUR_HOURS * 1000 + 999)),
+        FOUR_HOURS
+      )
+    ).toMatchObject({ kind: "point", heldSeconds: FOUR_HOURS });
+  });
+
+  it("awards nothing when another member replies before the delay", () => {
+    expect(
+      gameRules.evaluateMessage(
+        msg("alice", start),
+        msg("bob", after(FOUR_HOURS - 1)),
+        FOUR_HOURS
+      )
+    ).toEqual({ kind: "tooSoon" });
+  });
+
+  it("treats a message older than the last one as outdated", () => {
+    expect(
+      gameRules.evaluateMessage(
+        msg("alice", after(60)),
+        msg("bob", after(59)),
+        FOUR_HOURS
+      )
+    ).toEqual({ kind: "outdated" });
+  });
+
+  it("starts over when the last message was in another channel", () => {
+    expect(
+      gameRules.evaluateMessage(
+        msg("alice", start, "old-channel"),
+        msg("bob", after(FOUR_HOURS * 2)),
+        FOUR_HOURS
+      )
+    ).toEqual({ kind: "first" });
+  });
+});

@@ -18,17 +18,13 @@ import {
 import { overallPageMessage } from "#modules/rngdle/interactions/overall-page.button.js";
 import { unlinkConfirmMessage } from "#modules/rngdle/interactions/unlink-confirm.button.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
-import { linkOwnAccount } from "#modules/rngdle/services/linking.js";
-import { reminderTimestamp } from "#modules/rngdle/services/reminders.js";
-import store from "#modules/rngdle/services/store.js";
-import sync from "#modules/rngdle/services/sync.js";
-import {
-  dailyLeaderboard,
-  parsePeriod,
-  serverCard,
-  versusCard,
+import linking from "#modules/rngdle/services/linking.service.js";
+import reminders from "#modules/rngdle/services/reminders.service.js";
+import store from "#modules/rngdle/services/store.service.js";
+import sync from "#modules/rngdle/services/sync.service.js";
+import views, {
   type ViewContext,
-} from "#modules/rngdle/services/views.js";
+} from "#modules/rngdle/services/views.service.js";
 
 const AUTOCOMPLETE_LIMIT = 25;
 const USERNAME_MAX_LENGTH = 64;
@@ -65,7 +61,10 @@ async function replyWithImage(
 }
 
 async function leaderboard(interaction: Interaction, config: Config) {
-  const board = await dailyLeaderboard(viewContext(interaction, config), 0);
+  const board = await views.dailyLeaderboard(
+    viewContext(interaction, config),
+    0
+  );
   await replyWithImage(
     interaction,
     board?.image ?? null,
@@ -100,7 +99,7 @@ async function serverStats(interaction: Interaction, config: Config) {
     (await interaction.client.guilds.fetch(interaction.guildId));
   await replyWithImage(
     interaction,
-    await serverCard(viewContext(interaction, config), guild),
+    await views.serverCard(viewContext(interaction, config), guild),
     "server-stats.png",
     config.t("server.empty"),
     [navigationRow(config.t, ["profile", "overall"])]
@@ -114,7 +113,7 @@ async function leaderboardAll(interaction: Interaction, config: Config) {
       interaction.options.getInteger("page") ?? 1,
       interaction.user.id,
       "public",
-      parsePeriod(interaction.options.getString("period"))
+      views.parsePeriod(interaction.options.getString("period"))
     )
   );
 }
@@ -132,7 +131,7 @@ async function link(interaction: Interaction, config: Config) {
   }
   await interaction.deferReply(ephemeral);
 
-  const outcome = await linkOwnAccount(guildId, userId, username);
+  const outcome = await linking.linkOwnAccount(guildId, userId, username);
   switch (outcome.kind) {
     case "notFound":
     case "unreachable":
@@ -204,7 +203,7 @@ async function remind(interaction: Interaction, config: Config) {
   const lines = [
     channel
       ? config.t("remind.enabled", {
-          time: reminderTimestamp(new Date()),
+          time: reminders.reminderTimestamp(new Date()),
           channel: `<#${channel.id}>`,
         })
       : config.t("remind.enabledNoChannel"),
@@ -248,7 +247,7 @@ async function versus(interaction: Interaction, config: Config) {
   await sync.refreshIfStale(interaction.guildId);
   await replyWithImage(
     interaction,
-    await versusCard(viewContext(interaction, config), left, right),
+    await views.versusCard(viewContext(interaction, config), left, right),
     "versus.png",
     config.t("versus.noRolls")
   );
