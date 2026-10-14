@@ -33,7 +33,10 @@ export function isTracked(
   config: ConfigProvider<ServerStatsConfigSchema>
 ): boolean {
   const excludedIds = new Set(
-    (config.get("excludedChannels") ?? []).map((excluded) => excluded.id)
+    [
+      ...(config.get("excludedChannels") ?? []),
+      ...(config.get("excludedCategories") ?? []),
+    ].map((excluded) => excluded.id)
   );
   if (isExcluded(channel, excludedIds)) {
     return false;

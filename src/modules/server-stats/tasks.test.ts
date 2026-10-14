@@ -25,7 +25,10 @@ const { postReport, serverStatsTasks } = await import("./tasks.js");
 
 const module = { id: "server-stats" } as Module<ServerStatsConfigSchema>;
 const client = {
-  guilds: { fetch: async () => ({ memberCount: 120 }) },
+  guilds: {
+    cache: { has: (id: string) => id !== "gone" },
+    fetch: async () => ({ memberCount: 120 }),
+  },
 } as unknown as Client<true>;
 const day = new Date("2026-10-13T00:00:00Z");
 
@@ -99,7 +102,10 @@ describe("postReport", () => {
 describe("daily-report task", () => {
   it("runs at Paris midnight, reports the previous day and purges old counters", async () => {
     vi.useFakeTimers({ now: new Date("2026-10-13T22:00:05Z") });
-    mocks.getConfigForModuleIn.mockResolvedValue(fakeConfig(undefined));
+    mocks.getConfigForModuleIn.mockResolvedValue(
+      fakeConfig({ isSendable: () => true, send: vi.fn(async () => ({})) })
+    );
+    mocks.dailyStats.mockResolvedValue(stats);
     const [task] = serverStatsTasks(module);
 
     expect(task).toMatchObject({
@@ -109,14 +115,27 @@ describe("daily-report task", () => {
     await task!.run(client);
     vi.useRealTimers();
 
-    expect(mocks.getConfigForModuleIn).toHaveBeenCalledWith(module, "guild-1");
+    expect(mocks.dailyStats).toHaveBeenCalledWith(
+      "guild-1",
+      new Date("2026-10-13T00:00:00Z")
+    );
     expect(mocks.purgeBefore).toHaveBeenCalledWith(
       new Date("2026-07-15T00:00:00Z")
     );
   });
 
+  it("skips the servers the bot has left", async () => {
+    mocks.getActivatedGuildIds.mockResolvedValueOnce(["gone"]);
+    const [task] = serverStatsTasks(module);
+
+    await task!.run(client);
+
+    expect(mocks.getConfigForModuleIn).not.toHaveBeenCalled();
+    expect(mocks.purgeBefore).toHaveBeenCalledOnce();
+  });
+
   it("keeps going when a guild fails", async () => {
-    mocks.getActivatedGuildIds.mockResolvedValueOnce(["broken", "guild-1"]);
+    mocks.getActivatedGuildIds.mockResolvedValueOnce(["guild-0", "guild-1"]);
     mocks.getConfigForModuleIn
       .mockRejectedValueOnce(new Error("boom"))
       .mockResolvedValueOnce(fakeConfig(undefined));

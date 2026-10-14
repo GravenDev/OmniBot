@@ -19,6 +19,9 @@ export async function postReport(
   guildId: string,
   day: Date
 ): Promise<void> {
+  if (!client.guilds.cache.has(guildId)) {
+    return;
+  }
   const config = await configService.getConfigForModuleIn(module, guildId);
   const channel = config.get("reportChannel");
   if (!channel?.isSendable()) {
