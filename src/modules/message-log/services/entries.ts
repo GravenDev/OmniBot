@@ -16,10 +16,17 @@ const FIELD_LIMIT = 1024;
 type AnyMessage = Message | PartialMessage;
 
 export function truncate(text: string, limit: number): string {
-  const characters = Array.from(text);
-  return characters.length <= limit
-    ? text
-    : `${characters.slice(0, limit - 1).join("")}…`;
+  if (text.length <= limit) {
+    return text;
+  }
+  let kept = "";
+  for (const character of text) {
+    if (kept.length + character.length > limit - 1) {
+      break;
+    }
+    kept += character;
+  }
+  return `${kept}…`;
 }
 
 export function isAuthoredByMember(message: Message): boolean {
@@ -97,7 +104,7 @@ export function editedLog(before: Message, after: Message, t: TFunction) {
     .setFooter(footer(before, t));
 
   const tooLong = [before, after].some(
-    (message) => Array.from(message.content).length > FIELD_LIMIT
+    (message) => message.content.length > FIELD_LIMIT
   );
   const files = tooLong
     ? [

@@ -44,9 +44,14 @@ function fakeMessage(
 
 describe("truncate", () => {
   it("never splits an emoji", () => {
-    expect(truncate("ab😀c", 3)).toBe("ab…");
-    expect(truncate("a😀😀", 3)).toBe("a😀😀");
-    expect(truncate("😀😀😀😀", 3)).toBe("😀😀…");
+    expect(truncate("ab😀c", 4)).toBe("ab…");
+    expect(truncate("😀😀😀😀", 5)).toBe("😀😀…");
+  });
+
+  it("stays within the limit counted the way Discord counts it", () => {
+    const truncated = truncate("😀".repeat(600), 1024);
+    expect(truncated.length).toBeLessThanOrEqual(1024);
+    expect(truncated.endsWith("😀…")).toBe(true);
   });
 });
 

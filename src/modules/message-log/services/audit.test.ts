@@ -50,9 +50,21 @@ function fakeGuild(initial: FakeEntry[], canViewAuditLog = true) {
   };
 }
 
+let clock = now;
+
 function finder() {
-  return new DeleterFinder({ delayMs: 0, now: () => now }).find;
+  clock = now;
+  return new DeleterFinder({ delayMs: 0, now: () => clock }).find;
 }
+
+const entry = (count: number, ageMs = 1000) => ({
+  id: "e",
+  targetId: "42",
+  channelId: "200",
+  executorId: "7",
+  ageMs,
+  count,
+});
 
 describe("DeleterFinder", () => {
   it("returns the moderator of a fresh matching entry", async () => {
@@ -109,6 +121,57 @@ describe("DeleterFinder", () => {
       },
     ]);
     expect(await find(guild, "42", "200")).toBe("7");
+  });
+
+  it("credits each of several deletions read from one merged entry", async () => {
+    const find = finder();
+    const { guild } = fakeGuild([entry(2)]);
+    expect(await find(guild, "42", "200")).toBe("7");
+    expect(await find(guild, "42", "200")).toBe("7");
+    expect(await find(guild, "42", "200")).toBeNull();
+  });
+
+  it("consumes one increment per deletion of a known entry", async () => {
+    const find = finder();
+    const { guild, setEntries } = fakeGuild([entry(1)]);
+    expect(await find(guild, "42", "200")).toBe("7");
+    setEntries([entry(3)]);
+    expect(await find(guild, "42", "200")).toBe("7");
+    expect(await find(guild, "42", "200")).toBe("7");
+    expect(await find(guild, "42", "200")).toBeNull();
+  });
+
+  it("uses an old entry seen for the first time as a baseline", async () => {
+    const find = finder();
+    const { guild, setEntries } = fakeGuild([entry(4, 60_000)]);
+    expect(await find(guild, "42", "200")).toBeNull();
+    setEntries([entry(5, 60_000)]);
+    expect(await find(guild, "42", "200")).toBe("7");
+  });
+
+  it("forgets an entry after a while instead of crediting a stale increment", async () => {
+    const find = finder();
+    const { guild, setEntries } = fakeGuild([entry(1)]);
+    expect(await find(guild, "42", "200")).toBe("7");
+    clock = now + 6 * 60_000;
+    setEntries([entry(2, 6 * 60_000)]);
+    expect(await find(guild, "42", "200")).toBeNull();
+  });
+
+  it("waits once per burst instead of once per deletion", async () => {
+    vi.useFakeTimers({ now });
+    try {
+      const find = new DeleterFinder({ delayMs: 1500 }).find;
+      const { guild } = fakeGuild([]);
+      let done = 0;
+      for (let i = 0; i < 5; i++) {
+        void find(guild, "42", "200").then(() => done++);
+      }
+      await vi.advanceTimersByTimeAsync(1501);
+      expect(done).toBe(5);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("does not read the audit log without the permission", async () => {
