@@ -131,6 +131,33 @@ describe("DeleterFinder", () => {
     expect(await find(guild, "42", "200")).toBeNull();
   });
 
+  it("credits two moderators in the order they deleted", async () => {
+    const find = finder();
+    const { guild } = fakeGuild([
+      {
+        id: "b",
+        targetId: "42",
+        channelId: "200",
+        executorId: "8",
+        ageMs: 500,
+      },
+      {
+        id: "a",
+        targetId: "42",
+        channelId: "200",
+        executorId: "7",
+        ageMs: 1000,
+      },
+    ]);
+    expect(await find(guild, "42", "200")).toBe("7");
+    expect(await find(guild, "42", "200")).toBe("8");
+  });
+
+  it("ignores an entry created well after the deletion was received", async () => {
+    const { guild } = fakeGuild([entry(1, -5000)]);
+    expect(await finder()(guild, "42", "200")).toBeNull();
+  });
+
   it("consumes one increment per deletion of a known entry", async () => {
     const find = finder();
     const { guild, setEntries } = fakeGuild([entry(1)]);
@@ -147,6 +174,7 @@ describe("DeleterFinder", () => {
     expect(await find(guild, "42", "200")).toBeNull();
     setEntries([entry(5, 60_000)]);
     expect(await find(guild, "42", "200")).toBe("7");
+    expect(await find(guild, "42", "200")).toBeNull();
   });
 
   it("forgets an entry after a while instead of crediting a stale increment", async () => {
@@ -167,7 +195,9 @@ describe("DeleterFinder", () => {
       for (let i = 0; i < 5; i++) {
         void find(guild, "42", "200").then(() => done++);
       }
-      await vi.advanceTimersByTimeAsync(1501);
+      await vi.advanceTimersByTimeAsync(1499);
+      expect(done).toBe(0);
+      await vi.advanceTimersByTimeAsync(2);
       expect(done).toBe(5);
     } finally {
       vi.useRealTimers();

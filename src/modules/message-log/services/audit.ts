@@ -2,6 +2,7 @@ import { AuditLogEvent, type Guild, PermissionFlagsBits } from "discord.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 
 const FRESHNESS_MS = 10_000;
+const CLOCK_SKEW_MS = 2_000;
 const AUDIT_DELAY_MS = 1_500;
 const MEMORY_MS = 5 * 60_000;
 const MAX_TRACKED_ENTRIES = 1_000;
@@ -54,14 +55,16 @@ export class DeleterFinder {
       .fetchAuditLogs({ type: AuditLogEvent.MessageDelete, limit: 10 })
       .catch(() => null);
     const now = this.now();
-    for (const entry of logs?.entries.values() ?? []) {
+    const oldestFirst = [...(logs?.entries.values() ?? [])].reverse();
+    for (const entry of oldestFirst) {
       if (entry.targetId !== authorId || entry.extra.channel.id !== channelId) {
         continue;
       }
       const previous = this.recall(entry.id, now);
       if (previous === undefined) {
         const fresh =
-          Math.abs(receivedAt - entry.createdTimestamp) < FRESHNESS_MS;
+          entry.createdTimestamp - receivedAt < CLOCK_SKEW_MS &&
+          receivedAt - entry.createdTimestamp < FRESHNESS_MS;
         this.remember(entry.id, fresh ? 1 : entry.extra.count, now);
         if (fresh) {
           return entry.executorId;
