@@ -22,7 +22,8 @@ export default declareTask({
 | Field        | Description                                                                        |
 | ------------ | ---------------------------------------------------------------------------------- |
 | `id`         | Identifier, unique within the module. The scheduler names the job `<module>:<id>`. |
-| `schedule`   | Cron expression, always evaluated in **UTC**. A 6-field expression adds seconds.   |
+| `schedule`   | Cron expression, evaluated in `timezone`. A 6-field expression adds seconds.       |
+| `timezone`   | IANA time zone of `schedule` (e.g. `Europe/Paris`). Optional, **UTC** by default.  |
 | `runOnStart` | Also run once as soon as the bot starts. Optional, `false` by default.             |
 | `run`        | The work to do. Receives the ready Discord client.                                 |
 

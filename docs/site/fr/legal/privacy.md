@@ -1,6 +1,6 @@
 # Politique de confidentialité
 
-Dernière mise à jour : juin 2026
+Dernière mise à jour : octobre 2026
 
 ## Responsable du traitement
 

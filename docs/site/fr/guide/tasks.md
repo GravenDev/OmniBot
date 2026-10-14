@@ -19,12 +19,13 @@ export default declareTask({
 });
 ```
 
-| Champ        | Description                                                                                  |
-| ------------ | -------------------------------------------------------------------------------------------- |
-| `id`         | Identifiant, unique au sein du module. Le planificateur nomme la tâche `<module>:<id>`.      |
-| `schedule`   | Expression cron, toujours évaluée en **UTC**. Une expression à 6 champs ajoute les secondes. |
-| `runOnStart` | Exécute aussi la tâche une fois au démarrage du bot. Optionnel, `false` par défaut.          |
-| `run`        | Le travail à faire. Reçoit le client Discord prêt.                                           |
+| Champ        | Description                                                                              |
+| ------------ | ---------------------------------------------------------------------------------------- |
+| `id`         | Identifiant, unique au sein du module. Le planificateur nomme la tâche `<module>:<id>`.  |
+| `schedule`   | Expression cron, évaluée dans `timezone`. Une expression à 6 champs ajoute les secondes. |
+| `timezone`   | Fuseau IANA de `schedule` (par ex. `Europe/Paris`). Optionnel, **UTC** par défaut.       |
+| `runOnStart` | Exécute aussi la tâche une fois au démarrage du bot. Optionnel, `false` par défaut.      |
+| `run`        | Le travail à faire. Reçoit le client Discord prêt.                                       |
 
 Enregistrez la tâche dans le `onLoad` du module, comme les commandes et les écouteurs :
 
