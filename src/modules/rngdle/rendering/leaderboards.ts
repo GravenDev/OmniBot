@@ -1,4 +1,4 @@
-import { loadAsset, registerFont, type Rgb } from "#lib/imaging.js";
+import { loadAsset, registerFont } from "#lib/imaging.js";
 import {
   renderLeaderboardTable,
   type LeaderboardEntry,
@@ -14,7 +14,6 @@ import { ACCENT } from "./theme.js";
 const ASSETS = new URL("../assets/", import.meta.url);
 const MONO_FONT = "SpaceMonoBold";
 const DAILY_WIDTH = 1010;
-const OVERALL_SCORE_COLOR: Rgb = [251, 251, 251];
 
 const loadIcon = (name: string) => loadAsset(new URL(`${name}.png`, ASSETS));
 
@@ -110,7 +109,6 @@ export function renderOverallLeaderboard(
         align: "right",
         cell: (row) => ({
           text: `${formatShort(row.totalScore, locale)} EP`,
-          color: OVERALL_SCORE_COLOR,
         }),
       },
     ],

@@ -127,8 +127,8 @@ export function createBoard(
   registerFont(new URL("outfit.ttf", ASSETS), FONT);
   const ctx = createCanvas(width, height).getContext("2d");
   fillBand(ctx, PALETTE.background, 0, height - 1);
-  fillBand(ctx, PALETTE.header, 0, headerHeight);
-  fillBand(ctx, accent, headerHeight - ACCENT_LINE + 1, headerHeight);
+  fillBand(ctx, PALETTE.header, 0, headerHeight - 1);
+  fillBand(ctx, accent, headerHeight - ACCENT_LINE, headerHeight - 1);
   return ctx;
 }
 

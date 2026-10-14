@@ -25,8 +25,9 @@ export function renderLeaderboard(
     columns: [
       {
         header: headers.score,
-        x: 650,
-        maxWidth: 140,
+        x: 770,
+        maxWidth: 250,
+        align: "right",
         cell: (row) => ({ text: String(row.score) }),
       },
     ],
