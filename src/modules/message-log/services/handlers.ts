@@ -10,7 +10,7 @@ import type { MessageLogConfigSchema } from "#modules/message-log/message-log.co
 import { type DeleterLookup, findDeleter } from "./audit.js";
 import {
   bulkDeleteLog,
-  deletedEmbed,
+  deletedLog,
   editedLog,
   isAuthoredByMember,
 } from "./entries.js";
@@ -39,7 +39,7 @@ export async function logDeletion(
     message.channelId
   );
   await logChannel.send({
-    embeds: [deletedEmbed(message, config.t, deletedBy)],
+    ...deletedLog(message, config.t, deletedBy),
     allowedMentions: NO_MENTIONS,
   });
 }

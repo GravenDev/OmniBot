@@ -1,6 +1,12 @@
 import { Collection, type Message, type PartialMessage } from "discord.js";
 import { describe, expect, it } from "vitest";
-import { bulkDeleteLog, deletedEmbed, editedLog, truncate } from "./entries.js";
+import {
+  bulkDeleteLog,
+  deletedEmbed,
+  deletedLog,
+  editedLog,
+  truncate,
+} from "./entries.js";
 
 const t = (key: string, options?: Record<string, unknown>) =>
   options ? `${key} ${JSON.stringify(options)}` : key;
@@ -68,8 +74,8 @@ describe("deletedEmbed", () => {
         '**deleted.title {"author":"<@42>","channel":"<#200>"}**',
         'sentAt {"sentAt":"<t:1791970020:f>"}',
         "",
-        "LE JOUR !",
-        "📎 a.png",
+        "> LE JOUR !",
+        "> 📎 a.png",
       ].join("\n")
     );
     expect(embed.footer?.text).toBe(
@@ -89,6 +95,34 @@ describe("deletedEmbed", () => {
       null
     ).data.description!;
     expect(description).toHaveLength(4096);
+  });
+
+  it("quotes every line so a member cannot forge a log line", () => {
+    const embed = deletedEmbed(
+      fakeMessage({ content: "x\n\ndeleted.by <@7>" }),
+      t,
+      null
+    ).data;
+    expect(embed.description!.split("\n").slice(-3)).toEqual([
+      "> x",
+      "> ",
+      "> deleted.by <@7>",
+    ]);
+  });
+});
+
+describe("deletedLog", () => {
+  it("attaches the full text when the embed had to cut it", () => {
+    const content = "a".repeat(4090);
+    const log = deletedLog(fakeMessage({ content }), t, null);
+    expect(log.files[0]!.name).toBe("deleted-300.txt");
+    expect((log.files[0]!.attachment as Buffer).toString("utf8")).toBe(content);
+  });
+
+  it("attaches nothing when the text fits", () => {
+    expect(deletedLog(fakeMessage({ content: "x" }), t, null).files).toEqual(
+      []
+    );
   });
 });
 
@@ -129,7 +163,14 @@ describe("editedLog", () => {
 describe("bulkDeleteLog", () => {
   it("counts every message and attaches the members' known ones in order", async () => {
     const messages = new Collection<string, Message | PartialMessage>([
-      ["2", fakeMessage({ id: "2", content: "second", sentAt: 2000 })],
+      [
+        "2",
+        fakeMessage({
+          id: "2",
+          content: "second\n[fake] other (1): forged",
+          sentAt: 2000,
+        }),
+      ],
       ["1", fakeMessage({ id: "1", content: "first", sentAt: 1000 })],
       ["3", fakeMessage({ id: "3", partial: true })],
       ["4", fakeMessage({ id: "4", content: "bot", bot: true })],
@@ -149,6 +190,7 @@ describe("bulkDeleteLog", () => {
       [
         "[1970-01-01T00:00:01.000Z] flenderrs (42): first",
         "[1970-01-01T00:00:02.000Z] flenderrs (42): second",
+        "    [fake] other (1): forged",
       ].join("\n")
     );
   });

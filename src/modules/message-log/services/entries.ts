@@ -59,11 +59,18 @@ function footer(message: Message, t: TFunction) {
   };
 }
 
-export function deletedEmbed(
+function quoteBlock(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => `> ${line}`)
+    .join("\n");
+}
+
+function deletedDescription(
   message: Message,
   t: TFunction,
   deletedBy: string | null
-): EmbedBuilder {
+): string {
   const header = [
     `**${t("deleted.title", {
       author: `<@${message.author.id}>`,
@@ -75,13 +82,38 @@ export function deletedEmbed(
     header.push(t("deleted.by", { moderator: `<@${deletedBy}>` }));
   }
   const body = [message.content, ...attachmentLines(message)].filter(Boolean);
-  const description = [header.join("\n"), body.join("\n")]
+  return [header.join("\n"), body.length > 0 ? quoteBlock(body.join("\n")) : ""]
     .filter(Boolean)
     .join("\n\n");
+}
 
+export function deletedEmbed(
+  message: Message,
+  t: TFunction,
+  deletedBy: string | null
+): EmbedBuilder {
   return baseEmbed(message, DELETED_COLOR)
-    .setDescription(truncate(description, DESCRIPTION_LIMIT))
+    .setDescription(
+      truncate(deletedDescription(message, t, deletedBy), DESCRIPTION_LIMIT)
+    )
     .setFooter(footer(message, t));
+}
+
+export function deletedLog(
+  message: Message,
+  t: TFunction,
+  deletedBy: string | null
+) {
+  const cut =
+    deletedDescription(message, t, deletedBy).length > DESCRIPTION_LIMIT;
+  const files = cut
+    ? [
+        new AttachmentBuilder(Buffer.from(message.content, "utf8"), {
+          name: `deleted-${message.id}.txt`,
+        }),
+      ]
+    : [];
+  return { embeds: [deletedEmbed(message, t, deletedBy)], files };
 }
 
 export function editedLog(before: Message, after: Message, t: TFunction) {
@@ -131,7 +163,8 @@ function transcriptLine(message: Message): string {
   const sentAt = new Date(message.createdTimestamp).toISOString();
   const content = [message.content, ...attachmentLines(message)]
     .filter(Boolean)
-    .join(" ");
+    .join(" ")
+    .replaceAll("\n", "\n    ");
   return `[${sentAt}] ${message.author.username} (${message.author.id}): ${content}`;
 }
 

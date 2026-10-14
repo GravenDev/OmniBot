@@ -153,6 +153,11 @@ describe("DeleterFinder", () => {
     expect(await find(guild, "42", "200")).toBe("8");
   });
 
+  it("tolerates an entry stamped slightly after the deletion was received", async () => {
+    const { guild } = fakeGuild([entry(1, -1000)]);
+    expect(await finder()(guild, "42", "200")).toBe("7");
+  });
+
   it("ignores an entry created well after the deletion was received", async () => {
     const { guild } = fakeGuild([entry(1, -5000)]);
     expect(await finder()(guild, "42", "200")).toBeNull();

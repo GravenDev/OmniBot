@@ -95,6 +95,17 @@ describe("logDeletion", () => {
     expect(payload.embeds[0]!.data.description).toContain("deleted.by");
   });
 
+  it("sends the full text of a deletion too long for the embed", async () => {
+    const { config, send } = fakeConfig();
+    await logDeletion(
+      fakeMessage({ content: "a".repeat(4090) }),
+      config,
+      noDeleter
+    );
+    const [payload] = send.mock.calls[0] as unknown as [{ files: unknown[] }];
+    expect(payload.files).toHaveLength(1);
+  });
+
   it("ignores uncached messages, bots, webhooks and system messages", async () => {
     const { config, send } = fakeConfig();
     await logDeletion(fakeMessage({ partial: true }), config, noDeleter);
@@ -186,6 +197,22 @@ describe("logEdit", () => {
       fakeMessage({ partial: true }),
       config
     );
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("ignores edits by bots, webhooks, system messages and excluded channels", async () => {
+    const { config, send } = fakeConfig({ excludedCategories: ["cat"] });
+    const edited = (options: Parameters<typeof fakeMessage>[0]) =>
+      logEdit(
+        fakeMessage({ ...options, content: "a" }),
+        fakeMessage({ ...options, content: "b" }),
+        config
+      );
+    await edited({ bot: true });
+    await edited({ webhookId: "9" });
+    await edited({ system: true });
+    await edited({ channel: fakeSourceChannel("200", "cat") });
+    await edited({ channel: fakeSourceChannel("log") });
     expect(send).not.toHaveBeenCalled();
   });
 
