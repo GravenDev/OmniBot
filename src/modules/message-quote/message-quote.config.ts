@@ -12,6 +12,12 @@ export const messageQuoteConfigSchema = {
     description: "Categories whose channels are treated as excluded channels.",
     type: [ConfigType.CATEGORY],
   },
+  ignoredRoles: {
+    name: "Ignored roles",
+    description:
+      "Optional roles (game, notification…) held only by members who also have the member role: ignored when comparing who sees the quoted channel and the destination.",
+    type: [ConfigType.ROLE],
+  },
 } satisfies ConfigSchema;
 
 export type MessageQuoteConfigSchema = typeof messageQuoteConfigSchema;
