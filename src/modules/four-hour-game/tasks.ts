@@ -70,26 +70,38 @@ async function closeDays(
   }
 
   const guild = await client.guilds.fetch(guildId);
-  const standings = await fourHourGameService.getDailyStandings(guildId);
   for (const point of points) {
-    const entry = standings.find((row) => row.userId === point.userId);
-    await channel.send({
-      embeds: [
-        buildDailyPointEmbed(
-          {
-            ...point,
-            total: entry?.score ?? 0,
-            rank: entry ? { rank: entry.rank, total: standings.length } : null,
-            avatarUrl: await fetchWinnerAvatar(guild, point.userId),
-          },
-          config
-        ),
-      ],
-      allowedMentions: { parse: [] },
-    });
-    logger.info(
-      `Daily point announced | guildId = ${guildId} | day = ${point.day} | userId = ${point.userId}`
-    );
+    try {
+      const standings = await fourHourGameService.getDailyStandings(
+        guildId,
+        point.day
+      );
+      const entry = standings.find((row) => row.userId === point.userId);
+      await channel.send({
+        embeds: [
+          buildDailyPointEmbed(
+            {
+              ...point,
+              total: entry?.score ?? 0,
+              rank: entry
+                ? { rank: entry.rank, total: standings.length }
+                : null,
+              avatarUrl: await fetchWinnerAvatar(guild, point.userId),
+            },
+            config
+          ),
+        ],
+        allowedMentions: { parse: [] },
+      });
+      logger.info(
+        `Daily point announced | guildId = ${guildId} | day = ${point.day} | userId = ${point.userId}`
+      );
+    } catch (err) {
+      logger.error(
+        { err },
+        `Failed to announce the daily point | guildId = ${guildId} | day = ${point.day}`
+      );
+    }
   }
 }
 

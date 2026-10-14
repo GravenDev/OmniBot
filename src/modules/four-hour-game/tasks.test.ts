@@ -117,6 +117,68 @@ describe("closeAllDays", () => {
     );
   });
 
+  it("gives each announcement the standings at the end of its own day", async () => {
+    closeDays.mockResolvedValue([
+      { day: "2026-10-12", userId: "alice", heldSeconds: 3600 },
+      { day: "2026-10-13", userId: "alice", heldSeconds: 7200 },
+    ]);
+    getDailyStandings.mockImplementation(async (_guildId, day) => [
+      { userId: "alice", score: day === "2026-10-12" ? 1 : 2, rank: 1 },
+    ]);
+
+    await closeAllDays(client, module);
+
+    expect(getDailyStandings).toHaveBeenCalledWith("guild", "2026-10-12");
+    const totals = send.mock.calls.map(
+      ([options]) => options.embeds[0].toJSON().description.split("\n")[1]
+    );
+    expect(totals).toEqual([
+      "Total : **1 point du jour** · 1ᵉʳ sur 1",
+      "Total : **2 points du jour** · 1ᵉʳ sur 1",
+    ]);
+  });
+
+  it("keeps announcing the other days when one fails to send", async () => {
+    closeDays.mockResolvedValue([
+      { day: "2026-10-12", userId: "alice", heldSeconds: 3600 },
+      { day: "2026-10-13", userId: "bob", heldSeconds: 7200 },
+    ]);
+    send.mockRejectedValueOnce(new Error("Missing Permissions"));
+
+    await closeAllDays(client, module);
+
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it("still closes the days when the game channel cannot be used", async () => {
+    getConfigForModuleIn.mockResolvedValue({
+      ...config("fr"),
+      get: () => ({ id: "game", isSendable: () => false, send }),
+    });
+    closeDays.mockResolvedValue([
+      { day: "2026-10-13", userId: "bob", heldSeconds: 7200 },
+    ]);
+
+    await closeAllDays(client, module);
+
+    expect(closeDays).toHaveBeenCalledWith("guild", "game");
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("closes the other guilds when one fails", async () => {
+    getActivatedGuildIds.mockResolvedValue(["broken", "guild"]);
+    closeDays.mockImplementation(async (guildId: string) => {
+      if (guildId === "broken") {
+        throw new Error("database down");
+      }
+      return [];
+    });
+
+    await closeAllDays(client, module);
+
+    expect(closeDays).toHaveBeenCalledWith("guild", "game");
+  });
+
   it("stays silent when no day was closed", async () => {
     closeDays.mockResolvedValue([]);
 

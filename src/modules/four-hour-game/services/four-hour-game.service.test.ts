@@ -239,11 +239,20 @@ vi.mock("#lib/database.js", () => ({
       async deleteMany({
         where,
       }: {
-        where: { guildId: string; userId: string };
+        where: {
+          guildId: string;
+          userId?: string;
+          day?: { gt?: string; lte?: string };
+        };
       }) {
         let count = 0;
         for (const [k, row] of dailyBests) {
-          if (row.guildId === where.guildId && row.userId === where.userId) {
+          if (
+            row.guildId === where.guildId &&
+            (where.userId === undefined || row.userId === where.userId) &&
+            (where.day?.gt === undefined || row.day > where.day.gt) &&
+            (where.day?.lte === undefined || row.day <= where.day.lte)
+          ) {
             dailyBests.delete(k);
             count++;
           }
@@ -260,15 +269,21 @@ vi.mock("#lib/database.js", () => ({
         closedDays.set(data.guildId, data.closedDay);
         return data;
       },
-      async update({
+      async updateMany({
         where,
         data,
       }: {
-        where: { guildId: string };
+        where: { guildId: string; closedDay: string };
         data: { closedDay: string };
       }) {
+        if (closedDays.get(where.guildId) !== where.closedDay) {
+          return { count: 0 };
+        }
         closedDays.set(where.guildId, data.closedDay);
-        return { guildId: where.guildId, ...data };
+        return { count: 1 };
+      },
+      async deleteMany({ where }: { where: { guildId: string } }) {
+        return { count: closedDays.delete(where.guildId) ? 1 : 0 };
       },
     },
     $transaction: (operations: Promise<unknown>[]) => Promise.all(operations),
@@ -662,6 +677,23 @@ describe("FourHourGameService.resetRound", () => {
     expect(scores.size).toBe(0);
     expect(lastMessages.has("other")).toBe(true);
   });
+
+  it("forgets the days not closed yet, but keeps the closed ones", async () => {
+    closedDays.set("guild", "2026-10-13");
+    for (const day of ["2026-10-13", "2026-10-14"]) {
+      dailyBests.set(key("guild", day), {
+        guildId: "guild",
+        day,
+        userId: "alice",
+        heldSeconds: 3600,
+      });
+    }
+
+    await service.resetRound("guild");
+
+    expect([...dailyBests.keys()]).toEqual([key("guild", "2026-10-13")]);
+    expect(closedDays.has("guild")).toBe(false);
+  });
 });
 
 describe("FourHourGameService deletions and resync", () => {
@@ -732,6 +764,53 @@ describe("FourHourGameService deletions and resync", () => {
     );
 
     expect(lastMessages.has("guild")).toBe(false);
+  });
+
+  it("credits the replaced message's hold on resync", async () => {
+    const paris = (iso: string) => new Date(`${iso}+02:00`);
+    await service.handleMessage(
+      message("zed", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T09:00:00")),
+      DELAY
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      latest("bob", paris("2026-10-14T22:00:00"))
+    );
+    const closed = await service.closeDays(
+      "guild",
+      "game",
+      paris("2026-10-15T08:00:00")
+    );
+
+    expect(closed).toEqual([
+      { day: "2026-10-14", userId: "alice", heldSeconds: 13 * 3600 },
+    ]);
+  });
+
+  it("credits nothing on resync when the latest message is the stored one's author", async () => {
+    const paris = (iso: string) => new Date(`${iso}+02:00`);
+    await service.handleMessage(
+      message("zed", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T09:00:00")),
+      DELAY
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      latest("alice", paris("2026-10-14T22:00:00"))
+    );
+
+    expect(dailyBests.get(key("guild", "2026-10-14"))?.userId).toBe("zed");
   });
 
   it("replaces the stored last message with the channel's real one on resync", async () => {
@@ -893,6 +972,29 @@ describe("daily points", () => {
     expect(await service.closeDays("guild", "game", now)).toEqual([]);
   });
 
+  it("returns nothing when another process closed the day first", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    await send("bob", "2026-10-14T09:00:00");
+    const updateMany = vi
+      .spyOn(prisma.fourHourGameDailyState, "updateMany")
+      .mockResolvedValueOnce({ count: 0 });
+
+    expect(
+      await service.closeDays("guild", "game", paris("2026-10-15T00:00:00"))
+    ).toEqual([]);
+    updateMany.mockRestore();
+  });
+
+  it("does not credit the previous channel's message when the game moves", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    await service.handleMessage(
+      message("bob", paris("2026-10-14T12:00:00"), { channelId: "new" }),
+      DELAY
+    );
+
+    expect(dailyBests.size).toBe(0);
+  });
+
   it("starts with today on a guild that never played", async () => {
     expect(
       await service.closeDays("guild", "game", paris("2026-10-15T00:00:00"))
@@ -936,6 +1038,22 @@ describe("daily points", () => {
     });
   });
 
+  it("ranks players as they stood at the end of a given day", async () => {
+    closedDays.set("guild", "2026-10-14");
+    seedDailyBest("2026-10-12", "bob");
+    seedDailyBest("2026-10-13", "alice");
+    seedDailyBest("2026-10-14", "alice");
+
+    expect(await service.getDailyStandings("guild", "2026-10-13")).toEqual([
+      { userId: "alice", score: 1, rank: 1 },
+      { userId: "bob", score: 1, rank: 2 },
+    ]);
+    expect(await service.getDailyStandings("guild", "2026-10-20")).toEqual([
+      { userId: "alice", score: 2, rank: 1 },
+      { userId: "bob", score: 1, rank: 2 },
+    ]);
+  });
+
   it("returns a profile for a player with only daily points", async () => {
     closedDays.set("guild", "2026-10-14");
     seedDailyBest("2026-10-14", "alice");
@@ -952,6 +1070,14 @@ describe("daily points", () => {
     seedDailyBest("2026-10-14", "alice");
 
     expect(await service.deleteScore("guild", "alice")).toBe(true);
+    expect(dailyBests.size).toBe(0);
+  });
+
+  it("reports nothing removed when only today's unclosed best was cleared", async () => {
+    closedDays.set("guild", "2026-10-14");
+    seedDailyBest("2026-10-15", "alice");
+
+    expect(await service.deleteScore("guild", "alice")).toBe(false);
     expect(dailyBests.size).toBe(0);
   });
 });

@@ -67,11 +67,13 @@ Au démarrage, le bot relit le vrai dernier message de joueur de chaque salon de
 
 ### Point du jour
 
-Les journées suivent l'heure de Paris (minuit à minuit). Chaque fois qu'un message cesse d'être le dernier (un autre joueur répond), le temps pendant lequel il a tenu est attribué à son auteur, découpé par journée : un message posté à 22 h et remplacé à 3 h compte 2 h pour la première journée et 3 h pour la suivante. Le délai configuré ne joue aucun rôle : une tenue de 40 minutes peut remporter la journée, et une tenue qui rapporte un point des 4h compte aussi. Le meilleur temps de chaque journée est retenu ; à égalité, le premier à l'avoir atteint le garde.
+Les journées suivent l'heure de Paris (minuit à minuit). Chaque fois qu'un message cesse d'être le dernier (un autre joueur répond), le temps pendant lequel il a tenu est attribué à son auteur, découpé par journée : un message posté à 22 h et remplacé à 3 h compte 2 h pour la première journée et 3 h pour la suivante. Le délai configuré ne joue aucun rôle : une tenue de 40 minutes peut remporter la journée, et une tenue qui rapporte un point des 4h compte aussi. Le meilleur temps de chaque journée est retenu ; à égalité, le premier à l'avoir atteint le garde. Un temps déjà attribué reste acquis, même si son message est supprimé ensuite.
 
-À minuit (heure de Paris), le bot clôt la journée écoulée sur chaque serveur : le message encore en place compte jusqu'à minuit, puis l'auteur du meilleur temps de la journée gagne son point du jour. Le bot l'annonce dans le salon de jeu, sans notifier personne : la journée, le temps tenu, son total de points du jour et son rang à ce classement, avec son avatar en vignette. Une journée sans aucun message n'attribue rien. Une journée n'est jamais close deux fois.
+À minuit (heure de Paris), le bot clôt la journée écoulée sur chaque serveur : le message encore en place compte jusqu'à minuit, puis l'auteur du meilleur temps de la journée gagne son point du jour. Le bot l'annonce dans le salon de jeu, sans notifier personne : la journée, le temps tenu, son total de points du jour et son rang à ce classement à la fin de cette journée, avec son avatar en vignette. Une journée sans aucun message n'attribue rien. Une journée n'est jamais close deux fois. Une annonce qui ne peut pas être envoyée (salon supprimé, permission retirée) est perdue, mais la journée est close quand même et les annonces suivantes partent.
 
-La clôture est aussi tentée au démarrage, après la relecture des salons : les journées écoulées pendant un arrêt sont closes et annoncées, une par une. Les réponses postées pendant l'arrêt n'étant pas vues, le message qui était en place au moment de l'arrêt peut y être crédité au-delà de ce qu'il a réellement tenu. Sur un serveur, le décompte commence le jour du premier message traité après la mise en place du point du jour.
+La clôture est aussi tentée au démarrage, après la relecture des salons : les journées écoulées pendant un arrêt sont closes et annoncées, une par une. Quand la relecture trouve qu'un autre joueur a répondu pendant l'arrêt, le message qui était en place est crédité jusqu'à cette réponse. Si personne n'a répondu, il est crédité jusqu'à minuit, comme s'il avait été vu tenir. Les réponses intermédiaires postées pendant l'arrêt ne sont pas vues : seule la dernière compte.
+
+Sur un serveur, le décompte commence le jour du premier message traité ou du premier démarrage après la mise en place du point du jour. Quand le module est réactivé après avoir été désactivé, les journées qui n'avaient pas été closes sont oubliées et le décompte repart du jour de la réactivation ; les points du jour déjà gagnés sont conservés.
 
 ### `/jd4h score [member]`
 
@@ -96,7 +98,7 @@ Génère une image du top 10 du serveur (rang, médailles pour le podium, avatar
 
 **Permission requise :** Administrateur
 
-Fixe le score d'un membre, ou le supprime. Fixer un score à 0 revient à le supprimer. Supprimer un score efface aussi l'historique des points du membre et ses points du jour (la journée concernée reste alors sans gagnant), et les séries des autres joueurs sont alors calculées comme si ces points n'avaient pas existé ; le fixer à une autre valeur conserve l'historique. Réponses éphémères.
+Fixe le score d'un membre, ou le supprime. Fixer un score à 0 revient à le supprimer. Supprimer un score efface aussi l'historique des points du membre et ses points du jour, y compris son meilleur temps de la journée en cours (la journée concernée reste alors sans gagnant, et le message qu'il a encore en place peut de nouveau être crédité). La réponse ne parle de suppression que si un score ou un point du jour visible a été effacé, et les séries des autres joueurs sont alors calculées comme si ces points n'avaient pas existé ; le fixer à une autre valeur conserve l'historique. Réponses éphémères.
 
 ### Configuration — `/config four-hour-game`
 

@@ -211,17 +211,20 @@ class FourHourGameService implements Service {
         );
       }
 
-      const [closed] = await prisma.$transaction([
+      const [closed, { count }] = await prisma.$transaction([
         prisma.fourHourGameDailyBest.findMany({
           where: { guildId, day: { gt: state.closedDay, lte: yesterday } },
           select: { day: true, userId: true, heldSeconds: true },
           orderBy: { day: "asc" },
         }),
-        prisma.fourHourGameDailyState.update({
-          where: { guildId },
+        prisma.fourHourGameDailyState.updateMany({
+          where: { guildId, closedDay: state.closedDay },
           data: { closedDay: yesterday },
         }),
       ]);
+      if (count === 0) {
+        return [];
+      }
       if (closed.length > 0) {
         this.bumpRevision(guildId);
       }
@@ -229,16 +232,21 @@ class FourHourGameService implements Service {
     });
   }
 
-  async getDailyStandings(guildId: string): Promise<LeaderboardEntry[]> {
+  async getDailyStandings(
+    guildId: string,
+    upTo?: string
+  ): Promise<LeaderboardEntry[]> {
     const state = await prisma.fourHourGameDailyState.findUnique({
       where: { guildId },
     });
     if (!state) {
       return [];
     }
+    const lastDay =
+      upTo !== undefined && upTo < state.closedDay ? upTo : state.closedDay;
     const groups = await prisma.fourHourGameDailyBest.groupBy({
       by: ["userId"],
-      where: { guildId, day: { lte: state.closedDay } },
+      where: { guildId, day: { lte: lastDay } },
       _count: { _all: true },
     });
     return groups
@@ -267,7 +275,18 @@ class FourHourGameService implements Service {
 
   resetRound(guildId: string): Promise<void> {
     return this.queue.run(guildId, async () => {
-      await prisma.fourHourGameLastMessage.deleteMany({ where: { guildId } });
+      const state = await prisma.fourHourGameDailyState.findUnique({
+        where: { guildId },
+      });
+      await prisma.$transaction([
+        prisma.fourHourGameLastMessage.deleteMany({ where: { guildId } }),
+        prisma.fourHourGameDailyBest.deleteMany({
+          where: state
+            ? { guildId, day: { gt: state.closedDay } }
+            : { guildId },
+        }),
+        prisma.fourHourGameDailyState.deleteMany({ where: { guildId } }),
+      ]);
     });
   }
 
@@ -276,9 +295,30 @@ class FourHourGameService implements Service {
     channelId: string,
     fetchLatest: LatestMessageFetcher
   ): Promise<void> {
-    return this.queue.run(guildId, () =>
-      this.replaceLastMessage(guildId, channelId, fetchLatest)
-    );
+    return this.queue.run(guildId, async () => {
+      const last = await prisma.fourHourGameLastMessage.findUnique({
+        where: { guildId },
+      });
+      const latest = await this.replaceLastMessage(
+        guildId,
+        channelId,
+        fetchLatest
+      );
+      if (
+        last &&
+        latest &&
+        last.channelId === channelId &&
+        last.authorId !== latest.authorId &&
+        last.sentAt < latest.sentAt
+      ) {
+        const closedDay = await this.getClosedDay(guildId, latest.sentAt);
+        await this.creditHolds(
+          guildId,
+          last.authorId,
+          splitHold(last.sentAt, latest.sentAt, closedDay)
+        );
+      }
+    });
   }
 
   handleDeletion(
@@ -307,17 +347,18 @@ class FourHourGameService implements Service {
     guildId: string,
     channelId: string,
     fetchLatest: LatestMessageFetcher
-  ): Promise<void> {
+  ): Promise<ChannelMessage | null> {
     const latest = await fetchLatest();
     if (!latest) {
       await prisma.fourHourGameLastMessage.deleteMany({ where: { guildId } });
-      return;
+      return null;
     }
     await prisma.fourHourGameLastMessage.upsert({
       where: { guildId },
       create: { guildId, channelId, ...latest },
       update: { channelId, ...latest },
     });
+    return latest;
   }
 
   async getScore(guildId: string, userId: string): Promise<number | null> {
@@ -346,16 +387,27 @@ class FourHourGameService implements Service {
     return existing === null ? "created" : "updated";
   }
 
-  async deleteScore(guildId: string, userId: string): Promise<boolean> {
-    const [{ count }, points, dailies] = await prisma.$transaction([
-      prisma.fourHourGameScore.deleteMany({ where: { guildId, userId } }),
-      prisma.fourHourGamePoint.deleteMany({ where: { guildId, userId } }),
-      prisma.fourHourGameDailyBest.deleteMany({ where: { guildId, userId } }),
-    ]);
-    if (count > 0 || points.count > 0 || dailies.count > 0) {
-      this.bumpRevision(guildId);
-    }
-    return count > 0 || dailies.count > 0;
+  deleteScore(guildId: string, userId: string): Promise<boolean> {
+    return this.queue.run(guildId, async () => {
+      const state = await prisma.fourHourGameDailyState.findUnique({
+        where: { guildId },
+      });
+      const closedDay = state?.closedDay ?? "";
+      const [{ count }, points, closed, open] = await prisma.$transaction([
+        prisma.fourHourGameScore.deleteMany({ where: { guildId, userId } }),
+        prisma.fourHourGamePoint.deleteMany({ where: { guildId, userId } }),
+        prisma.fourHourGameDailyBest.deleteMany({
+          where: { guildId, userId, day: { lte: closedDay } },
+        }),
+        prisma.fourHourGameDailyBest.deleteMany({
+          where: { guildId, userId, day: { gt: closedDay } },
+        }),
+      ]);
+      if (count > 0 || points.count > 0 || closed.count > 0 || open.count > 0) {
+        this.bumpRevision(guildId);
+      }
+      return count > 0 || closed.count > 0;
+    });
   }
 
   async getRank(guildId: string, userId: string): Promise<PlayerRank | null> {
