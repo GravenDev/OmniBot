@@ -1,0 +1,23 @@
+{
+  "config.reportChannel.name": "Report channel",
+  "config.reportChannel.description": "Channel where the previous day's statistics are posted every night. Nothing is posted until it is set.",
+  "config.excludedChannels.name": "Excluded channels",
+  "config.excludedChannels.description": "Channels or categories whose activity is not counted.",
+  "config.includePrivateChannels.name": "Include private channels",
+  "config.includePrivateChannels.description": "Also count the channels that @everyone cannot see. Their names then appear in the public report.",
+  "config.showTopMembers.name": "Show most active members",
+  "config.showTopMembers.description": "Lists the most active members in the report.",
+
+  "report.title": "Server stats — {{date}}",
+  "report.since": "Counting started {{since}}",
+  "report.memberCount": "Members",
+  "report.joins": "New members",
+  "report.leaves": "Members who left",
+  "report.messages": "Messages posted",
+  "report.activeMembers": "Active members",
+  "report.activeChannels": "Active channels",
+  "report.reactions": "Reactions added",
+  "report.topReactions": "Top reactions",
+  "report.topChannels": "Most active channels",
+  "report.topMembers": "Most active members"
+}

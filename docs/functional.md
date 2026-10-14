@@ -430,3 +430,34 @@ Le bot répond au message sans notifier son auteur, et seulement dans les salons
 | `theme`      | Choix   | `light` (noir sur blanc, par défaut) ou `dark` (blanc sur gris foncé), pour `/latex` aussi. |
 
 Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
+
+---
+
+## Module Server Stats
+
+Compte l'activité quotidienne du serveur et publie un bilan chaque nuit.
+
+### Comptage
+
+À partir de l'activation du module, le bot compte, par jour (heure de Paris) :
+
+- les messages, par salon et par membre ; les messages d'un fil comptent pour son salon parent ;
+- les réactions ajoutées, par emoji ;
+- les arrivées et les départs de membres.
+
+Les bots, les messages système, les salons exclus et, par défaut, les salons que `@everyone` ne voit pas (dont les fils privés) ne sont pas comptés. Seuls des compteurs sont enregistrés, jamais le contenu des messages ; ils sont supprimés au bout de 90 jours. Les événements survenus pendant que le bot est arrêté ne sont pas comptés.
+
+### Bilan quotidien
+
+Chaque jour à minuit (heure de Paris), le bot publie dans le salon configuré le bilan de la veille : nombre de membres, nouveaux membres, départs, messages postés, membres actifs, salons actifs, réactions ajoutées, et les 5 réactions, salons et membres les plus actifs. La description indique depuis quand le comptage a commencé. Les membres cités ne sont pas notifiés. Tant que le salon n'est pas défini, ou si rien n'a encore été compté, rien n'est publié.
+
+### Configuration — `/config server-stats`
+
+| Champ                    | Type           | Description                                                                                                              |
+| ------------------------ | -------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `reportChannel`          | Salon          | Salon du bilan quotidien. Tant qu'il n'est pas défini, rien n'est publié.                                                |
+| `excludedChannels`       | Salons (liste) | Salons ou catégories dont l'activité n'est pas comptée.                                                                  |
+| `includePrivateChannels` | Booléen        | Compte aussi les salons que `@everyone` ne voit pas ; leurs noms apparaissent alors dans le bilan. Désactivé par défaut. |
+| `showTopMembers`         | Booléen        | Affiche les membres les plus actifs. Activé par défaut.                                                                  |
+
+Le module suit les arrivées et départs : l'intent privilégié _Server Members_ doit être activé sur le bot.
