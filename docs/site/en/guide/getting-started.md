@@ -29,7 +29,7 @@ The core system wires everything together — adding a feature means creating a 
 
 - [mise](https://mise.jdx.dev/) — pins Node.js, pnpm, and pitchfork versions. Without mise, install **Node.js 24** and **pnpm** manually (check `.mise.toml` for exact versions).
 - **Docker** — for the PostgreSQL 17 container.
-- A **Discord bot token** — create an application in the [Discord Developer Portal](https://discord.com/developers/applications), then go to the Bot section and reset the token. Enable **Message Content Intent** if your module needs it.
+- A **Discord bot token** — create an application in the [Discord Developer Portal](https://discord.com/developers/applications), then go to the Bot section and reset the token. Enable **Message Content Intent** if your module needs it, and **Server Members Intent** (required by Server Stats: without it Discord refuses the connection and the bot does not start).
 
 ### Setup
 

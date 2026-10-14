@@ -6,7 +6,7 @@
   "config.excludedCategories.name": "Catégories exclues",
   "config.excludedCategories.description": "Catégories dont l'activité des salons n'est pas comptée.",
   "config.includePrivateChannels.name": "Compter les salons privés",
-  "config.includePrivateChannels.description": "Compte aussi les salons que @everyone ne voit pas. À activer quand @everyone ne voit aucun salon (accès donné par un rôle de membre).",
+  "config.includePrivateChannels.description": "Compte aussi les salons que @everyone ne voit pas. À activer quand @everyone ne voit aucun salon (accès donné par un rôle de membre), en excluant les salons du staff : ils seraient comptés aussi.",
   "config.showTopMembers.name": "Afficher les membres les plus actifs",
   "config.showTopMembers.description": "Liste les membres les plus actifs dans le bilan.",
   "report.title": "Statistiques du serveur — {{date}}",

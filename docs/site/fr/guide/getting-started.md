@@ -29,7 +29,7 @@ Le système central relie le tout — ajouter une fonctionnalité signifie crée
 
 - [mise](https://mise.jdx.dev/) — fixe les versions de Node.js, pnpm et pitchfork. Sans mise, installez **Node.js 24** et **pnpm** manuellement (vérifiez `.mise.toml` pour les versions exactes).
 - **Docker** — pour le conteneur PostgreSQL 17.
-- Un **token de bot Discord** — créez une application dans le [Discord Developer Portal](https://discord.com/developers/applications), puis allez dans la section Bot et réinitialisez le token. Activez **Message Content Intent** si votre module en a besoin.
+- Un **token de bot Discord** — créez une application dans le [Discord Developer Portal](https://discord.com/developers/applications), puis allez dans la section Bot et réinitialisez le token. Activez **Message Content Intent** si votre module en a besoin, ainsi que **Server Members Intent** (requis par Server Stats : sans lui, Discord refuse la connexion et le bot ne démarre pas).
 
 ### Configuration
 
