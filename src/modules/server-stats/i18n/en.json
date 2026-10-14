@@ -6,7 +6,7 @@
   "config.excludedCategories.name": "Excluded categories",
   "config.excludedCategories.description": "Categories whose channels' activity is not counted.",
   "config.includePrivateChannels.name": "Include private channels",
-  "config.includePrivateChannels.description": "Also count the channels that @everyone cannot see. Enable it when @everyone sees no channel (access through a member role).",
+  "config.includePrivateChannels.description": "Also count the channels that @everyone cannot see. Enable it when @everyone sees no channel (access through a member role), and exclude the staff channels: they would be counted too.",
   "config.showTopMembers.name": "Show most active members",
   "config.showTopMembers.description": "Lists the most active members in the report.",
   "report.title": "Server stats — {{date}}",

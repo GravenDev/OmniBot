@@ -20,7 +20,7 @@ export const serverStatsConfigSchema = {
   includePrivateChannels: {
     name: "Include private channels",
     description:
-      "Also count the channels that @everyone cannot see. Enable it when @everyone sees no channel (access through a member role).",
+      "Also count the channels that @everyone cannot see. Enable it when @everyone sees no channel (access through a member role), and exclude the staff channels: they would be counted too.",
     type: ConfigType.BOOLEAN,
     defaultValue: false,
   },
