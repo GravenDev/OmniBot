@@ -22,7 +22,23 @@ import {
   quoteLinks,
   quoteReply,
   resolveQuote,
+  truncate,
 } from "./quote.js";
+
+describe("truncate", () => {
+  it("never splits an emoji and stays within the UTF-16 limit", () => {
+    const truncated = truncate("😀".repeat(600), 1024);
+    expect(truncated.length).toBeLessThanOrEqual(1024);
+    expect(truncated.endsWith("😀…")).toBe(true);
+  });
+
+  it("drops a spoiler the cut would leave open", () => {
+    expect(truncate(`intro ||${"secret ".repeat(20)}||`, 30)).toBe("intro …");
+    expect(truncate(`||a|| ${"b".repeat(40)}`, 20)).toBe(
+      `||a|| ${"b".repeat(13)}…`
+    );
+  });
+});
 
 const GUILD = "100";
 
@@ -250,11 +266,13 @@ function fakeSource(
 
 function fakeConfig(
   excluded: string[] = [],
-  excludedCategories: string[] = []
+  excludedCategories: string[] = [],
+  ignoredRoles: string[] = []
 ) {
   const values: Record<string, { id: string }[]> = {
     excludedChannels: excluded.map((id) => ({ id })),
     excludedCategories: excludedCategories.map((id) => ({ id })),
+    ignoredRoles: ignoredRoles.map((id) => ({ id })),
   };
   return {
     t,
@@ -851,6 +869,32 @@ describe("quoteLinks", () => {
     });
     await quoteLinks(message, fakeConfig(["999"]));
     expect(reply).not.toHaveBeenCalled();
+  });
+
+  it("applies the ignored roles of the configuration", async () => {
+    const channel = (id: string, viewers: string[]) =>
+      fakeChannel({
+        id,
+        guild: lockedServer,
+        viewers,
+        messages: { "300": quoted },
+      });
+    const post = () =>
+      fakeSource(
+        link("200", "300"),
+        { "200": channel("200", ["member"]) },
+        channel("999", ["member", "player"])
+      );
+
+    const refused = post();
+    await quoteLinks(refused.message, fakeConfig());
+    expect(refused.reply).not.toHaveBeenCalled();
+
+    const allowed = post();
+    await quoteLinks(allowed.message, fakeConfig([], [], ["player"]));
+    expect(allowed.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ failIfNotExists: false })
+    );
   });
 
   it("ignores messages from an excluded category", async () => {
