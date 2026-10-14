@@ -1,0 +1,13 @@
+{
+  "config.excludedChannels.name": "Excluded channels",
+  "config.excludedChannels.description": "Channels or categories whose messages are never quoted, and where posted links are not quoted.",
+
+  "quote.footer": "Quoted by {{quoter}} | in #{{channel}}",
+  "quote.footerForwarded": "Quoted by {{quoter}} | forwarded in #{{channel}}",
+  "quote.noContent": "*Message without text*",
+  "quote.jump": "Go to message",
+  "quote.jumpNumbered": "Message {{number}}",
+
+  "delete.button": "Delete",
+  "delete.notAllowed": "Only the member who posted the link, the quoted authors or a moderator can delete this quote."
+}
