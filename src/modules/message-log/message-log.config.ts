@@ -9,8 +9,13 @@ export const messageLogConfigSchema = {
   },
   excludedChannels: {
     name: "Excluded channels",
-    description: "Channels or categories whose messages are not logged.",
+    description: "Channels whose messages are not logged.",
     type: [ConfigType.CHANNEL],
+  },
+  excludedCategories: {
+    name: "Excluded categories",
+    description: "Categories whose channels' messages are not logged.",
+    type: [ConfigType.CATEGORY],
   },
   logEdits: {
     name: "Log edits",

@@ -7,8 +7,13 @@ import type {
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { MessageLogConfigSchema } from "#modules/message-log/message-log.config.js";
-import { findDeleter } from "./audit.js";
-import { bulkDeleteLog, deletedEmbed, editedEmbed } from "./entries.js";
+import { type DeleterLookup, findDeleter } from "./audit.js";
+import {
+  bulkDeleteLog,
+  deletedEmbed,
+  editedLog,
+  isAuthoredByMember,
+} from "./entries.js";
 import { logChannelFor } from "./routing.js";
 
 type Config = ConfigProvider<MessageLogConfigSchema>;
@@ -16,25 +21,23 @@ type AnyMessage = Message | PartialMessage;
 
 const NO_MENTIONS = { parse: [] };
 
-function isIgnored(message: AnyMessage): boolean {
-  return !!message.author?.bot || !!message.webhookId;
-}
-
 export async function logDeletion(
   message: AnyMessage,
   config: Config,
-  lookupDeleter = findDeleter
+  lookupDeleter: DeleterLookup = findDeleter
 ): Promise<void> {
-  if (!message.inGuild() || isIgnored(message)) {
+  if (message.partial || !message.inGuild() || !isAuthoredByMember(message)) {
     return;
   }
   const logChannel = logChannelFor(message.channel, config);
   if (!logChannel) {
     return;
   }
-  const deletedBy = message.author
-    ? await lookupDeleter(message.guild, message.author.id, message.channelId)
-    : null;
+  const deletedBy = await lookupDeleter(
+    message.guild,
+    message.author.id,
+    message.channelId
+  );
   await logChannel.send({
     embeds: [deletedEmbed(message, config.t, deletedBy)],
     allowedMentions: NO_MENTIONS,
@@ -66,9 +69,9 @@ export async function logEdit(
   if (
     !config.get("logEdits") ||
     before.partial ||
-    !before.inGuild() ||
-    isIgnored(before) ||
     after.partial ||
+    !before.inGuild() ||
+    !isAuthoredByMember(before) ||
     before.content === after.content
   ) {
     return;
@@ -78,7 +81,7 @@ export async function logEdit(
     return;
   }
   await logChannel.send({
-    embeds: [editedEmbed(before, after, config.t)],
+    ...editedLog(before, after, config.t),
     allowedMentions: NO_MENTIONS,
   });
 }

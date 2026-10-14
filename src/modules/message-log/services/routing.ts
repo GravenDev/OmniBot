@@ -22,7 +22,10 @@ export function logChannelFor(
     return null;
   }
   const excludedIds = new Set(
-    (config.get("excludedChannels") ?? []).map((excluded) => excluded.id)
+    [
+      ...(config.get("excludedChannels") ?? []),
+      ...(config.get("excludedCategories") ?? []),
+    ].map((excluded) => excluded.id)
   );
   excludedIds.add(logChannel.id);
   return isExcluded(source, excludedIds) ? null : logChannel;

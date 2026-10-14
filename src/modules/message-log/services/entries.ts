@@ -15,38 +15,51 @@ const FIELD_LIMIT = 1024;
 
 type AnyMessage = Message | PartialMessage;
 
-function truncate(text: string, limit: number): string {
-  return text.length <= limit ? text : `${text.slice(0, limit - 1)}…`;
+export function truncate(text: string, limit: number): string {
+  const characters = Array.from(text);
+  return characters.length <= limit
+    ? text
+    : `${characters.slice(0, limit - 1).join("")}…`;
 }
 
-function timestamp(message: AnyMessage): string {
+export function isAuthoredByMember(message: Message): boolean {
+  return !message.author.bot && !message.webhookId && !message.system;
+}
+
+function timestamp(message: Message): string {
   return `<t:${Math.floor(message.createdTimestamp / 1000)}:f>`;
 }
 
-function attachmentLines(message: AnyMessage): string[] {
+function attachmentLines(message: Message): string[] {
   return [...message.attachments.values()].map(
     (attachment) => `📎 ${attachment.name}`
   );
 }
 
-function withAuthor(embed: EmbedBuilder, message: AnyMessage): EmbedBuilder {
-  if (message.author) {
-    embed.setAuthor({
+function baseEmbed(message: Message, color: number): EmbedBuilder {
+  return new EmbedBuilder()
+    .setColor(color)
+    .setAuthor({
       name: message.author.username,
       iconURL: message.author.displayAvatarURL(),
-    });
-  }
-  return embed;
+    })
+    .setTimestamp();
+}
+
+function footer(message: Message, t: TFunction) {
+  return {
+    text: t("footer", { authorId: message.author.id, messageId: message.id }),
+  };
 }
 
 export function deletedEmbed(
-  message: AnyMessage,
+  message: Message,
   t: TFunction,
   deletedBy: string | null
 ): EmbedBuilder {
   const header = [
     `**${t("deleted.title", {
-      author: message.author ? `<@${message.author.id}>` : t("unknownAuthor"),
+      author: `<@${message.author.id}>`,
       channel: `<#${message.channelId}>`,
     })}**`,
     t("sentAt", { sentAt: timestamp(message) }),
@@ -54,37 +67,20 @@ export function deletedEmbed(
   if (deletedBy) {
     header.push(t("deleted.by", { moderator: `<@${deletedBy}>` }));
   }
-  const body = message.partial
-    ? [t("deleted.unknownContent")]
-    : [message.content, ...attachmentLines(message)].filter(Boolean);
+  const body = [message.content, ...attachmentLines(message)].filter(Boolean);
   const description = [header.join("\n"), body.join("\n")]
     .filter(Boolean)
     .join("\n\n");
 
-  return withAuthor(new EmbedBuilder(), message)
-    .setColor(DELETED_COLOR)
+  return baseEmbed(message, DELETED_COLOR)
     .setDescription(truncate(description, DESCRIPTION_LIMIT))
-    .setFooter({
-      text: message.author
-        ? t("footer.full", {
-            authorId: message.author.id,
-            messageId: message.id,
-          })
-        : t("footer.message", { messageId: message.id }),
-    })
-    .setTimestamp();
+    .setFooter(footer(message, t));
 }
 
-export function editedEmbed(
-  before: Message,
-  after: AnyMessage,
-  t: TFunction
-): EmbedBuilder {
-  const content = (message: AnyMessage) =>
+export function editedLog(before: Message, after: Message, t: TFunction) {
+  const content = (message: Message) =>
     truncate(message.content || t("edited.empty"), FIELD_LIMIT);
-
-  return withAuthor(new EmbedBuilder(), before)
-    .setColor(EDITED_COLOR)
+  const embed = baseEmbed(before, EDITED_COLOR)
     .setDescription(
       [
         `**${t("edited.title", {
@@ -98,19 +94,37 @@ export function editedEmbed(
       { name: t("edited.before"), value: content(before) },
       { name: t("edited.after"), value: content(after) }
     )
-    .setFooter({
-      text: t("footer.full", {
-        authorId: before.author.id,
-        messageId: before.id,
-      }),
-    })
-    .setTimestamp();
+    .setFooter(footer(before, t));
+
+  const tooLong = [before, after].some(
+    (message) => Array.from(message.content).length > FIELD_LIMIT
+  );
+  const files = tooLong
+    ? [
+        new AttachmentBuilder(
+          Buffer.from(
+            [
+              `${t("edited.before")}:`,
+              before.content,
+              "",
+              `${t("edited.after")}:`,
+              after.content,
+            ].join("\n"),
+            "utf8"
+          ),
+          { name: `edit-${before.id}.txt` }
+        ),
+      ]
+    : [];
+
+  return { embeds: [embed], files };
 }
 
 function transcriptLine(message: Message): string {
   const sentAt = new Date(message.createdTimestamp).toISOString();
-  const attachments = attachmentLines(message);
-  const content = [message.content, ...attachments].filter(Boolean).join(" ");
+  const content = [message.content, ...attachmentLines(message)]
+    .filter(Boolean)
+    .join(" ");
   return `[${sentAt}] ${message.author.username} (${message.author.id}): ${content}`;
 }
 
@@ -122,20 +136,24 @@ export function bulkDeleteLog(
   t: TFunction
 ) {
   const known = [...messages.values()]
-    .filter((message): message is Message => !message.partial)
+    .filter(
+      (message): message is Message =>
+        !message.partial && isAuthoredByMember(message)
+    )
     .sort((a, b) => a.createdTimestamp - b.createdTimestamp);
 
+  const lines = [
+    `**${t("bulk.title", {
+      count: messages.size,
+      channel: `<#${channelId}>`,
+    })}**`,
+  ];
+  if (known.length > 0) {
+    lines.push(t("bulk.known", { count: known.length }));
+  }
   const embed = new EmbedBuilder()
     .setColor(DELETED_COLOR)
-    .setDescription(
-      [
-        `**${t("bulk.title", {
-          count: messages.size,
-          channel: `<#${channelId}>`,
-        })}**`,
-        t("bulk.known", { count: known.length }),
-      ].join("\n")
-    )
+    .setDescription(lines.join("\n"))
     .setTimestamp();
 
   const files =

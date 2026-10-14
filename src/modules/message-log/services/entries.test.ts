@@ -1,6 +1,6 @@
 import { Collection, type Message, type PartialMessage } from "discord.js";
 import { describe, expect, it } from "vitest";
-import { bulkDeleteLog, deletedEmbed, editedEmbed } from "./entries.js";
+import { bulkDeleteLog, deletedEmbed, editedLog, truncate } from "./entries.js";
 
 const t = (key: string, options?: Record<string, unknown>) =>
   options ? `${key} ${JSON.stringify(options)}` : key;
@@ -12,6 +12,9 @@ function fakeMessage(
     id?: string;
     content?: string;
     partial?: boolean;
+    bot?: boolean;
+    webhookId?: string;
+    system?: boolean;
     attachments?: string[];
     sentAt?: number;
   } = {}
@@ -23,6 +26,8 @@ function fakeMessage(
     content: options.partial ? null : (options.content ?? ""),
     createdTimestamp: options.sentAt ?? createdTimestamp,
     url: "https://discord.com/channels/100/200/300",
+    webhookId: options.webhookId ?? null,
+    system: options.system ?? false,
     attachments: new Collection(
       (options.attachments ?? []).map((name) => [name, { name }])
     ),
@@ -31,10 +36,19 @@ function fakeMessage(
       : {
           id: "42",
           username: "flenderrs",
+          bot: options.bot ?? false,
           displayAvatarURL: () => "https://cdn/avatar.png",
         },
   } as unknown as Message;
 }
+
+describe("truncate", () => {
+  it("never splits an emoji", () => {
+    expect(truncate("ab😀c", 3)).toBe("ab…");
+    expect(truncate("a😀😀", 3)).toBe("a😀😀");
+    expect(truncate("😀😀😀😀", 3)).toBe("😀😀…");
+  });
+});
 
 describe("deletedEmbed", () => {
   it("shows the author, the channel and the content", () => {
@@ -54,21 +68,13 @@ describe("deletedEmbed", () => {
       ].join("\n")
     );
     expect(embed.footer?.text).toBe(
-      'footer.full {"authorId":"42","messageId":"300"}'
+      'footer {"authorId":"42","messageId":"300"}'
     );
   });
 
   it("names the moderator when the audit log confirms it", () => {
     const embed = deletedEmbed(fakeMessage({ content: "x" }), t, "7").data;
     expect(embed.description).toContain('deleted.by {"moderator":"<@7>"}');
-  });
-
-  it("says when the content is unknown", () => {
-    const embed = deletedEmbed(fakeMessage({ partial: true }), t, null).data;
-    expect(embed.author).toBeUndefined();
-    expect(embed.description).toContain('"author":"unknownAuthor"');
-    expect(embed.description).toContain("deleted.unknownContent");
-    expect(embed.footer?.text).toBe('footer.message {"messageId":"300"}');
   });
 
   it("truncates a long message", () => {
@@ -81,13 +87,14 @@ describe("deletedEmbed", () => {
   });
 });
 
-describe("editedEmbed", () => {
+describe("editedLog", () => {
   it("shows the content before and after", () => {
-    const embed = editedEmbed(
+    const log = editedLog(
       fakeMessage({ content: "avant" }),
       fakeMessage({ content: "" }),
       t
-    ).data;
+    );
+    const embed = log.embeds[0]!.data;
     expect(embed.fields).toEqual([
       { name: "edited.before", value: "avant" },
       { name: "edited.after", value: "edited.empty" },
@@ -95,21 +102,40 @@ describe("editedEmbed", () => {
     expect(embed.description).toContain(
       'edited.jump {"url":"https://discord.com/channels/100/200/300"}'
     );
+    expect(log.files).toEqual([]);
+  });
+
+  it("attaches the full texts when a side does not fit in a field", () => {
+    const before = `${"a".repeat(1500)} old`;
+    const after = `${"a".repeat(1500)} new`;
+    const log = editedLog(
+      fakeMessage({ content: before }),
+      fakeMessage({ content: after }),
+      t
+    );
+    expect(log.embeds[0]!.data.fields![0]!.value).toHaveLength(1024);
+    expect(log.files[0]!.name).toBe("edit-300.txt");
+    expect((log.files[0]!.attachment as Buffer).toString("utf8")).toBe(
+      ["edited.before:", before, "", "edited.after:", after].join("\n")
+    );
   });
 });
 
 describe("bulkDeleteLog", () => {
-  it("counts every message and attaches the known ones in order", async () => {
+  it("counts every message and attaches the members' known ones in order", async () => {
     const messages = new Collection<string, Message | PartialMessage>([
       ["2", fakeMessage({ id: "2", content: "second", sentAt: 2000 })],
       ["1", fakeMessage({ id: "1", content: "first", sentAt: 1000 })],
       ["3", fakeMessage({ id: "3", partial: true })],
+      ["4", fakeMessage({ id: "4", content: "bot", bot: true })],
+      ["5", fakeMessage({ id: "5", content: "hook", webhookId: "9" })],
+      ["6", fakeMessage({ id: "6", system: true })],
     ]);
     const log = bulkDeleteLog(messages, "200", t);
 
     expect(log.embeds[0]!.data.description).toBe(
       [
-        '**bulk.title {"count":3,"channel":"<#200>"}**',
+        '**bulk.title {"count":6,"channel":"<#200>"}**',
         'bulk.known {"count":2}',
       ].join("\n")
     );
@@ -122,10 +148,12 @@ describe("bulkDeleteLog", () => {
     );
   });
 
-  it("attaches nothing when no content is known", () => {
+  it("attaches nothing and mentions no file when no content is known", () => {
     const messages = new Collection<string, Message | PartialMessage>([
       ["3", fakeMessage({ id: "3", partial: true })],
     ]);
-    expect(bulkDeleteLog(messages, "200", t).files).toEqual([]);
+    const log = bulkDeleteLog(messages, "200", t);
+    expect(log.files).toEqual([]);
+    expect(log.embeds[0]!.data.description).not.toContain("bulk.known");
   });
 });

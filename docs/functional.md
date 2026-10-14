@@ -243,26 +243,27 @@ Consigne les messages supprimés et modifiés dans un salon réservé au staff.
 
 Pour chaque message supprimé, le bot poste dans le salon des logs l'auteur, le salon, la date d'envoi, le texte et le nom des pièces jointes, avec en pied l'ID de l'auteur et l'ID du message. Les mentions ne notifient personne.
 
-- **Contenu connu seulement pour les messages en cache** : ceux reçus depuis le démarrage du bot (environ 200 par salon). Pour un message plus ancien, le log indique que le contenu est inconnu.
+- **Seuls les messages en cache sont consignés** : ceux reçus depuis le démarrage du bot et encore en mémoire (environ 200 par salon). Pour un message plus ancien, Discord ne transmet ni l'auteur ni le contenu : rien n'est consigné.
 - **Pièces jointes** : seul leur nom est consigné, leur lien ne fonctionne plus après la suppression.
-- **Auteur de la suppression** : affiché seulement quand le journal d'audit le confirme, c'est-à-dire quand un modérateur supprime le message d'un autre membre. Le bot attend 1,5 seconde que l'entrée apparaisse, et il lui faut la permission _Voir les logs du serveur_. Quand un membre supprime son propre message, aucun nom n'est affiché.
+- **Auteur de la suppression** : affiché seulement quand le journal d'audit le confirme, c'est-à-dire quand un modérateur supprime le message d'un autre membre. Le bot attend 1,5 seconde que l'entrée apparaisse, et il lui faut la permission _Voir les logs du serveur_. Discord regroupe les suppressions successives d'un même modérateur dans une seule entrée : le bot ne nomme le modérateur que si l'entrée est nouvelle (moins de 10 secondes) ou si son compteur a augmenté depuis sa dernière lecture. En cas de doute, aucun nom n'est affiché, en particulier quand un membre supprime son propre message.
 
-Une suppression en masse produit un seul log avec le nombre de messages et, en fichier joint, le contenu de ceux qui étaient en cache.
+Une suppression en masse produit un seul log avec le nombre de messages et, en fichier joint, le contenu de ceux qui étaient en cache et écrits par des membres.
 
 ### Messages modifiés
 
-Si l'option est active, chaque modification du texte d'un message en cache est consignée avec le contenu avant et après et un lien vers le message. Les mises à jour qui ne changent pas le texte (chargement d'un aperçu de lien) sont ignorées.
+Si l'option est active, chaque modification du texte d'un message en cache est consignée avec le contenu avant et après et un lien vers le message. Quand l'un des deux textes dépasse 1 024 caractères, les deux versions complètes sont jointes en fichier. Les mises à jour qui ne changent pas le texte (chargement d'un aperçu de lien, épinglage) sont ignorées.
 
 ### Ce qui n'est pas consigné
 
-Les messages des bots et des webhooks, ceux des salons exclus et ceux du salon des logs lui-même. Le bot ne stocke rien : le contenu n'est conservé que dans son cache en mémoire, puis dans le salon des logs.
+Les messages des bots, des webhooks et les messages système, ceux des salons et catégories exclus et ceux du salon des logs lui-même. Le bot ne stocke rien : le contenu n'est conservé que dans son cache en mémoire, puis dans le salon des logs.
 
 ### Configuration — `/config message-log`
 
-| Champ              | Type           | Description                                                       |
-| ------------------ | -------------- | ----------------------------------------------------------------- |
-| `logChannel`       | Salon          | Salon des logs. Tant qu'il n'est pas défini, rien n'est consigné. |
-| `excludedChannels` | Salons (liste) | Salons ou catégories dont les messages ne sont pas consignés.     |
-| `logEdits`         | Booléen        | Consigne aussi les messages modifiés. Activé par défaut.          |
+| Champ                | Type               | Description                                                       |
+| -------------------- | ------------------ | ----------------------------------------------------------------- |
+| `logChannel`         | Salon              | Salon des logs. Tant qu'il n'est pas défini, rien n'est consigné. |
+| `excludedChannels`   | Salons (liste)     | Salons dont les messages ne sont pas consignés.                   |
+| `excludedCategories` | Catégories (liste) | Catégories dont les messages des salons ne sont pas consignés.    |
+| `logEdits`           | Booléen            | Consigne aussi les messages modifiés. Activé par défaut.          |
 
 Le salon des logs doit être réservé au staff : il reproduit le contenu de messages venant de tous les salons, privés compris. Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
