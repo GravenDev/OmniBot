@@ -1,6 +1,6 @@
 # Politique de confidentialité
 
-Dernière mise à jour : juin 2026
+Dernière mise à jour : octobre 2026
 
 ## Responsable du traitement
 
@@ -29,6 +29,10 @@ OmniBot collecte uniquement les données nécessaires à son fonctionnement :
 
 - Quels modules sont activés ou désactivés sur chaque serveur
 - La version à laquelle chaque module a été installé pour la dernière fois
+
+### Statistiques d'activité
+
+Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, jamais le contenu des messages. Ces compteurs sont supprimés au bout de 90 jours. Le bilan quotidien publié sur le serveur peut citer les membres les plus actifs ; les administrateurs peuvent le désactiver.
 
 ## Stockage des données
 

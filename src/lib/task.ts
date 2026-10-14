@@ -4,6 +4,7 @@ import { DeclarationType, type Declared } from "./declared.js";
 export interface ScheduledTask {
   id: string;
   schedule: string;
+  timezone?: string;
   runOnStart?: boolean;
   run: (client: Client<true>) => Promise<void>;
 }

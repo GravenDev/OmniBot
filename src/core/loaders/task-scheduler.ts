@@ -30,7 +30,7 @@ export function startModuleTasks(client: Client<true>, module: Module): void {
     const name = `${module.id}:${task.id}`;
     const job = new Cron(
       task.schedule,
-      { name, timezone: "UTC", protect: true },
+      { name, timezone: task.timezone ?? "UTC", protect: true },
       () => runTask(client, name, task)
     );
     jobs.push(job);

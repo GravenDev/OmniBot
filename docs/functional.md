@@ -232,3 +232,36 @@ plus de commande dédiée : la configuration se fait via `/config thread-creator
 
 Il n'y a plus de flag `actif` : désactiver le module via `/modules` arrête la
 surveillance sans effacer la configuration.
+
+---
+
+## Module Server Stats
+
+Compte l'activité quotidienne du serveur et publie un bilan chaque nuit.
+
+### Comptage
+
+Dès que le module est activé, le bot compte, par jour (heure de Paris) :
+
+- les messages, par salon et par membre ; les messages d'un fil comptent pour son salon parent ;
+- les réactions ajoutées, par emoji ;
+- les arrivées et les départs de membres.
+
+Les bots, les messages système, les salons et catégories exclus et, par défaut, les salons que `@everyone` ne voit pas (dont les fils privés) ne sont pas comptés. Seuls des compteurs sont enregistrés, jamais le contenu des messages ; ils sont supprimés au bout de 90 jours. Les événements survenus pendant que le bot est arrêté ne sont pas comptés.
+
+### Bilan quotidien
+
+Chaque jour à minuit (heure de Paris), le bot publie dans le salon configuré le bilan de la veille : nombre de membres (bots compris), nouveaux membres et départs (hors bots), messages postés, membres actifs, salons actifs, réactions ajoutées, et les 5 réactions, salons et membres les plus actifs. La description indique depuis quand le comptage a commencé (premier événement compté sur le serveur ; une désactivation temporaire du module ne remet pas cette date à zéro). Les membres cités ne sont pas notifiés. Tant que le salon n'est pas défini, ou si rien n'a encore été compté, rien n'est publié.
+
+### Configuration — `/config server-stats`
+
+| Champ                    | Type               | Description                                                                                                                                                                                                                                                                                                                                        |
+| ------------------------ | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `reportChannel`          | Salon              | Salon du bilan quotidien. Tant qu'il n'est pas défini, rien n'est publié.                                                                                                                                                                                                                                                                          |
+| `excludedChannels`       | Salons (liste)     | Salons dont l'activité n'est pas comptée.                                                                                                                                                                                                                                                                                                          |
+| `excludedCategories`     | Catégories (liste) | Catégories dont l'activité des salons n'est pas comptée.                                                                                                                                                                                                                                                                                           |
+| `includePrivateChannels` | Booléen            | Compte aussi les salons que `@everyone` ne voit pas. À activer quand `@everyone` ne voit aucun salon (accès donné par un rôle de membre), sinon le bilan reste à zéro. Les salons du staff sont alors comptés aussi et peuvent apparaître dans le bilan public : excluez-les avec `excludedChannels` / `excludedCategories`. Désactivé par défaut. |
+| `showTopMembers`         | Booléen            | Affiche les membres les plus actifs. Activé par défaut.                                                                                                                                                                                                                                                                                            |
+
+> [!WARNING]
+> Le module suit les arrivées et départs : l'intent privilégié _Server Members_ doit être activé dans le Developer Portal **avant** de déployer une version qui contient ce module. Les intents sont demandés au démarrage, que le module soit activé ou non : sans ce réglage, Discord refuse la connexion et le bot entier ne démarre pas.

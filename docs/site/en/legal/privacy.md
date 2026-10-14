@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: June 2026
+Last updated: October 2026
 
 ## Data Controller
 
@@ -29,6 +29,10 @@ OmniBot collects only the data necessary for its operation:
 
 - Which modules are enabled or disabled on each guild
 - The version at which each module was last installed
+
+### Activity Statistics
+
+When the Server Stats module is enabled on a guild, the bot counts every day, per guild, the messages per channel and per member, the reactions per emoji, and the members joining and leaving. Only counters are stored, never message content. These counters are deleted after 90 days. The daily report posted on the guild may list the most active members; administrators can turn this off.
 
 ## Data Storage
 
