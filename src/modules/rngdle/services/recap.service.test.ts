@@ -1,14 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { TFunction } from "#lib/i18n.js";
-import {
-  buildDailyMessage,
-  computeDailyRecap,
-  isStreakMilestone,
-  MESSAGE_LIMIT,
-  type DailyRecap,
-} from "./recap.js";
-import { ScoreTable } from "./scoring.js";
-import type { StoredRoll } from "./store.js";
+import recap, { MESSAGE_LIMIT, type DailyRecap } from "./recap.service.js";
+import { ScoreTable } from "./scoring.service.js";
+import type { StoredRoll } from "./store.service.js";
 
 const table = new ScoreTable({
   "0": 0,
@@ -41,23 +35,27 @@ const t: TFunction = (key, options) =>
 
 describe("isStreakMilestone", () => {
   it.each([7, 30, 50, 100, 200, 300, 365, 400, 1000])("%i is one", (days) => {
-    expect(isStreakMilestone(days)).toBe(true);
+    expect(recap.isStreakMilestone(days)).toBe(true);
   });
 
   it.each([0, 1, 6, 8, 99, 150, 250, 364, 366, 401])("%i is not", (days) => {
-    expect(isStreakMilestone(days)).toBe(false);
+    expect(recap.isStreakMilestone(days)).toBe(false);
   });
 });
 
 describe("computeDailyRecap", () => {
   it("returns null when nobody rolled that day", () => {
     expect(
-      computeDailyRecap([roll("a", 600, "2026-02-28T10:00:00Z")], DAY, table)
+      recap.computeDailyRecap(
+        [roll("a", 600, "2026-02-28T10:00:00Z")],
+        DAY,
+        table
+      )
     ).toBeNull();
   });
 
   it("counts players, finds the rarest and the worst roll of the day only", () => {
-    const recap = computeDailyRecap(
+    const result = recap.computeDailyRecap(
       [
         roll("a", 700, "2026-02-28T10:00:00Z"),
         roll("a", 350, "2026-03-01T00:00:00Z"),
@@ -70,17 +68,17 @@ describe("computeDailyRecap", () => {
       table
     )!;
 
-    expect(recap.participants).toBe(3);
-    expect(recap.rarest).toEqual({
+    expect(result.participants).toBe(3);
+    expect(result.rarest).toEqual({
       userId: "b",
       tier: "MYTHIC",
       topPercent: 0.5,
     });
-    expect(recap.worst).toEqual({ userId: "b", score: 50 });
+    expect(result.worst).toEqual({ userId: "b", score: 50 });
   });
 
   it("leaves the rarest roll out below RARE", () => {
-    const recap = computeDailyRecap(
+    const result = recap.computeDailyRecap(
       [
         roll("a", 250, "2026-03-01T10:00:00Z"),
         roll("b", 299, "2026-03-01T10:00:00Z"),
@@ -89,15 +87,18 @@ describe("computeDailyRecap", () => {
       table
     )!;
 
-    expect(recap.rarest).toBeNull();
+    expect(result.rarest).toBeNull();
     expect(
-      computeDailyRecap([roll("a", 300, "2026-03-01T10:00:00Z")], DAY, table)!
-        .rarest
+      recap.computeDailyRecap(
+        [roll("a", 300, "2026-03-01T10:00:00Z")],
+        DAY,
+        table
+      )!.rarest
     ).toMatchObject({ tier: "RARE", topPercent: 20 });
   });
 
   it("leaves the worst roll out when a single player rolled", () => {
-    const recap = computeDailyRecap(
+    const result = recap.computeDailyRecap(
       [
         roll("a", 600, "2026-03-01T10:00:00Z"),
         roll("a", 10, "2026-03-01T11:00:00Z"),
@@ -106,12 +107,12 @@ describe("computeDailyRecap", () => {
       table
     )!;
 
-    expect(recap.participants).toBe(1);
-    expect(recap.worst).toBeNull();
+    expect(result.participants).toBe(1);
+    expect(result.worst).toBeNull();
   });
 
   it("leaves the worst roll out when it ties with the best one", () => {
-    const recap = computeDailyRecap(
+    const result = recap.computeDailyRecap(
       [
         roll("a", 250, "2026-03-01T10:00:00Z"),
         roll("b", 250, "2026-03-01T11:00:00Z"),
@@ -120,12 +121,12 @@ describe("computeDailyRecap", () => {
       table
     )!;
 
-    expect(recap.participants).toBe(2);
-    expect(recap.worst).toBeNull();
+    expect(result.participants).toBe(2);
+    expect(result.worst).toBeNull();
   });
 
   it("lists the players whose streak reaches a milestone that day, longest first", () => {
-    const recap = computeDailyRecap(
+    const result = recap.computeDailyRecap(
       [
         ...daysBefore("seven", 6),
         roll("seven", 100, "2026-03-01T10:00:00Z"),
@@ -140,7 +141,7 @@ describe("computeDailyRecap", () => {
       table
     )!;
 
-    expect(recap.streaks).toEqual([
+    expect(result.streaks).toEqual([
       { userId: "thirty", days: 30 },
       { userId: "seven", days: 7 },
     ]);
@@ -156,13 +157,13 @@ describe("buildDailyMessage", () => {
   };
 
   it("keeps the congratulations line alone without a recap", () => {
-    expect(buildDailyMessage(["a", "b"], null, t, "fr")).toBe(
+    expect(recap.buildDailyMessage(["a", "b"], null, t, "fr")).toBe(
       'daily.message {"winners":"<@a> <@b>"}'
     );
   });
 
   it("puts every line in order, with mentions and localized numbers", () => {
-    expect(buildDailyMessage(["a"], full, t, "fr").split("\n")).toEqual([
+    expect(recap.buildDailyMessage(["a"], full, t, "fr").split("\n")).toEqual([
       'daily.message {"winners":"<@a>"}',
       'daily.participants {"count":12}',
       'daily.rarest {"user":"<@r>","tier":"MYTHIC","percent":"0,5"}',
@@ -175,12 +176,14 @@ describe("buildDailyMessage", () => {
     const rarest = { userId: "r", tier: "MYTHIC", topPercent: 0.034 };
 
     expect(
-      buildDailyMessage(["a"], { ...full, rarest }, t, "fr").split("\n")[2]
+      recap
+        .buildDailyMessage(["a"], { ...full, rarest }, t, "fr")
+        .split("\n")[2]
     ).toBe('daily.rarest {"user":"<@r>","tier":"MYTHIC","percent":"0,034"}');
   });
 
   it("skips the missing parts", () => {
-    const message = buildDailyMessage(
+    const message = recap.buildDailyMessage(
       ["a"],
       { participants: 1, rarest: null, worst: null, streaks: [] },
       t,
@@ -199,7 +202,12 @@ describe("buildDailyMessage", () => {
       days: 7,
     }));
 
-    const message = buildDailyMessage(["a"], { ...full, streaks }, t, "en");
+    const message = recap.buildDailyMessage(
+      ["a"],
+      { ...full, streaks },
+      t,
+      "en"
+    );
     const lines = message.split("\n");
 
     expect(message.length).toBeLessThanOrEqual(MESSAGE_LIMIT);
@@ -218,7 +226,7 @@ describe("buildDailyMessage", () => {
       }));
       const winnerIds = Array.from({ length: winners }, (_, i) => `${i}`);
 
-      const message = buildDailyMessage(
+      const message = recap.buildDailyMessage(
         winnerIds,
         { ...full, streaks },
         t,

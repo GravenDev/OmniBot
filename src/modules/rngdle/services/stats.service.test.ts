@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { ScoreTable } from "./scoring.js";
-import {
-  computeRollStats,
-  computeServerStats,
-  computeStreaks,
-} from "./stats.js";
-import type { StoredRoll } from "./store.js";
+import { ScoreTable } from "./scoring.service.js";
+import stats from "./stats.service.js";
+import type { StoredRoll } from "./store.service.js";
 
 const table = new ScoreTable({
   "0": 0,
@@ -31,7 +27,7 @@ function roll(userId: string, score: number, badgeCount = 0): StoredRoll {
 
 describe("computeRollStats", () => {
   it("returns null without rolls", () => {
-    expect(computeRollStats([], table)).toBeNull();
+    expect(stats.computeRollStats([], table)).toBeNull();
   });
 
   it("computes totals, truncated average, extremes (first on ties) and max badges", () => {
@@ -44,33 +40,33 @@ describe("computeRollStats", () => {
       roll("e", 10, 0),
     ];
 
-    const stats = computeRollStats(rolls, table)!;
+    const result = stats.computeRollStats(rolls, table)!;
 
-    expect(stats).toMatchObject({
+    expect(result).toMatchObject({
       totalRolls: 6,
       totalScore: 1372,
       averageScore: 228,
       maxBadges: 5,
     });
-    expect(stats.best).toEqual({
+    expect(result.best).toEqual({
       userId: "b",
       number: rolls[1]!.number,
       score: 601,
       rolledAt: rolls[1]!.rolledAt,
     });
-    expect(stats.worst.userId).toBe("c");
+    expect(result.worst.userId).toBe("c");
   });
 
   it("counts every tier, with zeros, and leaves ERROR rolls out of the tiers", () => {
     const scores = [0, 5, 100, 250, 350, 450, 550, 650, 700, -1];
 
-    const stats = computeRollStats(
+    const result = stats.computeRollStats(
       scores.map((score) => roll("a", score)),
       table
     )!;
 
-    expect(stats.totalRolls).toBe(10);
-    expect(stats.tierCounts).toEqual({
+    expect(result.totalRolls).toBe(10);
+    expect(result.tierCounts).toEqual({
       TRASH: 2,
       COMMON: 1,
       UNCOMMON: 1,
@@ -84,7 +80,7 @@ describe("computeRollStats", () => {
 
 describe("computeServerStats", () => {
   it("returns null without rolls", () => {
-    expect(computeServerStats([], table)).toBeNull();
+    expect(stats.computeServerStats([], table)).toBeNull();
   });
 
   it("includes the roll stats and orders tier leaders by count, at most 3, skipping ERROR rolls", () => {
@@ -100,13 +96,13 @@ describe("computeServerStats", () => {
       roll("z", -10),
     ];
 
-    const stats = computeServerStats(rolls, table)!;
+    const result = stats.computeServerStats(rolls, table)!;
 
-    expect(stats.totalRolls).toBe(9);
-    expect(stats.tierLeaders.COMMON).toEqual(["c", "b", "a"]);
-    expect(stats.tierLeaders.MYTHIC).toEqual(["a"]);
-    expect(stats.tierLeaders.TRASH).toEqual([]);
-    expect(Object.values(stats.tierLeaders).flat()).not.toContain("z");
+    expect(result.totalRolls).toBe(9);
+    expect(result.tierLeaders.COMMON).toEqual(["c", "b", "a"]);
+    expect(result.tierLeaders.MYTHIC).toEqual(["a"]);
+    expect(result.tierLeaders.TRASH).toEqual([]);
+    expect(Object.values(result.tierLeaders).flat()).not.toContain("z");
   });
 });
 
@@ -115,7 +111,7 @@ describe("computeStreaks", () => {
   const now = new Date("2026-03-02T12:00:00Z");
 
   it("is empty without rolls", () => {
-    expect(computeStreaks([], now)).toEqual({ current: 0, best: 0 });
+    expect(stats.computeStreaks([], now)).toEqual({ current: 0, best: 0 });
   });
 
   it("counts a streak ending today", () => {
@@ -125,13 +121,13 @@ describe("computeStreaks", () => {
       at("2026-03-02T08:00:00Z"),
     ];
 
-    expect(computeStreaks(rolls, now)).toEqual({ current: 3, best: 3 });
+    expect(stats.computeStreaks(rolls, now)).toEqual({ current: 3, best: 3 });
   });
 
   it("keeps a streak ending yesterday, since today's roll may still come", () => {
     const rolls = [at("2026-02-28T10:00:00Z"), at("2026-03-01T10:00:00Z")];
 
-    expect(computeStreaks(rolls, now)).toEqual({ current: 2, best: 2 });
+    expect(stats.computeStreaks(rolls, now)).toEqual({ current: 2, best: 2 });
   });
 
   it("drops the current streak after a missed day but keeps the record", () => {
@@ -141,7 +137,7 @@ describe("computeStreaks", () => {
       at("2026-02-27T10:00:00Z"),
     ];
 
-    expect(computeStreaks(rolls, now)).toEqual({ current: 0, best: 3 });
+    expect(stats.computeStreaks(rolls, now)).toEqual({ current: 0, best: 3 });
   });
 
   it("restarts after a one-day gap", () => {
@@ -152,7 +148,7 @@ describe("computeStreaks", () => {
       at("2026-03-02T10:00:00Z"),
     ];
 
-    expect(computeStreaks(rolls, now)).toEqual({ current: 2, best: 2 });
+    expect(stats.computeStreaks(rolls, now)).toEqual({ current: 2, best: 2 });
   });
 
   it("counts several rolls of the same UTC day once, in any order", () => {
@@ -163,13 +159,15 @@ describe("computeStreaks", () => {
       at("2026-03-02T00:30:00Z"),
     ];
 
-    expect(computeStreaks(rolls, now)).toEqual({ current: 2, best: 2 });
+    expect(stats.computeStreaks(rolls, now)).toEqual({ current: 2, best: 2 });
   });
 
   it("chains days across a month boundary", () => {
     const rolls = [at("2026-01-31T10:00:00Z"), at("2026-02-01T10:00:00Z")];
 
-    expect(computeStreaks(rolls, new Date("2026-02-01T18:00:00Z"))).toEqual({
+    expect(
+      stats.computeStreaks(rolls, new Date("2026-02-01T18:00:00Z"))
+    ).toEqual({
       current: 2,
       best: 2,
     });

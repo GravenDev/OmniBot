@@ -3,12 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const sleep = vi.hoisted(() => vi.fn(async (_ms: number) => undefined));
 vi.mock("node:timers/promises", () => ({ setTimeout: sleep }));
 
-import {
-  fetchScoreTable,
-  fetchUserRolls,
-  RngdleApiError,
-  RngdleUserNotFoundError,
-} from "./api.js";
+import api, { RngdleApiError, RngdleUserNotFoundError } from "./api.service.js";
 
 const fetchMock = vi.fn();
 
@@ -54,7 +49,7 @@ describe("fetchUserRolls", () => {
       .mockResolvedValueOnce(page([apiRoll(3)]))
       .mockResolvedValueOnce(page([apiRoll(4)], false));
 
-    const rolls = await fetchUserRolls("Some User", null);
+    const rolls = await api.fetchUserRolls("Some User", null);
 
     expect(rolls.map((roll) => roll.id)).toEqual(["r1", "r2", "r3", "r4"]);
     expect(requestedQueries()).toEqual([
@@ -71,14 +66,17 @@ describe("fetchUserRolls", () => {
   it("stops on an empty page", async () => {
     fetchMock.mockResolvedValueOnce(page([]));
 
-    expect(await fetchUserRolls("u", null)).toEqual([]);
+    expect(await api.fetchUserRolls("u", null)).toEqual([]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it("stops once the oldest roll of a page is not newer than since", async () => {
     fetchMock.mockResolvedValue(page([apiRoll(1), apiRoll(2)]));
 
-    const rolls = await fetchUserRolls("u", new Date(Date.UTC(2026, 0, 28)));
+    const rolls = await api.fetchUserRolls(
+      "u",
+      new Date(Date.UTC(2026, 0, 28))
+    );
 
     expect(rolls).toHaveLength(2);
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -89,7 +87,7 @@ describe("fetchUserRolls", () => {
       .mockResolvedValueOnce(page([apiRoll(1)]))
       .mockResolvedValueOnce(page([apiRoll(2)], false));
 
-    await fetchUserRolls("u", new Date(Date.UTC(2026, 0, 1)));
+    await api.fetchUserRolls("u", new Date(Date.UTC(2026, 0, 1)));
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
@@ -102,7 +100,7 @@ describe("fetchUserRolls", () => {
       )
     );
 
-    const rolls = await fetchUserRolls("u", null);
+    const rolls = await api.fetchUserRolls("u", null);
 
     expect(rolls[0]).toEqual({
       id: "r1",
@@ -117,7 +115,7 @@ describe("fetchUserRolls", () => {
   it("throws RngdleUserNotFoundError on 404", async () => {
     fetchMock.mockResolvedValueOnce(reply("", { status: 404 }));
 
-    await expect(fetchUserRolls("ghost", null)).rejects.toThrow(
+    await expect(api.fetchUserRolls("ghost", null)).rejects.toThrow(
       RngdleUserNotFoundError
     );
   });
@@ -125,7 +123,7 @@ describe("fetchUserRolls", () => {
   it("throws RngdleApiError on other client errors without retrying", async () => {
     fetchMock.mockResolvedValue(reply("", { status: 403 }));
 
-    await expect(fetchUserRolls("u", null)).rejects.toThrow(RngdleApiError);
+    await expect(api.fetchUserRolls("u", null)).rejects.toThrow(RngdleApiError);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -140,14 +138,14 @@ describe("fetchUserRolls", () => {
   ])("rejects the unexpected payload %j", async (body) => {
     fetchMock.mockResolvedValueOnce(reply(body));
 
-    await expect(fetchUserRolls("u", null)).rejects.toThrow(RngdleApiError);
+    await expect(api.fetchUserRolls("u", null)).rejects.toThrow(RngdleApiError);
   });
 
   describe("retries", () => {
     it("gives up after 3 attempts with an exponential backoff", async () => {
       fetchMock.mockImplementation(async () => reply("", { status: 503 }));
 
-      await expect(fetchUserRolls("u", null)).rejects.toThrow("503");
+      await expect(api.fetchUserRolls("u", null)).rejects.toThrow("503");
       expect(fetchMock).toHaveBeenCalledTimes(3);
       expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([1000, 2000]);
     });
@@ -160,7 +158,7 @@ describe("fetchUserRolls", () => {
         .mockResolvedValueOnce(limited("999"))
         .mockResolvedValueOnce(page([apiRoll(1)], false));
 
-      expect(await fetchUserRolls("u", null)).toHaveLength(1);
+      expect(await api.fetchUserRolls("u", null)).toHaveLength(1);
       expect(sleep.mock.calls.map(([ms]) => ms)).toEqual([7000, 30_000]);
     });
   });
@@ -194,7 +192,7 @@ describe("fetchScoreTable", () => {
       "/c.js": "console.log(1)",
     });
 
-    const table = await fetchScoreTable();
+    const table = await api.fetchScoreTable();
 
     expect(table).not.toBeNull();
     expect(Object.keys(table!).length).toBeGreaterThanOrEqual(20);
@@ -204,12 +202,12 @@ describe("fetchScoreTable", () => {
   it("returns null when no script has a plausible table", async () => {
     mockSite({ "/a.js": "var x=1", "/b.js": tableSource(1200, () => 10) });
 
-    expect(await fetchScoreTable()).toBeNull();
+    expect(await api.fetchScoreTable()).toBeNull();
   });
 
   it("throws when the home page is unavailable", async () => {
     fetchMock.mockResolvedValue(reply("", { status: 404 }));
 
-    await expect(fetchScoreTable()).rejects.toThrow(RngdleApiError);
+    await expect(api.fetchScoreTable()).rejects.toThrow(RngdleApiError);
   });
 });

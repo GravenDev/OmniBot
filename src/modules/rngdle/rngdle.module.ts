@@ -7,7 +7,7 @@ import navigationButton from "./interactions/navigation.button.js";
 import overallPageButton from "./interactions/overall-page.button.js";
 import unlinkConfirmButton from "./interactions/unlink-confirm.button.js";
 import { rngdleConfigSchema } from "./rngdle.config.js";
-import { rngdleTasks } from "./tasks.js";
+import { rngdleTasks } from "./tasks/rngdle-tasks.js";
 
 const logger = loggerMaker("rngdle");
 

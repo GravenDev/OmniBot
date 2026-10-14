@@ -7,13 +7,10 @@ import {
   type ButtonInteraction,
 } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
-import {
-  overallPage,
-  parsePeriod,
-  periodRange,
+import views, {
   type Period,
   type ViewContext,
-} from "#modules/rngdle/services/views.js";
+} from "#modules/rngdle/services/views.service.js";
 
 const CUSTOM_ID = "rngdle-overall";
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -33,7 +30,7 @@ export function periodText(
   period: Period,
   now = new Date()
 ): string {
-  const { from, to } = periodRange(period, now);
+  const { from, to } = views.periodRange(period, now);
   if (period === "month" && from) {
     const month = new Intl.DateTimeFormat(context.locale, {
       month: "long",
@@ -65,7 +62,7 @@ export async function overallPageMessage(
   period: Period = "all",
   now: Date = new Date()
 ) {
-  const result = await overallPage(context, page, callerId, period, now);
+  const result = await views.overallPage(context, page, callerId, period, now);
   if (!result) {
     return {
       content: context.t(
@@ -138,7 +135,7 @@ export default declareInteractionHandler<ButtonInteraction>({
         page,
         interaction.user.id,
         "private",
-        parsePeriod(period),
+        views.parsePeriod(period),
         anchor && Number.isInteger(anchorDay)
           ? new Date(anchorDay * DAY_MS)
           : new Date()

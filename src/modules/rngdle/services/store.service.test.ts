@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Account } from "./store.js";
+import type { Account } from "./store.service.js";
 
 interface Row extends Record<string, any> {}
 
@@ -126,7 +126,7 @@ const remote = (id: string, score: number, badgeCount = 0, day = 1) => ({
   rolledAt: new Date(Date.UTC(2026, 0, day)),
 });
 
-let store: (typeof import("./store.js"))["default"];
+let store: (typeof import("./store.service.js"))["default"];
 
 async function seed(who: Account, ...rolls: ReturnType<typeof remote>[]) {
   await store.register(who.guildId, who.userId, who.username);
@@ -142,7 +142,7 @@ beforeEach(async () => {
   db.state.reminders = [];
   db.state.table = null;
   vi.resetModules();
-  store = (await import("./store.js")).default;
+  store = (await import("./store.service.js")).default;
 });
 
 describe("accounts", () => {

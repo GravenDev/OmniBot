@@ -14,11 +14,16 @@ vi.mock("#lib/logger.js", () => {
   const logger = { info: vi.fn(), warn: vi.fn() };
   return { loggerMaker: () => logger };
 });
-vi.mock("./api.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./api.js")>()),
-  fetchUserRolls: mocks.fetchUserRolls,
-}));
-vi.mock("./store.js", () => ({
+vi.mock("./api.service.js", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("./api.service.js")>();
+  return {
+    ...orig,
+    default: Object.assign(new orig.ApiService(), {
+      fetchUserRolls: mocks.fetchUserRolls,
+    }),
+  };
+});
+vi.mock("./store.service.js", () => ({
   default: {
     account: mocks.account,
     accountByUsername: mocks.accountByUsername,
@@ -27,7 +32,7 @@ vi.mock("./store.js", () => ({
     saveRolls: mocks.saveRolls,
   },
 }));
-vi.mock("./sync.js", () => ({
+vi.mock("./sync.service.js", () => ({
   default: {
     exclusive: async (_guildId: string, task: () => Promise<unknown>) => {
       mocks.order.push("queue");
@@ -36,8 +41,8 @@ vi.mock("./sync.js", () => ({
   },
 }));
 
-import { RngdleApiError, RngdleUserNotFoundError } from "./api.js";
-import { linkAccount, linkOwnAccount } from "./linking.js";
+import { RngdleApiError, RngdleUserNotFoundError } from "./api.service.js";
+import linking from "./linking.service.js";
 
 const ROLLS = [{ number: 1 }, { number: 2 }];
 
@@ -57,7 +62,9 @@ beforeEach(() => {
 
 describe("linkAccount", () => {
   it("fetches the rolls outside the queue, then registers and imports them", async () => {
-    await expect(linkAccount("guild", "user", "Alice")).resolves.toEqual({
+    await expect(
+      linking.linkAccount("guild", "user", "Alice")
+    ).resolves.toEqual({
       kind: "created",
       count: 2,
     });
@@ -74,7 +81,9 @@ describe("linkAccount", () => {
     "reports a %s account",
     async (kind) => {
       mocks.register.mockResolvedValue(kind);
-      await expect(linkAccount("guild", "user", "Alice")).resolves.toEqual({
+      await expect(
+        linking.linkAccount("guild", "user", "Alice")
+      ).resolves.toEqual({
         kind,
         count: 2,
       });
@@ -83,7 +92,9 @@ describe("linkAccount", () => {
 
   it("reports an unknown username without touching the store", async () => {
     mocks.fetchUserRolls.mockRejectedValue(new RngdleUserNotFoundError("x"));
-    await expect(linkAccount("guild", "user", "Nobody")).resolves.toEqual({
+    await expect(
+      linking.linkAccount("guild", "user", "Nobody")
+    ).resolves.toEqual({
       kind: "notFound",
     });
     expect(mocks.register).not.toHaveBeenCalled();
@@ -91,7 +102,9 @@ describe("linkAccount", () => {
 
   it("reports an unreachable rngdle.com", async () => {
     mocks.fetchUserRolls.mockRejectedValue(new RngdleApiError("down"));
-    await expect(linkAccount("guild", "user", "Alice")).resolves.toEqual({
+    await expect(
+      linking.linkAccount("guild", "user", "Alice")
+    ).resolves.toEqual({
       kind: "unreachable",
     });
     expect(mocks.register).not.toHaveBeenCalled();
@@ -103,7 +116,9 @@ describe("linkAccount", () => {
       userId: "other",
       username: "alice",
     });
-    await expect(linkAccount("guild", "user", "Alice")).resolves.toEqual({
+    await expect(
+      linking.linkAccount("guild", "user", "Alice")
+    ).resolves.toEqual({
       kind: "conflict",
       userId: "other",
     });
@@ -117,7 +132,9 @@ describe("linkAccount", () => {
       userId: "other",
       username: "alice",
     });
-    await expect(linkAccount("guild", "user", "Alice")).resolves.toEqual({
+    await expect(
+      linking.linkAccount("guild", "user", "Alice")
+    ).resolves.toEqual({
       kind: "conflict",
       userId: "other",
     });
@@ -131,7 +148,9 @@ describe("linkAccount", () => {
       username: "Old",
     });
     mocks.register.mockResolvedValue("renamed");
-    await expect(linkAccount("guild", "user", "Alice")).resolves.toEqual({
+    await expect(
+      linking.linkAccount("guild", "user", "Alice")
+    ).resolves.toEqual({
       kind: "renamed",
       count: 2,
     });
@@ -145,7 +164,9 @@ describe("linkOwnAccount", () => {
       userId: "user",
       username: "Old",
     });
-    await expect(linkOwnAccount("guild", "user", "Alice")).resolves.toEqual({
+    await expect(
+      linking.linkOwnAccount("guild", "user", "Alice")
+    ).resolves.toEqual({
       kind: "alreadyLinked",
       username: "Old",
     });
@@ -159,7 +180,9 @@ describe("linkOwnAccount", () => {
       userId: "user",
       username: "Old",
     });
-    await expect(linkOwnAccount("guild", "user", "Alice")).resolves.toEqual({
+    await expect(
+      linking.linkOwnAccount("guild", "user", "Alice")
+    ).resolves.toEqual({
       kind: "alreadyLinked",
       username: "Old",
     });
@@ -173,7 +196,9 @@ describe("linkOwnAccount", () => {
       username: "alice",
     });
     mocks.register.mockResolvedValue("unchanged");
-    await expect(linkOwnAccount("guild", "user", "Alice")).resolves.toEqual({
+    await expect(
+      linking.linkOwnAccount("guild", "user", "Alice")
+    ).resolves.toEqual({
       kind: "unchanged",
       count: 2,
     });
@@ -189,7 +214,9 @@ describe("linkOwnAccount", () => {
       async (_guildId: string, _userId: string, username: string) =>
         username === "alice" ? "unchanged" : "renamed"
     );
-    await expect(linkOwnAccount("guild", "user", "ALICE")).resolves.toEqual({
+    await expect(
+      linking.linkOwnAccount("guild", "user", "ALICE")
+    ).resolves.toEqual({
       kind: "unchanged",
       count: 2,
     });
@@ -210,13 +237,15 @@ describe("linkOwnAccount", () => {
     });
     mocks.latestRollDate.mockResolvedValue(latest);
     mocks.register.mockResolvedValue("unchanged");
-    await linkOwnAccount("guild", "user", "Alice");
+    await linking.linkOwnAccount("guild", "user", "Alice");
 
     expect(mocks.fetchUserRolls).toHaveBeenCalledWith("Alice", latest);
   });
 
   it("links a member who has no account yet", async () => {
-    await expect(linkOwnAccount("guild", "user", "Alice")).resolves.toEqual({
+    await expect(
+      linking.linkOwnAccount("guild", "user", "Alice")
+    ).resolves.toEqual({
       kind: "created",
       count: 2,
     });

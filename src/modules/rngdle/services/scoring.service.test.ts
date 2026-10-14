@@ -1,12 +1,8 @@
 import { describe, expect, it } from "vitest";
-import {
-  compressScoreTable,
-  extractScoreTable,
-  formatPercent,
-  isPlausibleTable,
+import scoring, {
   ScoreTable,
   type CompressedTable,
-} from "./scoring.js";
+} from "./scoring.service.js";
 
 function bigTable(size: number) {
   const entries = Array.from({ length: size }, (_, i) => {
@@ -22,7 +18,7 @@ describe("extractScoreTable", () => {
   it("finds the table in a larger blob, parses exotic notations and keeps the biggest", () => {
     const source = `var a=${bigTable(1100)};var b=${bigTable(1500)};var d={1:2}`;
 
-    const table = extractScoreTable(source)!;
+    const table = scoring.extractScoreTable(source)!;
 
     expect(table.size).toBe(1500);
     expect(table.get(100_000)).toBe(0.5);
@@ -31,11 +27,13 @@ describe("extractScoreTable", () => {
   });
 
   it("ignores small objects, unclosed tables and sources without a table", () => {
-    expect(extractScoreTable("var a={1:2,3:4};var b={0x10:1.5}")).toBeNull();
     expect(
-      extractScoreTable(`var a=${bigTable(1200).slice(0, -1)}`)
+      scoring.extractScoreTable("var a={1:2,3:4};var b={0x10:1.5}")
     ).toBeNull();
-    expect(extractScoreTable("console.log('hello')")).toBeNull();
+    expect(
+      scoring.extractScoreTable(`var a=${bigTable(1200).slice(0, -1)}`)
+    ).toBeNull();
+    expect(scoring.extractScoreTable("console.log('hello')")).toBeNull();
   });
 });
 
@@ -50,7 +48,7 @@ describe("compressScoreTable", () => {
       [500, 99.99],
     ]);
 
-    expect(compressScoreTable(table)).toEqual({
+    expect(scoring.compressScoreTable(table)).toEqual({
       "100": 0,
       "50": 0.5,
       "400": 1,
@@ -110,7 +108,7 @@ describe("formatPercent", () => {
     [49.5, "50%"],
     [0.5, "1%"],
   ])("formats %s as %s", (percent, text) => {
-    expect(formatPercent(percent)).toBe(text);
+    expect(scoring.formatPercent(percent)).toBe(text);
   });
 });
 
@@ -121,19 +119,23 @@ describe("isPlausibleTable", () => {
     ) as CompressedTable;
 
   it("accepts monotonic tables of 20+ entries, equal percents and the 0 and 100 bounds", () => {
-    expect(isPlausibleTable(build(20))).toBe(true);
-    expect(isPlausibleTable(build(30, () => 50))).toBe(true);
-    expect(isPlausibleTable(build(21, (i) => (i * 100) / 20))).toBe(true);
+    expect(scoring.isPlausibleTable(build(20))).toBe(true);
+    expect(scoring.isPlausibleTable(build(30, () => 50))).toBe(true);
+    expect(scoring.isPlausibleTable(build(21, (i) => (i * 100) / 20))).toBe(
+      true
+    );
   });
 
   it("rejects short, out-of-range and decreasing tables", () => {
-    expect(isPlausibleTable(build(19))).toBe(false);
-    expect(isPlausibleTable(build(25, (i) => (i === 24 ? 100.5 : i)))).toBe(
+    expect(scoring.isPlausibleTable(build(19))).toBe(false);
+    expect(
+      scoring.isPlausibleTable(build(25, (i) => (i === 24 ? 100.5 : i)))
+    ).toBe(false);
+    expect(scoring.isPlausibleTable(build(25, (i) => (i === 0 ? -1 : i)))).toBe(
       false
     );
-    expect(isPlausibleTable(build(25, (i) => (i === 0 ? -1 : i)))).toBe(false);
-    expect(isPlausibleTable(build(25, (i) => (i === 10 ? 1 : i * 2)))).toBe(
-      false
-    );
+    expect(
+      scoring.isPlausibleTable(build(25, (i) => (i === 10 ? 1 : i * 2)))
+    ).toBe(false);
   });
 });

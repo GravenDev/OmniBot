@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { StoredRoll } from "./store.js";
-import { compare, computeHeadToHead, computeVersus } from "./versus.js";
+import type { StoredRoll } from "./store.service.js";
+import versus from "./versus.service.js";
 
 function roll(
   userId: string,
@@ -19,21 +19,21 @@ function roll(
 
 describe("compare", () => {
   it("names the higher side, or a tie", () => {
-    expect(compare(5, 3)).toBe("left");
-    expect(compare(3, 5)).toBe("right");
-    expect(compare(4, 4)).toBe("tie");
+    expect(versus.compare(5, 3)).toBe("left");
+    expect(versus.compare(3, 5)).toBe("right");
+    expect(versus.compare(4, 4)).toBe("tie");
   });
 
   it("gives the line to the only side that has a value", () => {
-    expect(compare(0, null)).toBe("left");
-    expect(compare(null, 0)).toBe("right");
-    expect(compare(null, null)).toBeNull();
+    expect(versus.compare(0, null)).toBe("left");
+    expect(versus.compare(null, 0)).toBe("right");
+    expect(versus.compare(null, null)).toBeNull();
   });
 });
 
 describe("computeHeadToHead", () => {
   it("only counts the UTC days both players rolled", () => {
-    const duel = computeHeadToHead(
+    const duel = versus.computeHeadToHead(
       [roll("a", 1, 50), roll("a", 2, 10), roll("a", 3, 30), roll("a", 4, 99)],
       [roll("b", 1, 40), roll("b", 2, 20), roll("b", 3, 30), roll("b", 5, 1)]
     );
@@ -42,7 +42,7 @@ describe("computeHeadToHead", () => {
   });
 
   it("uses UTC days, not 24-hour windows", () => {
-    const duel = computeHeadToHead(
+    const duel = versus.computeHeadToHead(
       [roll("a", 1, 50, { hour: 23 })],
       [roll("b", 2, 40, { hour: 0 })]
     );
@@ -51,7 +51,7 @@ describe("computeHeadToHead", () => {
   });
 
   it("keeps each player's best roll of a day", () => {
-    const duel = computeHeadToHead(
+    const duel = versus.computeHeadToHead(
       [roll("a", 1, 90, { hour: 1 }), roll("a", 1, 10, { hour: 20 })],
       [roll("b", 1, 50)]
     );
@@ -62,11 +62,11 @@ describe("computeHeadToHead", () => {
 
 describe("computeVersus", () => {
   it("returns null when neither player has a roll", () => {
-    expect(computeVersus([], [])).toBeNull();
+    expect(versus.computeVersus([], [])).toBeNull();
   });
 
   it("summarizes both players and picks the winner of every line", () => {
-    const versus = computeVersus(
+    const match = versus.computeVersus(
       [
         roll("a", 1, 100, { badgeCount: 2, number: 7 }),
         roll("a", 2, 51, { badgeCount: 5 }),
@@ -78,22 +78,22 @@ describe("computeVersus", () => {
       ]
     );
 
-    expect(versus?.left).toEqual({
+    expect(match?.left).toEqual({
       totalScore: 151,
       totalRolls: 2,
       averageScore: 75,
       best: { number: 7, score: 100 },
       maxBadges: 5,
     });
-    expect(versus?.right).toEqual({
+    expect(match?.right).toEqual({
       totalScore: 135,
       totalRolls: 3,
       averageScore: 45,
       best: { number: 9, score: 120 },
       maxBadges: 5,
     });
-    expect(versus?.headToHead).toEqual({ days: 2, left: 1, right: 1, ties: 0 });
-    expect(versus?.winners).toEqual({
+    expect(match?.headToHead).toEqual({ days: 2, left: 1, right: 1, ties: 0 });
+    expect(match?.winners).toEqual({
       totalScore: "left",
       totalRolls: "right",
       averageScore: "left",
@@ -104,16 +104,16 @@ describe("computeVersus", () => {
   });
 
   it("gives every line to the only player who rolled", () => {
-    const versus = computeVersus([], [roll("b", 1, 0)]);
+    const match = versus.computeVersus([], [roll("b", 1, 0)]);
 
-    expect(versus?.left).toEqual({
+    expect(match?.left).toEqual({
       totalScore: 0,
       totalRolls: 0,
       averageScore: null,
       best: null,
       maxBadges: null,
     });
-    expect(versus?.winners).toEqual({
+    expect(match?.winners).toEqual({
       totalScore: "tie",
       totalRolls: "right",
       averageScore: "right",

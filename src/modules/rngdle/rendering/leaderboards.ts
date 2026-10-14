@@ -3,11 +3,10 @@ import {
   renderLeaderboardTable,
   type LeaderboardEntry,
 } from "#lib/leaderboard-table.js";
-import {
-  formatPercent,
+import scoring, {
   TIER_COLORS,
   type TierOrError,
-} from "#modules/rngdle/services/scoring.js";
+} from "#modules/rngdle/services/scoring.service.js";
 import { formatCompact, formatShort, formatSpaced } from "./format.js";
 
 const ASSETS = new URL("../assets/", import.meta.url);
@@ -80,7 +79,7 @@ export async function renderDailyLeaderboard(
         maxWidth: 180,
         align: "right",
         cell: (row) => ({
-          text: formatPercent(row.percent),
+          text: scoring.formatPercent(row.percent),
           color: TIER_COLORS[row.tier],
           icon: row.percent > 50 ? arrowUp : trash,
         }),

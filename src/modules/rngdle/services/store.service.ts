@@ -1,12 +1,11 @@
 import { readFileSync } from "node:fs";
 import prisma from "#lib/database.js";
 import { declareService, type Service } from "#lib/service.js";
-import type { RemoteRoll } from "./api.js";
-import {
-  isPlausibleTable,
+import type { RemoteRoll } from "./api.service.js";
+import scoring, {
   ScoreTable,
   type CompressedTable,
-} from "./scoring.js";
+} from "./scoring.service.js";
 
 const SNAPSHOT = new URL("../assets/score-table.json", import.meta.url);
 
@@ -52,11 +51,11 @@ function loadTable(data: unknown): ScoreTable | null {
     typeof data === "object" &&
     data !== null &&
     Object.values(data).every((percent) => typeof percent === "number") &&
-    isPlausibleTable(data as CompressedTable);
+    scoring.isPlausibleTable(data as CompressedTable);
   return valid ? new ScoreTable(data as CompressedTable) : null;
 }
 
-class RngdleStore implements Service {
+export class RngdleStore implements Service {
   private readonly revisions = new Map<string, number>();
   private table: Promise<ScoreTable> | null = null;
 

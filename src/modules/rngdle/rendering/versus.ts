@@ -12,13 +12,13 @@ import { fitText } from "#lib/stat-card.js";
 import {
   TIER_COLORS,
   type TierOrError,
-} from "#modules/rngdle/services/scoring.js";
+} from "#modules/rngdle/services/scoring.service.js";
 import type {
   HeadToHead,
   Side,
   VersusWinners,
   Winner,
-} from "#modules/rngdle/services/versus.js";
+} from "#modules/rngdle/services/versus.service.js";
 import { formatSpaced } from "./format.js";
 
 const WIDTH = 1000;

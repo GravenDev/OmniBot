@@ -1,16 +1,24 @@
 import type { ButtonInteraction } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
-import type { ViewContext } from "#modules/rngdle/services/views.js";
+import type { ViewContext } from "#modules/rngdle/services/views.service.js";
 
 const mocks = vi.hoisted(() => ({
   overallPage: vi.fn(),
 }));
 
-vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  overallPage: mocks.overallPage,
-}));
+vi.mock("#modules/rngdle/services/views.service.js", async (importOriginal) => {
+  const orig =
+    await importOriginal<
+      typeof import("#modules/rngdle/services/views.service.js")
+    >();
+  return {
+    ...orig,
+    default: Object.assign(new orig.ViewsService(), {
+      overallPage: mocks.overallPage,
+    }),
+  };
+});
 
 const {
   default: handler,

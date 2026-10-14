@@ -17,20 +17,25 @@ vi.mock("#lib/logger.js", () => {
 vi.mock("#core/services/module.service.js", () => ({
   default: { getActivatedGuildIds: mocks.activated },
 }));
-vi.mock("./store.js", () => ({
+vi.mock("./store.service.js", () => ({
   default: {
     accounts: mocks.accounts,
     latestRollDate: mocks.latestRollDate,
     saveRolls: mocks.saveRolls,
   },
 }));
-vi.mock("./api.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./api.js")>()),
-  fetchUserRolls: mocks.fetchUserRolls,
-}));
+vi.mock("./api.service.js", async (importOriginal) => {
+  const orig = await importOriginal<typeof import("./api.service.js")>();
+  return {
+    ...orig,
+    default: Object.assign(new orig.ApiService(), {
+      fetchUserRolls: mocks.fetchUserRolls,
+    }),
+  };
+});
 
-import { RngdleUserNotFoundError } from "./api.js";
-import sync, { FullSyncCooldownError } from "./sync.js";
+import { RngdleUserNotFoundError } from "./api.service.js";
+import sync, { FullSyncCooldownError } from "./sync.service.js";
 
 const MINUTE = 60_000;
 const NOW = new Date("2026-03-10T12:00:00Z");

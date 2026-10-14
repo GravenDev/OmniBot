@@ -3,8 +3,8 @@ import moduleService from "#core/services/module.service.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
-import { fetchUserRolls, RngdleUserNotFoundError } from "./api.js";
-import store, { type Account } from "./store.js";
+import api, { RngdleUserNotFoundError } from "./api.service.js";
+import store, { type Account } from "./store.service.js";
 
 const logger = loggerMaker("rngdle");
 
@@ -32,7 +32,7 @@ function startOfUtcDay(date: Date): Date {
   );
 }
 
-class RngdleSync implements Service {
+export class RngdleSync implements Service {
   private readonly queue = new KeyedQueue();
   private readonly lastSync = new Map<string, number>();
   private readonly lastFullSync = new Map<string, number>();
@@ -161,7 +161,7 @@ class RngdleSync implements Service {
     }
     return store.saveRolls(
       account,
-      await fetchUserRolls(account.username, latest)
+      await api.fetchUserRolls(account.username, latest)
     );
   }
 }

@@ -9,17 +9,25 @@ const mocks = vi.hoisted(() => ({
   refreshIfStale: vi.fn(),
 }));
 
-vi.mock("#modules/rngdle/services/store.js", () => ({
+vi.mock("#modules/rngdle/services/store.service.js", () => ({
   default: { account: mocks.account },
 }));
-vi.mock("#modules/rngdle/services/sync.js", () => ({
+vi.mock("#modules/rngdle/services/sync.service.js", () => ({
   default: { refreshIfStale: mocks.refreshIfStale },
 }));
-vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  profileCard: mocks.profileCard,
-  overallPage: mocks.overallPage,
-}));
+vi.mock("#modules/rngdle/services/views.service.js", async (importOriginal) => {
+  const orig =
+    await importOriginal<
+      typeof import("#modules/rngdle/services/views.service.js")
+    >();
+  return {
+    ...orig,
+    default: Object.assign(new orig.ViewsService(), {
+      profileCard: mocks.profileCard,
+      overallPage: mocks.overallPage,
+    }),
+  };
+});
 
 const { default: handler, navigationRow } =
   await import("./navigation.button.js");

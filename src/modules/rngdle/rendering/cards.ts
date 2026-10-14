@@ -16,7 +16,7 @@ import {
   TIERS,
   type Tier,
   type TierOrError,
-} from "#modules/rngdle/services/scoring.js";
+} from "#modules/rngdle/services/scoring.service.js";
 import { formatSpaced } from "./format.js";
 
 const OUTLINED_TIERS = new Set<TierOrError>([

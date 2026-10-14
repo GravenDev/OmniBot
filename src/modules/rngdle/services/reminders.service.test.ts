@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  nextUtcMidnight,
-  reminderMessages,
-  reminderTimestamp,
-  startOfUtcDay,
-} from "./reminders.js";
+import reminders from "./reminders.service.js";
 
 const t = (key: string, options: Record<string, unknown> = {}) =>
   `${key}|${options["users"]}|${options["deadline"]}`;
@@ -14,15 +9,19 @@ const midnight = Date.UTC(2026, 9, 13) / 1000;
 
 describe("UTC day boundaries", () => {
   it("computes the start of the day and the next midnight", () => {
-    expect(startOfUtcDay(now)).toEqual(new Date(Date.UTC(2026, 9, 12)));
-    expect(nextUtcMidnight(now)).toEqual(new Date(Date.UTC(2026, 9, 13)));
-    expect(nextUtcMidnight(new Date(Date.UTC(2026, 11, 31, 23, 59)))).toEqual(
-      new Date(Date.UTC(2027, 0, 1))
+    expect(reminders.startOfUtcDay(now)).toEqual(
+      new Date(Date.UTC(2026, 9, 12))
     );
+    expect(reminders.nextUtcMidnight(now)).toEqual(
+      new Date(Date.UTC(2026, 9, 13))
+    );
+    expect(
+      reminders.nextUtcMidnight(new Date(Date.UTC(2026, 11, 31, 23, 59)))
+    ).toEqual(new Date(Date.UTC(2027, 0, 1)));
   });
 
   it("formats the daily reminder time as a Discord time", () => {
-    expect(reminderTimestamp(now)).toBe(
+    expect(reminders.reminderTimestamp(now)).toBe(
       `<t:${Date.UTC(2026, 9, 12, 18) / 1000}:t>`
     );
   });
@@ -30,12 +29,12 @@ describe("UTC day boundaries", () => {
 
 describe("reminderMessages", () => {
   it("returns nothing when nobody needs a reminder", () => {
-    expect(reminderMessages(t, [], new Set(), now)).toEqual([]);
+    expect(reminders.reminderMessages(t, [], new Set(), now)).toEqual([]);
   });
 
   it("mentions every user once with a relative deadline at midnight UTC, pinging only the mentionable ones", () => {
     expect(
-      reminderMessages(t, ["1", "2", "3"], new Set(["1", "3"]), now)
+      reminders.reminderMessages(t, ["1", "2", "3"], new Set(["1", "3"]), now)
     ).toEqual([
       {
         content: `remind.message|<@1> <@2> <@3>|<t:${midnight}:R>`,
@@ -50,7 +49,7 @@ describe("reminderMessages", () => {
       (_, i) => `${10n ** 18n + BigInt(i)}`
     );
     const mentionable = new Set(ids.filter((_, i) => i % 3 !== 0));
-    const messages = reminderMessages(t, ids, mentionable, now);
+    const messages = reminders.reminderMessages(t, ids, mentionable, now);
 
     expect(messages.length).toBeGreaterThan(1);
     for (const { content, allowedMentions } of messages) {

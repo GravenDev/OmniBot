@@ -1,7 +1,7 @@
 import type { Client } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
-import type { RngdleConfigSchema } from "./rngdle.config.js";
+import type { RngdleConfigSchema } from "../rngdle.config.js";
 
 const { send, syncAll, pendingReminders, mentionable } = vi.hoisted(() => ({
   send: vi.fn(),
@@ -25,33 +25,39 @@ vi.mock("#core/services/mention.service.js", () => ({
 vi.mock("#core/services/module.service.js", () => ({
   default: { getActivatedGuildIds: async () => ["guild"] },
 }));
-vi.mock("./services/sync.js", () => ({ default: { syncAll } }));
-vi.mock("./services/store.js", () => ({ default: { pendingReminders } }));
+vi.mock("../services/sync.service.js", () => ({ default: { syncAll } }));
+vi.mock("../services/store.service.js", () => ({
+  default: { pendingReminders },
+}));
 vi.mock("#lib/logger.js", () => {
   const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
   return { loggerMaker: () => logger };
 });
-vi.mock("./services/views.js", () => ({
-  dailyLeaderboard: async () => ({
-    image: Buffer.from("png"),
-    winnerIds: ["winner"],
-  }),
-  dailyRecap: async () => ({
-    participants: 4,
-    rarest: null,
-    worst: null,
-    streaks: [],
-  }),
+vi.mock("../services/views.service.js", () => ({
+  default: {
+    dailyLeaderboard: async () => ({
+      image: Buffer.from("png"),
+      winnerIds: ["winner"],
+    }),
+    dailyRecap: async () => ({
+      participants: 4,
+      rarest: null,
+      worst: null,
+      streaks: [],
+    }),
+  },
 }));
 
-const { rngdleTasks } = await import("./tasks.js");
+const { rngdleTasks } = await import("./rngdle-tasks.js");
 
-function task(id: string) {
+function allTasks() {
   return rngdleTasks({
     id: "rngdle",
-  } as unknown as Module<RngdleConfigSchema>).find(
-    (declared) => declared.id === id
-  )!;
+  } as unknown as Module<RngdleConfigSchema>);
+}
+
+function task(id: string) {
+  return allTasks().find((declared) => declared.id === id)!;
 }
 
 beforeEach(() => {
@@ -65,9 +71,7 @@ beforeEach(() => {
 
 describe("daily leaderboard task", () => {
   it("posts the recap text with the profile and overall leaderboard buttons", async () => {
-    const task = rngdleTasks({
-      id: "rngdle",
-    } as unknown as Module<RngdleConfigSchema>).find(
+    const task = allTasks().find(
       (declared) => declared.id === "daily-leaderboard"
     )!;
 
