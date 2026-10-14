@@ -1,4 +1,4 @@
-import { EmbedBuilder, type Guild, type Message } from "discord.js";
+import { EmbedBuilder, type Message } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
@@ -11,6 +11,7 @@ import {
 import fourHourGameService, {
   type PlayerRank,
 } from "#modules/four-hour-game/services/four-hour-game.service.js";
+import { fetchWinnerAvatar } from "#modules/four-hour-game/services/winner-avatar.js";
 import { Colors } from "#utils/colors.js";
 
 const logger = loggerMaker("four-hour-game");
@@ -48,19 +49,6 @@ export function buildPointEmbed(
     embed.setThumbnail(announcement.avatarUrl);
   }
   return embed;
-}
-
-async function fetchWinnerAvatar(
-  guild: Guild,
-  userId: string
-): Promise<string | null> {
-  try {
-    const member = await guild.members.fetch(userId).catch(() => null);
-    const owner = member ?? (await guild.client.users.fetch(userId));
-    return owner.displayAvatarURL({ size: 128 });
-  } catch {
-    return null;
-  }
 }
 
 async function fetchRank(

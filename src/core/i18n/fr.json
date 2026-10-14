@@ -89,7 +89,7 @@
   "modules.thread-creator.description": "Crée automatiquement des fils de discussion sous chaque nouveau message dans les canaux configurés.",
 
   "modules.four-hour-game.name": "Jeu des 4h",
-  "modules.four-hour-game.description": "Marquez un point quand votre message reste le dernier du salon de jeu pendant le délai configuré.",
+  "modules.four-hour-game.description": "Marquez un point quand votre message reste le dernier du salon de jeu pendant le délai configuré, et un point du jour pour la plus longue tenue de la journée.",
 
   "modules.rngdle.name": "RNGdle",
   "modules.rngdle.description": "Suit les tirages rngdle.com des membres : classements, profils, statistiques du serveur et classement quotidien.",

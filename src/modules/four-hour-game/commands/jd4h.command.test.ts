@@ -18,8 +18,9 @@ import type { PlayerProfile } from "#modules/four-hour-game/services/four-hour-g
 const getProfile = vi.hoisted(() => vi.fn());
 const getRevision = vi.hoisted(() => vi.fn());
 const getLeaderboard = vi.hoisted(() => vi.fn());
+const getDailyStandings = vi.hoisted(() => vi.fn());
 vi.mock("#modules/four-hour-game/services/four-hour-game.service.js", () => ({
-  default: { getProfile, getRevision, getLeaderboard },
+  default: { getProfile, getRevision, getLeaderboard, getDailyStandings },
 }));
 
 const resolvePlayers = vi.hoisted(() => vi.fn());
@@ -54,6 +55,8 @@ const profile: PlayerProfile = {
   currentStreak: 2,
   bestStreak: 6,
   lastPointAt: new Date("2026-10-03T22:30:00Z"),
+  dailyPoints: 7,
+  dailyRank: { rank: 2, total: 9 },
 };
 
 let revision = 0;
@@ -76,12 +79,12 @@ const keyConfig = {
 
 let guild = 0;
 
-function leaderboardInteraction() {
+function leaderboardInteraction(type: string | null = null) {
   return {
     guildId: `guild-${++guild}`,
     client: { id: "client" },
     inGuild: () => true,
-    options: { getSubcommand: () => "leaderboard" },
+    options: { getSubcommand: () => "leaderboard", getString: () => type },
     deferReply: vi.fn(async () => {}),
     editReply: vi.fn(async () => {}),
   } as unknown as ChatInputCommandInteraction & {
@@ -130,6 +133,42 @@ describe("/jd4h leaderboard", () => {
 
     expect(renderLeaderboard).not.toHaveBeenCalled();
     expect(interaction.editReply).toHaveBeenCalledWith("leaderboard.empty");
+  });
+
+  it("ranks the top ten by daily points on request", async () => {
+    getDailyStandings.mockResolvedValue(
+      Array.from({ length: 12 }, (_, index) => ({
+        rank: index + 1,
+        userId: `player-${index + 1}`,
+        score: 20 - index,
+      }))
+    );
+    resolvePlayers.mockResolvedValue(
+      new Map([["player-1", { name: "One", avatar: null }]])
+    );
+    const interaction = leaderboardInteraction("daily");
+
+    await command.execute(interaction, keyConfig);
+
+    expect(resolvePlayers.mock.calls.at(-1)![2]).toHaveLength(10);
+    expect(renderLeaderboard.mock.calls[0]![0]).toEqual([
+      { rank: 1, name: "One", score: 20, avatar: null },
+    ]);
+    expect(interaction.editReply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "leaderboard.daily.title" })
+    );
+  });
+
+  it("answers with the daily empty message when nobody won a day", async () => {
+    getDailyStandings.mockResolvedValue([]);
+    resolvePlayers.mockResolvedValue(new Map());
+    const interaction = leaderboardInteraction("daily");
+
+    await command.execute(interaction, keyConfig);
+
+    expect(interaction.editReply).toHaveBeenCalledWith(
+      "leaderboard.daily.empty"
+    );
   });
 });
 
@@ -239,6 +278,7 @@ describe("/jd4h score", () => {
       ["4 h 12 min", undefined],
       ["2", "record : 6"],
       ["3 oct. 2026", undefined],
+      ["7", "#2 sur 9"],
     ]);
   });
 

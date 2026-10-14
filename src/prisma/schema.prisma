@@ -52,6 +52,21 @@ model FourHourGamePoint {
   @@index([guildId, awardedAt])
 }
 
+model FourHourGameDailyBest {
+  guildId     String
+  day         String
+  userId      String
+  heldSeconds Int
+
+  @@id([guildId, day])
+  @@index([guildId, userId])
+}
+
+model FourHourGameDailyState {
+  guildId   String @id
+  closedDay String
+}
+
 // === Modèles de modules/reports/reports.prisma ===
 model MessageReport {
   id               Int       @id @default(autoincrement())

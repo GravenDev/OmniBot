@@ -73,6 +73,16 @@ export function buildProfileCard(
             ? formatDate.format(profile.lastPointAt)
             : MISSING,
         },
+        {
+          title: t("profile.daily"),
+          value: formatNumber(profile.dailyPoints, locale),
+          ...(profile.dailyRank && {
+            subtext: t("profile.dailyRank", {
+              rank: profile.dailyRank.rank,
+              total: profile.dailyRank.total,
+            }),
+          }),
+        },
       ],
     ],
   };

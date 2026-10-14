@@ -19,6 +19,8 @@ const profile: PlayerProfile = {
   currentStreak: 2,
   bestStreak: 5,
   lastPointAt: new Date("2026-10-03T22:30:00Z"),
+  dailyPoints: 1500,
+  dailyRank: { rank: 1, total: 9 },
 };
 
 const legacy: PlayerProfile = {
@@ -28,6 +30,8 @@ const legacy: PlayerProfile = {
   currentStreak: 0,
   bestStreak: 0,
   lastPointAt: null,
+  dailyPoints: 0,
+  dailyRank: null,
 };
 
 const player = { name: "Alice", avatar: null };
@@ -58,6 +62,7 @@ describe("buildProfileCard", () => {
       { title: "Meilleur temps tenu", value: "4 h 12 min", subtext: undefined },
       { title: "Série en cours", value: "2", subtext: "record : 5" },
       { title: "Dernier point", value: "3 oct. 2026", subtext: undefined },
+      { title: "Points du jour", value: "1 500", subtext: "#1 sur 9" },
     ]);
   });
 
@@ -70,8 +75,10 @@ describe("buildProfileCard", () => {
       "4h 12m",
       "2",
       "Oct 3, 2026",
+      "1,500",
     ]);
     expect(card.rows[1]?.[0]?.subtext).toBe("best: 5");
+    expect(card.rows[1]?.[2]?.subtext).toBe("#1 of 9");
   });
 
   it("shows a dash for values the history cannot tell", () => {
@@ -83,6 +90,7 @@ describe("buildProfileCard", () => {
       { title: "Meilleur temps tenu", value: "—", subtext: undefined },
       { title: "Série en cours", value: "—", subtext: undefined },
       { title: "Dernier point", value: "—", subtext: undefined },
+      { title: "Points du jour", value: "0", subtext: undefined },
     ]);
   });
 
