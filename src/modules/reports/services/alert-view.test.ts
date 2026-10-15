@@ -86,6 +86,25 @@ describe("alertMessage", () => {
     expect(text).toContain("no previous report");
   });
 
+  it("escapes markdown in a reporter's reason", () => {
+    const { text } = render(
+      report({
+        reporters: [
+          {
+            userId: "rep-1",
+            source: "menu",
+            reason: "[Verify here](https://evil.example) **now**",
+            reportedAt: new Date("2026-10-01T10:05:00Z"),
+          },
+        ],
+      })
+    );
+
+    expect(text).toContain(
+      "\\[Verify here](https://evil.example) \\*\\*now\\*\\*"
+    );
+  });
+
   it("offers every action while the report is open", () => {
     const { buttons } = render(report());
 

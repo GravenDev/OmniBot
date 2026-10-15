@@ -1,9 +1,15 @@
-import { MessageFlags, type ModalSubmitInteraction } from "discord.js";
+import {
+  DiscordAPIError,
+  MessageFlags,
+  RESTJSONErrorCodes,
+  type ModalSubmitInteraction,
+} from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { loggerMaker } from "#lib/logger.js";
 import { REPORT_MODAL_ID } from "../commands/report-message.command.js";
 import type { ReportsConfigSchema } from "../reports.config.js";
 import reportService, {
+  canPost,
   ineligibility,
   snapshotOf,
 } from "../services/report.service.js";
@@ -22,7 +28,7 @@ export default declareInteractionHandler<
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const alertChannel = config.get("alertChannel");
-    if (!alertChannel?.isSendable() || !channelId || !messageId) {
+    if (!canPost(alertChannel) || !channelId || !messageId) {
       await interaction.editReply(config.t("menu.unconfigured"));
       return;
     }
@@ -35,11 +41,17 @@ export default declareInteractionHandler<
       }
       message = await channel.messages.fetch(messageId);
     } catch (err) {
+      const noAccess =
+        err instanceof DiscordAPIError &&
+        (err.code === RESTJSONErrorCodes.MissingAccess ||
+          err.code === RESTJSONErrorCodes.MissingPermissions);
       logger.info(
         { err },
-        `Reported message is gone | messageId = ${messageId}`
+        `Reported message unreadable | messageId = ${messageId}`
       );
-      await interaction.editReply(config.t("menu.gone"));
+      await interaction.editReply(
+        config.t(noAccess ? "menu.noAccess" : "menu.gone")
+      );
       return;
     }
 

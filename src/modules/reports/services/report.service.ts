@@ -1,8 +1,12 @@
 import {
   DiscordAPIError,
+  PermissionFlagsBits,
   RESTJSONErrorCodes,
+  type Channel,
   type Client,
+  type GuildTextBasedChannel,
   type Message,
+  type SendableChannels,
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
@@ -89,6 +93,25 @@ export function ineligibility(
   return null;
 }
 
+export function canPost(
+  channel: Channel | null | undefined
+): channel is GuildTextBasedChannel {
+  if (!channel?.isSendable() || channel.isDMBased()) {
+    return false;
+  }
+  const me = channel.guild.members.me;
+  return (
+    !me ||
+    (channel
+      .permissionsFor(me)
+      ?.has([
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+      ]) ??
+      false)
+  );
+}
+
 function isMissing(error: unknown): boolean {
   return (
     error instanceof DiscordAPIError &&
@@ -111,7 +134,7 @@ class ReportService implements Service {
     reporter: Omit<Reporter, "reportedAt">,
     reactionKept: boolean
   ): Promise<ReportOutcome> {
-    if (!config.get("alertChannel")?.isSendable()) {
+    if (!canPost(config.get("alertChannel"))) {
       return "unconfigured";
     }
 
@@ -217,11 +240,10 @@ class ReportService implements Service {
       moderatorRoleId,
     });
 
-    const alert = await this.fetchAlert(client, report);
-    if (alert) {
-      await alert.edit(view);
+    const alertChannel = await this.editAlert(client, report, view);
+    if (alertChannel) {
       if (reopened) {
-        await alert.reply({
+        await alertChannel.send({
           content: config.t("alert.reopened", {
             id: report.id,
             role: moderatorRoleId ? `<@&${moderatorRoleId}>` : "",
@@ -230,13 +252,24 @@ class ReportService implements Service {
             parse: [],
             roles: moderatorRoleId ? [moderatorRoleId] : [],
           },
+          reply: {
+            messageReference: report.alertMessageId!,
+            failIfNotExists: false,
+          },
         });
       }
       return;
     }
 
+    if (report.status !== "open") {
+      logger.info(
+        `Alert gone for a closed report, not republished | guildId = ${report.guildId} | reportId = ${report.id}`
+      );
+      return;
+    }
+
     const channel = config.get("alertChannel");
-    if (!channel?.isSendable()) {
+    if (!canPost(channel)) {
       logger.warn(
         `No usable alert channel | guildId = ${report.guildId} | reportId = ${report.id}`
       );
@@ -246,19 +279,21 @@ class ReportService implements Service {
     await store.setAlert(report.id, sent.channelId, sent.id);
   }
 
-  private async fetchAlert(
+  private async editAlert(
     client: Client,
-    report: Report
-  ): Promise<Message | null> {
+    report: Report,
+    view: ReturnType<typeof alertMessage>
+  ): Promise<SendableChannels | null> {
     if (!report.alertChannelId || !report.alertMessageId) {
       return null;
     }
     try {
       const channel = await client.channels.fetch(report.alertChannelId);
-      if (!channel?.isTextBased()) {
+      if (!channel?.isSendable()) {
         return null;
       }
-      return await channel.messages.fetch(report.alertMessageId);
+      await channel.messages.edit(report.alertMessageId, view);
+      return channel;
     } catch (error) {
       if (isMissing(error)) {
         return null;

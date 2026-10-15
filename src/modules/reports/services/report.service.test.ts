@@ -84,32 +84,31 @@ beforeAll(async () => {
   silenceLogs();
 });
 
-function setup(options: { alertMissing?: boolean } = {}) {
-  const alert = {
-    edit: vi.fn(async () => ({})),
-    reply: vi.fn(async () => ({})),
-  };
+function setup(options: { alertMissing?: boolean; canSend?: boolean } = {}) {
   const alertChannel = {
     id: "alerts",
     isSendable: () => true,
-    isTextBased: () => true,
+    isDMBased: () => false,
+    guild: { members: { me: { id: "bot" } } },
+    permissionsFor: () => ({ has: () => options.canSend ?? true }),
     send: vi.fn(async () => ({ channelId: "alerts", id: "alert-1" })),
     messages: {
-      fetch: vi.fn(async () => {
+      edit: vi.fn(async () => {
         if (options.alertMissing) {
           throw new DiscordAPIError(
             { code: 10008, message: "Unknown Message" },
             10008,
             404,
-            "GET",
+            "PATCH",
             "/channels/alerts/messages/alert-1",
             {}
           );
         }
-        return alert;
+        return {};
       }),
     },
   };
+  const alert = { edit: alertChannel.messages.edit };
   const client = {
     channels: { fetch: vi.fn(async () => alertChannel) },
   } as any;
@@ -176,7 +175,6 @@ describe("report", () => {
     expect(outcome).toBe("added");
     expect(alertChannel.send).toHaveBeenCalledOnce();
     expect(alert.edit).toHaveBeenCalledOnce();
-    expect(alert.reply).not.toHaveBeenCalled();
     expect(db.reports[0].reporters).toHaveLength(2);
   });
 
@@ -210,7 +208,7 @@ describe("report", () => {
   });
 
   it("reopens a closed report and pings in reply to its alert", async () => {
-    const { client, config, alert } = setup();
+    const { client, config, alert, alertChannel } = setup();
     await service.report(client, config, snapshot, reporter("r1"), false);
     db.reports[0].status = "dismissed";
 
@@ -224,11 +222,25 @@ describe("report", () => {
 
     expect(outcome).toBe("reopened");
     expect(db.store.setStatus).toHaveBeenCalledWith(1, "open", null);
-    expect(alert.reply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        allowedMentions: { parse: [], roles: ["role-9"] },
-      })
+    expect(alert.edit).toHaveBeenCalledOnce();
+    expect(alertChannel.send).toHaveBeenCalledTimes(2);
+    expect(alertChannel.send.mock.calls[1]![0]).toMatchObject({
+      allowedMentions: { parse: [], roles: ["role-9"] },
+      reply: { messageReference: "alert-1", failIfNotExists: false },
+    });
+  });
+
+  it("updates the alert without reading the channel history", async () => {
+    const { client, config, alertChannel } = setup();
+    await service.report(client, config, snapshot, reporter("r1"), false);
+
+    await service.report(client, config, snapshot, reporter("r2"), false);
+
+    expect(alertChannel.messages.edit).toHaveBeenCalledWith(
+      "alert-1",
+      expect.anything()
     );
+    expect(alertChannel.messages).not.toHaveProperty("fetch");
   });
 
   it("posts a fresh alert when the previous one was deleted", async () => {
@@ -238,6 +250,33 @@ describe("report", () => {
     await service.report(client, config, snapshot, reporter("r2"), false);
 
     expect(alertChannel.send).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not republish the deleted alert of a closed report", async () => {
+    const { client, config, alertChannel } = setup({ alertMissing: true });
+    await service.report(client, config, snapshot, reporter("r1"), false);
+    db.reports[0].status = "resolved";
+
+    await service.messageChanged(client, config, "g1", "m1", { deleted: true });
+
+    expect(db.store.setMessageState).toHaveBeenCalledWith(1, "deleted");
+    expect(alertChannel.send).toHaveBeenCalledOnce();
+  });
+
+  it("does nothing while the bot cannot post in the alert channel", async () => {
+    const { client, config, alertChannel } = setup({ canSend: false });
+
+    const outcome = await service.report(
+      client,
+      config,
+      snapshot,
+      reporter("r1"),
+      false
+    );
+
+    expect(outcome).toBe("unconfigured");
+    expect(db.store.byMessage).not.toHaveBeenCalled();
+    expect(alertChannel.send).not.toHaveBeenCalled();
   });
 
   it("does nothing until an alert channel is configured", async () => {

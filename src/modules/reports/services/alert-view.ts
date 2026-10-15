@@ -3,6 +3,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ContainerBuilder,
+  escapeMarkdown,
   MessageFlags,
   type MessageMentionOptions,
 } from "discord.js";
@@ -103,7 +104,7 @@ function reportersBlock(report: Report, t: TFunction): string {
   const reasons = report.reporters.filter((reporter) => reporter.reason);
   for (const reporter of reasons.slice(0, SHOWN_REASONS)) {
     lines.push(
-      `- <@${reporter.userId}> : ${truncate(reporter.reason!.replace(/\s+/g, " "), REASON_LIMIT)}`
+      `- <@${reporter.userId}> : ${truncate(escapeMarkdown(reporter.reason!.replace(/\s+/g, " "), { maskedLink: true }), REASON_LIMIT)}`
     );
   }
   if (reasons.length > SHOWN_REASONS) {

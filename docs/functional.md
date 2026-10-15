@@ -191,7 +191,7 @@ Un message signalé donne **une seule alerte**, quel que soit le nombre de signa
 
 L'alerte montre l'auteur, le salon avec un lien vers le message, sa date, une **copie du message** (texte et liens des pièces jointes), les membres qui ont signalé avec leurs motifs, le nombre de signalements précédents de l'auteur et combien ont été sanctionnés (les signalements jugés abusifs ne comptent pas). Si l'auteur modifie son message, la nouvelle version s'ajoute sous la copie ; s'il le supprime, l'alerte l'indique et garde la copie. Si le bot n'a pas pu retirer une réaction, l'alerte le signale.
 
-Un nouveau signalement sur une alerte close la rouvre et mentionne le rôle modérateur en réponse à l'alerte. Si l'alerte a été supprimée, une nouvelle est publiée.
+Un nouveau signalement sur une alerte close la rouvre et mentionne le rôle modérateur en réponse à l'alerte. Si l'alerte d'un signalement en attente a été supprimée, une nouvelle est publiée ; celle d'un signalement clos n'est republiée qu'à sa réouverture.
 
 ### Actions
 
@@ -208,7 +208,9 @@ Un nouveau signalement sur une alerte close la rouvre et mentionne le rôle mod�
 
 Les sanctions ont un motif facultatif (obligatoire pour l'avertissement), repris dans le journal d'audit du serveur. Elles sont refusées avec une explication si l'auteur est le propriétaire du serveur, si le modérateur n'a pas un rôle plus haut que l'auteur, ou si le bot ne peut pas l'atteindre. Un auteur qui a quitté le serveur ne peut plus qu'être banni. Une action qui échoue est inscrite au journal de l'alerte avec la mention « échec » et l'alerte reste ouverte. Deux modérateurs qui agissent en même temps ne peuvent pas sanctionner deux fois : le second est prévenu que l'alerte est déjà close.
 
-Le bot a besoin des permissions Gérer les messages (dans les salons surveillés), Exclure temporairement, Expulser et Bannir des membres, et de pouvoir écrire dans le salon des alertes.
+Les permissions sont vérifiées dans le salon des alertes ; pour « Supprimer le message », le modérateur doit aussi avoir Gérer les messages dans le salon du message signalé.
+
+Le bot a besoin des permissions Gérer les messages (dans les salons surveillés), Exclure temporairement, Expulser et Bannir des membres, et de voir le salon des alertes et d'y écrire. Tant qu'il ne le peut pas, rien n'est signalé.
 
 ### Conservation
 

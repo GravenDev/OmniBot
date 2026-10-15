@@ -102,9 +102,17 @@ async function deleteReported(
 
   let failed = false;
   try {
-    const channel = await interaction.guild!.channels.fetch(report.channelId);
+    const guild = interaction.guild!;
+    const channel = await guild.channels.fetch(report.channelId);
     if (!channel?.isTextBased()) {
       throw new Error(`Not a text channel | channelId = ${report.channelId}`);
+    }
+    const moderator = await guild.members.fetch(interaction.user.id);
+    if (
+      !channel.permissionsFor(moderator).has(PermissionFlagsBits.ManageMessages)
+    ) {
+      await tell(interaction, config.t("error.memberCannotDelete"));
+      return;
     }
     await channel.messages.delete(report.messageId);
   } catch (error) {
