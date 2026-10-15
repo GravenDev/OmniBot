@@ -16,7 +16,7 @@ const rngdleModule = defineModule({
   name: "RNGdle",
   description:
     "Tracks the members' rngdle.com rolls: leaderboards, profiles, server statistics and a daily leaderboard.",
-  version: "1.0.0",
+  version: "1.1.0",
   author: "LoicR",
 
   config: rngdleConfigSchema,
