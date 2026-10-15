@@ -1,6 +1,8 @@
 import {
+  ApplicationCommandType,
   type AutocompleteInteraction,
   type ChatInputCommandInteraction,
+  type ContextMenuCommandInteraction,
   type Interaction,
   MessageFlags,
 } from "discord.js";
@@ -9,18 +11,23 @@ import { modules } from "#core/runtime.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import { errorMessageKey } from "#core/utils/error-message.js";
-import { requireAdmin } from "#core/utils/require-admin.js";
+import { requireAdmin, requirePermissions } from "#core/utils/require-admin.js";
+import { commandType } from "#lib/command.js";
 import { createT } from "#lib/i18n.js";
 import type { CompatibleInteraction } from "#lib/interaction.js";
 import { declareEventListener } from "#lib/listener.js";
 import logger from "#lib/logger.js";
 
-function findCommand(commandName: string) {
+function findCommand(commandName: string, type: ApplicationCommandType) {
   return [...modules, coreModule]
     .flatMap((module) =>
       module.registry.commands.map((cmd) => ({ module, command: cmd }))
     )
-    .find((entry) => entry.command.data.name === commandName);
+    .find(
+      (entry) =>
+        entry.command.data.name === commandName &&
+        commandType(entry.command) === type
+    );
 }
 
 function findInteractionHandler(customId: string) {
@@ -42,8 +49,10 @@ function findInteractionHandler(customId: string) {
   return matches[0];
 }
 
-async function handleCommand(interaction: ChatInputCommandInteraction) {
-  const command = findCommand(interaction.commandName);
+async function handleCommand(
+  interaction: ChatInputCommandInteraction | ContextMenuCommandInteraction
+) {
+  const command = findCommand(interaction.commandName, interaction.commandType);
 
   if (!command) {
     logger.warn(`Command not found | name = ${interaction.commandName}`);
@@ -118,7 +127,10 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
 }
 
 async function handleComplete(interaction: AutocompleteInteraction) {
-  const command = findCommand(interaction.commandName);
+  const command = findCommand(
+    interaction.commandName,
+    ApplicationCommandType.ChatInput
+  );
 
   if (!command) {
     logger.warn(
@@ -237,8 +249,15 @@ async function handleInteraction(interaction: CompatibleInteraction) {
     return;
   }
 
-  if (handler.handler.access === "admin") {
+  const access = handler.handler.access;
+  if (access === "admin") {
     if (!(await requireAdmin(interaction, coreConfig.t))) {
+      return;
+    }
+  } else if (typeof access === "object") {
+    if (
+      !(await requirePermissions(interaction, access.permissions, coreConfig.t))
+    ) {
       return;
     }
   }
@@ -268,7 +287,7 @@ async function handleInteraction(interaction: CompatibleInteraction) {
 }
 
 async function dispatch(interaction: Interaction) {
-  if (interaction.isChatInputCommand()) {
+  if (interaction.isChatInputCommand() || interaction.isContextMenuCommand()) {
     await handleCommand(interaction);
     return;
   }

@@ -92,6 +92,28 @@ describe("ConfigValidator", () => {
       expect(ConfigValidator.DURATION(value)).toBe(false);
     });
   });
+
+  describe("EMOJI", () => {
+    it.each([
+      "🚩",
+      "⚠️",
+      "👍🏽",
+      "🇫🇷",
+      "1️⃣",
+      "🧑‍⚖️",
+      "<:flag:123456789012345678>",
+      "<a:dance:123456789012345678>",
+    ])("accepts %j", (value) => {
+      expect(ConfigValidator.EMOJI(value)).toBe(true);
+    });
+
+    it.each(["", "a", "flag", "🚩🚩", "🚩 ", ":flag:", "<:x:123>"])(
+      "rejects %j",
+      (value) => {
+        expect(ConfigValidator.EMOJI(value)).toBe(false);
+      }
+    );
+  });
 });
 
 describe("getConfigTypeName", () => {

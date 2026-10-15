@@ -25,7 +25,7 @@ src/modules/mon-module/
 ```typescript
 interface InteractionHandler {
   customId: string; // Préfixe pour la correspondance custom ID
-  access: "admin" | "everyone"; // Qui peut la déclencher — requis
+  access: "admin" | "everyone" | { permissions: bigint }; // Qui peut la déclencher — requis
   check: (
     interaction: CompatibleInteraction,
     config: ConfigProvider
@@ -38,12 +38,12 @@ interface InteractionHandler {
 }
 ```
 
-| Champ      | Requis | Description                                                                                                         |
-| ---------- | ------ | ------------------------------------------------------------------------------------------------------------------- |
-| `customId` | Oui    | Préfixe unique — comparé au début du `customId` de l'interaction                                                    |
-| `access`   | Oui    | `"admin"` réserve l'interaction aux utilisateurs ayant la permission `Administrateur` ; `"everyone"` l'ouvre à tous |
-| `check`    | Oui    | Garde de type — affine le type d'interaction pour `execute`                                                         |
-| `execute`  | Oui    | Appelé quand l'interaction est déclenchée                                                                           |
+| Champ      | Requis | Description                                                                                                                                                            |
+| ---------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `customId` | Oui    | Préfixe unique — comparé au début du `customId` de l'interaction                                                                                                       |
+| `access`   | Oui    | `"admin"` réserve l'interaction aux utilisateurs ayant la permission `Administrateur` ; `{ permissions }` à ceux qui ont ces permissions ; `"everyone"` l'ouvre à tous |
+| `check`    | Oui    | Garde de type — affine le type d'interaction pour `execute`                                                                                                            |
+| `execute`  | Oui    | Appelé quand l'interaction est déclenchée                                                                                                                              |
 
 Le paramètre `config` est un `ConfigProvider` donnant accès à la configuration du module.
 
@@ -174,6 +174,17 @@ export default declareInteractionHandler({
 ```
 
 La vérification est effectuée **centralement** par le dispatcher d'interactions — pas besoin de vérifications de permission en ligne dans votre gestionnaire.
+
+Pour ouvrir une interaction aux modérateurs plutôt qu'aux seuls administrateurs, exigez les permissions Discord dont elle a besoin :
+
+```typescript
+export default declareInteractionHandler({
+  customId: "bannir-auteur",
+  access: { permissions: PermissionFlagsBits.BanMembers },
+  check: (interaction) => interaction.isButton(),
+  // ...
+});
+```
 
 ## Enregistrement
 
