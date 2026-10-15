@@ -30,6 +30,7 @@ import {
   fitText,
   measureText,
   renderStatCard,
+  TREND_COLORS,
   type StatCard,
 } from "./stat-card.js";
 
@@ -167,6 +168,48 @@ describe("renderStatCard", () => {
 
     expect(await countColor(highlighted, edge, color)).toBe(60);
     expect(await countColor(plain, edge, color)).toBe(0);
+  });
+
+  it("adds the footer below the boxes, across the content width", async () => {
+    const draw = vi.fn();
+
+    const png = await renderStatCard(
+      card({ rows: [[box], [box]], footer: { height: 200, draw } })
+    );
+
+    expect(draw).toHaveBeenCalledWith(expect.anything(), 40, 420, 920);
+    expect(pngSize(png)).toEqual({ width: 1000, height: 420 + 200 + 30 });
+  });
+
+  it("draws a trend before the subtext, in the color of its direction", async () => {
+    const subtext: [number, number, number, number] = [60, 240, 60, 30];
+    const plain = await renderStatCard(
+      card({ rows: [[{ ...box, subtext: "yesterday: 3" }]] })
+    );
+    const up = await renderStatCard(
+      card({
+        rows: [
+          [
+            {
+              ...box,
+              subtext: "yesterday: 3",
+              trend: { text: "+2", direction: "up" },
+            },
+          ],
+        ],
+      })
+    );
+    const down = await renderStatCard(
+      card({
+        rows: [[{ ...box, trend: { text: "-2", direction: "down" } }]],
+      })
+    );
+
+    expect(await countColor(plain, subtext, TREND_COLORS.up)).toBe(0);
+    expect(await countColor(up, subtext, TREND_COLORS.up)).toBeGreaterThan(20);
+    expect(await countColor(down, subtext, TREND_COLORS.down)).toBeGreaterThan(
+      20
+    );
   });
 
   it("rejects a row that cannot be laid out", async () => {

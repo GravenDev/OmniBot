@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { ScoreTable } from "./scoring.js";
 import {
+  byBestRoll,
+  computeRanking,
   computeRollStats,
   computeServerStats,
   computeStreaks,
+  rankingIndex,
 } from "./stats.js";
 import type { StoredRoll } from "./store.js";
 
@@ -173,5 +176,72 @@ describe("computeStreaks", () => {
       current: 2,
       best: 2,
     });
+  });
+});
+
+describe("rankingIndex", () => {
+  it("follows the total for newcomers and the average for regulars", () => {
+    expect(rankingIndex(400, 2, 20)).toBeCloseTo(400 / 22);
+    expect(rankingIndex(200 * 1000, 1000, 20)).toBeCloseTo(196.08, 1);
+  });
+
+  it("grows smoothly with each roll at a steady average", () => {
+    const indexes = [1, 2, 5, 20, 100].map((rolls) =>
+      rankingIndex(100 * rolls, rolls, 20)
+    );
+
+    expect(indexes).toEqual([...indexes].sort((a, b) => a - b));
+    expect(indexes.at(-1)).toBeLessThan(100);
+  });
+});
+
+describe("computeRanking", () => {
+  it("returns nothing without rolls", () => {
+    expect(computeRanking([])).toEqual([]);
+  });
+
+  it("ranks a regular with a steady average above a newcomer with a better one", () => {
+    const regular = Array.from({ length: 60 }, () => roll("regular", 300));
+    const newcomer = [roll("newcomer", 500), roll("newcomer", 500)];
+
+    const ranking = computeRanking([...newcomer, ...regular]);
+
+    expect(ranking.map((entry) => entry.userId)).toEqual([
+      "regular",
+      "newcomer",
+    ]);
+    expect(ranking[0]).toMatchObject({ rolls: 60, total: 18_000 });
+    expect(ranking[0]!.index).toBeCloseTo(18_000 / 80);
+  });
+
+  it("keeps the first best roll of each player and breaks ties by total then id", () => {
+    const first = roll("b", 300);
+    const ranking = computeRanking(
+      [roll("a", 100), roll("a", 200), first, roll("b", 300), roll("c", 300)],
+      0
+    );
+
+    expect(ranking.map((entry) => entry.userId)).toEqual(["b", "c", "a"]);
+    expect(ranking[0]!.best.number).toBe(first.number);
+  });
+});
+
+describe("byBestRoll", () => {
+  it("orders players by their best roll, the earliest first on ties", () => {
+    const early = roll("late-id", 500);
+    const ranking = computeRanking([
+      roll("steady", 300),
+      roll("steady", 300),
+      early,
+      roll("early-id", 500),
+      roll("low", 100),
+    ]);
+
+    expect(byBestRoll(ranking).map((entry) => entry.userId)).toEqual([
+      "late-id",
+      "early-id",
+      "steady",
+      "low",
+    ]);
   });
 });

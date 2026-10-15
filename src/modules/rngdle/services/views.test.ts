@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   rolls: vi.fn(),
-  totals: vi.fn(),
   accounts: vi.fn(),
   renderDaily: vi.fn(async (..._args: unknown[]) => Buffer.from("daily")),
   renderOverall: vi.fn(async (..._args: unknown[]) => Buffer.from("overall")),
   renderServer: vi.fn(async (..._args: unknown[]) => Buffer.from("server")),
   renderVersus: vi.fn(async (..._args: unknown[]) => Buffer.from("versus")),
+  renderHistory: vi.fn(async (..._args: unknown[]) => Buffer.from("history")),
   tierOf: vi.fn((_score: number) => "COMMON"),
 }));
 
@@ -16,7 +16,6 @@ vi.mock("./store.js", () => ({
   default: {
     revision: () => 0,
     rolls: mocks.rolls,
-    totals: mocks.totals,
     accounts: mocks.accounts,
     scoreTable: async () => ({
       percentOf: (score: number) => score / 10,
@@ -35,6 +34,9 @@ vi.mock("#modules/rngdle/rendering/cards.js", () => ({
 vi.mock("#modules/rngdle/rendering/versus.js", () => ({
   renderVersus: mocks.renderVersus,
 }));
+vi.mock("#modules/rngdle/rendering/history.js", () => ({
+  renderHistory: mocks.renderHistory,
+}));
 vi.mock("#lib/imaging.js", () => ({
   fetchAvatar: async () => null,
   fetchImage: async () => null,
@@ -44,6 +46,7 @@ import { renderProfile } from "#modules/rngdle/rendering/cards.js";
 import {
   dailyLeaderboard,
   dailyRecap,
+  historyCard,
   overallPage,
   parsePeriod,
   periodRange,
@@ -77,6 +80,7 @@ function setup() {
           [
             guildId,
             {
+              iconURL: () => null,
               members: {
                 fetch: async ({ user: id }: { user: string }) => {
                   if (!MEMBERS.has(id)) throw new Error("unknown member");
@@ -101,16 +105,23 @@ function setup() {
 }
 
 const roll = (userId: string, score: number) => ({ userId, number: 1, score });
+const datedRoll = (userId: string, score: number) => ({
+  userId,
+  number: score,
+  score,
+  badgeCount: 0,
+  rolledAt: new Date("2026-03-01T12:00:00Z"),
+});
 
 beforeEach(() => {
   setup();
   mocks.rolls.mockReset().mockResolvedValue([]);
-  mocks.totals.mockReset().mockResolvedValue([]);
   mocks.accounts.mockReset().mockResolvedValue([]);
   mocks.renderDaily.mockClear();
   mocks.renderOverall.mockClear();
   mocks.renderServer.mockClear();
   mocks.renderVersus.mockClear();
+  mocks.renderHistory.mockClear();
   mocks.tierOf.mockReset().mockReturnValue("COMMON");
 });
 
@@ -178,20 +189,24 @@ describe("parsePeriod", () => {
 });
 
 describe("dailyLeaderboard", () => {
-  const rowsOf = () =>
-    mocks.renderDaily.mock.calls[0]![0] as { rank: number; name: string }[];
+  const rendered = () =>
+    mocks.renderDaily.mock.calls.at(-1)![0] as {
+      rows: { rank: number; name: string; delta: number | null }[];
+      average: { score: number; rolls: number; previous: number | null };
+      players: { count: number; previous: number | null };
+      worst: { name: string; score: number } | null;
+    };
+  const days = (today: object[], previous: object[] = []) =>
+    mocks.rolls.mockImplementation(async (_guildId, filter) =>
+      filter.byScore ? today : previous
+    );
 
   it("ranks the rolls and returns every distinct player tied with the best score as winner", async () => {
-    mocks.rolls.mockResolvedValue([
-      roll("a", 100),
-      roll("b", 100),
-      roll("a", 100),
-      roll("c", 50),
-    ]);
+    days([roll("a", 100), roll("b", 100), roll("a", 100), roll("c", 50)]);
 
     const board = await dailyLeaderboard(context, 0);
 
-    expect(rowsOf().map((row) => [row.rank, row.name])).toEqual([
+    expect(rendered().rows.map((row) => [row.rank, row.name])).toEqual([
       [1, "nick-a"],
       [2, "name-b"],
       [3, "nick-a"],
@@ -203,29 +218,75 @@ describe("dailyLeaderboard", () => {
     });
   });
 
-  it("shows at most 25 rows", async () => {
-    mocks.rolls.mockResolvedValue(
-      Array.from({ length: 30 }, (_, i) => roll(`p${i}`, 1000 - i))
-    );
+  it("compares the day with the day before, as a whole and per player", async () => {
+    vi.useFakeTimers({
+      now: new Date("2026-03-02T12:00:00Z"),
+      toFake: ["Date"],
+    });
+    try {
+      days(
+        [roll("a", 300), roll("b", 100), roll("c", 50)],
+        [roll("a", 120), roll("a", 200), roll("b", 150)]
+      );
+
+      await dailyLeaderboard(context, 1);
+
+      expect(mocks.rolls).toHaveBeenCalledWith(context.guildId, {
+        from: new Date("2026-02-28T00:00:00Z"),
+        to: new Date("2026-03-01T00:00:00Z"),
+      });
+      const data = rendered();
+      expect(data.rows.map((row) => row.delta)).toEqual([100, -50, null]);
+      expect(data.average).toMatchObject({ score: 150, rolls: 3 });
+      expect(data.average.previous).toBe(156);
+      expect(data.players).toEqual({ count: 3, previous: 2 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("leaves the comparison out when nobody rolled the day before", async () => {
+    days([roll("a", 300)]);
 
     await dailyLeaderboard(context, 0);
 
-    expect(rowsOf()).toHaveLength(25);
+    expect(rendered().average.previous).toBeNull();
+    expect(rendered().players.previous).toBeNull();
+    expect(rendered().rows[0]!.delta).toBeNull();
+  });
+
+  it("singles out the worst roll, even below the 25 shown, once two players rolled", async () => {
+    days(
+      Array.from({ length: 30 }, (_, i) => roll(`p${i}`, 1000 - i)).concat(
+        roll("ghost", 1)
+      )
+    );
+    mocks.accounts.mockResolvedValue([
+      { guildId: "g", userId: "ghost", username: "ghost-rngdle" },
+    ]);
+
+    await dailyLeaderboard(context, 0);
+
+    expect(rendered().rows).toHaveLength(25);
+    expect(rendered().worst).toMatchObject({
+      name: "ghost-rngdle",
+      score: 1,
+    });
+
+    days([roll("a", 300), roll("a", 5)]);
+    await dailyLeaderboard({ ...context, guildId: `${context.guildId}x` }, 0);
+    expect(rendered().worst).toBeNull();
   });
 
   it("keeps players Discord cannot resolve, under their RNGdle username", async () => {
     mocks.accounts.mockResolvedValue([
       { guildId: "g", userId: "ghost", username: "ghost-rngdle" },
     ]);
-    mocks.rolls.mockResolvedValue([
-      roll("ghost", 30),
-      roll("a", 20),
-      roll("unknown", 10),
-    ]);
+    days([roll("ghost", 30), roll("a", 20), roll("unknown", 10)]);
 
     const board = await dailyLeaderboard(context, 0);
 
-    expect(rowsOf().map((row) => [row.rank, row.name])).toEqual([
+    expect(rendered().rows.map((row) => [row.rank, row.name])).toEqual([
       [1, "ghost-rngdle"],
       [2, "nick-a"],
       [3, "?"],
@@ -267,43 +328,72 @@ describe("dailyRecap", () => {
 });
 
 describe("overallPage", () => {
-  const totals = Array.from({ length: 25 }, (_, i) => ({
-    userId: `p${i}`,
-    total: 1000 - i,
-  }));
+  const players = Array.from({ length: 25 }, (_, i) => [
+    datedRoll(`p${i}`, 1000 - i),
+    datedRoll(`p${i}`, 1000 - i),
+  ]).flat();
 
-  const rendered = () => {
-    const [rows, , , caller] = mocks.renderOverall.mock.calls.at(-1)! as [
-      { rank: number }[],
-      unknown,
-      string,
-      { rank: number; name: string } | undefined,
-    ];
-    return { ranks: rows.map((row) => row.rank), caller };
-  };
+  const rendered = () =>
+    mocks.renderOverall.mock.calls.at(-1)![0] as {
+      players: number;
+      rolls: number;
+      average: { score: number };
+      ranking: { rank: number; name: string; rolls: number; index: number }[];
+      caller: { rank: number; name: string } | undefined;
+      bestRolls: { rank: number; name: string; score: number }[];
+    };
 
   beforeEach(() => {
-    mocks.totals.mockResolvedValue(totals);
+    mocks.rolls.mockResolvedValue(players);
   });
 
-  it("returns null when nobody has a score", async () => {
-    mocks.totals.mockResolvedValue([]);
+  it("returns null when nobody has a roll", async () => {
+    mocks.rolls.mockResolvedValue([]);
 
     expect(await overallPage(context, 1, "p0")).toBeNull();
   });
 
-  it("renders 10 rows per page and clamps the requested page", async () => {
+  it("renders 10 rows per page in both tables and clamps the requested page", async () => {
     expect(await overallPage(context, 99, "x")).toMatchObject({
       page: 3,
       pageCount: 3,
     });
-    expect(rendered().ranks).toEqual([21, 22, 23, 24, 25]);
+    expect(rendered().ranking.map((row) => row.rank)).toEqual([
+      21, 22, 23, 24, 25,
+    ]);
+    expect(rendered().bestRolls.map((row) => row.rank)).toEqual([
+      21, 22, 23, 24, 25,
+    ]);
 
     expect(await overallPage(context, 0, "x")).toMatchObject({
       page: 1,
       pageCount: 3,
     });
-    expect(rendered().ranks).toHaveLength(10);
+    expect(rendered().ranking).toHaveLength(10);
+    expect(rendered()).toMatchObject({ players: 25, rolls: 50 });
+  });
+
+  it("ranks by the index and lists each player's best roll apart", async () => {
+    mocks.rolls.mockResolvedValue([
+      ...Array.from({ length: 40 }, () => datedRoll("a", 300)),
+      datedRoll("b", 900),
+      datedRoll("b", 100),
+    ]);
+
+    await overallPage(context, 1, "x");
+
+    expect(rendered().ranking.map((row) => [row.name, row.rolls])).toEqual([
+      ["nick-a", 40],
+      ["name-b", 2],
+    ]);
+    expect(rendered().ranking[0]!.index).toBeCloseTo(12_000 / 60);
+    expect(
+      rendered().bestRolls.map((row) => [row.rank, row.name, row.score])
+    ).toEqual([
+      [1, "name-b", 900],
+      [2, "nick-a", 300],
+    ]);
+    expect(rendered().average.score).toBe(Math.trunc(13_000 / 42));
   });
 
   it("adds the caller row only when the caller is off the page", async () => {
@@ -317,23 +407,23 @@ describe("overallPage", () => {
     expect(rendered().caller).toBeUndefined();
   });
 
-  it("sums the scores over the requested period, cached separately", async () => {
+  it("ranks over the requested period, cached separately", async () => {
     await overallPage(context, 1, "x");
     await overallPage(context, 1, "x", "week");
     await overallPage(context, 1, "x", "week");
 
-    expect(mocks.totals).toHaveBeenCalledTimes(2);
-    expect(mocks.totals.mock.calls[0]).toEqual([context.guildId, {}]);
-    expect(mocks.totals.mock.calls[1]).toEqual([
+    expect(mocks.rolls).toHaveBeenCalledTimes(2);
+    expect(mocks.rolls.mock.calls[0]).toEqual([context.guildId, {}]);
+    expect(mocks.rolls.mock.calls[1]).toEqual([
       context.guildId,
       periodRange("week"),
     ]);
   });
 
   it("falls back to the registered username, then to a placeholder, for unresolved players", async () => {
-    mocks.totals.mockResolvedValue([
-      { userId: "ghost1", total: 2 },
-      { userId: "ghost2", total: 1 },
+    mocks.rolls.mockResolvedValue([
+      datedRoll("ghost1", 2),
+      datedRoll("ghost2", 1),
     ]);
     mocks.accounts.mockResolvedValue([
       { userId: "ghost1", username: "Registered" },
@@ -341,8 +431,89 @@ describe("overallPage", () => {
 
     await overallPage(context, 1, "x");
 
-    const rows = mocks.renderOverall.mock.calls[0]![0] as { name: string }[];
-    expect(rows.map((row) => row.name)).toEqual(["Registered", "?"]);
+    expect(rendered().ranking.map((row) => row.name)).toEqual([
+      "Registered",
+      "?",
+    ]);
+  });
+});
+
+describe("historyCard", () => {
+  const account = { guildId: "", userId: "a", username: "alice" };
+  const day = (date: number, score: number) => ({
+    userId: "a",
+    number: score,
+    score,
+    badgeCount: 0,
+    rolledAt: new Date(Date.UTC(2026, 2, date, 10)),
+  });
+  const rendered = () =>
+    mocks.renderHistory.mock.calls.at(-1)![0] as {
+      username: string;
+      rows: { dateText: string; today: boolean; score: number }[];
+      averageScore: number;
+      averagePercent: number;
+      upperHalf: number;
+      currentStreak: number;
+      bestStreak: number;
+    };
+  const now = new Date("2026-03-20T12:00:00Z");
+
+  it("returns null without rolls", async () => {
+    expect(
+      await historyCard(context, { ...account, guildId: context.guildId })
+    ).toBeNull();
+    expect(mocks.renderHistory).not.toHaveBeenCalled();
+  });
+
+  it("lists the latest rolls newest first and sums them up", async () => {
+    mocks.rolls.mockResolvedValue(
+      Array.from({ length: 20 }, (_, i) => day(i + 1, (i + 1) * 100))
+    );
+
+    await historyCard(
+      context,
+      { ...account, guildId: context.guildId },
+      5,
+      now
+    );
+
+    expect(mocks.rolls).toHaveBeenCalledWith(context.guildId, {
+      userId: "a",
+    });
+    const data = rendered();
+    expect(data.username).toBe("nick-a");
+    expect(data.rows.map((row) => row.score)).toEqual([
+      2000, 1900, 1800, 1700, 1600,
+    ]);
+    expect(data.rows[0]).toMatchObject({
+      dateText: "history.today",
+      today: true,
+    });
+    expect(data.rows[1]).toMatchObject({
+      dateText: "Thu, Mar 19",
+      today: false,
+    });
+    expect(data.averageScore).toBe(1800);
+    expect(data.averagePercent).toBe(180);
+    expect(data.upperHalf).toBe(5);
+    expect(data).toMatchObject({ currentStreak: 20, bestStreak: 20 });
+  });
+
+  it("keeps the count between 5 and 15", async () => {
+    mocks.rolls.mockResolvedValue(
+      Array.from({ length: 20 }, (_, i) => day(i + 1, 100))
+    );
+    const own = { ...account, guildId: context.guildId };
+
+    await historyCard(context, own, 99, now);
+    expect(rendered().rows).toHaveLength(15);
+
+    await historyCard(context, own, 1, now);
+    expect(rendered().rows).toHaveLength(5);
+
+    await historyCard(context, own, undefined, now);
+    expect(rendered().rows).toHaveLength(10);
   });
 });
 

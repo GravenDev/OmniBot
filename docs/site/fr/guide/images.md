@@ -82,8 +82,9 @@ La fiche fait 1000 px de large par défaut (`width` pour l'élargir), en paysage
 
 - **L'en-tête** affiche l'`image` ronde, le `title`, un `subtitle` optionnel et un `rank` optionnel : une médaille pour le podium, `#N / total` sinon, masqué quand `position` vaut 0.
 - **Les lignes** contiennent une à trois cases, qui se partagent la largeur de la ligne.
-- **Une case** a un `title` et une `value`, et éventuellement une `color` (valeur, teinte légère et liseré sur le bord gauche ; `highlight: false` colore la valeur sans mettre la case en avant), un `subtext` et un petit `avatar` dans le coin. Un texte trop long rétrécit pour tenir dans la case.
+- **Une case** a un `title` et une `value`, et éventuellement une `color` (valeur, teinte légère et liseré sur le bord gauche ; `highlight: false` colore la valeur sans mettre la case en avant), un `subtext`, une `trend` (`{ text, direction: "up" | "down" }`, une flèche et un texte verts ou rouges avant le `subtext`) et un petit `avatar` dans le coin. Un texte trop long rétrécit pour tenir dans la case.
 - **Un panneau latéral** (`{ width, draw(ctx, x, y, width, height) }`) ajoute un panneau personnalisé à droite des cases, de la même hauteur qu'elles. `drawPanel`, `drawPanelTitle`, `drawText`, `drawFittedText` et `measureText` de `#lib/stat-card` le gardent cohérent avec le reste de la fiche ; la répartition par palier de RNGdle est construite ainsi (`src/modules/rngdle/rendering/cards.ts`).
+- **Un pied** (`{ height, draw(ctx, x, y, width) }`) ajoute une section personnalisée sous les cases, sur toute la largeur du contenu, et la fiche grandit d'autant. Les classements et l'historique de RNGdle y dessinent leurs tableaux (`src/modules/rngdle/rendering/table.ts`).
 
 ## Bonnes pratiques
 

@@ -12,11 +12,9 @@ vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
   overallPage: mocks.overallPage,
 }));
 
-const {
-  default: handler,
-  overallPageMessage,
-  periodText,
-} = await import("./overall-page.button.js");
+const { default: handler, overallPageMessage } =
+  await import("./overall-page.button.js");
+const { periodText } = await import("#modules/rngdle/services/views.js");
 
 const t = ((key: string, options?: Record<string, unknown>) =>
   options ? `${key} ${JSON.stringify(options)}` : key) as ViewContext["t"];

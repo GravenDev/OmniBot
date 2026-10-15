@@ -5,6 +5,7 @@ import type { ConfigProvider } from "#lib/config.js";
 const mocks = vi.hoisted(() => ({
   account: vi.fn(),
   profileCard: vi.fn(),
+  historyCard: vi.fn(),
   overallPage: vi.fn(),
   refreshIfStale: vi.fn(),
 }));
@@ -18,6 +19,7 @@ vi.mock("#modules/rngdle/services/sync.js", () => ({
 vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   profileCard: mocks.profileCard,
+  historyCard: mocks.historyCard,
   overallPage: mocks.overallPage,
 }));
 
@@ -47,6 +49,7 @@ async function click(target: string) {
 beforeEach(() => {
   mocks.account.mockReset().mockResolvedValue(null);
   mocks.profileCard.mockReset().mockResolvedValue(Buffer.from("png"));
+  mocks.historyCard.mockReset().mockResolvedValue(Buffer.from("png"));
   mocks.overallPage.mockReset().mockResolvedValue({
     image: Buffer.from("png"),
     page: 1,
@@ -101,7 +104,41 @@ describe("navigation button", () => {
       reply.components.flatMap((row) =>
         row.toJSON().components.map((button) => button.custom_id)
       )
-    ).toEqual(["rngdle-nav:overall"]);
+    ).toEqual(["rngdle-nav:history", "rngdle-nav:overall"]);
+  });
+
+  it("shows the caller's own history, with the default count", async () => {
+    const account = { guildId: "guild", userId: "caller", username: "Lucky" };
+    mocks.account.mockResolvedValue(account);
+
+    const interaction = await click("history");
+
+    expect(mocks.historyCard).toHaveBeenCalledWith(
+      expect.anything(),
+      account,
+      undefined
+    );
+    const [reply] = interaction.editReply.mock.calls[0]! as [
+      {
+        files: { name: string }[];
+        components: { toJSON(): { components: { custom_id?: string }[] } }[];
+      },
+    ];
+    expect(reply.files[0]!.name).toBe("history-Lucky.png");
+    expect(
+      reply.components.flatMap((row) =>
+        row.toJSON().components.map((button) => button.custom_id)
+      )
+    ).toEqual(["rngdle-nav:profile", "rngdle-nav:overall"]);
+  });
+
+  it("tells an unlinked member privately how to link their account for the history", async () => {
+    const interaction = await click("history");
+
+    expect(mocks.historyCard).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "profile.notRegisteredSelf",
+    });
   });
 
   it("refreshes the guild's rolls before answering", async () => {

@@ -64,7 +64,7 @@ beforeEach(() => {
 });
 
 describe("daily leaderboard task", () => {
-  it("posts the recap text with the profile and overall leaderboard buttons", async () => {
+  it("posts the recap text with the profile, history and overall leaderboard buttons", async () => {
     const task = rngdleTasks({
       id: "rngdle",
     } as unknown as Module<RngdleConfigSchema>).find(
@@ -87,7 +87,11 @@ describe("daily leaderboard task", () => {
       message.components.flatMap((row) =>
         row.toJSON().components.map((button) => button.custom_id)
       )
-    ).toEqual(["rngdle-nav:profile", "rngdle-nav:overall"]);
+    ).toEqual([
+      "rngdle-nav:profile",
+      "rngdle-nav:history",
+      "rngdle-nav:overall",
+    ]);
   });
 });
 

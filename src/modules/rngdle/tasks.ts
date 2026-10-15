@@ -49,7 +49,7 @@ async function postDailyLeaderboard(
   await channel.send({
     content: buildDailyMessage(board.winnerIds, recap, config.t, config.locale),
     files: [new AttachmentBuilder(board.image, { name: "leaderboard.png" })],
-    components: [navigationRow(config.t, ["profile", "overall"])],
+    components: [navigationRow(config.t, ["profile", "history", "overall"])],
     allowedMentions: {
       users: await mentionService.mentionable(guildId, board.winnerIds),
     },
