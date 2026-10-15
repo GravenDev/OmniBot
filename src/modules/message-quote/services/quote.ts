@@ -9,9 +9,8 @@ import {
   type GuildMember,
   type Message,
   PermissionFlagsBits,
-  PermissionsBitField,
-  type Role,
 } from "discord.js";
+import { READ_PERMISSIONS, widensAudience } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
 import {
@@ -33,11 +32,6 @@ const LINK_PATTERN =
 
 const HIDDEN_PATTERN =
   /```[\s\S]*?```|``[\s\S]*?``|`[^`\n]*`|\|\|[\s\S]*?\|\|/g;
-
-const READ_PERMISSIONS = [
-  PermissionFlagsBits.ViewChannel,
-  PermissionFlagsBits.ReadMessageHistory,
-];
 
 export interface MessageLink {
   channelId: string;
@@ -86,49 +80,6 @@ export function isExcluded(
 export function isNsfw(channel: GuildBasedChannel): boolean {
   const base = channel.isThread() ? channel.parent : channel;
   return !!base && "nsfw" in base && base.nsfw;
-}
-
-function grants(
-  channel: GuildBasedChannel,
-  role: Role,
-  required: bigint[]
-): boolean {
-  const base = channel.isThread() ? channel.parent : channel;
-  if (!base) {
-    return false;
-  }
-  const everyone = channel.guild.roles.everyone;
-  const permissions = new PermissionsBitField([
-    everyone.permissions,
-    role.permissions,
-  ]);
-  for (const id of [everyone.id, role.id]) {
-    const overwrite = base.permissionOverwrites.cache.get(id);
-    if (overwrite) {
-      permissions.remove(overwrite.deny).add(overwrite.allow);
-    }
-  }
-  return permissions.has(required);
-}
-
-export function widensAudience(
-  quotedChannel: GuildBasedChannel,
-  destination: GuildBasedChannel,
-  ignoredRoleIds: ReadonlySet<string> = new Set()
-): boolean {
-  if (quotedChannel.id === destination.id) {
-    return false;
-  }
-  if (quotedChannel.type === ChannelType.PrivateThread) {
-    return true;
-  }
-  return quotedChannel.guild.roles.cache.some(
-    (role) =>
-      !role.managed &&
-      !ignoredRoleIds.has(role.id) &&
-      grants(destination, role, [PermissionFlagsBits.ViewChannel]) &&
-      !grants(quotedChannel, role, READ_PERMISSIONS)
-  );
 }
 
 function isOwnQuote(quoted: Message<true>): boolean {
