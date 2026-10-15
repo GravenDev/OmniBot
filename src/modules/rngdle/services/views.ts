@@ -233,9 +233,10 @@ export function dailyLeaderboard(
           },
           players: {
             count: playerCount,
-            previous: hadPrevious
-              ? new Set(previousRolls.map((roll) => roll.userId)).size
-              : null,
+            previous:
+              hadPrevious && daysAgo > 0
+                ? new Set(previousRolls.map((roll) => roll.userId)).size
+                : null,
           },
           worst: showWorst
             ? {
@@ -481,19 +482,27 @@ export function historyCard(
     const player = (
       await resolvePlayers(context.client, context.guildId, [account.userId])
     ).get(account.userId);
-    const formatDate = new Intl.DateTimeFormat(context.locale, {
+    const dateFormat = {
       weekday: "short",
       day: "numeric",
       month: "short",
       timeZone: "UTC",
+    } as const;
+    const formatDate = new Intl.DateTimeFormat(context.locale, dateFormat);
+    const formatOldDate = new Intl.DateTimeFormat(context.locale, {
+      ...dateFormat,
+      year: "numeric",
     });
+    const currentYear = now.getUTCFullYear();
     const { t } = context;
     const rows = recent.map((roll) => {
       const isToday = utcDayKey(roll.rolledAt) === today;
+      const format =
+        roll.rolledAt.getUTCFullYear() === currentYear
+          ? formatDate
+          : formatOldDate;
       return {
-        dateText: isToday
-          ? t("history.today")
-          : formatDate.format(roll.rolledAt),
+        dateText: isToday ? t("history.today") : format.format(roll.rolledAt),
         today: isToday,
         number: roll.number,
         score: roll.score,

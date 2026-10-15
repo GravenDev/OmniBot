@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatCompact,
   formatExpected,
+  formatIndex,
   formatShort,
   formatSpaced,
 } from "./format.js";
@@ -28,6 +29,17 @@ describe("formatCompact", () => {
     [1_234_567_890, "1.2B"],
   ])("formats %s as %s", (value, text) => {
     expect(formatCompact(value)).toBe(text);
+  });
+});
+
+describe("formatIndex", () => {
+  it.each([
+    [5802 / 21, "276"],
+    [1.75, "2"],
+    [999.6, "1.0k"],
+    [12_345.4, "12.3k"],
+  ])("formats %s as %s", (value, text) => {
+    expect(formatIndex(value)).toBe(text);
   });
 });
 

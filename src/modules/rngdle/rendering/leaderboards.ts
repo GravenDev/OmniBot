@@ -12,7 +12,7 @@ import {
   TIER_COLORS,
   type TierOrError,
 } from "#modules/rngdle/services/scoring.js";
-import { formatCompact, formatSpaced } from "./format.js";
+import { formatCompact, formatIndex, formatSpaced } from "./format.js";
 import {
   drawCellText,
   drawDelta,
@@ -284,7 +284,7 @@ export async function renderOverallLeaderboard(
               x: RANKING_WIDTH - PANEL_PADDING,
               align: "right",
               draw: (c, row, cx, cy) =>
-                drawCellText(c, formatCompact(row.index), cx, cy, {
+                drawCellText(c, formatIndex(row.index), cx, cy, {
                   align: "right",
                   color: ACCENT,
                 }),

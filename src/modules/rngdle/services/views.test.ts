@@ -245,6 +245,15 @@ describe("dailyLeaderboard", () => {
     }
   });
 
+  it("does not compare today's unfinished player count with yesterday's", async () => {
+    days([roll("a", 300)], [roll("a", 200), roll("b", 150), roll("c", 90)]);
+
+    await dailyLeaderboard(context, 0);
+
+    expect(rendered().players).toEqual({ count: 1, previous: null });
+    expect(rendered().average.previous).not.toBeNull();
+  });
+
   it("leaves the comparison out when nobody rolled the day before", async () => {
     days([roll("a", 300)]);
 
@@ -498,6 +507,25 @@ describe("historyCard", () => {
     expect(data.averagePercent).toBe(180);
     expect(data.upperHalf).toBe(5);
     expect(data).toMatchObject({ currentStreak: 20, bestStreak: 20 });
+  });
+
+  it("shows the year of rolls from a previous year", async () => {
+    mocks.rolls.mockResolvedValue([
+      { ...day(1, 100), rolledAt: new Date(Date.UTC(2025, 11, 30, 10)) },
+      day(19, 200),
+    ]);
+
+    await historyCard(
+      context,
+      { ...account, guildId: context.guildId },
+      5,
+      now
+    );
+
+    expect(rendered().rows.map((row) => row.dateText)).toEqual([
+      "Thu, Mar 19",
+      "Tue, Dec 30, 2025",
+    ]);
   });
 
   it("keeps the count between 5 and 15", async () => {

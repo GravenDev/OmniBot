@@ -23,6 +23,10 @@ export function formatCompact(value: number): string {
   return abbreviate(value, ["B", "M", "k"], (scaled) => scaled.toFixed(1));
 }
 
+export function formatIndex(value: number): string {
+  return formatCompact(Math.round(value));
+}
+
 export function formatShort(value: number, locale: string): string {
   return abbreviate(value, [locale === "fr" ? "Md" : "B", "M", "k"], (scaled) =>
     scaled.toFixed(1).replace(".0", "")
