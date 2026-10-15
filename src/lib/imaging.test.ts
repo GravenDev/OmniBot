@@ -2,9 +2,22 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { createCanvas } from "@napi-rs/canvas";
+import { createCanvas, type SKRSContext2D } from "@napi-rs/canvas";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadAsset } from "./imaging.js";
+import {
+  createBoard,
+  drawHighlight,
+  drawPortrait,
+  loadAsset,
+  PALETTE,
+  type Rgb,
+} from "./imaging.js";
+
+const ACCENT: Rgb = [10, 200, 90];
+
+function pixel(ctx: SKRSContext2D, x: number, y: number): number[] {
+  return [...ctx.getImageData(x, y, 1, 1).data.subarray(0, 3)];
+}
 
 let directory: string | undefined;
 
@@ -28,4 +41,45 @@ describe("loadAsset", () => {
     const image = await loadAsset(url);
     expect(image.width).toBe(1);
   });
+});
+
+describe("createBoard", () => {
+  it("underlines the header with the accent", () => {
+    const ctx = createBoard(20, 40, 20, ACCENT);
+
+    expect(pixel(ctx, 10, 16)).toEqual([...PALETTE.header]);
+    expect(pixel(ctx, 10, 17)).toEqual([...ACCENT]);
+    expect(pixel(ctx, 10, 19)).toEqual([...ACCENT]);
+    expect(pixel(ctx, 10, 20)).toEqual([...PALETTE.background]);
+  });
+});
+
+describe("drawPortrait", () => {
+  it("rings the portrait with the given color", () => {
+    const ctx = createCanvas(40, 40).getContext("2d");
+
+    drawPortrait(ctx, null, 10, 10, 20, ACCENT);
+
+    expect(pixel(ctx, 20, 8)).toEqual([...ACCENT]);
+    expect(pixel(ctx, 20, 20)).toEqual([...PALETTE.placeholder]);
+  });
+});
+
+describe("drawHighlight", () => {
+  it.each(["left", "right"] as const)(
+    "tints the area and draws a solid %s edge",
+    (edge) => {
+      const ctx = createCanvas(40, 20).getContext("2d");
+      ctx.fillStyle = "rgb(0, 0, 0)";
+      ctx.fillRect(0, 0, 40, 20);
+
+      drawHighlight(ctx, 0, 0, 40, 20, ACCENT, { edge });
+
+      const [edgeX, otherX] = edge === "left" ? [1, 38] : [38, 1];
+      expect(pixel(ctx, edgeX, 10)).toEqual([...ACCENT]);
+      const tint = pixel(ctx, otherX, 10);
+      expect(tint[1]).toBeGreaterThan(0);
+      expect(tint[1]).toBeLessThan(ACCENT[1] / 4);
+    }
+  );
 });

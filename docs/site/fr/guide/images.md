@@ -2,13 +2,15 @@
 
 Les classements et les fiches de statistiques sont rendus en images PNG avec [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas) (binaires précompilés, rien à installer). Deux générateurs prêts à l'emploi couvrent l'essentiel des besoins ; des fonctions de plus bas niveau sont là pour le reste.
 
-| Module                   | Fournit                                                                                                           |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `#lib/leaderboard-table` | `renderLeaderboardTable` : tableau classé avec médailles, avatars, pseudos et vos propres colonnes                |
-| `#lib/stat-card`         | `renderStatCard` : fiche avec portrait, titre, rang optionnel, grille de cases de statistiques et panneau latéral |
-| `#lib/imaging`           | Palette et police communes, téléchargement d'avatars, images rondes, texte ajusté, ressources                     |
+| Module                   | Fournit                                                                                                                                                                                                    |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `#lib/leaderboard-table` | `renderLeaderboardTable` : tableau classé avec médailles, avatars, pseudos et vos propres colonnes                                                                                                         |
+| `#lib/stat-card`         | `renderStatCard` : fiche avec portrait, titre, rang optionnel, grille de cases de statistiques et panneau latéral                                                                                          |
+| `#lib/imaging`           | Palette et police communes, accent par défaut (`DEFAULT_ACCENT`), téléchargement d'avatars, images rondes et portraits cerclés (`drawPortrait`), mise en avant (`drawHighlight`), texte ajusté, ressources |
 
 La police Outfit et les médailles or, argent et bronze sont fournies dans `src/lib/assets/` et chargées pour vous.
+
+Chaque module déclare sa couleur d'accent dans `rendering/theme.ts` (`export const ACCENT: Rgb = [77, 163, 255];`) et la passe en `accent` à chaque générateur, pour que toutes ses images se ressemblent. Sans `accent`, c'est `DEFAULT_ACCENT` qui s'applique.
 
 ## Un classement
 
@@ -48,7 +50,7 @@ const png = await renderLeaderboardTable({
 });
 ```
 
-Une colonne peut être alignée à droite (`align: "right"`, `x` est alors son bord droit), et chaque cellule peut fixer sa `color`, sa police (`family`) ou une petite `icon` dessinée avant le texte. Passez `caller` pour ajouter, sous un séparateur, la ligne de la personne qui consulte quand elle n'est pas sur la page, et `width` pour un tableau plus large que les 800 px par défaut.
+Une colonne peut être alignée à droite (`align: "right"`, `x` est alors son bord droit), et chaque cellule peut fixer sa `color`, sa police (`family`) ou une petite `icon` dessinée avant le texte. Passez `caller` pour ajouter, sous un séparateur, la ligne de la personne qui consulte quand elle n'est pas sur la page, `width` pour un tableau plus large que les 800 px par défaut, et `accent`, la couleur du module, pour le liseré sous l'en-tête et la ligne de l'appelant.
 
 ## Une fiche de statistiques
 
@@ -76,11 +78,11 @@ const png = await renderStatCard({
 });
 ```
 
-La fiche fait 1000 px de large, en paysage, pour que Discord l'affiche assez grande pour être lue.
+La fiche fait 1000 px de large par défaut (`width` pour l'élargir), en paysage, pour que Discord l'affiche assez grande pour être lue. Son `accent`, la couleur du module, colore le liseré sous l'en-tête, l'anneau du portrait et le rang.
 
 - **L'en-tête** affiche l'`image` ronde, le `title`, un `subtitle` optionnel et un `rank` optionnel : une médaille pour le podium, `#N / total` sinon, masqué quand `position` vaut 0.
 - **Les lignes** contiennent une à trois cases, qui se partagent la largeur de la ligne.
-- **Une case** a un `title` et une `value`, et éventuellement une `color` (valeur et contour ; `outline: false` garde la couleur sans le cadre), un `subtext` et un petit `avatar` dans le coin. Un texte trop long rétrécit pour tenir dans la case.
+- **Une case** a un `title` et une `value`, et éventuellement une `color` (valeur, teinte légère et liseré sur le bord gauche ; `highlight: false` colore la valeur sans mettre la case en avant), un `subtext` et un petit `avatar` dans le coin. Un texte trop long rétrécit pour tenir dans la case.
 - **Un panneau latéral** (`{ width, draw(ctx, x, y, width, height) }`) ajoute un panneau personnalisé à droite des cases, de la même hauteur qu'elles. `drawPanel`, `drawPanelTitle`, `drawText`, `drawFittedText` et `measureText` de `#lib/stat-card` le gardent cohérent avec le reste de la fiche ; la répartition par palier de RNGdle est construite ainsi (`src/modules/rngdle/rendering/cards.ts`).
 
 ## Bonnes pratiques

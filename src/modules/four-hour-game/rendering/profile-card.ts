@@ -3,6 +3,7 @@ import type { TFunction } from "#lib/i18n.js";
 import { renderStatCard, type StatCard } from "#lib/stat-card.js";
 import { formatHeldTime } from "#modules/four-hour-game/services/formatting.js";
 import type { PlayerProfile } from "#modules/four-hour-game/services/four-hour-game.service.js";
+import { ACCENT } from "./theme.js";
 
 const MISSING = "—";
 
@@ -31,6 +32,7 @@ export function buildProfileCard(
   });
 
   return {
+    accent: ACCENT,
     image: player.avatar,
     title: player.name,
     subtitle: t("profile.subtitle"),

@@ -126,8 +126,8 @@ describe("renderServerStats", () => {
     expectedCount: (value: number) => `/ ${value}`,
   };
 
-  it.each([0, 3, 5])("renders a 1000x560 PNG with %i leaders", async (n) => {
+  it.each([0, 3, 5])("renders a 1200x560 PNG with %i leaders", async (n) => {
     const png = await renderServerStats(serverStats(n), labels);
-    expect(pngSize(png)).toEqual({ width: 1000, height: 560 });
+    expect(pngSize(png)).toEqual({ width: 1200, height: 560 });
   });
 });

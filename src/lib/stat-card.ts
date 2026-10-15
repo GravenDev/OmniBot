@@ -1,7 +1,10 @@
 import type { Image, SKRSContext2D } from "@napi-rs/canvas";
 import {
   createBoard,
+  DEFAULT_ACCENT,
   drawCircularImage,
+  drawHighlight,
+  drawPortrait,
   fillTextAnchored,
   fillTextCentered,
   font,
@@ -11,27 +14,27 @@ import {
   type Rgb,
 } from "./imaging.js";
 
-const WIDTH = 1000;
-const MARGIN = 40;
-const HEADER_HEIGHT = 130;
+export const DEFAULT_WIDTH = 1000;
+export const MARGIN = 40;
+export const HEADER_HEIGHT = 130;
 const HEADER_CENTER = HEADER_HEIGHT / 2;
-const PORTRAIT_SIZE = 90;
+export const PORTRAIT_SIZE = 90;
 const TITLE_X = MARGIN + PORTRAIT_SIZE + 24;
-const TITLE_SIZE = 44;
+export const TITLE_SIZE = 44;
 const TITLE_MIN_SIZE = 30;
 const SUBTITLE_SIZE = 20;
 const RANK_GAP = 24;
 
-const BODY_TOP = HEADER_HEIGHT + 30;
-const BOTTOM_MARGIN = 30;
-const GAP = 20;
+export const BODY_TOP = HEADER_HEIGHT + 30;
+export const BOTTOM_MARGIN = 30;
+export const GAP = 20;
 const BOX_HEIGHT = 110;
-const PANEL_RADIUS = 12;
+export const PANEL_RADIUS = 12;
 export const PANEL_PADDING = 20;
 export const LABEL_SIZE = 19;
-const VALUE_SIZE = 32;
-const SUBTEXT_SIZE = 17;
-const SUBTEXT_MIN_SIZE = 13;
+export const VALUE_SIZE = 32;
+export const SUBTEXT_SIZE = 17;
+export const SUBTEXT_MIN_SIZE = 13;
 const BOX_TITLE_Y = 16;
 const BOX_VALUE_Y = 42;
 const BOX_SUBTEXT_Y = 84;
@@ -40,7 +43,6 @@ const BOX_AVATAR_INSET = 14;
 
 const RANK_SIZE = 64;
 const TOTAL_SIZE = 26;
-const RANK_COLOR: Rgb = [150, 150, 150];
 const MEDAL_HEIGHT = 76;
 const MEDAL_WIDTHS = [76, 78, 78];
 
@@ -48,7 +50,7 @@ export interface StatBox {
   title: string;
   value: string;
   color?: Rgb;
-  outline?: boolean;
+  highlight?: boolean;
   subtext?: string;
   avatar?: Image | null;
 }
@@ -71,6 +73,8 @@ export interface StatCard {
   rank?: { position: number; total: number };
   rows: StatBox[][];
   aside?: CardAside;
+  accent?: Rgb;
+  width?: number;
 }
 
 export function drawText(
@@ -142,19 +146,42 @@ export function drawPanel(
   y: number,
   width: number,
   height: number,
-  outline?: Rgb
+  highlight?: Rgb
+): void {
+  fillPanel(ctx, x, y, width, height);
+  if (highlight) {
+    drawHighlight(ctx, x, y, width, height, highlight, {
+      radius: PANEL_RADIUS,
+    });
+  }
+  strokePanel(ctx, x, y, width, height);
+}
+
+export function fillPanel(
+  ctx: SKRSContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number
 ): void {
   ctx.beginPath();
   ctx.roundRect(x, y, width, height, PANEL_RADIUS);
   ctx.fillStyle = rgb(PALETTE.box);
   ctx.fill();
-  if (outline) {
-    ctx.beginPath();
-    ctx.roundRect(x + 1, y + 1, width - 2, height - 2, PANEL_RADIUS - 1);
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = rgb(outline);
-    ctx.stroke();
-  }
+}
+
+export function strokePanel(
+  ctx: SKRSContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+): void {
+  ctx.beginPath();
+  ctx.roundRect(x + 0.5, y + 0.5, width - 1, height - 1, PANEL_RADIUS);
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = rgb(PALETTE.border);
+  ctx.stroke();
 }
 
 export function drawPanelTitle(
@@ -178,10 +205,10 @@ function drawStatBox(
   x: number,
   y: number,
   width: number,
-  { title, value, color, outline = true, subtext, avatar }: StatBox
+  { title, value, color, highlight = true, subtext, avatar }: StatBox
 ): void {
   const left = x + PANEL_PADDING;
-  drawPanel(ctx, x, y, width, BOX_HEIGHT, outline ? color : undefined);
+  drawPanel(ctx, x, y, width, BOX_HEIGHT, highlight ? color : undefined);
   drawPanelTitle(ctx, title, x, y);
   if (avatar !== undefined) {
     const avatarX = x + width - BOX_AVATAR_SIZE - BOX_AVATAR_INSET;
@@ -235,9 +262,10 @@ function rankWidth(
 function drawRank(
   ctx: SKRSContext2D,
   { position, total }: { position: number; total: number },
-  medals: Image[]
+  medals: Image[],
+  accent: Rgb,
+  right: number
 ): void {
-  const right = WIDTH - MARGIN;
   const medal = medals[position - 1];
   const medalWidth = MEDAL_WIDTHS[position - 1];
   if (medal && medalWidth) {
@@ -258,27 +286,30 @@ function drawRank(
   fillTextCentered(ctx, totalText, right, HEADER_CENTER + 14);
   const rankRight = right - measureText(ctx, totalText, TOTAL_SIZE);
   ctx.font = font(RANK_SIZE);
-  ctx.fillStyle = rgb(RANK_COLOR);
+  ctx.fillStyle = rgb(accent);
   fillTextCentered(ctx, `#${position}`, rankRight, HEADER_CENTER);
   ctx.textAlign = "left";
 }
 
 export async function renderStatCard(card: StatCard): Promise<Buffer> {
   const medals = card.rank ? await loadMedals() : [];
+  const accent = card.accent ?? DEFAULT_ACCENT;
+  const width = card.width ?? DEFAULT_WIDTH;
   const bodyHeight =
     card.rows.length * BOX_HEIGHT + (card.rows.length - 1) * GAP;
   const ctx = createBoard(
-    WIDTH,
+    width,
     BODY_TOP + bodyHeight + BOTTOM_MARGIN,
-    HEADER_HEIGHT
+    HEADER_HEIGHT,
+    accent
   );
   ctx.textAlign = "left";
 
   const portraitY = HEADER_CENTER - PORTRAIT_SIZE / 2;
-  drawCircularImage(ctx, card.image, MARGIN, portraitY, PORTRAIT_SIZE);
+  drawPortrait(ctx, card.image, MARGIN, portraitY, PORTRAIT_SIZE, accent);
   const rank = card.rank && card.rank.position > 0 ? card.rank : undefined;
   const titleWidth =
-    WIDTH -
+    width -
     MARGIN -
     TITLE_X -
     (rank ? rankWidth(ctx, rank, medals) + RANK_GAP : 0);
@@ -306,10 +337,10 @@ export async function renderStatCard(card: StatCard): Promise<Buffer> {
     fillTextCentered(ctx, subtitle.text, TITLE_X, HEADER_CENTER + 26);
   }
   if (rank) {
-    drawRank(ctx, rank, medals);
+    drawRank(ctx, rank, medals, accent, width - MARGIN);
   }
 
-  const contentWidth = WIDTH - 2 * MARGIN;
+  const contentWidth = width - 2 * MARGIN;
   const asideWidth = card.aside ? card.aside.width + GAP : 0;
   const boxesWidth = contentWidth - asideWidth;
   card.rows.forEach((boxes, row) => {
@@ -318,13 +349,13 @@ export async function renderStatCard(card: StatCard): Promise<Buffer> {
         `A stat card row holds 1 to 3 boxes, got ${boxes.length}`
       );
     }
-    const width = (boxesWidth - GAP * (boxes.length - 1)) / boxes.length;
+    const boxWidth = (boxesWidth - GAP * (boxes.length - 1)) / boxes.length;
     boxes.forEach((box, index) => {
       drawStatBox(
         ctx,
-        MARGIN + index * (width + GAP),
+        MARGIN + index * (boxWidth + GAP),
         BODY_TOP + row * (BOX_HEIGHT + GAP),
-        width,
+        boxWidth,
         box
       );
     });
