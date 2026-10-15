@@ -78,6 +78,28 @@ describe("task scheduler", () => {
     expect(run).not.toHaveBeenCalled();
   });
 
+  it("follows the time zone of a task", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-13T21:59:59Z") });
+    const paris = vi.fn(async () => {});
+    const utc = vi.fn(async () => {});
+    startModuleTasks(
+      client,
+      moduleWith(
+        declareTask({
+          id: "paris",
+          schedule: "0 0 * * *",
+          timezone: "Europe/Paris",
+          run: paris,
+        }),
+        declareTask({ id: "utc", schedule: "0 0 * * *", run: utc })
+      )
+    );
+
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(paris).toHaveBeenCalledOnce();
+    expect(utc).not.toHaveBeenCalled();
+  });
+
   it("registers tasks through the module registry", () => {
     const task = declareTask({
       id: "x",

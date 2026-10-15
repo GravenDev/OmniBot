@@ -8,7 +8,7 @@ import type {
 import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
-import { fetchLatestPlayerMessage } from "#modules/four-hour-game/services/channel-history.js";
+import { fetchStandingMessage } from "#modules/four-hour-game/services/channel-history.js";
 import fourHourGameService from "#modules/four-hour-game/services/four-hour-game.service.js";
 
 const logger = loggerMaker("four-hour-game");
@@ -38,7 +38,7 @@ export default declareEventListener<
         deletedFrom.guildId,
         channel.id,
         [...messages.keys()],
-        () => fetchLatestPlayerMessage(channel)
+        () => fetchStandingMessage(channel)
       );
     } catch (err) {
       logger.error(

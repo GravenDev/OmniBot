@@ -9,19 +9,36 @@ export function isPlayerMessage(
   return !message.author.bot && !message.system;
 }
 
-export async function fetchLatestPlayerMessage(
+export async function fetchPlayerMessages(
+  channel: TextBasedChannel
+): Promise<ChannelMessage[]> {
+  const messages = await channel.messages.fetch({ limit: HISTORY_DEPTH });
+  return [...messages.values()]
+    .filter(isPlayerMessage)
+    .sort((a, b) => a.createdTimestamp - b.createdTimestamp)
+    .map((message) => ({
+      messageId: message.id,
+      authorId: message.author.id,
+      sentAt: message.createdAt,
+    }));
+}
+
+export function standingOf(
+  chronological: readonly ChannelMessage[]
+): ChannelMessage | null {
+  let standing = chronological.at(-1) ?? null;
+  for (let i = chronological.length - 2; i >= 0; i--) {
+    const message = chronological[i]!;
+    if (message.authorId !== standing!.authorId) {
+      break;
+    }
+    standing = message;
+  }
+  return standing;
+}
+
+export async function fetchStandingMessage(
   channel: TextBasedChannel
 ): Promise<ChannelMessage | null> {
-  const messages = await channel.messages.fetch({ limit: HISTORY_DEPTH });
-  const latest = [...messages.values()]
-    .filter(isPlayerMessage)
-    .sort((a, b) => b.createdTimestamp - a.createdTimestamp)[0];
-
-  return latest
-    ? {
-        messageId: latest.id,
-        authorId: latest.author.id,
-        sentAt: latest.createdAt,
-      }
-    : null;
+  return standingOf(await fetchPlayerMessages(channel));
 }

@@ -11,6 +11,11 @@
   "point.total_other": "Total: **{{count}} points**",
   "point.postedAt": "Message posted",
 
+  "daily.title": "Daily point",
+  "daily.description": "{{user}} wins the point for {{date}}: their message went unanswered for **{{duration}}**, longer than any other that day.",
+  "daily.total_one": "Total: **{{count}} daily point**",
+  "daily.total_other": "Total: **{{count}} daily points**",
+
   "score.none": "{{user}} has no score on this server.",
 
   "profile.subtitle": "4h game",
@@ -20,6 +25,8 @@
   "profile.streak": "Current streak",
   "profile.streakRecord": "best: {{record}}",
   "profile.lastPoint": "Last point",
+  "profile.daily": "Daily points",
+  "profile.dailyRank": "#{{rank}} of {{total}}",
 
   "rank.place_ordinal_one": "{{count}}st",
   "rank.place_ordinal_two": "{{count}}nd",
@@ -33,6 +40,8 @@
   "duration.seconds": "{{value}}s",
 
   "leaderboard.empty": "Nobody has scored yet.",
+  "leaderboard.daily.title": "**Daily points**: one point each day for the message that went unanswered the longest.",
+  "leaderboard.daily.empty": "Nobody has won a daily point yet.",
   "leaderboard.header.rank": "Rank",
   "leaderboard.header.player": "Player",
   "leaderboard.header.score": "Score",

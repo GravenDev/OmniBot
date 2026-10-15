@@ -21,6 +21,7 @@ const leaderboardCache = new RevisionCache(15_000);
 const profileCache = new RevisionCache(15_000);
 
 type Config = ConfigProvider<FourHourGameConfigSchema>;
+type Board = "hold" | "daily";
 
 async function showScore(
   interaction: ChatInputCommandInteraction<"cached" | "raw">,
@@ -73,12 +74,18 @@ async function showScore(
 
 async function buildLeaderboardImage(
   interaction: ChatInputCommandInteraction<"cached" | "raw">,
-  config: Config
+  config: Config,
+  board: Board
 ): Promise<Buffer | null> {
-  const entries = await fourHourGameService.getLeaderboard(
-    interaction.guildId,
-    LEADERBOARD_SIZE
-  );
+  const entries =
+    board === "daily"
+      ? (
+          await fourHourGameService.getDailyStandings(interaction.guildId)
+        ).slice(0, LEADERBOARD_SIZE)
+      : await fourHourGameService.getLeaderboard(
+          interaction.guildId,
+          LEADERBOARD_SIZE
+        );
 
   const players = await resolvePlayers(
     interaction.client,
@@ -114,20 +121,27 @@ async function showLeaderboard(
   interaction: ChatInputCommandInteraction<"cached" | "raw">,
   config: Config
 ) {
+  const board: Board =
+    interaction.options.getString("type") === "daily" ? "daily" : "hold";
   await interaction.deferReply();
 
   const image = await leaderboardCache.get(
-    `${interaction.guildId}:${config.locale}`,
+    `${interaction.guildId}:${config.locale}:${board}`,
     fourHourGameService.getRevision(interaction.guildId),
-    () => buildLeaderboardImage(interaction, config)
+    () => buildLeaderboardImage(interaction, config, board)
   );
 
   if (!image) {
-    await interaction.editReply(config.t("leaderboard.empty"));
+    await interaction.editReply(
+      config.t(
+        board === "daily" ? "leaderboard.daily.empty" : "leaderboard.empty"
+      )
+    );
     return;
   }
 
   await interaction.editReply({
+    ...(board === "daily" && { content: config.t("leaderboard.daily.title") }),
     files: [new AttachmentBuilder(image, { name: "leaderboard.png" })],
   });
 }
@@ -157,6 +171,26 @@ export default declareCommand<FourHourGameConfigSchema>({
         .setName("leaderboard")
         .setDescription("Show the 4h game leaderboard")
         .setDescriptionLocalizations({ fr: "Afficher le classement du jeu" })
+        .addStringOption((option) =>
+          option
+            .setName("type")
+            .setDescription("Which points to rank (defaults to 4h points)")
+            .setDescriptionLocalizations({
+              fr: "Points à classer (points des 4h par défaut)",
+            })
+            .addChoices(
+              {
+                name: "4h points",
+                name_localizations: { fr: "Points des 4h" },
+                value: "hold",
+              },
+              {
+                name: "Daily points",
+                name_localizations: { fr: "Points du jour" },
+                value: "daily",
+              }
+            )
+        )
     ),
 
   async execute(interaction, config) {

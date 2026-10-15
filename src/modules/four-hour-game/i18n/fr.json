@@ -11,6 +11,11 @@
   "point.total_other": "Total : **{{count}} points**",
   "point.postedAt": "Message posté",
 
+  "daily.title": "Point du jour",
+  "daily.description": "{{user}} remporte le point du {{date}} : son message est resté sans réponse **{{duration}}**, plus longtemps que tout autre ce jour-là.",
+  "daily.total_one": "Total : **{{count}} point du jour**",
+  "daily.total_other": "Total : **{{count}} points du jour**",
+
   "score.none": "{{user}} n'a pas de score sur ce serveur.",
 
   "profile.subtitle": "Jeu des 4h",
@@ -20,6 +25,8 @@
   "profile.streak": "Série en cours",
   "profile.streakRecord": "record : {{record}}",
   "profile.lastPoint": "Dernier point",
+  "profile.daily": "Points du jour",
+  "profile.dailyRank": "#{{rank}} sur {{total}}",
 
   "rank.place_ordinal_one": "{{count}}ᵉʳ",
   "rank.place_ordinal_other": "{{count}}ᵉ",
@@ -31,6 +38,8 @@
   "duration.seconds": "{{value}} s",
 
   "leaderboard.empty": "Personne n'a encore marqué de point.",
+  "leaderboard.daily.title": "**Points du jour** : un point chaque jour au message resté le plus longtemps sans réponse.",
+  "leaderboard.daily.empty": "Personne n'a encore remporté de point du jour.",
   "leaderboard.header.rank": "Rang",
   "leaderboard.header.player": "Pseudo",
   "leaderboard.header.score": "Score",

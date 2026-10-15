@@ -44,7 +44,7 @@ Les images générées par les modules (classements, profils, statistiques) affi
 
 ## Module Jeu des 4h
 
-Repris du bot DJ4H. Dans le salon de jeu, le dernier message posté « tient » : si personne d'autre n'écrit pendant le délai configuré (4 h par défaut), son auteur marque un point au message suivant.
+Repris du bot DJ4H. Dans le salon de jeu, le dernier message posté « tient » : si personne d'autre n'écrit pendant le délai configuré (4 h par défaut), son auteur marque un point au message suivant. En parallèle, chaque jour, le message resté le plus longtemps sans réponse rapporte un **point du jour**, compté à part.
 
 ### Comportement automatique
 
@@ -61,9 +61,19 @@ Chaque point gagné est aussi inscrit dans l'historique du serveur, avec la dur�
 
 Les messages de bots, les messages système (arrivée d'un membre, épinglage, boost…), les messages hors du salon (y compris dans ses fils) et les messages privés sont ignorés. Un message plus ancien que le dernier message enregistré (reçu dans le désordre) est ignoré lui aussi. Après un changement de salon de jeu, le dernier message de l'ancien salon ne compte plus : la partie repart du premier message posté dans le nouveau. Il en va de même quand le module est réactivé après avoir été désactivé.
 
-Un message supprimé ne compte plus : si c'était le dernier message, c'est le message de joueur précédent encore présent dans le salon qui redevient le dernier message, avec son heure d'envoi réelle. Si le salon n'en contient plus, la partie repart du prochain message.
+Un message supprimé ne compte plus : si c'était le dernier message, c'est le message de joueur précédent encore présent dans le salon qui redevient le dernier message, avec son heure d'envoi réelle (si son auteur a posté plusieurs messages d'affilée, le premier de la série, comme pendant la partie). Si le salon n'en contient plus, la partie repart du prochain message.
 
-Au démarrage, le bot relit le vrai dernier message de joueur de chaque salon de jeu pour rattraper les messages postés ou supprimés pendant qu'il était arrêté. Les points qui auraient dû être gagnés pendant l'arrêt ne sont pas rattrapés. Les messages d'un même serveur sont traités un par un : deux messages simultanés ne peuvent pas marquer deux fois sur le même prédécesseur.
+Au démarrage, le bot relit le vrai dernier message de joueur de chaque salon de jeu (le premier de la dernière série d'un même joueur, puisque reposter ne remplace pas son propre message) pour rattraper les messages postés ou supprimés pendant qu'il était arrêté. Les points qui auraient dû être gagnés pendant l'arrêt ne sont pas rattrapés. Les messages d'un même serveur sont traités un par un : deux messages simultanés ne peuvent pas marquer deux fois sur le même prédécesseur.
+
+### Point du jour
+
+Les journées suivent l'heure de Paris (minuit à minuit). Chaque fois qu'un message cesse d'être le dernier (un autre joueur répond), le temps pendant lequel il a tenu est attribué à son auteur, découpé par journée : un message posté à 22 h et remplacé à 3 h compte 2 h pour la première journée et 3 h pour la suivante. Le délai configuré ne joue aucun rôle : une tenue de 40 minutes peut remporter la journée, et une tenue qui rapporte un point des 4h compte aussi. Le meilleur temps de chaque journée est retenu ; à égalité, le premier à l'avoir atteint le garde. Un temps déjà attribué reste acquis, même si son message est supprimé ensuite.
+
+À minuit (heure de Paris), le bot clôt la journée écoulée sur chaque serveur : le message encore en place compte jusqu'à minuit, puis l'auteur du meilleur temps de la journée gagne son point du jour. Le bot l'annonce dans le salon de jeu, sans notifier personne : la journée, le temps tenu, son total de points du jour et son rang à ce classement à la fin de cette journée, avec son avatar en vignette. Une journée où aucun message n'a été en place n'attribue rien ; un message resté en place toute la journée, même sans aucune réponse, la remporte avec la journée entière (24 h, 23 h ou 25 h les jours de changement d'heure). Une journée n'est jamais close deux fois. Une annonce qui ne peut pas être envoyée (salon supprimé, permission retirée) est perdue, mais la journée est close quand même et les annonces suivantes partent.
+
+La clôture est aussi tentée au démarrage, après la relecture des salons : les journées écoulées pendant un arrêt sont closes et annoncées, une par une. La relecture rejoue les 50 derniers messages du salon postés pendant l'arrêt comme s'ils avaient été vus en direct : le message qui était en place est crédité jusqu'à la première réponse d'un autre joueur, puis chaque réponse jusqu'à la suivante. Si personne n'a répondu, ou si seul son auteur a reposté, il reste en place et est crédité jusqu'à minuit, comme s'il avait été vu tenir. S'il a été supprimé pendant l'arrêt, la partie reprend sur le dernier message en place, sans crédit. Si la relecture d'un salon échoue, ou si un message y arrive avant qu'elle soit faite, le message qui était en place à l'arrêt est crédité de toute la durée de l'arrêt.
+
+Sur un serveur, le décompte commence le jour du premier message traité ou du premier démarrage après la mise en place du point du jour. Quand le module est réactivé après avoir été désactivé, les journées qui n'avaient pas été closes sont oubliées et le décompte repart du jour de la réactivation ; les points du jour déjà gagnés sont conservés et restent visibles.
 
 ### `/jd4h score [member]`
 
@@ -75,19 +85,20 @@ La carte montre :
 - **Ce mois-ci** : les points gagnés depuis le 1ᵉʳ du mois (UTC) ;
 - **Meilleur temps tenu** : la plus longue durée pendant laquelle un de ses messages gagnants est resté sans réponse ;
 - **Série en cours** : le nombre de points d'affilée qu'il a remportés sur le serveur, sans qu'un autre joueur marque entre deux (0 si le dernier point du serveur est à quelqu'un d'autre), avec son record en dessous ;
-- **Dernier point** : la date de son dernier point (UTC).
+- **Dernier point** : la date de son dernier point (UTC) ;
+- **Points du jour** : le nombre de journées qu'il a remportées, avec son rang à ce classement en dessous (« #2 sur 9 »).
 
-Ces valeurs viennent de l'historique : un joueur dont tous les points sont antérieurs à l'historique (ou ont été fixés par un administrateur) voit « — » à leur place. Un membre sans score reçoit un simple message texte. L'image est réutilisée pendant 15 secondes par serveur, langue et membre, et régénérée dès qu'un score change.
+Ces valeurs viennent de l'historique : un joueur dont tous les points sont antérieurs à l'historique (ou ont été fixés par un administrateur) voit « — » à leur place. Un membre sans score ni point du jour reçoit un simple message texte ; un membre qui n'a que des points du jour voit 0 point. L'image est réutilisée pendant 15 secondes par serveur, langue et membre, et régénérée dès qu'un score change.
 
-### `/jd4h leaderboard`
+### `/jd4h leaderboard [type]`
 
-Génère une image du top 10 du serveur (rang, médailles pour le podium, avatar, surnom sur le serveur, score). Les membres à 0 point et ceux dont le compte Discord est introuvable n'y figurent pas. L'image est réutilisée pendant 15 secondes par serveur et par langue, et régénérée dès qu'un score change.
+Génère une image du top 10 du serveur (rang, médailles pour le podium, avatar, surnom sur le serveur, score). Par défaut, c'est le classement des points des 4h ; `type: Points du jour` classe les joueurs par nombre de journées remportées (journées closes seulement), avec un rappel de la règle au-dessus de l'image. Dans les deux cas, les égalités sont départagées par identifiant Discord. Les membres à 0 point et ceux dont le compte Discord est introuvable n'y figurent pas. L'image est réutilisée pendant 15 secondes par serveur, langue et classement, et régénérée dès qu'un score change ou qu'une journée est close.
 
 ### `/jd4h-admin set <member> <score>` et `/jd4h-admin unset <member>`
 
 **Permission requise :** Administrateur
 
-Fixe le score d'un membre, ou le supprime. Fixer un score à 0 revient à le supprimer. Supprimer un score efface aussi l'historique des points du membre, et les séries des autres joueurs sont alors calculées comme si ces points n'avaient pas existé ; le fixer à une autre valeur conserve l'historique. Réponses éphémères.
+Fixe le score d'un membre, ou le supprime. Fixer un score à 0 revient à le supprimer. Supprimer un score efface aussi l'historique des points du membre et ses points du jour, y compris son meilleur temps de la journée en cours (la journée concernée revient à la meilleure tenue enregistrée ensuite, s'il y en a une ; le message qu'il a encore en place peut de nouveau être crédité). La réponse ne parle de suppression que si un score ou un point du jour visible a été effacé, et les séries des autres joueurs sont alors calculées comme si ces points n'avaient pas existé ; le fixer à une autre valeur conserve l'historique. Réponses éphémères.
 
 ### Configuration — `/config four-hour-game`
 

@@ -17,9 +17,18 @@ interface PointRow {
   awardedAt: Date;
 }
 
+interface DailyBestRow {
+  guildId: string;
+  day: string;
+  userId: string;
+  heldSeconds: number;
+}
+
 const lastMessages = new Map<string, LastMessageRow>();
 const scores = new Map<string, number>();
 const points: PointRow[] = [];
+const dailyBests = new Map<string, DailyBestRow>();
+const closedDays = new Map<string, string>();
 const key = (guildId: string, userId: string) => `${guildId}:${userId}`;
 
 vi.mock("#lib/database.js", () => ({
@@ -170,6 +179,123 @@ vi.mock("#lib/database.js", () => ({
           }));
       },
     },
+    fourHourGameDailyBest: {
+      async findUnique({
+        where,
+      }: {
+        where: { guildId_day: { guildId: string; day: string } };
+      }) {
+        const { guildId, day } = where.guildId_day;
+        return dailyBests.get(key(guildId, day)) ?? null;
+      },
+      async upsert({
+        create,
+        update,
+      }: {
+        create: DailyBestRow;
+        update: Pick<DailyBestRow, "userId" | "heldSeconds">;
+      }) {
+        const k = key(create.guildId, create.day);
+        const current = dailyBests.get(k);
+        const row = current ? { ...current, ...update } : create;
+        dailyBests.set(k, row);
+        return row;
+      },
+      async findMany({
+        where,
+      }: {
+        where: { guildId: string; day: { gt: string; lte: string } };
+      }) {
+        return [...dailyBests.values()]
+          .filter(
+            (row) =>
+              row.guildId === where.guildId &&
+              row.day > where.day.gt &&
+              row.day <= where.day.lte
+          )
+          .sort((a, b) => a.day.localeCompare(b.day))
+          .map(({ day, userId, heldSeconds }) => ({
+            day,
+            userId,
+            heldSeconds,
+          }));
+      },
+      async groupBy({
+        where,
+      }: {
+        where: { guildId: string; day: { lte: string } };
+      }) {
+        const counts = new Map<string, number>();
+        for (const row of dailyBests.values()) {
+          if (row.guildId === where.guildId && row.day <= where.day.lte) {
+            counts.set(row.userId, (counts.get(row.userId) ?? 0) + 1);
+          }
+        }
+        return [...counts].map(([userId, count]) => ({
+          userId,
+          _count: { _all: count },
+        }));
+      },
+      async deleteMany({
+        where,
+      }: {
+        where: {
+          guildId: string;
+          userId?: string;
+          day?: { gt?: string; lte?: string };
+        };
+      }) {
+        let count = 0;
+        for (const [k, row] of dailyBests) {
+          if (
+            row.guildId === where.guildId &&
+            (where.userId === undefined || row.userId === where.userId) &&
+            (where.day?.gt === undefined || row.day > where.day.gt) &&
+            (where.day?.lte === undefined || row.day <= where.day.lte)
+          ) {
+            dailyBests.delete(k);
+            count++;
+          }
+        }
+        return { count };
+      },
+    },
+    fourHourGameDailyState: {
+      async findUnique({ where }: { where: { guildId: string } }) {
+        const closedDay = closedDays.get(where.guildId);
+        return closedDay ? { guildId: where.guildId, closedDay } : null;
+      },
+      async create({ data }: { data: { guildId: string; closedDay: string } }) {
+        closedDays.set(data.guildId, data.closedDay);
+        return data;
+      },
+      async update({
+        where,
+        data,
+      }: {
+        where: { guildId: string };
+        data: { closedDay: string };
+      }) {
+        closedDays.set(where.guildId, data.closedDay);
+        return { guildId: where.guildId, ...data };
+      },
+      async updateMany({
+        where,
+        data,
+      }: {
+        where: { guildId: string; closedDay: string };
+        data: { closedDay: string };
+      }) {
+        if (closedDays.get(where.guildId) !== where.closedDay) {
+          return { count: 0 };
+        }
+        closedDays.set(where.guildId, data.closedDay);
+        return { count: 1 };
+      },
+      async deleteMany({ where }: { where: { guildId: string } }) {
+        return { count: closedDays.delete(where.guildId) ? 1 : 0 };
+      },
+    },
     $transaction: (operations: Promise<unknown>[]) => Promise.all(operations),
   },
 }));
@@ -206,6 +332,8 @@ beforeEach(() => {
   lastMessages.clear();
   scores.clear();
   points.length = 0;
+  dailyBests.clear();
+  closedDays.clear();
 });
 
 describe("FourHourGameService.handleMessage", () => {
@@ -493,6 +621,8 @@ describe("FourHourGameService.getProfile", () => {
       currentStreak: 1,
       bestStreak: 2,
       lastPointAt: new Date("2026-10-03T10:00:00Z"),
+      dailyPoints: 0,
+      dailyRank: null,
     });
   });
 
@@ -533,6 +663,8 @@ describe("FourHourGameService.getProfile", () => {
       currentStreak: 0,
       bestStreak: 0,
       lastPointAt: null,
+      dailyPoints: 0,
+      dailyRank: null,
     });
   });
 });
@@ -555,6 +687,29 @@ describe("FourHourGameService.resetRound", () => {
     expect(scores.size).toBe(0);
     expect(lastMessages.has("other")).toBe(true);
   });
+
+  it("forgets the days not closed yet, but keeps the closed ones visible", async () => {
+    closedDays.set("guild", "2026-10-13");
+    for (const day of ["2026-10-13", "2026-10-14"]) {
+      dailyBests.set(key("guild", day), {
+        guildId: "guild",
+        day,
+        userId: "alice",
+        heldSeconds: 3600,
+      });
+    }
+    const revision = service.getRevision("guild");
+
+    await service.resetRound("guild", new Date("2026-11-20T12:00:00+01:00"));
+
+    expect([...dailyBests.keys()]).toEqual([key("guild", "2026-10-13")]);
+    expect(closedDays.get("guild")).toBe("2026-11-19");
+    expect(service.getRevision("guild")).toBeGreaterThan(revision);
+    expect(await service.getDailyStandings("guild")).toEqual([
+      { userId: "alice", score: 1, rank: 1 },
+    ]);
+    expect(await service.deleteScore("guild", "alice")).toBe(true);
+  });
 });
 
 describe("FourHourGameService deletions and resync", () => {
@@ -563,6 +718,15 @@ describe("FourHourGameService deletions and resync", () => {
     authorId,
     sentAt,
   });
+  const history =
+    (...entries: [authorId: string, sentAt: Date][]) =>
+    async () =>
+      entries.map(([authorId, sentAt]) => ({
+        messageId: `${authorId}-${sentAt.getTime()}`,
+        authorId,
+        sentAt,
+      }));
+  const paris = (iso: string) => new Date(`${iso}+02:00`);
 
   it("falls back to the channel's real last message when the stored one is deleted", async () => {
     await service.handleMessage(message("alice", start), DELAY);
@@ -627,10 +791,224 @@ describe("FourHourGameService deletions and resync", () => {
     expect(lastMessages.has("guild")).toBe(false);
   });
 
+  it("credits the replaced message's hold on resync", async () => {
+    await service.handleMessage(
+      message("zed", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T09:00:00")),
+      DELAY
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(
+        ["zed", paris("2026-10-14T08:00:00")],
+        ["alice", paris("2026-10-14T09:00:00")],
+        ["bob", paris("2026-10-14T22:00:00")]
+      )
+    );
+    const closed = await service.closeDays(
+      "guild",
+      "game",
+      paris("2026-10-15T08:00:00")
+    );
+
+    expect(closed).toEqual([
+      { day: "2026-10-14", userId: "alice", heldSeconds: 13 * 3600 },
+    ]);
+  });
+
+  it("keeps the stored message on resync when only its author posted since", async () => {
+    await service.handleMessage(
+      message("zed", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T09:00:00")),
+      DELAY
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(
+        ["zed", paris("2026-10-14T08:00:00")],
+        ["alice", paris("2026-10-14T09:00:00")],
+        ["alice", paris("2026-10-14T09:30:00")]
+      )
+    );
+    const closed = await service.closeDays(
+      "guild",
+      "game",
+      paris("2026-10-15T08:00:00")
+    );
+
+    expect(lastMessages.get("guild")?.sentAt).toEqual(
+      paris("2026-10-14T09:00:00")
+    );
+    expect(closed).toEqual([
+      { day: "2026-10-14", userId: "alice", heldSeconds: 15 * 3600 },
+    ]);
+  });
+
+  it("never moves the stored message back to an older run of its author", async () => {
+    await service.handleMessage(
+      message("zed", paris("2026-10-14T07:00:00")),
+      DELAY
+    );
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+    await service.handleMessage(
+      message("bob", paris("2026-10-14T09:00:00")),
+      DELAY
+    );
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T10:00:00")),
+      DELAY
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(
+        ["zed", paris("2026-10-14T07:00:00")],
+        ["alice", paris("2026-10-14T08:00:00")],
+        ["alice", paris("2026-10-14T10:00:00")]
+      )
+    );
+    const result = await service.handleMessage(
+      message("carol", paris("2026-10-14T12:30:00")),
+      DELAY
+    );
+
+    expect(result.kind).not.toBe("point");
+    expect(scores.size).toBe(0);
+  });
+
+  it("replays every hand-over missed while down", async () => {
+    await service.handleMessage(
+      message("zed", paris("2026-10-14T09:00:00")),
+      DELAY
+    );
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T10:00:00")),
+      DELAY
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(
+        ["zed", paris("2026-10-14T09:00:00")],
+        ["alice", paris("2026-10-14T10:00:00")],
+        ["bob", paris("2026-10-14T10:30:00")],
+        ["alice", paris("2026-10-14T11:30:00")]
+      )
+    );
+    expect(dailyBests.get(key("guild", "2026-10-14"))?.userId).toBe("zed");
+    const result = await service.handleMessage(
+      message("carol", paris("2026-10-14T14:05:00")),
+      DELAY
+    );
+
+    expect(lastMessages.get("guild")?.authorId).toBe("carol");
+    expect(result.kind).not.toBe("point");
+    expect(scores.size).toBe(0);
+  });
+
+  it("keeps the hold cut by a reply even when its author posted again", async () => {
+    await service.handleMessage(
+      message("zed", paris("2026-10-14T09:00:00")),
+      DELAY
+    );
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T10:00:00")),
+      DELAY
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(
+        ["zed", paris("2026-10-14T09:00:00")],
+        ["alice", paris("2026-10-14T10:00:00")],
+        ["bob", paris("2026-10-14T15:00:00")],
+        ["alice", paris("2026-10-14T15:00:30")],
+        ["carol", paris("2026-10-14T20:00:00")]
+      )
+    );
+    const closed = await service.closeDays(
+      "guild",
+      "game",
+      paris("2026-10-15T08:00:00")
+    );
+
+    expect(closed).toEqual([
+      { day: "2026-10-14", userId: "alice", heldSeconds: 5 * 3600 },
+    ]);
+  });
+
+  it("falls back to the standing message when the stored one was deleted while down", async () => {
+    await service.handleMessage(message("zed", start), DELAY);
+    await service.handleMessage(message("alice", at(60)), DELAY);
+
+    await service.resyncLastMessage("guild", "game", history(["zed", start]));
+
+    expect(lastMessages.get("guild")).toMatchObject({
+      authorId: "zed",
+      sentAt: start,
+    });
+  });
+
+  it("credits nothing on resync for a message stored in another channel", async () => {
+    await service.handleMessage(
+      message("alice", start, { channelId: "old" }),
+      DELAY
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["bob", at(3600)])
+    );
+
+    expect(dailyBests.size).toBe(0);
+    expect(lastMessages.get("guild")?.authorId).toBe("bob");
+  });
+
+  it("starts counting on the first startup, not on the day of a reply missed while down", async () => {
+    lastMessages.set("guild", {
+      guildId: "guild",
+      channelId: "game",
+      messageId: "old",
+      authorId: "alice",
+      sentAt: paris("2026-10-10T09:00:00"),
+    });
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["bob", paris("2026-10-11T09:00:00")]),
+      paris("2026-10-14T10:00:00")
+    );
+
+    expect(closedDays.get("guild")).toBe("2026-10-13");
+    expect(dailyBests.size).toBe(0);
+  });
+
   it("replaces the stored last message with the channel's real one on resync", async () => {
     await service.handleMessage(message("alice", start), DELAY);
 
-    await service.resyncLastMessage("guild", "game", latest("dave", at(3600)));
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["dave", at(3600)])
+    );
 
     expect(lastMessages.get("guild")).toMatchObject({
       channelId: "game",
@@ -664,5 +1042,269 @@ describe("FourHourGameService.getRevision", () => {
     expect(service.getRevision(guildId)).toBe(afterSet);
     await service.deleteScore(guildId, "alice");
     expect(service.getRevision(guildId)).toBeGreaterThan(afterSet);
+  });
+});
+
+describe("daily points", () => {
+  const HOUR = 3600;
+  const paris = (iso: string) => new Date(`${iso}+02:00`);
+  const send = (authorId: string, iso: string) =>
+    service.handleMessage(message(authorId, paris(iso)), DELAY);
+  const best = (day: string) => dailyBests.get(key("guild", day));
+  const seedDailyBest = (day: string, userId: string) =>
+    dailyBests.set(key("guild", day), {
+      guildId: "guild",
+      day,
+      userId,
+      heldSeconds: HOUR,
+    });
+
+  it("keeps the longest hold of the day, even below the delay", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    await send("bob", "2026-10-14T09:00:00");
+    await send("carol", "2026-10-14T11:30:00");
+    await send("alice", "2026-10-14T12:00:00");
+
+    expect(best("2026-10-14")).toEqual({
+      guildId: "guild",
+      day: "2026-10-14",
+      userId: "bob",
+      heldSeconds: 2.5 * HOUR,
+    });
+  });
+
+  it("keeps the first holder on a tie", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    await send("bob", "2026-10-14T09:00:00");
+    await send("carol", "2026-10-14T10:00:00");
+
+    expect(best("2026-10-14")?.userId).toBe("alice");
+  });
+
+  it("counts a hold that also scored a 4h point", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    await send("bob", "2026-10-14T13:00:00");
+
+    expect(best("2026-10-14")).toMatchObject({
+      userId: "alice",
+      heldSeconds: 5 * HOUR,
+    });
+  });
+
+  it("splits a hold at Paris midnight", async () => {
+    await send("alice", "2026-10-14T22:00:00");
+    await send("bob", "2026-10-15T03:00:00");
+
+    expect(best("2026-10-14")?.heldSeconds).toBe(2 * HOUR);
+    expect(best("2026-10-15")?.heldSeconds).toBe(3 * HOUR);
+  });
+
+  it("counts nothing for days before the game started tracking them", async () => {
+    await send("alice", "2026-10-12T08:00:00");
+    closedDays.clear();
+    await send("bob", "2026-10-14T09:00:00");
+
+    expect([...dailyBests.keys()]).toEqual([key("guild", "2026-10-14")]);
+  });
+
+  it("closes yesterday with the message still standing at midnight", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    await send("bob", "2026-10-14T09:00:00");
+    await send("carol", "2026-10-14T20:00:00");
+
+    const closed = await service.closeDays(
+      "guild",
+      "game",
+      paris("2026-10-15T00:00:05")
+    );
+
+    expect(closed).toEqual([
+      { day: "2026-10-14", userId: "bob", heldSeconds: 11 * HOUR },
+    ]);
+    expect(closedDays.get("guild")).toBe("2026-10-14");
+
+    await send("alice", "2026-10-15T09:00:00");
+    expect(best("2026-10-14")?.userId).toBe("bob");
+    expect(best("2026-10-15")).toMatchObject({
+      userId: "carol",
+      heldSeconds: 9 * HOUR,
+    });
+  });
+
+  it("gives the day to the message standing at midnight when it held longest", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    await send("bob", "2026-10-14T09:00:00");
+
+    const closed = await service.closeDays(
+      "guild",
+      "game",
+      paris("2026-10-15T00:00:00")
+    );
+
+    expect(closed).toEqual([
+      { day: "2026-10-14", userId: "bob", heldSeconds: 15 * HOUR },
+    ]);
+  });
+
+  it("ignores a standing message from another channel", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+
+    expect(
+      await service.closeDays("guild", "other", paris("2026-10-15T00:00:00"))
+    ).toEqual([]);
+    expect(closedDays.get("guild")).toBe("2026-10-14");
+  });
+
+  it("closes a day only once", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    await send("bob", "2026-10-14T09:00:00");
+    const now = paris("2026-10-15T00:00:00");
+
+    await service.closeDays("guild", "game", now);
+    expect(await service.closeDays("guild", "game", now)).toEqual([]);
+  });
+
+  it("refreshes the cached images when it closes a day", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    await send("bob", "2026-10-14T09:00:00");
+    const revision = service.getRevision("guild");
+
+    await service.closeDays("guild", "game", paris("2026-10-15T00:00:00"));
+
+    expect(service.getRevision("guild")).toBeGreaterThan(revision);
+  });
+
+  it("still reports a 4h point when its daily hold cannot be recorded", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    const findUnique = vi
+      .spyOn(prisma.fourHourGameDailyBest, "findUnique")
+      .mockRejectedValueOnce(new Error("database down"));
+
+    const result = await send("bob", "2026-10-14T13:00:00");
+
+    findUnique.mockRestore();
+    expect(result).toMatchObject({ kind: "point", winnerId: "alice" });
+  });
+
+  it("still plays the 4h game when the daily state cannot be read", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    const findUnique = vi
+      .spyOn(prisma.fourHourGameDailyState, "findUnique")
+      .mockRejectedValueOnce(new Error("database down"));
+
+    const result = await send("bob", "2026-10-14T13:00:00");
+
+    findUnique.mockRestore();
+    expect(result).toMatchObject({ kind: "point", winnerId: "alice" });
+    expect(lastMessages.get("guild")?.authorId).toBe("bob");
+  });
+
+  it("returns nothing when another process closed the day first", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    await send("bob", "2026-10-14T09:00:00");
+    const updateMany = vi
+      .spyOn(prisma.fourHourGameDailyState, "updateMany")
+      .mockResolvedValueOnce({ count: 0 });
+
+    expect(
+      await service.closeDays("guild", "game", paris("2026-10-15T00:00:00"))
+    ).toEqual([]);
+    updateMany.mockRestore();
+  });
+
+  it("does not credit the previous channel's message when the game moves", async () => {
+    await send("alice", "2026-10-14T08:00:00");
+    await service.handleMessage(
+      message("bob", paris("2026-10-14T12:00:00"), { channelId: "new" }),
+      DELAY
+    );
+
+    expect(dailyBests.size).toBe(0);
+  });
+
+  it("starts with today on a guild that never played", async () => {
+    expect(
+      await service.closeDays("guild", "game", paris("2026-10-15T00:00:00"))
+    ).toEqual([]);
+    expect(closedDays.get("guild")).toBe("2026-10-14");
+  });
+
+  it("closes every day missed while the bot was down", async () => {
+    await send("alice", "2026-10-13T20:00:00");
+
+    const closed = await service.closeDays(
+      "guild",
+      "game",
+      paris("2026-10-15T10:00:00")
+    );
+
+    expect(closed).toEqual([
+      { day: "2026-10-13", userId: "alice", heldSeconds: 4 * HOUR },
+      { day: "2026-10-14", userId: "alice", heldSeconds: 24 * HOUR },
+    ]);
+  });
+
+  it("ranks players by closed daily points only", async () => {
+    closedDays.set("guild", "2026-10-14");
+    seedDailyBest("2026-10-12", "bob");
+    seedDailyBest("2026-10-13", "alice");
+    seedDailyBest("2026-10-14", "bob");
+    seedDailyBest("2026-10-15", "alice");
+
+    expect(await service.getDailyStandings("guild")).toEqual([
+      { userId: "bob", score: 2, rank: 1 },
+      { userId: "alice", score: 1, rank: 2 },
+    ]);
+    expect(await service.getDailyRank("guild", "alice")).toEqual({
+      score: 1,
+      rank: { rank: 2, total: 2 },
+    });
+    expect(await service.getDailyRank("guild", "carol")).toEqual({
+      score: 0,
+      rank: null,
+    });
+  });
+
+  it("ranks players as they stood at the end of a given day", async () => {
+    closedDays.set("guild", "2026-10-14");
+    seedDailyBest("2026-10-12", "bob");
+    seedDailyBest("2026-10-13", "alice");
+    seedDailyBest("2026-10-14", "alice");
+
+    expect(await service.getDailyStandings("guild", "2026-10-13")).toEqual([
+      { userId: "alice", score: 1, rank: 1 },
+      { userId: "bob", score: 1, rank: 2 },
+    ]);
+    expect(await service.getDailyStandings("guild", "2026-10-20")).toEqual([
+      { userId: "alice", score: 2, rank: 1 },
+      { userId: "bob", score: 1, rank: 2 },
+    ]);
+  });
+
+  it("returns a profile for a player with only daily points", async () => {
+    closedDays.set("guild", "2026-10-14");
+    seedDailyBest("2026-10-14", "alice");
+
+    expect(await service.getProfile("guild", "alice")).toMatchObject({
+      score: 0,
+      dailyPoints: 1,
+      dailyRank: { rank: 1, total: 1 },
+    });
+  });
+
+  it("removes daily points with the score", async () => {
+    closedDays.set("guild", "2026-10-14");
+    seedDailyBest("2026-10-14", "alice");
+
+    expect(await service.deleteScore("guild", "alice")).toBe(true);
+    expect(dailyBests.size).toBe(0);
+  });
+
+  it("reports nothing removed when only today's unclosed best was cleared", async () => {
+    closedDays.set("guild", "2026-10-14");
+    seedDailyBest("2026-10-15", "alice");
+
+    expect(await service.deleteScore("guild", "alice")).toBe(false);
+    expect(dailyBests.size).toBe(0);
   });
 });
