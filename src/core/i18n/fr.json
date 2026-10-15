@@ -20,6 +20,8 @@
   "config.number.invalid": "❌ `{{value}}` n'est pas un nombre valide.",
   "config.duration.invalid": "❌ `{{value}}` n'est pas une durée valide. Utilisez un nombre suivi de `s`, `m`, `h` ou `d`, par ex. `30s`, `4h`, `1h30m`.",
   "config.duration.placeholder": "ex. 30s, 5m, 4h, 1h30m, 3d",
+  "config.emoji.invalid": "❌ `{{value}}` n'est pas un emoji. Saisissez un seul emoji, comme 🚩, ou un emoji personnalisé, comme `<:nom:123456789>`.",
+  "config.emoji.placeholder": "ex. 🚩 ou <:nom:123456789>",
 
   "config.enum.noOptions": "Ce champ ne déclare aucune option.",
   "config.enum.selectMultiple": "Sélectionnez une ou plusieurs valeurs",
@@ -42,6 +44,7 @@
   "interaction.failedDisable": "Le module n'a pas pu être désactivé. Réessayez dans quelques instants.",
   "interaction.configOptionNotFound": "Cette option de configuration n'existe plus. Relancez `/config` pour afficher les options à jour.",
   "interaction.notBoolean": "Cette option n'est pas un booléen.",
+  "interaction.memberMissingPermissions": "Vous n'avez pas les permissions nécessaires pour cette action.",
 
   "scalarList.header": "# `{{moduleName}}` — {{entryName}}\n-# {{typeName}}\n> {{entryDesc}}",
   "scalarList.valueText": "Valeur (texte)",
@@ -76,6 +79,7 @@
   "type.category": "Catégorie",
   "type.choice": "Choix",
   "type.duration": "Durée",
+  "type.emoji": "Emoji",
   "type.listOf": "Liste de {{type}}",
 
   "modules.core.name": "Configuration Globale",
@@ -89,6 +93,9 @@
 
   "modules.rngdle.name": "RNGdle",
   "modules.rngdle.description": "Suit les tirages rngdle.com des membres : classements, profils, statistiques du serveur et classement quotidien.",
+
+  "modules.reports.name": "Signalements",
+  "modules.reports.description": "Permet aux membres de signaler un message par une réaction ou le menu contextuel ; les modérateurs reçoivent une alerte avec des actions.",
 
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Module de développement déclarant tous les types de configuration, pour tester l'UI de configuration.",

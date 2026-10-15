@@ -25,7 +25,7 @@ src/modules/my-module/
 ```typescript
 interface InteractionHandler {
   customId: string; // Prefix for custom ID matching
-  access: "admin" | "everyone"; // Who may trigger it — required
+  access: "admin" | "everyone" | { permissions: bigint }; // Who may trigger it — required
   check: (
     interaction: CompatibleInteraction,
     config: ConfigProvider
@@ -38,12 +38,12 @@ interface InteractionHandler {
 }
 ```
 
-| Field      | Required | Description                                                                                                    |
-| ---------- | -------- | -------------------------------------------------------------------------------------------------------------- |
-| `customId` | Yes      | Unique prefix — matched against the start of the interaction's `customId`                                      |
-| `access`   | Yes      | `"admin"` restricts the interaction to users with the `Administrator` permission; `"everyone"` opens it to all |
-| `check`    | Yes      | Type guard — narrows the interaction type for `execute`                                                        |
-| `execute`  | Yes      | Called when the interaction is triggered                                                                       |
+| Field      | Required | Description                                                                                                                                                          |
+| ---------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `customId` | Yes      | Unique prefix — matched against the start of the interaction's `customId`                                                                                            |
+| `access`   | Yes      | `"admin"` restricts the interaction to users with the `Administrator` permission; `{ permissions }` to users holding those permissions; `"everyone"` opens it to all |
+| `check`    | Yes      | Type guard — narrows the interaction type for `execute`                                                                                                              |
+| `execute`  | Yes      | Called when the interaction is triggered                                                                                                                             |
 
 The `config` parameter is a `ConfigProvider` giving access to the module's configuration.
 
@@ -173,6 +173,17 @@ export default declareInteractionHandler({
 ```
 
 The check is enforced **centrally** by the interaction dispatcher — no need for inline permission checks in your handler.
+
+To open an interaction to moderators rather than administrators only, require the Discord permissions it needs:
+
+```typescript
+export default declareInteractionHandler({
+  customId: "ban-author",
+  access: { permissions: PermissionFlagsBits.BanMembers },
+  check: (interaction) => interaction.isButton(),
+  // ...
+});
+```
 
 ## Registration
 

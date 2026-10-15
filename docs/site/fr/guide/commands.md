@@ -140,6 +140,24 @@ const builder = new SlashCommandBuilder()
   );
 ```
 
+## Menus contextuels
+
+Une commande peut aussi être un menu contextuel de message ou d'utilisateur (clic droit → _Applications_). Déclarez son type d'interaction en second paramètre de type ; le dispatcher la route par nom **et** par type, un menu contextuel peut donc porter le même nom qu'une commande slash.
+
+```typescript
+export default declareCommand<MaConfig, MessageContextMenuCommandInteraction>({
+  data: new ContextMenuCommandBuilder()
+    .setName("Report message")
+    .setNameLocalizations({ fr: "Signaler le message" })
+    .setType(ApplicationCommandType.Message),
+
+  async execute(interaction, config) {
+    const message = interaction.targetMessage;
+    // ...
+  },
+});
+```
+
 ## Enregistrement et propagation
 
 ### Dans le module
