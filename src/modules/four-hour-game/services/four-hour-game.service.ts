@@ -2,6 +2,7 @@ import prisma from "#lib/database.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
+import { standingOf } from "./channel-history.js";
 import {
   dayOf,
   previousDay,
@@ -39,6 +40,8 @@ export interface ChannelMessage {
 }
 
 export type LatestMessageFetcher = () => Promise<ChannelMessage | null>;
+
+export type HistoryFetcher = () => Promise<ChannelMessage[]>;
 
 export type SetScoreResult = "created" | "updated" | "removed" | "absent";
 
@@ -320,29 +323,56 @@ class FourHourGameService implements Service {
   resyncLastMessage(
     guildId: string,
     channelId: string,
-    fetchLatest: LatestMessageFetcher,
+    fetchHistory: HistoryFetcher,
     now: Date = new Date()
   ): Promise<void> {
     return this.queue.run(guildId, async () => {
       const last = await prisma.fourHourGameLastMessage.findUnique({
         where: { guildId },
       });
-      const latest = await fetchLatest();
-      await this.storeLastMessage(guildId, channelId, latest);
-      if (
-        last &&
-        latest &&
-        last.channelId === channelId &&
-        last.authorId !== latest.authorId &&
-        last.sentAt < latest.sentAt
-      ) {
-        const closedDay = await this.getClosedDay(guildId, now);
+      const history = await fetchHistory();
+      if (!last || last.channelId !== channelId) {
+        await this.storeLastMessage(guildId, channelId, standingOf(history));
+        return;
+      }
+
+      const oldest = history[0];
+      const deleted =
+        !history.some((message) => message.messageId === last.messageId) &&
+        (!oldest || oldest.sentAt <= last.sentAt);
+      if (deleted) {
+        await this.storeLastMessage(guildId, channelId, standingOf(history));
+        return;
+      }
+
+      const holds: { authorId: string; from: Date; to: Date }[] = [];
+      let current: ChannelMessage = last;
+      for (const message of history) {
+        if (
+          message.sentAt > last.sentAt &&
+          message.authorId !== current.authorId
+        ) {
+          holds.push({
+            authorId: current.authorId,
+            from: current.sentAt,
+            to: message.sentAt,
+          });
+          current = message;
+        }
+      }
+      if (holds.length === 0) {
+        return;
+      }
+
+      const closedDay = await this.getClosedDay(guildId, now);
+      for (const hold of holds) {
         await this.creditHolds(
           guildId,
-          last.authorId,
-          splitHold(last.sentAt, latest.sentAt, closedDay)
+          hold.authorId,
+          splitHold(hold.from, hold.to, closedDay)
         );
       }
+      await this.storeLastMessage(guildId, channelId, current);
     });
   }
 

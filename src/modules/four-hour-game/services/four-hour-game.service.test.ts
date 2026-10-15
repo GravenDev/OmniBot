@@ -718,6 +718,15 @@ describe("FourHourGameService deletions and resync", () => {
     authorId,
     sentAt,
   });
+  const history =
+    (...entries: [authorId: string, sentAt: Date][]) =>
+    async () =>
+      entries.map(([authorId, sentAt]) => ({
+        messageId: `${authorId}-${sentAt.getTime()}`,
+        authorId,
+        sentAt,
+      }));
+  const paris = (iso: string) => new Date(`${iso}+02:00`);
 
   it("falls back to the channel's real last message when the stored one is deleted", async () => {
     await service.handleMessage(message("alice", start), DELAY);
@@ -783,7 +792,6 @@ describe("FourHourGameService deletions and resync", () => {
   });
 
   it("credits the replaced message's hold on resync", async () => {
-    const paris = (iso: string) => new Date(`${iso}+02:00`);
     await service.handleMessage(
       message("zed", paris("2026-10-14T08:00:00")),
       DELAY
@@ -796,7 +804,11 @@ describe("FourHourGameService deletions and resync", () => {
     await service.resyncLastMessage(
       "guild",
       "game",
-      latest("bob", paris("2026-10-14T22:00:00"))
+      history(
+        ["zed", paris("2026-10-14T08:00:00")],
+        ["alice", paris("2026-10-14T09:00:00")],
+        ["bob", paris("2026-10-14T22:00:00")]
+      )
     );
     const closed = await service.closeDays(
       "guild",
@@ -810,7 +822,6 @@ describe("FourHourGameService deletions and resync", () => {
   });
 
   it("keeps the stored message on resync when only its author posted since", async () => {
-    const paris = (iso: string) => new Date(`${iso}+02:00`);
     await service.handleMessage(
       message("zed", paris("2026-10-14T08:00:00")),
       DELAY
@@ -823,7 +834,11 @@ describe("FourHourGameService deletions and resync", () => {
     await service.resyncLastMessage(
       "guild",
       "game",
-      latest("alice", paris("2026-10-14T09:00:00"))
+      history(
+        ["zed", paris("2026-10-14T08:00:00")],
+        ["alice", paris("2026-10-14T09:00:00")],
+        ["alice", paris("2026-10-14T09:30:00")]
+      )
     );
     const closed = await service.closeDays(
       "guild",
@@ -839,8 +854,43 @@ describe("FourHourGameService deletions and resync", () => {
     ]);
   });
 
-  it("moves to the author's later run on resync when someone replied in between", async () => {
-    const paris = (iso: string) => new Date(`${iso}+02:00`);
+  it("never moves the stored message back to an older run of its author", async () => {
+    await service.handleMessage(
+      message("zed", paris("2026-10-14T07:00:00")),
+      DELAY
+    );
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+    await service.handleMessage(
+      message("bob", paris("2026-10-14T09:00:00")),
+      DELAY
+    );
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T10:00:00")),
+      DELAY
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(
+        ["zed", paris("2026-10-14T07:00:00")],
+        ["alice", paris("2026-10-14T08:00:00")],
+        ["alice", paris("2026-10-14T10:00:00")]
+      )
+    );
+    const result = await service.handleMessage(
+      message("carol", paris("2026-10-14T12:30:00")),
+      DELAY
+    );
+
+    expect(result.kind).not.toBe("point");
+    expect(scores.size).toBe(0);
+  });
+
+  it("replays every hand-over missed while down", async () => {
     await service.handleMessage(
       message("zed", paris("2026-10-14T09:00:00")),
       DELAY
@@ -853,7 +903,12 @@ describe("FourHourGameService deletions and resync", () => {
     await service.resyncLastMessage(
       "guild",
       "game",
-      latest("alice", paris("2026-10-14T11:30:00"))
+      history(
+        ["zed", paris("2026-10-14T09:00:00")],
+        ["alice", paris("2026-10-14T10:00:00")],
+        ["bob", paris("2026-10-14T10:30:00")],
+        ["alice", paris("2026-10-14T11:30:00")]
+      )
     );
     expect(dailyBests.get(key("guild", "2026-10-14"))?.userId).toBe("zed");
     const result = await service.handleMessage(
@@ -866,20 +921,67 @@ describe("FourHourGameService deletions and resync", () => {
     expect(scores.size).toBe(0);
   });
 
+  it("keeps the hold cut by a reply even when its author posted again", async () => {
+    await service.handleMessage(
+      message("zed", paris("2026-10-14T09:00:00")),
+      DELAY
+    );
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T10:00:00")),
+      DELAY
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(
+        ["zed", paris("2026-10-14T09:00:00")],
+        ["alice", paris("2026-10-14T10:00:00")],
+        ["bob", paris("2026-10-14T15:00:00")],
+        ["alice", paris("2026-10-14T15:00:30")],
+        ["carol", paris("2026-10-14T20:00:00")]
+      )
+    );
+    const closed = await service.closeDays(
+      "guild",
+      "game",
+      paris("2026-10-15T08:00:00")
+    );
+
+    expect(closed).toEqual([
+      { day: "2026-10-14", userId: "alice", heldSeconds: 5 * 3600 },
+    ]);
+  });
+
+  it("falls back to the standing message when the stored one was deleted while down", async () => {
+    await service.handleMessage(message("zed", start), DELAY);
+    await service.handleMessage(message("alice", at(60)), DELAY);
+
+    await service.resyncLastMessage("guild", "game", history(["zed", start]));
+
+    expect(lastMessages.get("guild")).toMatchObject({
+      authorId: "zed",
+      sentAt: start,
+    });
+  });
+
   it("credits nothing on resync for a message stored in another channel", async () => {
     await service.handleMessage(
       message("alice", start, { channelId: "old" }),
       DELAY
     );
 
-    await service.resyncLastMessage("guild", "game", latest("bob", at(3600)));
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["bob", at(3600)])
+    );
 
     expect(dailyBests.size).toBe(0);
     expect(lastMessages.get("guild")?.authorId).toBe("bob");
   });
 
   it("starts counting on the first startup, not on the day of a reply missed while down", async () => {
-    const paris = (iso: string) => new Date(`${iso}+02:00`);
     lastMessages.set("guild", {
       guildId: "guild",
       channelId: "game",
@@ -891,7 +993,7 @@ describe("FourHourGameService deletions and resync", () => {
     await service.resyncLastMessage(
       "guild",
       "game",
-      latest("bob", paris("2026-10-11T09:00:00")),
+      history(["bob", paris("2026-10-11T09:00:00")]),
       paris("2026-10-14T10:00:00")
     );
 
@@ -902,7 +1004,11 @@ describe("FourHourGameService deletions and resync", () => {
   it("replaces the stored last message with the channel's real one on resync", async () => {
     await service.handleMessage(message("alice", start), DELAY);
 
-    await service.resyncLastMessage("guild", "game", latest("dave", at(3600)));
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["dave", at(3600)])
+    );
 
     expect(lastMessages.get("guild")).toMatchObject({
       channelId: "game",
