@@ -1,5 +1,7 @@
 import type {
+  AttachmentBuilder,
   Collection,
+  EmbedBuilder,
   GuildTextBasedChannel,
   Message,
   PartialMessage,
@@ -14,12 +16,23 @@ import {
   editedLog,
   isAuthoredByMember,
 } from "./entries.js";
-import { logChannelFor } from "./routing.js";
+import { type LogTarget, logTargetFor } from "./routing.js";
 
 type Config = ConfigProvider<MessageLogConfigSchema>;
 type AnyMessage = Message | PartialMessage;
 
 const NO_MENTIONS = { parse: [] };
+
+async function send(
+  target: LogTarget,
+  log: { embeds: EmbedBuilder[]; files: AttachmentBuilder[] }
+): Promise<void> {
+  await target.channel.send({
+    embeds: log.embeds,
+    files: target.withFiles ? log.files : [],
+    allowedMentions: NO_MENTIONS,
+  });
+}
 
 export async function logDeletion(
   message: AnyMessage,
@@ -29,8 +42,8 @@ export async function logDeletion(
   if (message.partial || !message.inGuild() || !isAuthoredByMember(message)) {
     return;
   }
-  const logChannel = logChannelFor(message.channel, config);
-  if (!logChannel) {
+  const target = logTargetFor(message.channel, config);
+  if (!target) {
     return;
   }
   const deletedBy = await lookupDeleter(
@@ -38,10 +51,10 @@ export async function logDeletion(
     message.author.id,
     message.channelId
   );
-  await logChannel.send({
-    ...deletedLog(message, config.t, deletedBy),
-    allowedMentions: NO_MENTIONS,
-  });
+  await send(
+    target,
+    deletedLog(message, config.t, deletedBy, target.withContent)
+  );
 }
 
 export async function logBulkDeletion(
@@ -51,14 +64,14 @@ export async function logBulkDeletion(
   channel: GuildTextBasedChannel,
   config: Config
 ): Promise<void> {
-  const logChannel = logChannelFor(channel, config);
-  if (!logChannel) {
+  const target = logTargetFor(channel, config);
+  if (!target) {
     return;
   }
-  await logChannel.send({
-    ...bulkDeleteLog(messages, channel.id, config.t),
-    allowedMentions: NO_MENTIONS,
-  });
+  await send(
+    target,
+    bulkDeleteLog(messages, channel.id, config.t, target.withContent)
+  );
 }
 
 export async function logEdit(
@@ -76,12 +89,9 @@ export async function logEdit(
   ) {
     return;
   }
-  const logChannel = logChannelFor(before.channel, config);
-  if (!logChannel) {
+  const target = logTargetFor(before.channel, config);
+  if (!target) {
     return;
   }
-  await logChannel.send({
-    ...editedLog(before, after, config.t),
-    allowedMentions: NO_MENTIONS,
-  });
+  await send(target, editedLog(before, after, config.t, target.withContent));
 }

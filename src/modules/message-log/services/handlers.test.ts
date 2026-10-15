@@ -1,4 +1,11 @@
-import { Collection, type Message, type PartialMessage } from "discord.js";
+import {
+  ChannelType,
+  Collection,
+  type Message,
+  type PartialMessage,
+  PermissionFlagsBits,
+  PermissionsBitField,
+} from "discord.js";
 import { describe, expect, it, vi } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
 import type { MessageLogConfigSchema } from "#modules/message-log/message-log.config.js";
@@ -9,13 +16,16 @@ const t = (key: string) => key;
 function fakeSourceChannel(
   id = "200",
   parentId: string | null = null,
-  threadCategoryId?: string
+  threadCategoryId?: string,
+  type: ChannelType = ChannelType.GuildText
 ) {
   return {
     id,
+    type,
     parentId,
     parent: threadCategoryId ? { parentId: threadCategoryId } : null,
     isThread: () => threadCategoryId !== undefined,
+    guild: { roles: { cache: new Collection() } },
   };
 }
 
@@ -25,10 +35,21 @@ function fakeConfig(
     excludedCategories?: string[];
     logEdits?: boolean;
     noChannel?: boolean;
+    botPermissions?: bigint[];
   } = {}
 ) {
   const send = vi.fn(async () => ({}));
-  const logChannel = { id: "log", isSendable: () => true, send };
+  const granted = new PermissionsBitField(
+    options.botPermissions ?? PermissionsBitField.All
+  );
+  const logChannel = {
+    id: "log",
+    isSendable: () => true,
+    isDMBased: () => false,
+    guild: { members: { me: { id: "bot" } } },
+    permissionsFor: () => granted,
+    send,
+  };
   const values: Record<string, unknown> = {
     logChannel: options.noChannel ? undefined : logChannel,
     excludedChannels: (options.excluded ?? []).map((id) => ({ id })),
@@ -152,6 +173,59 @@ describe("logDeletion", () => {
     await logDeletion(fakeMessage(), config, noDeleter);
     expect(send).not.toHaveBeenCalled();
   });
+
+  it("does nothing, not even an audit lookup, when the bot cannot post", async () => {
+    const { config, send } = fakeConfig({
+      botPermissions: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.EmbedLinks,
+      ],
+    });
+    const lookup = vi.fn(async () => null);
+    await logDeletion(fakeMessage(), config, lookup);
+    expect(lookup).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("drops the attached file when the bot cannot attach files", async () => {
+    const { config, send } = fakeConfig({
+      botPermissions: [
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+        PermissionFlagsBits.EmbedLinks,
+      ],
+    });
+    await logDeletion(
+      fakeMessage({ content: "a".repeat(4090) }),
+      config,
+      noDeleter
+    );
+    const [payload] = send.mock.calls[0] as unknown as [{ files: unknown[] }];
+    expect(payload.files).toHaveLength(0);
+  });
+
+  it("hides the content of a channel more private than the log channel", async () => {
+    const { config, send } = fakeConfig();
+    await logDeletion(
+      fakeMessage({
+        content: "secret plan",
+        channel: fakeSourceChannel(
+          "thread",
+          "201",
+          "cat",
+          ChannelType.PrivateThread
+        ),
+      }),
+      config,
+      noDeleter
+    );
+    const [payload] = send.mock.calls[0] as unknown as [
+      { embeds: { data: { description: string } }[]; files: unknown[] },
+    ];
+    expect(payload.embeds[0]!.data.description).toContain("hidden");
+    expect(payload.embeds[0]!.data.description).not.toContain("secret plan");
+    expect(payload.files).toHaveLength(0);
+  });
 });
 
 describe("logBulkDeletion", () => {
@@ -181,6 +255,26 @@ describe("logEdit", () => {
       config
     );
     expect(send).toHaveBeenCalledOnce();
+  });
+
+  it("hides both versions of an edit in a more private channel", async () => {
+    const { config, send } = fakeConfig();
+    const channel = fakeSourceChannel(
+      "thread",
+      "201",
+      "cat",
+      ChannelType.PrivateThread
+    );
+    await logEdit(
+      fakeMessage({ content: "a", channel }),
+      fakeMessage({ content: "b", channel }),
+      config
+    );
+    const [payload] = send.mock.calls[0] as unknown as [
+      { embeds: { data: { description: string; fields?: unknown[] } }[] },
+    ];
+    expect(payload.embeds[0]!.data.description).toContain("hidden");
+    expect(payload.embeds[0]!.data.fields ?? []).toHaveLength(0);
   });
 
   it("ignores updates that keep the content, like an embed loading", async () => {

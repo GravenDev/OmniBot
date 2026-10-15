@@ -69,7 +69,8 @@ function quoteBlock(text: string): string {
 function deletedDescription(
   message: Message,
   t: TFunction,
-  deletedBy: string | null
+  deletedBy: string | null,
+  withContent: boolean
 ): string {
   const header = [
     `**${t("deleted.title", {
@@ -81,6 +82,9 @@ function deletedDescription(
   if (deletedBy) {
     header.push(t("deleted.by", { moderator: `<@${deletedBy}>` }));
   }
+  if (!withContent) {
+    return [header.join("\n"), t("hidden")].join("\n\n");
+  }
   const body = [message.content, ...attachmentLines(message)].filter(Boolean);
   return [header.join("\n"), body.length > 0 ? quoteBlock(body.join("\n")) : ""]
     .filter(Boolean)
@@ -90,11 +94,15 @@ function deletedDescription(
 export function deletedEmbed(
   message: Message,
   t: TFunction,
-  deletedBy: string | null
+  deletedBy: string | null,
+  withContent = true
 ): EmbedBuilder {
   return baseEmbed(message, DELETED_COLOR)
     .setDescription(
-      truncate(deletedDescription(message, t, deletedBy), DESCRIPTION_LIMIT)
+      truncate(
+        deletedDescription(message, t, deletedBy, withContent),
+        DESCRIPTION_LIMIT
+      )
     )
     .setFooter(footer(message, t));
 }
@@ -102,10 +110,12 @@ export function deletedEmbed(
 export function deletedLog(
   message: Message,
   t: TFunction,
-  deletedBy: string | null
+  deletedBy: string | null,
+  withContent = true
 ) {
   const cut =
-    deletedDescription(message, t, deletedBy).length > DESCRIPTION_LIMIT;
+    withContent &&
+    deletedDescription(message, t, deletedBy, true).length > DESCRIPTION_LIMIT;
   const files = cut
     ? [
         new AttachmentBuilder(Buffer.from(message.content, "utf8"), {
@@ -113,10 +123,18 @@ export function deletedLog(
         }),
       ]
     : [];
-  return { embeds: [deletedEmbed(message, t, deletedBy)], files };
+  return {
+    embeds: [deletedEmbed(message, t, deletedBy, withContent)],
+    files,
+  };
 }
 
-export function editedLog(before: Message, after: Message, t: TFunction) {
+export function editedLog(
+  before: Message,
+  after: Message,
+  t: TFunction,
+  withContent = true
+) {
   const content = (message: Message) =>
     truncate(message.content || t("edited.empty"), FIELD_LIMIT);
   const embed = baseEmbed(before, EDITED_COLOR)
@@ -127,13 +145,17 @@ export function editedLog(before: Message, after: Message, t: TFunction) {
           channel: `<#${before.channelId}>`,
         })}**`,
         t("edited.jump", { url: after.url }),
+        ...(withContent ? [] : ["", t("hidden")]),
       ].join("\n")
     )
-    .addFields(
-      { name: t("edited.before"), value: content(before) },
-      { name: t("edited.after"), value: content(after) }
-    )
     .setFooter(footer(before, t));
+  if (!withContent) {
+    return { embeds: [embed], files: [] };
+  }
+  embed.addFields(
+    { name: t("edited.before"), value: content(before) },
+    { name: t("edited.after"), value: content(after) }
+  );
 
   const tooLong = [before, after].some(
     (message) => message.content.length > FIELD_LIMIT
@@ -173,7 +195,8 @@ export function bulkDeleteLog(
     | ReadonlyCollection<string, AnyMessage>
     | Collection<string, AnyMessage>,
   channelId: string,
-  t: TFunction
+  t: TFunction,
+  withContent = true
 ) {
   const known = [...messages.values()]
     .filter(
@@ -189,7 +212,9 @@ export function bulkDeleteLog(
     })}**`,
   ];
   if (known.length > 0) {
-    lines.push(t("bulk.known", { count: known.length }));
+    lines.push(
+      withContent ? t("bulk.known", { count: known.length }) : t("hidden")
+    );
   }
   const embed = new EmbedBuilder()
     .setColor(DELETED_COLOR)
@@ -197,7 +222,7 @@ export function bulkDeleteLog(
     .setTimestamp();
 
   const files =
-    known.length > 0
+    withContent && known.length > 0
       ? [
           new AttachmentBuilder(
             Buffer.from(known.map(transcriptLine).join("\n"), "utf8"),

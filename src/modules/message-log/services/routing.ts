@@ -1,6 +1,23 @@
-import type { GuildBasedChannel, SendableChannels } from "discord.js";
+import {
+  type GuildBasedChannel,
+  type GuildTextBasedChannel,
+  PermissionFlagsBits,
+} from "discord.js";
+import { widensAudience } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { MessageLogConfigSchema } from "#modules/message-log/message-log.config.js";
+
+export interface LogTarget {
+  channel: GuildTextBasedChannel;
+  withContent: boolean;
+  withFiles: boolean;
+}
+
+const REQUIRED_PERMISSIONS = [
+  PermissionFlagsBits.ViewChannel,
+  PermissionFlagsBits.SendMessages,
+  PermissionFlagsBits.EmbedLinks,
+];
 
 export function isExcluded(
   channel: GuildBasedChannel,
@@ -13,12 +30,12 @@ export function isExcluded(
   return ids.some((id) => id !== null && excludedIds.has(id));
 }
 
-export function logChannelFor(
+export function logTargetFor(
   source: GuildBasedChannel | null,
   config: ConfigProvider<MessageLogConfigSchema>
-): SendableChannels | null {
+): LogTarget | null {
   const logChannel = config.get("logChannel");
-  if (!source || !logChannel?.isSendable()) {
+  if (!source || !logChannel?.isSendable() || logChannel.isDMBased()) {
     return null;
   }
   const excludedIds = new Set(
@@ -28,5 +45,17 @@ export function logChannelFor(
     ].map((excluded) => excluded.id)
   );
   excludedIds.add(logChannel.id);
-  return isExcluded(source, excludedIds) ? null : logChannel;
+  if (isExcluded(source, excludedIds)) {
+    return null;
+  }
+  const me = logChannel.guild.members.me;
+  const permissions = me ? logChannel.permissionsFor(me) : null;
+  if (permissions && !permissions.has(REQUIRED_PERMISSIONS)) {
+    return null;
+  }
+  return {
+    channel: logChannel,
+    withContent: !widensAudience(source, logChannel),
+    withFiles: !permissions || permissions.has(PermissionFlagsBits.AttachFiles),
+  };
 }
