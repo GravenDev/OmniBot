@@ -3,6 +3,7 @@ import CategoryConfigHandler from "./category.config-handler.js";
 import ChannelConfigHandler from "./channel.config-handler.js";
 import type { ConfigTypeHandler } from "./config-handler.js";
 import DurationConfigHandler from "./duration.config-handler.js";
+import EmojiConfigHandler from "./emoji.config-handler.js";
 import EnumConfigHandler from "./enum.config-handler.js";
 import NumberConfigHandler from "./number.config-handler.js";
 import RoleConfigHandler from "./role.config-handler.js";
@@ -20,6 +21,7 @@ const handlers: Record<ConfigType, ConfigTypeHandler<ConfigType> | null> = {
   [ConfigType.CATEGORY]: new CategoryConfigHandler(),
   [ConfigType.ENUM]: new EnumConfigHandler(),
   [ConfigType.DURATION]: new DurationConfigHandler(),
+  [ConfigType.EMOJI]: new EmojiConfigHandler(),
 };
 
 export default handlers;

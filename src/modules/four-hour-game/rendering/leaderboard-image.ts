@@ -2,6 +2,7 @@ import {
   renderLeaderboardTable,
   type LeaderboardEntry,
 } from "#lib/leaderboard-table.js";
+import { ACCENT } from "./theme.js";
 
 export interface LeaderboardRow extends LeaderboardEntry {
   score: number;
@@ -20,11 +21,13 @@ export function renderLeaderboard(
   return renderLeaderboardTable({
     headers,
     rows,
+    accent: ACCENT,
     columns: [
       {
         header: headers.score,
-        x: 650,
-        maxWidth: 140,
+        x: 770,
+        maxWidth: 250,
+        align: "right",
         cell: (row) => ({ text: String(row.score) }),
       },
     ],

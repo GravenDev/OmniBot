@@ -17,7 +17,7 @@ export class Registry {
    * An array of commands declared by the module.
    * @private
    */
-  private readonly _commands: Declared<Command<any>>[] = [];
+  private readonly _commands: Declared<Command<any, any>>[] = [];
 
   /**
    * An array of event listeners declared by the module.
@@ -40,7 +40,7 @@ export class Registry {
    *
    * @returns An array of registered commands.
    */
-  get commands(): Declared<Command>[] {
+  get commands(): Declared<Command<any, any>>[] {
     return [...this._commands];
   }
 
@@ -79,13 +79,13 @@ export class Registry {
     handler: Declared<
       | InteractionHandler<TCompatibleInteraction, TSchema>
       | EventListener<TEventType, TSchema>
-      | Command<TSchema>
+      | Command<TSchema, any>
       | ScheduledTask
     >
   ) {
     switch (handler.type) {
       case DeclarationType.Command:
-        this._commands.push(handler as Declared<Command<TSchema>>);
+        this._commands.push(handler as Declared<Command<TSchema, any>>);
         break;
       case DeclarationType.Listener:
         this._listeners.push(

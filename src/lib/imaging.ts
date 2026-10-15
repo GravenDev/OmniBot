@@ -24,11 +24,21 @@ export const PALETTE = {
   rowEven: [35, 35, 35],
   rowOdd: [45, 45, 45],
   box: [35, 35, 35],
+  border: [52, 52, 52],
+  separator: [80, 80, 80],
+  track: [50, 50, 50],
   text: [255, 255, 255],
   title: [200, 200, 200],
   subtext: [170, 170, 170],
   placeholder: [120, 120, 120],
 } as const satisfies Record<string, Rgb>;
+
+export const DEFAULT_ACCENT: Rgb = [124, 140, 255];
+
+const ACCENT_LINE = 3;
+const RING_WIDTH = 4;
+const HIGHLIGHT_ALPHA = 0.08;
+const HIGHLIGHT_EDGE = 5;
 
 export function rgb([r, g, b]: Rgb): string {
   return `rgb(${r}, ${g}, ${b})`;
@@ -107,13 +117,55 @@ export function fillBand(
 export function createBoard(
   width: number,
   height: number,
-  headerHeight: number
+  headerHeight: number,
+  accent: Rgb = DEFAULT_ACCENT
 ): SKRSContext2D {
   registerFont(new URL("outfit.ttf", ASSETS), FONT);
   const ctx = createCanvas(width, height).getContext("2d");
   fillBand(ctx, PALETTE.background, 0, height - 1);
-  fillBand(ctx, PALETTE.header, 0, headerHeight);
+  fillBand(ctx, PALETTE.header, 0, headerHeight - 1);
+  fillBand(ctx, accent, headerHeight - ACCENT_LINE, headerHeight - 1);
   return ctx;
+}
+
+export function drawHighlight(
+  ctx: SKRSContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: Rgb,
+  {
+    radius = 0,
+    edge = "left",
+  }: { radius?: number; edge?: "left" | "right" } = {}
+): void {
+  ctx.save();
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, radius);
+  ctx.clip();
+  ctx.fillStyle = rgb(color);
+  ctx.globalAlpha = HIGHLIGHT_ALPHA;
+  ctx.fillRect(x, y, width, height);
+  ctx.globalAlpha = 1;
+  const edgeX = edge === "left" ? x : x + width - HIGHLIGHT_EDGE;
+  ctx.fillRect(edgeX, y, HIGHLIGHT_EDGE, height);
+  ctx.restore();
+}
+
+export function drawPortrait(
+  ctx: SKRSContext2D,
+  image: Image | null,
+  x: number,
+  y: number,
+  size: number,
+  ring: Rgb
+): void {
+  ctx.beginPath();
+  ctx.arc(x + size / 2, y + size / 2, size / 2 + RING_WIDTH, 0, Math.PI * 2);
+  ctx.fillStyle = rgb(ring);
+  ctx.fill();
+  drawCircularImage(ctx, image, x, y, size);
 }
 
 export function drawCircularImage(

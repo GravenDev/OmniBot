@@ -20,6 +20,8 @@
   "config.number.invalid": "❌ `{{value}}` is not a valid number.",
   "config.duration.invalid": "❌ `{{value}}` is not a valid duration. Use a number followed by `s`, `m`, `h` or `d`, e.g. `30s`, `4h`, `1h30m`.",
   "config.duration.placeholder": "e.g. 30s, 5m, 4h, 1h30m, 3d",
+  "config.emoji.invalid": "❌ `{{value}}` is not an emoji. Enter a single emoji such as 🚩, or a custom emoji such as `<:name:123456789>`.",
+  "config.emoji.placeholder": "e.g. 🚩 or <:name:123456789>",
 
   "config.enum.noOptions": "This field declares no options.",
   "config.enum.selectMultiple": "Select one or more values",
@@ -42,6 +44,7 @@
   "interaction.failedDisable": "The module could not be disabled. Try again in a few moments.",
   "interaction.configOptionNotFound": "This configuration option no longer exists. Run `/config` again to see the current options.",
   "interaction.notBoolean": "This option is not a boolean toggle.",
+  "interaction.memberMissingPermissions": "You do not have the permissions required for this action.",
 
   "scalarList.header": "# `{{moduleName}}` — {{entryName}}\n-# {{typeName}}\n> {{entryDesc}}",
   "scalarList.valueText": "Value (text)",
@@ -76,6 +79,7 @@
   "type.category": "Category",
   "type.choice": "Choice",
   "type.duration": "Duration",
+  "type.emoji": "Emoji",
   "type.listOf": "List of {{type}}",
 
   "modules.core.name": "Global Configuration",
@@ -89,6 +93,9 @@
 
   "modules.rngdle.name": "RNGdle",
   "modules.rngdle.description": "Tracks the members' rngdle.com rolls: leaderboards, profiles, server statistics and a daily leaderboard.",
+
+  "modules.reports.name": "Reports",
+  "modules.reports.description": "Lets members report a message with a reaction or the context menu; moderators get an alert with actions.",
 
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Development module declaring all configuration types, used to test the configuration UI.",

@@ -1,4 +1,4 @@
-import { createCanvas } from "@napi-rs/canvas";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { describe, expect, it, vi } from "vitest";
 
 const { centeredTexts } = vi.hoisted(() => ({
@@ -32,6 +32,28 @@ import {
   renderStatCard,
   type StatCard,
 } from "./stat-card.js";
+
+async function countColor(
+  png: Buffer,
+  [x, y, width, height]: [number, number, number, number],
+  color: readonly number[]
+): Promise<number> {
+  const image = await loadImage(png);
+  const ctx = createCanvas(image.width, image.height).getContext("2d");
+  ctx.drawImage(image, 0, 0);
+  const data = ctx.getImageData(x, y, width, height).data;
+  let count = 0;
+  for (let index = 0; index < data.length; index += 4) {
+    if (
+      data[index] === color[0] &&
+      data[index + 1] === color[1] &&
+      data[index + 2] === color[2]
+    ) {
+      count++;
+    }
+  }
+  return count;
+}
 
 function pngSize(png: Buffer) {
   return { width: png.readUInt32BE(16), height: png.readUInt32BE(20) };
@@ -69,6 +91,24 @@ describe("renderStatCard", () => {
     expect(draw).toHaveBeenCalledWith(expect.anything(), 660, 160, 300, 240);
   });
 
+  it("lays a wider card out across its whole width", async () => {
+    const draw = vi.fn();
+    centeredTexts.length = 0;
+
+    await renderStatCard(
+      card({
+        width: 1200,
+        rank: { position: 7, total: 12 },
+        rows: [[box], [box]],
+        aside: { width: 300, draw },
+      })
+    );
+
+    expect(draw).toHaveBeenCalledWith(expect.anything(), 860, 160, 300, 240);
+    const total = centeredTexts.find((entry) => entry.text === " / 12")!;
+    expect(total.right).toBeCloseTo(1200 - 40, 0);
+  });
+
   it("renders a subtitle and a rank, with or without a medal", async () => {
     for (const position of [1, 7]) {
       const png = await renderStatCard(
@@ -103,6 +143,31 @@ describe("renderStatCard", () => {
       }
     }
   );
+
+  it("draws the rank in the accent", async () => {
+    const accent = [10, 200, 90] as const;
+    const png = await renderStatCard(
+      card({ rank: { position: 7, total: 12 }, accent })
+    );
+
+    expect(await countColor(png, [700, 0, 300, 120], accent)).toBeGreaterThan(
+      100
+    );
+  });
+
+  it("highlights a colored box unless told otherwise", async () => {
+    const color = [10, 200, 90] as const;
+    const edge: [number, number, number, number] = [42, 200, 3, 20];
+    const highlighted = await renderStatCard(
+      card({ rows: [[{ ...box, color }]] })
+    );
+    const plain = await renderStatCard(
+      card({ rows: [[{ ...box, color, highlight: false }]] })
+    );
+
+    expect(await countColor(highlighted, edge, color)).toBe(60);
+    expect(await countColor(plain, edge, color)).toBe(0);
+  });
 
   it("rejects a row that cannot be laid out", async () => {
     await expect(

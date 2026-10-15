@@ -1,7 +1,9 @@
 import type { Image, SKRSContext2D } from "@napi-rs/canvas";
 import {
   createBoard,
+  DEFAULT_ACCENT,
   drawCircularImage,
+  drawHighlight,
   fillBand,
   fillTextCentered,
   font,
@@ -16,6 +18,7 @@ const DEFAULT_WIDTH = 800;
 const HEADER_HEIGHT = 100;
 const ROW_HEIGHT = 90;
 const FONT_SIZE = 30;
+const HEADER_FONT_SIZE = 24;
 const RANK_X = 15;
 const RANK_TEXT_X = 30;
 const MEDAL_SIZE = 50;
@@ -27,7 +30,6 @@ const ICON_SIZE = 40;
 const ICON_GAP = 10;
 const CALLER_GAP = 20;
 const SEPARATOR_HEIGHT = 2;
-const SEPARATOR_COLOR: Rgb = [80, 80, 80];
 
 export interface LeaderboardEntry {
   rank: number;
@@ -56,6 +58,7 @@ export interface LeaderboardTable<Row> {
   rows: Row[];
   caller?: Row | undefined;
   width?: number;
+  accent?: Rgb;
 }
 
 function fitFont(
@@ -102,16 +105,17 @@ export async function renderLeaderboardTable<Row extends LeaderboardEntry>({
   rows,
   caller,
   width = DEFAULT_WIDTH,
+  accent = DEFAULT_ACCENT,
 }: LeaderboardTable<Row>): Promise<Buffer> {
   const bottom = HEADER_HEIGHT + rows.length * ROW_HEIGHT;
   const callerTop = bottom + CALLER_GAP;
   const height = caller ? callerTop + ROW_HEIGHT : bottom;
-  const ctx = createBoard(width, height, HEADER_HEIGHT);
+  const ctx = createBoard(width, height, HEADER_HEIGHT, accent);
   const medals = await loadMedals();
 
   const headerY = HEADER_HEIGHT / 2;
-  ctx.font = font(FONT_SIZE);
-  ctx.fillStyle = rgb(PALETTE.text);
+  ctx.font = font(HEADER_FONT_SIZE);
+  ctx.fillStyle = rgb(PALETTE.title);
   ctx.textAlign = "left";
   fillTextCentered(ctx, headers.rank, RANK_X, headerY);
   fillTextCentered(ctx, headers.player, PLAYER_X, headerY);
@@ -120,8 +124,16 @@ export async function renderLeaderboardTable<Row extends LeaderboardEntry>({
     fillTextCentered(ctx, header, x, headerY);
   }
 
-  const drawRow = (row: Row, top: number, color: Rgb): void => {
-    fillBand(ctx, color, top, top + ROW_HEIGHT);
+  const drawRow = (
+    row: Row,
+    top: number,
+    color: Rgb,
+    highlight?: Rgb
+  ): void => {
+    fillBand(ctx, color, top, top + ROW_HEIGHT - 1);
+    if (highlight) {
+      drawHighlight(ctx, 0, top, width, ROW_HEIGHT, highlight);
+    }
     const y = top + ROW_HEIGHT / 2;
     const medal = medals[row.rank - 1];
     if (medal) {
@@ -147,8 +159,8 @@ export async function renderLeaderboardTable<Row extends LeaderboardEntry>({
   if (caller) {
     const separatorTop = bottom + CALLER_GAP / 2;
     const separatorBottom = separatorTop + SEPARATOR_HEIGHT - 1;
-    fillBand(ctx, SEPARATOR_COLOR, separatorTop, separatorBottom);
-    drawRow(caller, callerTop, PALETTE.rowEven);
+    fillBand(ctx, PALETTE.separator, separatorTop, separatorBottom);
+    drawRow(caller, callerTop, PALETTE.rowEven, accent);
   }
 
   return ctx.canvas.encode("png");

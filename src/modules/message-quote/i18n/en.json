@@ -1,0 +1,15 @@
+{
+  "config.excludedChannels.name": "Excluded channels",
+  "config.excludedChannels.description": "Channels whose messages are never quoted, and where posted links are not quoted.",
+  "config.excludedCategories.name": "Excluded categories",
+  "config.excludedCategories.description": "Categories whose channels are treated as excluded channels.",
+  "config.ignoredRoles.name": "Ignored roles",
+  "config.ignoredRoles.description": "Optional roles (game, notification…) held only by members who also have the member role: ignored when comparing who sees the quoted channel and the destination.",
+  "quote.footer": "Quoted by {{quoter}} | in #{{channel}}",
+  "quote.footerForwarded": "Quoted by {{quoter}} | forwarded in #{{channel}}",
+  "quote.noContent": "*Message without text*",
+  "quote.jump": "Go to message",
+  "quote.jumpNumbered": "Message {{number}}",
+  "delete.button": "Delete",
+  "delete.notAllowed": "Only the member who posted the link, the quoted authors or a moderator can delete this quote."
+}

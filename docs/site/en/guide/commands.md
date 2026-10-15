@@ -133,6 +133,24 @@ const builder = new SlashCommandBuilder()
   );
 ```
 
+## Context Menus
+
+A command can also be a message or user context menu (right click → _Apps_). Declare its interaction type as the second type parameter; the dispatcher routes it by name **and** type, so a context menu may share its name with a slash command.
+
+```typescript
+export default declareCommand<MyConfig, MessageContextMenuCommandInteraction>({
+  data: new ContextMenuCommandBuilder()
+    .setName("Report message")
+    .setNameLocalizations({ fr: "Signaler le message" })
+    .setType(ApplicationCommandType.Message),
+
+  async execute(interaction, config) {
+    const message = interaction.targetMessage;
+    // ...
+  },
+});
+```
+
 ## Registration & Propagation
 
 ### In the Module

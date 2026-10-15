@@ -17,6 +17,22 @@ export enum ConfigType {
   ROLE = "ROLE",
   ENUM = "ENUM",
   DURATION = "DURATION",
+  EMOJI = "EMOJI",
+}
+
+const CUSTOM_EMOJI = /^<a?:\w{2,32}:\d{17,20}>$/;
+const EMOJI_CODEPOINT = /\p{Extended_Pictographic}|\p{Regional_Indicator}|⃣/u;
+
+export function isEmoji(value: string): boolean {
+  if (CUSTOM_EMOJI.test(value)) {
+    return true;
+  }
+  const graphemes = [
+    ...new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(
+      value
+    ),
+  ];
+  return graphemes.length === 1 && EMOJI_CODEPOINT.test(value);
 }
 
 export const ConfigValidator: Record<ConfigType, (value: string) => boolean> = {
@@ -35,6 +51,7 @@ export const ConfigValidator: Record<ConfigType, (value: string) => boolean> = {
   // handler (which has access to the entry); this generic predicate cannot.
   ENUM: () => true,
   DURATION: (value: string) => parseDuration(value) !== null,
+  EMOJI: isEmoji,
 };
 
 export function getConfigTypeName(
@@ -64,6 +81,7 @@ export const configTypeNames: Record<ConfigType, string> = {
   CATEGORY: "category",
   ENUM: "choice",
   DURATION: "duration",
+  EMOJI: "emoji",
 };
 
 export type ListOf<T extends ConfigType> = [T];
@@ -80,6 +98,7 @@ export interface TypeMap {
   // ConfigEntryValue narrows to the literal union when options are present.
   [ConfigType.ENUM]: string;
   [ConfigType.DURATION]: number;
+  [ConfigType.EMOJI]: string;
 }
 
 export type ResolveType<T extends ConfigType | ListOf<ConfigType>> =
@@ -141,7 +160,9 @@ export type ConfigEntry<T extends ConfigType> =
   // Without this, `{ type: ENUM }` would match SimpleConfigEntry and compile
   // without options, then fail at runtime building an empty select menu.
   | SimpleConfigEntry<Exclude<T, ConfigType.ENUM>>
-  | ListConfigEntry<Exclude<T, ConfigType.ENUM | ConfigType.DURATION>>
+  | ListConfigEntry<
+      Exclude<T, ConfigType.ENUM | ConfigType.DURATION | ConfigType.EMOJI>
+    >
   | EnumConfigEntry
   | EnumListConfigEntry;
 
