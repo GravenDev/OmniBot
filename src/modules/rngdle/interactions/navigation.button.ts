@@ -11,6 +11,7 @@ import { declareInteractionHandler } from "#lib/interaction.js";
 import store, { type Account } from "#modules/rngdle/services/store.js";
 import sync from "#modules/rngdle/services/sync.js";
 import {
+  historyCard,
   profileCard,
   type ViewContext,
 } from "#modules/rngdle/services/views.js";
@@ -18,7 +19,7 @@ import { overallPageMessage } from "./overall-page.button.js";
 
 const CUSTOM_ID = "rngdle-nav";
 
-export const NAV_TARGETS = ["profile", "overall"] as const;
+export const NAV_TARGETS = ["profile", "history", "overall"] as const;
 
 export type NavTarget = (typeof NAV_TARGETS)[number];
 
@@ -53,7 +54,35 @@ export async function profileMessage(
             name: `profile-${account.username}.png`,
           }),
         ],
-        components: [navigationRow(context.t, ["overall"])],
+        components: [navigationRow(context.t, ["history", "overall"])],
+      }
+    : {
+        content: context.t("profile.noRolls", { username: account.username }),
+      };
+}
+
+export async function historyMessage(
+  context: ViewContext,
+  account: Account | null,
+  self: boolean,
+  count?: number
+) {
+  if (!account) {
+    return {
+      content: context.t(
+        self ? "profile.notRegisteredSelf" : "profile.notRegistered"
+      ),
+    };
+  }
+  const image = await historyCard(context, account, count);
+  return image
+    ? {
+        files: [
+          new AttachmentBuilder(image, {
+            name: `history-${account.username}.png`,
+          }),
+        ],
+        components: [navigationRow(context.t, ["profile", "overall"])],
       }
     : {
         content: context.t("profile.noRolls", { username: account.username }),
@@ -81,14 +110,20 @@ export default declareInteractionHandler<ButtonInteraction>({
       t: config.t,
       locale: config.locale,
     };
+    if (target === "overall") {
+      await interaction.editReply(
+        await overallPageMessage(context, 1, interaction.user.id, "private")
+      );
+      return;
+    }
+    const account = await store.account(
+      interaction.guildId,
+      interaction.user.id
+    );
     await interaction.editReply(
       target === "profile"
-        ? await profileMessage(
-            context,
-            await store.account(interaction.guildId, interaction.user.id),
-            true
-          )
-        : await overallPageMessage(context, 1, interaction.user.id, "private")
+        ? await profileMessage(context, account, true)
+        : await historyMessage(context, account, true)
     );
   },
 });

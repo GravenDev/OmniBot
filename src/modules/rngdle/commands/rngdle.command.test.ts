@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   dailyLeaderboard: vi.fn(),
   serverCard: vi.fn(),
   profileCard: vi.fn(),
+  historyCard: vi.fn(),
   overallPage: vi.fn(),
   setReminder: vi.fn(),
   mentionable: vi.fn(),
@@ -41,6 +42,7 @@ vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
   dailyLeaderboard: mocks.dailyLeaderboard,
   serverCard: mocks.serverCard,
   profileCard: mocks.profileCard,
+  historyCard: mocks.historyCard,
   overallPage: mocks.overallPage,
 }));
 
@@ -58,6 +60,7 @@ interface Options {
   username?: string;
   member?: { id: string };
   strings?: Record<string, string>;
+  integers?: Record<string, number>;
   enabled?: boolean;
 }
 
@@ -66,6 +69,7 @@ function interactionFor({
   username,
   member,
   strings,
+  integers,
   enabled,
 }: Options) {
   return {
@@ -84,7 +88,7 @@ function interactionFor({
         return value ?? null;
       },
       getUser: () => member ?? null,
-      getInteger: () => null,
+      getInteger: (name: string) => integers?.[name] ?? null,
       getBoolean: () => enabled ?? null,
     },
     reply: vi.fn(),
@@ -110,6 +114,7 @@ beforeEach(() => {
   });
   mocks.serverCard.mockResolvedValue(Buffer.from("png"));
   mocks.profileCard.mockResolvedValue(Buffer.from("png"));
+  mocks.historyCard.mockResolvedValue(Buffer.from("png"));
   mocks.overallPage.mockResolvedValue({
     image: Buffer.from("png"),
     page: 1,
@@ -288,6 +293,62 @@ describe("/rngdle unlink", () => {
   });
 });
 
+describe("/rngdle history", () => {
+  it.each([
+    ["the caller", {}, "profile.notRegisteredSelf"],
+    ["another member", { member: { id: "other" } }, "profile.notRegistered"],
+    ["an RNGdle username", { username: "Bob" }, "profile.notRegistered"],
+  ])("asks %s to link an account first", async (_label, options, key) => {
+    const interaction = interactionFor({ subcommand: "history", ...options });
+    await run(interaction);
+
+    expect(mocks.historyCard).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith({ content: key });
+  });
+
+  it("shows the looked-up player's history with the requested count", async () => {
+    const account = { guildId: "guild", userId: "other", username: "Bob" };
+    mocks.accountByUsername.mockResolvedValue(account);
+    const interaction = interactionFor({
+      subcommand: "history",
+      username: "Bob",
+      integers: { count: 15 },
+    });
+    await run(interaction);
+
+    expect(mocks.accountByUsername).toHaveBeenCalledWith("guild", "Bob");
+    expect(mocks.historyCard).toHaveBeenCalledWith(
+      expect.anything(),
+      account,
+      15
+    );
+    const [sent] = interaction.editReply.mock.calls[0]! as [
+      { files: { name: string }[] },
+    ];
+    expect(sent.files[0]!.name).toBe("history-Bob.png");
+  });
+
+  it("says so when the player has no roll yet", async () => {
+    mocks.account.mockResolvedValue({
+      guildId: "guild",
+      userId: "caller",
+      username: "Lucky",
+    });
+    mocks.historyCard.mockResolvedValue(null);
+    const interaction = interactionFor({ subcommand: "history" });
+    await run(interaction);
+
+    expect(mocks.historyCard).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ userId: "caller" }),
+      undefined
+    );
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: 'profile.noRolls {"username":"Lucky"}',
+    });
+  });
+});
+
 describe("/rngdle profile without a linked account", () => {
   it.each([
     ["the caller", {}, "profile.notRegisteredSelf"],
@@ -329,22 +390,32 @@ describe("/rngdle navigation buttons", () => {
     });
   });
 
-  it("offers the profile and the overall leaderboard under today's leaderboard", async () => {
+  it("offers the profile, the history and the overall leaderboard under today's leaderboard", async () => {
     expect(customIds(await reply({ subcommand: "leaderboard" }))).toEqual([
       "rngdle-nav:profile",
+      "rngdle-nav:history",
       "rngdle-nav:overall",
     ]);
   });
 
-  it("offers the profile and the overall leaderboard under the server stats", async () => {
+  it("offers the profile, the history and the overall leaderboard under the server stats", async () => {
     expect(customIds(await reply({ subcommand: "server-stats" }))).toEqual([
       "rngdle-nav:profile",
+      "rngdle-nav:history",
       "rngdle-nav:overall",
     ]);
   });
 
-  it("offers the overall leaderboard under a profile", async () => {
+  it("offers the history and the overall leaderboard under a profile", async () => {
     expect(customIds(await reply({ subcommand: "profile" }))).toEqual([
+      "rngdle-nav:history",
+      "rngdle-nav:overall",
+    ]);
+  });
+
+  it("offers the profile and the overall leaderboard under a history", async () => {
+    expect(customIds(await reply({ subcommand: "history" }))).toEqual([
+      "rngdle-nav:profile",
       "rngdle-nav:overall",
     ]);
   });

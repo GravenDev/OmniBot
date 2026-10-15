@@ -21,7 +21,8 @@ vi.mock("#modules/rngdle/services/store.js", () => ({
 vi.mock("#modules/rngdle/services/sync.js", () => ({
   default: { refreshIfStale: mocks.refreshIfStale },
 }));
-vi.mock("#modules/rngdle/services/views.js", () => ({
+vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   versusCard: mocks.versusCard,
 }));
 vi.mock("#modules/rngdle/interactions/overall-page.button.js", () => ({

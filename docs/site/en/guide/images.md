@@ -82,8 +82,9 @@ The card is 1000 px wide by default (`width` widens it), landscape, so Discord d
 
 - **The header** shows the round `image`, the `title`, an optional `subtitle` and an optional `rank`: a medal for the podium, `#N / total` otherwise, hidden when `position` is 0.
 - **Rows** hold one to three boxes, which share the row's width.
-- **A box** has a `title` and a `value`, and optionally a `color` (value, light tint and an edge on the left; `highlight: false` colors the value without highlighting the box), a `subtext` and a small corner `avatar`. Text that is too long shrinks to fit the box.
+- **A box** has a `title` and a `value`, and optionally a `color` (value, light tint and an edge on the left; `highlight: false` colors the value without highlighting the box), a `subtext`, a `trend` (`{ text, direction: "up" | "down" }`, a green or red arrow and text before the subtext) and a small corner `avatar`. Text that is too long shrinks to fit the box.
 - **An aside** (`{ width, draw(ctx, x, y, width, height) }`) adds a custom panel on the right of the boxes, as tall as them. `drawPanel`, `drawPanelTitle`, `drawText`, `drawFittedText` and `measureText` from `#lib/stat-card` keep it consistent with the rest of the card; the RNGdle tier breakdown is built this way (`src/modules/rngdle/rendering/cards.ts`).
+- **A footer** (`{ height, draw(ctx, x, y, width) }`) adds a custom section below the boxes, across the whole content width, and the card grows by its height. The RNGdle leaderboards and history draw their tables there (`src/modules/rngdle/rendering/table.ts`).
 
 ## Good Practices
 

@@ -12,6 +12,7 @@ import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
 import {
+  historyMessage,
   navigationRow,
   profileMessage,
 } from "#modules/rngdle/interactions/navigation.button.js";
@@ -24,6 +25,8 @@ import store from "#modules/rngdle/services/store.js";
 import sync from "#modules/rngdle/services/sync.js";
 import {
   dailyLeaderboard,
+  HISTORY_MAX,
+  HISTORY_MIN,
   parsePeriod,
   serverCard,
   versusCard,
@@ -71,26 +74,36 @@ async function leaderboard(interaction: Interaction, config: Config) {
     board?.image ?? null,
     "leaderboard.png",
     config.t("leaderboard.empty"),
-    [navigationRow(config.t, ["profile", "overall"])]
+    [navigationRow(config.t, ["profile", "history", "overall"])]
   );
 }
 
-async function profile(interaction: Interaction, config: Config) {
-  const account = interaction.options.getString("username")
-    ? await store.accountByUsername(
-        interaction.guildId,
-        interaction.options.getString("username", true)
-      )
-    : await store.account(
-        interaction.guildId,
-        (interaction.options.getUser("member") ?? interaction.user).id
-      );
+async function lookedUpAccount(interaction: Interaction) {
+  const username = interaction.options.getString("username");
   const member = interaction.options.getUser("member");
-  const self =
-    !interaction.options.getString("username") &&
-    (!member || member.id === interaction.user.id);
+  const account = username
+    ? await store.accountByUsername(interaction.guildId, username)
+    : await store.account(interaction.guildId, (member ?? interaction.user).id);
+  const self = !username && (!member || member.id === interaction.user.id);
+  return { account, self };
+}
+
+async function profile(interaction: Interaction, config: Config) {
+  const { account, self } = await lookedUpAccount(interaction);
   await interaction.editReply(
     await profileMessage(viewContext(interaction, config), account, self)
+  );
+}
+
+async function history(interaction: Interaction, config: Config) {
+  const { account, self } = await lookedUpAccount(interaction);
+  await interaction.editReply(
+    await historyMessage(
+      viewContext(interaction, config),
+      account,
+      self,
+      interaction.options.getInteger("count") ?? undefined
+    )
   );
 }
 
@@ -103,7 +116,7 @@ async function serverStats(interaction: Interaction, config: Config) {
     await serverCard(viewContext(interaction, config), guild),
     "server-stats.png",
     config.t("server.empty"),
-    [navigationRow(config.t, ["profile", "overall"])]
+    [navigationRow(config.t, ["profile", "history", "overall"])]
   );
 }
 
@@ -260,6 +273,7 @@ const subcommands: Record<
 > = {
   leaderboard,
   profile,
+  history,
   "server-stats": serverStats,
   "leaderboard-all": leaderboardAll,
 };
@@ -295,6 +309,39 @@ export default declareCommand<RngdleConfigSchema>({
             .setDescription("RNGdle username to look up")
             .setDescriptionLocalizations({ fr: "Pseudo RNGdle à consulter" })
             .setAutocomplete(true)
+        )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("history")
+        .setDescription("Show a player's latest rolls")
+        .setDescriptionLocalizations({
+          fr: "Afficher les derniers tirages d'un joueur",
+        })
+        .addUserOption((option) =>
+          option
+            .setName("member")
+            .setDescription("Member to look up (defaults to you)")
+            .setDescriptionLocalizations({
+              fr: "Membre à consulter (vous par défaut)",
+            })
+        )
+        .addStringOption((option) =>
+          option
+            .setName("username")
+            .setDescription("RNGdle username to look up")
+            .setDescriptionLocalizations({ fr: "Pseudo RNGdle à consulter" })
+            .setAutocomplete(true)
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName("count")
+            .setDescription("Number of rolls to show (defaults to 10)")
+            .setDescriptionLocalizations({
+              fr: "Nombre de tirages affichés (10 par défaut)",
+            })
+            .setMinValue(HISTORY_MIN)
+            .setMaxValue(HISTORY_MAX)
         )
     )
     .addSubcommand((sub) =>

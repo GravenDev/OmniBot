@@ -10,7 +10,7 @@ import { declareInteractionHandler } from "#lib/interaction.js";
 import {
   overallPage,
   parsePeriod,
-  periodRange,
+  periodText,
   type Period,
   type ViewContext,
 } from "#modules/rngdle/services/views.js";
@@ -26,35 +26,6 @@ function pageButton(customId: string, label: string, disabled: boolean) {
     .setLabel(label)
     .setStyle(ButtonStyle.Primary)
     .setDisabled(disabled);
-}
-
-export function periodText(
-  context: Pick<ViewContext, "t" | "locale">,
-  period: Period,
-  now = new Date()
-): string {
-  const { from, to } = periodRange(period, now);
-  if (period === "month" && from) {
-    const month = new Intl.DateTimeFormat(context.locale, {
-      month: "long",
-      year: "numeric",
-      timeZone: "UTC",
-    }).format(from);
-    return context.t("overall.period.month", { month });
-  }
-  if (period === "week" && from && to) {
-    const format = new Intl.DateTimeFormat(context.locale, {
-      weekday: "short",
-      day: "numeric",
-      month: "short",
-      timeZone: "UTC",
-    });
-    return context.t("overall.period.week", {
-      from: format.format(from),
-      to: format.format(new Date(to.getTime() - DAY_MS)),
-    });
-  }
-  return context.t("overall.period.all");
 }
 
 export async function overallPageMessage(

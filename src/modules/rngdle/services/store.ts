@@ -269,23 +269,6 @@ class RngdleStore implements Service {
     return rolls.map((roll) => ({ ...roll, score: Number(roll.score) }));
   }
 
-  async totals(
-    guildId: string,
-    range: DateRange = {}
-  ): Promise<{ userId: string; total: number }[]> {
-    const groups = await prisma.rngdleRoll.groupBy({
-      by: ["userId"],
-      where: { guildId, ...rolledAtWhere(range) },
-      _sum: { score: true },
-    });
-    return groups
-      .map((group) => ({
-        userId: group.userId,
-        total: Number(group._sum.score ?? 0n),
-      }))
-      .sort((a, b) => b.total - a.total || a.userId.localeCompare(b.userId));
-  }
-
   scoreTable(): Promise<ScoreTable> {
     if (!this.table) {
       this.table = prisma.rngdleScoreTable

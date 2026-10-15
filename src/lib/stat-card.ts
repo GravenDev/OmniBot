@@ -45,6 +45,20 @@ const RANK_SIZE = 64;
 const TOTAL_SIZE = 26;
 const MEDAL_HEIGHT = 76;
 const MEDAL_WIDTHS = [76, 78, 78];
+const TREND_ARROW = 7;
+const TREND_GAP = 8;
+
+export const TREND_COLORS = {
+  up: [87, 242, 135],
+  down: [237, 66, 69],
+} as const satisfies Record<string, Rgb>;
+
+export type TrendDirection = keyof typeof TREND_COLORS;
+
+export interface Trend {
+  text: string;
+  direction: TrendDirection;
+}
 
 export interface StatBox {
   title: string;
@@ -52,6 +66,7 @@ export interface StatBox {
   color?: Rgb;
   highlight?: boolean;
   subtext?: string;
+  trend?: Trend | undefined;
   avatar?: Image | null;
 }
 
@@ -66,6 +81,11 @@ export interface CardAside {
   ) => void;
 }
 
+export interface CardSection {
+  height: number;
+  draw: (ctx: SKRSContext2D, x: number, y: number, width: number) => void;
+}
+
 export interface StatCard {
   image: Image | null;
   title: string;
@@ -73,6 +93,7 @@ export interface StatCard {
   rank?: { position: number; total: number };
   rows: StatBox[][];
   aside?: CardAside;
+  footer?: CardSection;
   accent?: Rgb;
   width?: number;
 }
@@ -184,6 +205,23 @@ export function strokePanel(
   ctx.stroke();
 }
 
+export function drawTrendArrow(
+  ctx: SKRSContext2D,
+  x: number,
+  centerY: number,
+  direction: TrendDirection
+): number {
+  const sign = direction === "up" ? 1 : -1;
+  ctx.beginPath();
+  ctx.moveTo(x, centerY + sign * TREND_ARROW * 0.6);
+  ctx.lineTo(x + TREND_ARROW * 2, centerY + sign * TREND_ARROW * 0.6);
+  ctx.lineTo(x + TREND_ARROW, centerY - sign * TREND_ARROW * 0.9);
+  ctx.closePath();
+  ctx.fillStyle = rgb(TREND_COLORS[direction]);
+  ctx.fill();
+  return TREND_ARROW * 2;
+}
+
 export function drawPanelTitle(
   ctx: SKRSContext2D,
   title: string,
@@ -205,7 +243,7 @@ function drawStatBox(
   x: number,
   y: number,
   width: number,
-  { title, value, color, highlight = true, subtext, avatar }: StatBox
+  { title, value, color, highlight = true, subtext, trend, avatar }: StatBox
 ): void {
   const left = x + PANEL_PADDING;
   drawPanel(ctx, x, y, width, BOX_HEIGHT, highlight ? color : undefined);
@@ -230,15 +268,35 @@ function drawStatBox(
     color ?? PALETTE.text,
     innerWidth
   );
+  let subtextX = left;
+  if (trend) {
+    const subtextY = y + BOX_SUBTEXT_Y;
+    subtextX +=
+      drawTrendArrow(
+        ctx,
+        subtextX,
+        subtextY + SUBTEXT_SIZE * 0.62,
+        trend.direction
+      ) + TREND_GAP;
+    drawText(
+      ctx,
+      trend.text,
+      subtextX,
+      subtextY,
+      SUBTEXT_SIZE,
+      TREND_COLORS[trend.direction]
+    );
+    subtextX += measureText(ctx, trend.text, SUBTEXT_SIZE) + TREND_GAP;
+  }
   if (subtext) {
     drawFittedText(
       ctx,
       subtext,
-      left,
+      subtextX,
       y + BOX_SUBTEXT_Y,
       SUBTEXT_SIZE,
       PALETTE.subtext,
-      innerWidth,
+      left + innerWidth - subtextX,
       SUBTEXT_MIN_SIZE
     );
   }
@@ -297,9 +355,10 @@ export async function renderStatCard(card: StatCard): Promise<Buffer> {
   const width = card.width ?? DEFAULT_WIDTH;
   const bodyHeight =
     card.rows.length * BOX_HEIGHT + (card.rows.length - 1) * GAP;
+  const footerHeight = card.footer ? GAP + card.footer.height : 0;
   const ctx = createBoard(
     width,
-    BODY_TOP + bodyHeight + BOTTOM_MARGIN,
+    BODY_TOP + bodyHeight + footerHeight + BOTTOM_MARGIN,
     HEADER_HEIGHT,
     accent
   );
@@ -369,6 +428,7 @@ export async function renderStatCard(card: StatCard): Promise<Buffer> {
       bodyHeight
     );
   }
+  card.footer?.draw(ctx, MARGIN, BODY_TOP + bodyHeight + GAP, contentWidth);
 
   return ctx.canvas.encode("png");
 }

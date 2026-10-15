@@ -144,3 +144,67 @@ export function computeServerStats(
 
   return { ...stats, tierLeaders };
 }
+
+export const RANKING_PRIOR = 20;
+
+export interface RankingEntry {
+  userId: string;
+  rolls: number;
+  total: number;
+  index: number;
+  best: RollSummary;
+}
+
+export function rankingIndex(
+  total: number,
+  rolls: number,
+  prior = RANKING_PRIOR
+): number {
+  return total / (rolls + prior);
+}
+
+export function computeRanking(
+  rolls: StoredRoll[],
+  prior = RANKING_PRIOR
+): RankingEntry[] {
+  const players = new Map<
+    string,
+    { rolls: number; total: number; best: StoredRoll }
+  >();
+  for (const roll of rolls) {
+    const player = players.get(roll.userId);
+    if (!player) {
+      players.set(roll.userId, { rolls: 1, total: roll.score, best: roll });
+      continue;
+    }
+    player.rolls += 1;
+    player.total += roll.score;
+    if (roll.score > player.best.score) {
+      player.best = roll;
+    }
+  }
+
+  return [...players]
+    .map(([userId, player]) => ({
+      userId,
+      rolls: player.rolls,
+      total: player.total,
+      index: rankingIndex(player.total, player.rolls, prior),
+      best: summarize(player.best),
+    }))
+    .sort(
+      (a, b) =>
+        b.index - a.index ||
+        b.total - a.total ||
+        a.userId.localeCompare(b.userId)
+    );
+}
+
+export function byBestRoll(entries: RankingEntry[]): RankingEntry[] {
+  return [...entries].sort(
+    (a, b) =>
+      b.best.score - a.best.score ||
+      a.best.rolledAt.getTime() - b.best.rolledAt.getTime() ||
+      a.userId.localeCompare(b.userId)
+  );
+}
