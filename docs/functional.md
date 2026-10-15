@@ -283,3 +283,42 @@ plus de commande dédiée : la configuration se fait via `/config thread-creator
 
 Il n'y a plus de flag `actif` : désactiver le module via `/modules` arrête la
 surveillance sans effacer la configuration.
+
+---
+
+## Module Message Quote
+
+Cite les messages Discord dont le lien est posté sur le serveur.
+
+### Comportement automatique
+
+Quand un membre poste un lien vers un message (`https://discord.com/channels/…`, y compris `ptb.` et `canary.`), le bot répond avec une citation : auteur et avatar, texte, première image, autres pièces jointes en liens, salon d'origine, membre qui cite et date du message. Un bouton « Aller au message » ouvre l'original. Les mentions présentes dans le message cité ne notifient personne.
+
+Un message transféré est cité avec son contenu transféré. Un message sans texte reprend la description (ou le titre) de son premier embed, à défaut le bot indique qu'il n'a pas de texte.
+
+**Ce qui n'est pas cité :**
+
+- Les liens vers un autre serveur
+- Les messages d'un salon que le membre qui poste le lien ne peut pas lire (voir le salon et lire l'historique ; pour un fil privé, en être membre ou pouvoir gérer les fils). Le bot ne révèle jamais un salon auquel le membre n'a pas accès.
+- Les messages qui seraient montrés à un public plus large que celui du salon d'origine : le bot compare, rôle par rôle (chaque rôle avec `@everyone`), qui voit le salon où le lien est posté et qui peut lire l'historique du salon d'origine. Si un rôle voit le premier sans pouvoir lire le second, le message n'est pas cité. Les rôles gérés par une intégration (bots, booster) et les rôles ignorés de la configuration ne sont pas comparés. Un message de `#staff` n'est donc jamais cité dans `#général`, même quand l'accès au serveur passe par un rôle de membre. Un message d'un fil privé n'est cité que dans ce même fil. Limites : les autorisations accordées à un membre précis (et non à un rôle) ne sont pas prises en compte, ni les combinaisons de rôles (un rôle qui retire l'accès au salon d'origine à des membres qui voient la destination grâce à un autre rôle) ; un fil privé de destination est jugé comme son salon parent, ce qui peut refuser une citation légitime. Sur un serveur où l'accès passe par un rôle de membre, un salon ouvert à un rôle optionnel (jeu, notifications) refuse les citations des salons communs tant que ce rôle n'est pas déclaré dans `ignoredRoles`.
+- Les citations publiées par le bot lui-même (ses autres messages, comme les annonces, restent citables)
+- Les messages d'un salon NSFW, sauf si le lien est posté dans un salon NSFW
+- Les liens entre chevrons (`<https://…>`), dans du code ou sous spoiler
+- Les messages des salons et catégories exclus, et les liens postés dans un salon exclu
+- Les liens postés par des bots
+
+Au plus 3 messages sont cités par message, les doublons sont ignorés. Un texte trop long est coupé, sans jamais laisser un spoiler à moitié ouvert. Si le message contenant le lien a été supprimé entre-temps, la citation est publiée sans y répondre. Si aucun lien n'est citable, le bot ne répond pas. Une pièce jointe image sous spoiler n'est jamais affichée, seulement listée en lien. Dès que le texte cité contient un spoiler (`||`), l'aperçu de lien n'est pas repris.
+
+### Bouton « Supprimer »
+
+Supprime la citation. Il est réservé au membre qui a posté le lien, aux auteurs des messages cités et aux membres qui peuvent gérer les messages du salon ; les autres reçoivent une réponse visible d'eux seuls.
+
+### Configuration — `/config message-quote`
+
+| Champ                | Type               | Description                                                                                                                   |
+| -------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `excludedChannels`   | Salons (liste)     | Salons dont les messages ne sont jamais cités, et où les liens postés ne sont pas cités.                                      |
+| `excludedCategories` | Catégories (liste) | Catégories dont les salons sont traités comme des salons exclus.                                                              |
+| `ignoredRoles`       | Rôles (liste)      | Rôles optionnels portés uniquement par des membres qui ont aussi le rôle de membre : ignorés dans la comparaison des publics. |
+
+Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
