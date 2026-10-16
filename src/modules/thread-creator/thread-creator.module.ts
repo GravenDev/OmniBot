@@ -10,7 +10,7 @@ export default defineModule({
   description:
     "Automatically creates discussion threads under each new message in configured channels.",
   version: "2.1.0",
-  author: "OmniBot",
+  author: "LoicR",
 
   // Configuration éditée via /config thread-creator.
   config: threadCreatorConfigSchema,
