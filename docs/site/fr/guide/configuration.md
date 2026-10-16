@@ -64,7 +64,7 @@ export default defineModule({
 | `CATEGORY` | Menu de sélection catégorie     | `string` (id)       | `CategoryChannel`     |
 | `ENUM`     | Menu de sélection (choix fixes) | `string` (choix)    | Union littérale       |
 | `DURATION` | Modale (`30s`, `4h`, `1h30m`)   | `number` (secondes) | `number` (secondes)   |
-| `EMOJI`    | Modale (`🚩`, `<:nom:id>`)      | `string`            | `string`              |
+| `EMOJI`    | Modale (`🚩`, `:nom:`)          | `string`            | `string`              |
 
 ### Listes
 

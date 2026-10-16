@@ -35,6 +35,49 @@ export function isEmoji(value: string): boolean {
   return graphemes.length === 1 && EMOJI_CODEPOINT.test(value);
 }
 
+/** The fields of a guild emoji needed to resolve it from user input. */
+export interface GuildEmojiLike {
+  id: string;
+  name: string | null;
+  animated: boolean | null;
+}
+
+/** Formats a guild emoji the way Discord writes it in a message. */
+function formatGuildEmoji(emoji: GuildEmojiLike): string {
+  return `<${emoji.animated ? "a" : ""}:${emoji.name}:${emoji.id}>`;
+}
+
+const EMOJI_NAME = /^:?(\w{2,32}):?$/;
+
+/**
+ * Turns what an admin typed into a stored emoji value, or `null` when it is not
+ * one. A modal text input has no emoji picker and Discord does not rewrite
+ * `:name:` into `<:name:id>` there, so a bare or colon-wrapped name is looked up
+ * among the guild's emojis: an exact match first, then a case-insensitive one
+ * as long as it is unambiguous.
+ */
+export function resolveEmoji(
+  value: string,
+  guildEmojis: Iterable<GuildEmojiLike>
+): string | null {
+  if (isEmoji(value)) {
+    return value;
+  }
+  const name = value.match(EMOJI_NAME)?.[1];
+  if (!name) {
+    return null;
+  }
+  const emojis = [...guildEmojis];
+  const exact = emojis.find((emoji) => emoji.name === name);
+  if (exact) {
+    return formatGuildEmoji(exact);
+  }
+  const loose = emojis.filter(
+    (emoji) => emoji.name?.toLowerCase() === name.toLowerCase()
+  );
+  return loose.length === 1 ? formatGuildEmoji(loose[0]!) : null;
+}
+
 export const ConfigValidator: Record<ConfigType, (value: string) => boolean> = {
   STRING: () => true,
   NUMBER: (value: string) =>

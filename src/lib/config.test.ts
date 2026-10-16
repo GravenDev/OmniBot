@@ -7,6 +7,7 @@ import {
   formatConfigValue,
   getConfigTypeName,
   isEnumEntry,
+  resolveEmoji,
   type ConfigData,
   type ConfigEntry,
   type ConfigSchema,
@@ -114,6 +115,50 @@ describe("ConfigValidator", () => {
       }
     );
   });
+});
+
+describe("resolveEmoji", () => {
+  const guildEmojis = [
+    { id: "111111111111111111", name: "gdSignaler", animated: false },
+    { id: "222222222222222222", name: "dance", animated: true },
+    { id: "333333333333333333", name: "Flag", animated: false },
+    { id: "444444444444444444", name: "FLAG", animated: false },
+  ];
+
+  it("keeps a unicode or fully written custom emoji as is", () => {
+    expect(resolveEmoji("🚩", guildEmojis)).toBe("🚩");
+    expect(resolveEmoji("<:xy:999999999999999999>", guildEmojis)).toBe(
+      "<:xy:999999999999999999>"
+    );
+  });
+
+  it.each([":gdSignaler:", "gdSignaler", ":gdsignaler:"])(
+    "resolves %j to the guild emoji",
+    (value) => {
+      expect(resolveEmoji(value, guildEmojis)).toBe(
+        "<:gdSignaler:111111111111111111>"
+      );
+    }
+  );
+
+  it("keeps the animated marker", () => {
+    expect(resolveEmoji(":dance:", guildEmojis)).toBe(
+      "<a:dance:222222222222222222>"
+    );
+  });
+
+  it("prefers an exact match over case-insensitive ones", () => {
+    expect(resolveEmoji(":FLAG:", guildEmojis)).toBe(
+      "<:FLAG:444444444444444444>"
+    );
+  });
+
+  it.each([":flag:", ":unknown:", "not an emoji", ""])(
+    "rejects %j",
+    (value) => {
+      expect(resolveEmoji(value, guildEmojis)).toBeNull();
+    }
+  );
 });
 
 describe("getConfigTypeName", () => {
