@@ -10,6 +10,24 @@ const bundles = readdirSync(SRC, { recursive: true, encoding: "utf8" })
   .filter((path) => /(^|\/)i18n\/[a-z]{2}\.json$/.test(path))
   .sort();
 
+const moduleIds = [
+  "core",
+  ...readdirSync(join(SRC, "modules"), { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .flatMap((entry) =>
+      readdirSync(join(SRC, "modules", entry.name))
+        .filter((file) => file.endsWith(".module.ts"))
+        .map((file) => join(SRC, "modules", entry.name, file))
+    )
+    .map((path) => /\bid:\s*"([^"]+)"/.exec(readFileSync(path, "utf8"))?.[1]),
+].sort();
+
+function coreBundle(lng: string): Record<string, string> {
+  return JSON.parse(
+    readFileSync(join(SRC, "core", "i18n", `${lng}.json`), "utf8")
+  ) as Record<string, string>;
+}
+
 function duplicateKeys(source: string): string[] {
   const duplicates: string[] = [];
   const objects: Set<string>[] = [];
@@ -40,5 +58,18 @@ describe("i18n bundles", () => {
 
   it.each(bundles)("%s declares each key once", (path) => {
     expect(duplicateKeys(readFileSync(join(SRC, path), "utf8"))).toEqual([]);
+  });
+
+  it("finds the modules", () => {
+    expect(moduleIds).toContain("message-log");
+    expect(moduleIds).not.toContain(undefined);
+  });
+
+  it.each(moduleIds)("core bundles name and describe the %s module", (id) => {
+    for (const lng of ["en", "fr"]) {
+      const bundle = coreBundle(lng);
+      expect(bundle, lng).toHaveProperty([`modules.${id}.name`]);
+      expect(bundle, lng).toHaveProperty([`modules.${id}.description`]);
+    }
   });
 });
