@@ -20,8 +20,8 @@
   "config.number.invalid": "❌ `{{value}}` is not a valid number.",
   "config.duration.invalid": "❌ `{{value}}` is not a valid duration. Use a number followed by `s`, `m`, `h` or `d`, e.g. `30s`, `4h`, `1h30m`.",
   "config.duration.placeholder": "e.g. 30s, 5m, 4h, 1h30m, 3d",
-  "config.emoji.invalid": "❌ `{{value}}` is not an emoji. Enter a single emoji such as 🚩, or a custom emoji such as `<:name:123456789>`.",
-  "config.emoji.placeholder": "e.g. 🚩 or <:name:123456789>",
+  "config.emoji.invalid": "❌ `{{value}}` is not an emoji. Enter a single emoji such as 🚩, or the name of a server emoji such as `:name:`.",
+  "config.emoji.placeholder": "e.g. 🚩 or :name:",
 
   "config.enum.noOptions": "This field declares no options.",
   "config.enum.selectMultiple": "Select one or more values",

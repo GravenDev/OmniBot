@@ -57,6 +57,8 @@ const { default: DurationConfigHandler } =
   await import("./duration.config-handler.js");
 const { default: UserConfigHandler } = await import("./user.config-handler.js");
 const { default: EnumConfigHandler } = await import("./enum.config-handler.js");
+const { default: EmojiConfigHandler } =
+  await import("./emoji.config-handler.js");
 
 const isConfigKey = vi.mocked(configService.isConfigKey);
 const updateConfig = vi.mocked(configService.updateConfigForModuleIn);
@@ -228,6 +230,81 @@ describe("DurationConfigHandler modal submit", () => {
         content: expect.stringContaining("configOptionNotFound"),
       })
     );
+  });
+});
+
+describe("EmojiConfigHandler modal submit", () => {
+  const gdSignaler = {
+    id: "111111111111111111",
+    name: "gdSignaler",
+    animated: false,
+  };
+
+  function fakeModalInteraction(typed: string) {
+    return {
+      guildId: "guild-1",
+      guild: {
+        emojis: {
+          fetch: vi
+            .fn()
+            .mockResolvedValue(new Map([[gdSignaler.id, gdSignaler]])),
+          cache: new Map(),
+        },
+      },
+      fields: { getTextInputValue: () => typed },
+      isFromMessage: () => true,
+      update: vi.fn(),
+      reply: vi.fn(),
+    } as unknown as ModalSubmitInteraction;
+  }
+
+  async function submit(interaction: ModalSubmitInteraction) {
+    const handler = await captureRegisteredHandler(new EmojiConfigHandler());
+    await handler.execute(interaction, ["mod", "emoji"], undefined as never);
+  }
+
+  function expectRejectedWith(
+    interaction: ModalSubmitInteraction,
+    key: string
+  ) {
+    expect(save).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: expect.stringContaining(key) })
+    );
+  }
+
+  it("declares that it requires admin", async () => {
+    const handler = await captureRegisteredHandler(new EmojiConfigHandler());
+    expect(handler.access).toBe("admin");
+  });
+
+  it("resolves a typed :name: against the guild's emojis", async () => {
+    const interaction = fakeModalInteraction(":gdSignaler:");
+
+    await submit(interaction);
+
+    expect(save).toHaveBeenCalledWith(
+      fakeModule,
+      "guild-1",
+      "emoji",
+      "<:gdSignaler:111111111111111111>"
+    );
+  });
+
+  it("saves a typed unicode emoji", async () => {
+    const interaction = fakeModalInteraction("🚩");
+
+    await submit(interaction);
+
+    expect(save).toHaveBeenCalledWith(fakeModule, "guild-1", "emoji", "🚩");
+  });
+
+  it("rejects an unknown name without saving", async () => {
+    const interaction = fakeModalInteraction(":nope:");
+
+    await submit(interaction);
+
+    expectRejectedWith(interaction, "config.emoji.invalid");
   });
 });
 
