@@ -85,7 +85,7 @@
   "modules.core.name": "Configuration Globale",
   "modules.core.description": "Le module principal de l'application, gérant les commandes et évènements principaux. Il est toujours chargé.",
 
-  "modules.thread-creator.name": "Thread Creator",
+  "modules.thread-creator.name": "Création de fils",
   "modules.thread-creator.description": "Crée automatiquement des fils de discussion sous chaque nouveau message dans les canaux configurés.",
 
   "modules.four-hour-game.name": "Jeu des 4h",
@@ -96,6 +96,12 @@
 
   "modules.reports.name": "Signalements",
   "modules.reports.description": "Permet aux membres de signaler un message par une réaction ou le menu contextuel ; les modérateurs reçoivent une alerte avec des actions.",
+
+  "modules.message-log.name": "Journal des messages",
+  "modules.message-log.description": "Consigne les messages supprimés et modifiés dans un salon du staff.",
+
+  "modules.message-quote.name": "Citation de messages",
+  "modules.message-quote.description": "Cite les messages Discord dont le lien est posté, pour les membres autorisés à les lire.",
 
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Module de développement déclarant tous les types de configuration, pour tester l'UI de configuration.",
