@@ -17,7 +17,7 @@ export default defineModule({
   description:
     "Development module declaring all configuration types, used to test the configuration UI.",
   version: "1.0.0",
-  author: "OmniBot",
+  author: "AntoineJT",
   devOnly: true,
 
   config: {
