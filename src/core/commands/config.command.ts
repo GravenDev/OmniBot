@@ -25,6 +25,7 @@ export default declareCommand({
       option
         .setName("module")
         .setDescription("The module to configure")
+        .setDescriptionLocalizations({ fr: "Le module à configurer" })
         .setRequired(true)
         .setAutocomplete(true)
     ),

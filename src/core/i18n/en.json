@@ -97,6 +97,12 @@
   "modules.reports.name": "Reports",
   "modules.reports.description": "Lets members report a message with a reaction or the context menu; moderators get an alert with actions.",
 
+  "modules.message-log.name": "Message Log",
+  "modules.message-log.description": "Logs deleted and edited messages in a staff channel.",
+
+  "modules.message-quote.name": "Message Quote",
+  "modules.message-quote.description": "Quotes the Discord messages whose link is posted, for members allowed to read them.",
+
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Development module declaring all configuration types, used to test the configuration UI.",
 
