@@ -124,6 +124,39 @@ describe("configurationMessage pagination", () => {
   });
 });
 
+describe("configurationMessage current value", () => {
+  beforeAll(() => {
+    addTranslations("en", "core", { "config.option": "{{currentValue}}" });
+  });
+
+  function currentValueOf(type: ConfigType, value: string): string {
+    const module = {
+      id: "mod",
+      name: "Mod",
+      config: { field: { name: "Field", description: "desc", type } },
+    } as unknown as Module<ConfigSchema>;
+    const config = new ConfigProvider(
+      module,
+      { field: value } as ConfigData<ConfigSchema>,
+      "en"
+    );
+    const json = JSON.stringify(
+      configurationMessage(module, config)[0]!.toJSON()
+    );
+    return json.match(/Current: ([^"]*)/)![1]!;
+  }
+
+  it("leaves a custom emoji bare so Discord renders it", () => {
+    expect(
+      currentValueOf(ConfigType.EMOJI, "<:delete:1408086702182109254>")
+    ).toBe("<:delete:1408086702182109254>");
+  });
+
+  it("keeps other scalar values in a code span", () => {
+    expect(currentValueOf(ConfigType.STRING, "hello")).toBe("`hello`");
+  });
+});
+
 describe("configPageOfKey", () => {
   const module = moduleWithFields(14);
 
