@@ -91,15 +91,20 @@ function renderCurrentValue(
 
   const type = option.type;
   const baseType = Array.isArray(type) ? type[0] : type;
-  const isEntity =
+  // Mentions and emojis are left bare so Discord renders them; inside a code
+  // span a custom emoji would show as its raw `<:name:id>` markup.
+  const isRendered =
     baseType === ConfigType.USER ||
     baseType === ConfigType.ROLE ||
     baseType === ConfigType.CHANNEL ||
-    baseType === ConfigType.CATEGORY;
+    baseType === ConfigType.CATEGORY ||
+    baseType === ConfigType.EMOJI;
 
   return items
     .map((item) =>
-      isEntity ? String(item) : `\`${formatConfigValue(option, item, locale)}\``
+      isRendered
+        ? String(item)
+        : `\`${formatConfigValue(option, item, locale)}\``
     )
     .join(", ");
 }
