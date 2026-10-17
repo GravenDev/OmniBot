@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build:
+  docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -41,7 +41,7 @@ jobs:
           path: docs/site/.vitepress/dist
 
   deploy:
-    needs: build
+    needs: docs
     if: *deploy-condition
     runs-on: ubuntu-latest
     permissions:
