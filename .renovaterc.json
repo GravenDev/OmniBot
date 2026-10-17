@@ -1,14 +1,19 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
+  "extends": ["config:recommended", "docker:pinDigests"],
   "postUpdateOptions": ["pnpmDedupe"],
-  "minimumReleaseAge": "3 days",
+  "minimumReleaseAge": "7 days",
   "schedule": ["before 9am on Monday"],
   "prConcurrentLimit": 10,
   "separateMultipleMajor": true,
   "platformAutomerge": true,
   "vulnerabilityAlerts": {
-    "schedule": ["at any time"]
+    "schedule": ["at any time"],
+    "minimumReleaseAge": "1 day"
+  },
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["before 9am on the first day of the month"]
   },
   "packageRules": [
     {
@@ -40,6 +45,30 @@
       "matchManagers": ["github-actions"],
       "matchPackageNames": ["actions/*", "github/*"],
       "pinDigests": false
+    },
+    {
+      "description": "Automerge Docker image digest refreshes (same tag, rebuilt base). The docker CI job builds the image.",
+      "matchDatasources": ["docker"],
+      "matchUpdateTypes": ["digest"],
+      "automerge": true
+    },
+    {
+      "description": "Prisma CLI and client must move together. Never automerged: the CLI runs the migrations in production.",
+      "matchPackageNames": ["prisma", "@prisma/*"],
+      "groupName": "prisma",
+      "automerge": false
+    },
+    {
+      "description": "Build tooling compiles the shipped code or runs on contributors' machines: reviewed by hand",
+      "matchPackageNames": ["typescript", "tsx", "lefthook"],
+      "automerge": false
+    },
+    {
+      "description": "A Postgres major needs a data migration (pg_upgrade or dump/restore): only on request from the dependency dashboard",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["postgres"],
+      "matchUpdateTypes": ["major"],
+      "dependencyDashboardApproval": true
     }
   ]
 }
