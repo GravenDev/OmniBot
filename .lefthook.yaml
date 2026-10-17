@@ -10,9 +10,12 @@ pre-commit:
     docs:
       glob: "*.{md,json}"
       run: pnpm exec oxfmt --check {staged_files}
+    # dlx follows the workspace trustPolicy, which rejects some old, legitimate
+    # releases deep in Renovate's dependency tree (semver@6.3.1). Releases
+    # over 30 days old are spared for this tool only; recent ones are checked.
     renovate:
       glob: ".renovaterc.json"
-      run: pnpm --package=renovate dlx renovate-config-validator --strict {staged_files}
+      run: pnpm --config.trust-policy-ignore-after=43200 --package=renovate dlx renovate-config-validator --strict {staged_files}
 
 commit-msg:
   commands:
