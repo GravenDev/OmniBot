@@ -79,19 +79,6 @@ ARG TARGETPLATFORM
 RUN --mount=type=cache,id=pnpm-store-${TARGETPLATFORM},target=/pnpm/store,sharing=locked \
     pnpm install --frozen-lockfile --prod --filter omni-bot
 
-# `prisma` is an *optional peer* of @prisma/client, so `auto-install-peers`
-# (enabled in pnpm-lock.yaml) drags the whole CLI — and its typescript/effect/
-# @prisma/engines dependencies — into a production install. Those are build-time
-# tools only: at runtime the bot talks to the client generated in
-# dist/generated/prisma, which embeds its own query engine. Dropping them here
-# removes ~140 MB from the final image.
-RUN rm -rf \
-      node_modules/prisma \
-      node_modules/.pnpm/prisma@* \
-      node_modules/.pnpm/@prisma+engines@* \
-      node_modules/.pnpm/typescript@* \
-      node_modules/.pnpm/effect@*
-
 # --- migrator: short-lived image that applies the Prisma migrations -------
 # It carries the pnpm-pinned Prisma CLI plus the consolidated schema and the
 # migration history. `--schema` points at the folder: Prisma merges every
