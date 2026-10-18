@@ -5,14 +5,15 @@ import {
   type GuildMember,
 } from "discord.js";
 
-export type Sanction = "warn" | "timeout" | "kick" | "ban";
+export type Sanction = "warn" | "timeout" | "kick" | "ban" | "softban";
 
 export type SanctionBlock =
   | "targetLeft"
   | "targetIsSelf"
   | "targetIsOwner"
   | "moderatorBelow"
-  | "botBelow";
+  | "botBelow"
+  | "alreadyBanned";
 
 export const MAX_TIMEOUT_SECONDS = 28 * 24 * 60 * 60;
 export const MAX_BAN_PURGE_SECONDS = 7 * 24 * 60 * 60;
@@ -34,7 +35,7 @@ export function sanctionBlock(
   target: TargetRank | null
 ): SanctionBlock | null {
   if (!target) {
-    return sanction === "ban" ? null : "targetLeft";
+    return sanction === "ban" || sanction === "softban" ? null : "targetLeft";
   }
   if (target.id === moderator.id) {
     return "targetIsSelf";
@@ -45,7 +46,8 @@ export function sanctionBlock(
   if (!moderator.isOwner && moderator.position <= target.position) {
     return "moderatorBelow";
   }
-  if (sanction !== "warn" && !target.botCan[sanction]) {
+  const power = sanction === "softban" ? "ban" : sanction;
+  if (power !== "warn" && !target.botCan[power]) {
     return "botBelow";
   }
   return null;
@@ -87,6 +89,21 @@ export async function fetchMember(
   }
 }
 
+export async function isBanned(guild: Guild, userId: string): Promise<boolean> {
+  try {
+    await guild.bans.fetch({ user: userId, force: true });
+    return true;
+  } catch (error) {
+    if (
+      error instanceof DiscordAPIError &&
+      error.code === RESTJSONErrorCodes.UnknownBan
+    ) {
+      return false;
+    }
+    throw error;
+  }
+}
+
 export interface SanctionInput {
   reason: string | null;
   duration: number | null;
@@ -118,6 +135,13 @@ export async function applySanction(
         reason,
         deleteMessageSeconds: input.purgeSeconds ?? 0,
       });
+      return;
+    case "softban":
+      await guild.bans.create(userId, {
+        reason,
+        deleteMessageSeconds: input.purgeSeconds ?? MAX_BAN_PURGE_SECONDS,
+      });
+      await guild.bans.remove(userId, reason);
       return;
   }
 }

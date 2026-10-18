@@ -19,6 +19,7 @@ import { messageUrl } from "../services/alert-view.js";
 import {
   applySanction,
   fetchMember,
+  isBanned,
   MAX_BAN_PURGE_SECONDS,
   MAX_TIMEOUT_SECONDS,
   rankOf,
@@ -43,10 +44,12 @@ const PERMISSIONS: Record<Direct | Sanction, bigint> = {
   timeout: PermissionFlagsBits.ModerateMembers,
   kick: PermissionFlagsBits.KickMembers,
   ban: PermissionFlagsBits.BanMembers,
+  softban: PermissionFlagsBits.BanMembers,
 };
 
 const REASON_MAX = 400;
 const DEFAULT_TIMEOUT = "1h";
+const DEFAULT_SOFTBAN_PURGE = "7d";
 
 function reportIdOf(args: string[]): number | null {
   const id = Number(args[0]);
@@ -256,6 +259,15 @@ function sanctionModal(sanction: Sanction, reportId: number, config: Config) {
       })
     );
   }
+  if (sanction === "softban") {
+    modal.addComponents(
+      textInput("purge", t("modal.purge"), TextInputStyle.Short, true, {
+        value: DEFAULT_SOFTBAN_PURGE,
+        placeholder: t("modal.softbanPurgePlaceholder"),
+        max: 20,
+      })
+    );
+  }
   return modal;
 }
 
@@ -304,8 +316,11 @@ function readFields(
   }
 
   let purgeSeconds: number | null = null;
-  if (sanction === "ban") {
+  if (sanction === "ban" || sanction === "softban") {
     const raw = interaction.fields.getTextInputValue("purge").trim();
+    if (sanction === "softban" && !raw) {
+      return "invalidPurge";
+    }
     if (raw) {
       purgeSeconds = parseDuration(raw);
       if (purgeSeconds === null || purgeSeconds > MAX_BAN_PURGE_SECONDS) {
@@ -332,11 +347,17 @@ async function runSanction(
   const guild = interaction.guild!;
   const moderator = await guild.members.fetch(interaction.user.id);
   const member = await fetchMember(guild, report.authorId);
-  const block = sanctionBlock(
-    sanction,
-    rankOf(moderator),
-    member ? targetRankOf(member) : null
-  );
+  const block =
+    sanctionBlock(
+      sanction,
+      rankOf(moderator),
+      member ? targetRankOf(member) : null
+    ) ??
+    (sanction === "softban" &&
+    !member &&
+    (await isBanned(guild, report.authorId))
+      ? "alreadyBanned"
+      : null);
   if (block) {
     await tell(interaction, config.t(`block.${block}`));
     return;
@@ -427,7 +448,7 @@ function sanctionModalHandler(sanction: Sanction) {
   );
 }
 
-const SANCTIONS: Sanction[] = ["warn", "timeout", "kick", "ban"];
+const SANCTIONS: Sanction[] = ["warn", "timeout", "kick", "ban", "softban"];
 const DIRECT: Direct[] = ["delete", "dismiss", "abusive", "reopen"];
 
 export const alertButtonHandlers = [

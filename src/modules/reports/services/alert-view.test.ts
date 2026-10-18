@@ -114,6 +114,7 @@ describe("alertMessage", () => {
       "report-timeout:7",
       "report-kick:7",
       "report-ban:7",
+      "report-softban:7",
       "report-dismiss:7",
       "report-abusive:7",
     ]);
