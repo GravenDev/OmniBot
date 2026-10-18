@@ -23,7 +23,7 @@ const reportsModule = defineModule({
   name: "Reports",
   description:
     "Lets members report a message with a reaction or the context menu; moderators get an alert with actions.",
-  version: "1.0.0",
+  version: "1.1.0",
   author: "OmniBot",
 
   config: reportsConfigSchema,

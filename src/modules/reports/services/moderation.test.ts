@@ -16,13 +16,20 @@ function target(overrides: Partial<TargetRank> = {}): TargetRank {
 
 describe("sanctionBlock", () => {
   it("allows every sanction on a lower member the bot can reach", () => {
-    for (const sanction of ["warn", "timeout", "kick", "ban"] as const) {
+    for (const sanction of [
+      "warn",
+      "timeout",
+      "kick",
+      "ban",
+      "softban",
+    ] as const) {
       expect(sanctionBlock(sanction, moderator, target())).toBeNull();
     }
   });
 
-  it("only allows a ban once the author left", () => {
+  it("only allows a ban or softban once the author left", () => {
     expect(sanctionBlock("ban", moderator, null)).toBeNull();
+    expect(sanctionBlock("softban", moderator, null)).toBeNull();
     expect(sanctionBlock("kick", moderator, null)).toBe("targetLeft");
     expect(sanctionBlock("timeout", moderator, null)).toBe("targetLeft");
     expect(sanctionBlock("warn", moderator, null)).toBe("targetLeft");
@@ -58,6 +65,7 @@ describe("sanctionBlock", () => {
     expect(sanctionBlock("timeout", moderator, shielded)).toBe("botBelow");
     expect(sanctionBlock("kick", moderator, shielded)).toBe("botBelow");
     expect(sanctionBlock("ban", moderator, shielded)).toBe("botBelow");
+    expect(sanctionBlock("softban", moderator, shielded)).toBe("botBelow");
     expect(sanctionBlock("warn", moderator, shielded)).toBeNull();
   });
 });

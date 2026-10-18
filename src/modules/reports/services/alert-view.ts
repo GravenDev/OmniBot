@@ -32,6 +32,7 @@ export type AlertButton =
   | "timeout"
   | "kick"
   | "ban"
+  | "softban"
   | "dismiss"
   | "abusive"
   | "reopen";
@@ -210,6 +211,7 @@ function actionRows(report: Report, t: TFunction) {
       button("ban", report.id, t("button.ban"), ButtonStyle.Danger)
     ),
     new ActionRowBuilder<ButtonBuilder>().addComponents(
+      button("softban", report.id, t("button.softban"), ButtonStyle.Danger),
       button("dismiss", report.id, t("button.dismiss"), ButtonStyle.Success),
       button("abusive", report.id, t("button.abusive"), ButtonStyle.Secondary)
     ),

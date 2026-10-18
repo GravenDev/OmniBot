@@ -10,6 +10,7 @@ export type ActionType =
   | "timeout"
   | "kick"
   | "ban"
+  | "softban"
   | "dismiss"
   | "abusive"
   | "reopen";
