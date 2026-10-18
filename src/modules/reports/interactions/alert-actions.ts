@@ -49,7 +49,7 @@ const PERMISSIONS: Record<Direct | Sanction, bigint> = {
 
 const REASON_MAX = 400;
 const DEFAULT_TIMEOUT = "1h";
-const DEFAULT_SOFTBAN_PURGE = "7d";
+const DEFAULT_SOFTBAN_PURGE = "1d";
 
 function reportIdOf(args: string[]): number | null {
   const id = Number(args[0]);
