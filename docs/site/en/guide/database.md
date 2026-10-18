@@ -25,15 +25,19 @@ src/
 
 ```prisma
 generator client {
-  provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+  provider            = "prisma-client"
+  output              = "../generated/prisma"
+  runtime             = "nodejs"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 ```
+
+The schema holds no connection URL. The Prisma CLI reads `DATABASE_URL` through `prisma.config.ts` (which loads `.env` when there is one), and the bot connects through the node-postgres driver adapter in `src/lib/database.ts`.
 
 ## Adding a Model to Your Module
 
@@ -69,7 +73,7 @@ This runs the consolidation script then `prisma generate`.
 pnpm prisma:migrate
 ```
 
-This runs consolidation then `prisma migrate dev`. It creates a new migration file in `src/prisma/migrations/`.
+This runs consolidation then `prisma migrate dev`, which creates a new migration file in `src/prisma/migrations/`, then regenerates the client: since Prisma 7, `migrate dev` no longer does it.
 
 ## Consolidation System
 
@@ -143,7 +147,7 @@ await prisma.moduleActivation.create({
 });
 ```
 
-The Prisma client is a singleton exported from `#lib/database.js`. It's initialized once at startup.
+The Prisma client is a singleton exported from `#lib/database.js`. It's initialized once at startup and goes through `@prisma/adapter-pg`, so the connection pool is node-postgres's (10 connections).
 
 ## Best Practices
 

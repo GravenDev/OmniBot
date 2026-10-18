@@ -1,9 +1,15 @@
+// The `prisma-client` generator emits TypeScript into src/, compiled by tsc
+// with the rest of the bot. `.js` import extensions are what NodeNext expects.
 generator client {
-  provider = "prisma-client-js"
-  output   = "../generated/prisma"
+  provider            = "prisma-client"
+  output              = "../generated/prisma"
+  runtime             = "nodejs"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
 }
 
+// The connection URL lives in prisma.config.ts (for the CLI) and in the
+// driver adapter of src/lib/database.ts (for the bot).
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
