@@ -23,8 +23,6 @@ trustPolicyExclude:
   # Maintenance release of the 5.x line published alongside 6.4.1 and 7.1.11,
   # with provenance but not the trusted publisher those used (vitepress dep).
   - vite@5.4.21
-  # Published without the provenance of 4.0.0/4.0.1 (vite dep, Dec 2024).
-  - chokidar@4.0.3
 
 allowBuilds:
   '@prisma/client': true
