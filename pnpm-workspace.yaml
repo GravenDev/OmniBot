@@ -4,6 +4,28 @@ packages:
 
 shellEmulator: true
 
+# Same delay as Renovate's minimumReleaseAge, applied by pnpm to every
+# resolution, transitive dependencies included (in minutes: 7 days).
+# Security fixes are taken by hand, Renovate's vulnerability PRs being off: a
+# fix younger than that goes under minimumReleaseAgeExclude as an exact
+# version (`- name@1.2.3`), in the PR that bumps it. Drop the entry once the
+# version is past the delay.
+minimumReleaseAge: 10080
+
+# Refuses a version published with weaker guarantees (trusted publisher,
+# provenance) than an earlier-published one: a sign of account takeover.
+# The check compares a version with the ones published before it, so rolling
+# back to a version that passed is not affected. It also runs on every install,
+# lockfile entries included.
+trustPolicy: no-downgrade
+# Verified legitimate releases, kept to the exact version:
+trustPolicyExclude:
+  # Maintenance release of the 5.x line published alongside 6.4.1 and 7.1.11,
+  # with provenance but not the trusted publisher those used (vitepress dep).
+  - vite@5.4.21
+  # Published without the provenance of 4.0.0/4.0.1 (vite dep, Dec 2024).
+  - chokidar@4.0.3
+
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
