@@ -65,6 +65,11 @@
       "automerge": false
     },
     {
+      "description": "7.10.x skipped: from 7.10.0 the prisma CLI is published with a token, without the provenance of earlier releases (https://github.com/prisma/orm/pull/30035), which pnpm's trustPolicy rejects. 8.x is offered again (its release candidates carry provenance); pnpm still rejects any release that does not. Drop the rule once a 7.10.x release is attested (npm view prisma@<version> dist.attestations), or once on 8.",
+      "matchPackageNames": ["prisma", "@prisma/*"],
+      "allowedVersions": "<7.10.0 || >=8.0.0"
+    },
+    {
       "description": "Build tooling compiles the shipped code or runs on contributors' machines: reviewed by hand",
       "matchPackageNames": ["typescript", "tsx", "lefthook"],
       "automerge": false
