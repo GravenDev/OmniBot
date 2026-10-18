@@ -21,7 +21,7 @@ runs:
     # No node-version: setup-node keeps the Node mise put on the PATH and is
     # only here for its pnpm store cache.
     - name: Cache the pnpm store
-      uses: actions/setup-node@v6 # zizmor: ignore[cache-poisoning]
+      uses: actions/setup-node@v7 # zizmor: ignore[cache-poisoning]
       with:
         cache: "pnpm"
 
