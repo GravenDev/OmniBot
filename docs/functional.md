@@ -210,17 +210,17 @@ Un nouveau signalement sur une alerte close la rouvre et mentionne le rôle mod�
 
 ### Actions
 
-| Bouton               | Effet                                                                                                                                      | Permission requise     |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------- |
-| Supprimer le message | Supprime le message signalé ; l'alerte reste ouverte. Disponible aussi une fois l'alerte close.                                            | Gérer les messages     |
-| Avertir              | Envoie en MP à l'auteur le message saisi, avec le lien du message. Clôt l'alerte.                                                          | Exclure temporairement |
-| Exclure…             | Exclusion temporaire de la durée saisie (`1h` par défaut, 28 jours maximum). Clôt l'alerte.                                                | Exclure temporairement |
-| Expulser             | Expulse l'auteur. Clôt l'alerte.                                                                                                           | Expulser des membres   |
-| Bannir               | Bannit l'auteur, avec suppression facultative de ses messages récents (7 jours maximum). Clôt l'alerte.                                    | Bannir des membres     |
-| Softban              | Bannit l'auteur puis lève aussitôt le bannissement, pour supprimer ses messages récents (7 jours par défaut et au maximum). Clôt l'alerte. | Bannir des membres     |
-| Classer sans suite   | Clôt l'alerte sans action.                                                                                                                 | Gérer les messages     |
-| Signalement abusif   | Clôt l'alerte ; le signalement ne compte pas dans l'historique de l'auteur.                                                                | Gérer les messages     |
-| Rouvrir              | Rouvre une alerte close.                                                                                                                   | Gérer les messages     |
+| Bouton               | Effet                                                                                                                                        | Permission requise     |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| Supprimer le message | Supprime le message signalé ; l'alerte reste ouverte. Disponible aussi une fois l'alerte close.                                              | Gérer les messages     |
+| Avertir              | Envoie en MP à l'auteur le message saisi, avec le lien du message. Clôt l'alerte.                                                            | Exclure temporairement |
+| Exclure…             | Exclusion temporaire de la durée saisie (`1h` par défaut, 28 jours maximum). Clôt l'alerte.                                                  | Exclure temporairement |
+| Expulser             | Expulse l'auteur. Clôt l'alerte.                                                                                                             | Expulser des membres   |
+| Bannir               | Bannit l'auteur, avec suppression facultative de ses messages récents (7 jours maximum). Clôt l'alerte.                                      | Bannir des membres     |
+| Softban              | Bannit l'auteur puis lève aussitôt le bannissement, pour supprimer ses messages récents (1 jour par défaut, 7 jours maximum). Clôt l'alerte. | Bannir des membres     |
+| Classer sans suite   | Clôt l'alerte sans action.                                                                                                                   | Gérer les messages     |
+| Signalement abusif   | Clôt l'alerte ; le signalement ne compte pas dans l'historique de l'auteur.                                                                  | Gérer les messages     |
+| Rouvrir              | Rouvre une alerte close.                                                                                                                     | Gérer les messages     |
 
 Les sanctions ont un motif facultatif (obligatoire pour l'avertissement), repris dans le journal d'audit du serveur. Elles sont refusées avec une explication si l'auteur est le propriétaire du serveur, si le modérateur n'a pas un rôle plus haut que l'auteur, ou si le bot ne peut pas l'atteindre. Un auteur qui a quitté le serveur ne peut plus qu'être banni ou softbanni ; le softban est refusé s'il est déjà banni, pour ne pas lever son bannissement. Une action qui échoue est inscrite au journal de l'alerte avec la mention « échec » et l'alerte reste ouverte. Deux modérateurs qui agissent en même temps ne peuvent pas sanctionner deux fois : le second est prévenu que l'alerte est déjà close.
 
