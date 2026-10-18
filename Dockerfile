@@ -7,9 +7,9 @@
 # Build:  docker build -t omnibot .
 # ---------------------------------------------------------------------------
 
-# Alpine keeps the runtime small; Prisma detects `linux-musl-openssl-3.0.x` and
-# generates the matching query engine inside this very image, so musl/glibc can
-# not drift between the build and the runtime stage.
+# Alpine keeps the runtime small. Prisma 7 has no native query engine any more
+# (the client goes through node-postgres), so only the migrator carries a
+# platform-specific binary: the schema engine, fetched for musl at install.
 ARG NODE_IMAGE=node:24.21.0-alpine
 
 # --- base: pnpm through corepack, shared by every stage --------------------
@@ -58,19 +58,16 @@ RUN pnpm build
 # tsc only emits the .ts files it compiles, so the runtime assets have to be
 # placed next to the JavaScript by hand:
 #   - i18n bundles (*.json) live next to their module sources,
-#   - image assets (fonts, pictures) live in each module's assets/ folder,
-#   - the generated Prisma client is imported relatively from dist/lib.
-# Type declarations are dropped (useless at runtime); .js.map files are kept so
-# that production stack traces stay readable.
+#   - image assets (fonts, pictures) live in each module's assets/ folder.
+# The generated Prisma client is TypeScript under src/, so tsc already emitted
+# it. Type declarations are dropped (useless at runtime); .js.map files are kept
+# so that production stack traces stay readable.
 RUN set -eux; \
     find dist \( -name '*.d.ts' -o -name '*.d.ts.map' \) -delete; \
     cd src; \
     find . -type f \( -name '*.json' -o -path '*/assets/*' \) \
       -not -path './prisma/*' -not -path './generated/*' \
-      -exec sh -c 'mkdir -p "/app/dist/$(dirname "$1")" && cp "$1" "/app/dist/$1"' _ {} \; ; \
-    mkdir -p /app/dist/generated; \
-    cp -R /app/src/generated/prisma /app/dist/generated/prisma; \
-    find /app/dist/generated/prisma -name '*.d.ts' -delete
+      -exec sh -c 'mkdir -p "/app/dist/$(dirname "$1")" && cp "$1" "/app/dist/$1"' _ {} \;
 
 # --- prod-deps: runtime dependency tree only ------------------------------
 FROM base AS prod-deps
@@ -83,9 +80,11 @@ RUN --mount=type=cache,id=pnpm-store-${TARGETPLATFORM},target=/pnpm/store,sharin
 # It carries the pnpm-pinned Prisma CLI plus the consolidated schema and the
 # migration history. `--schema` points at the folder: Prisma merges every
 # *.prisma file in it (dbinfo.prisma holds the datasource) and reads
-# ./migrations from the same place.
+# ./migrations from the same place. prisma.config.ts hands the CLI the
+# connection URL from DATABASE_URL.
 FROM deps AS migrator
 
+COPY prisma.config.ts ./
 COPY --from=build /app/src/prisma ./prisma
 
 USER node
@@ -98,10 +97,9 @@ CMD ["/app/node_modules/.bin/prisma", "migrate", "deploy", "--schema", "/app/pri
 # --- runtime: minimal production image ------------------------------------
 FROM ${NODE_IMAGE} AS runtime
 
-# openssl: required by the Prisma query engine.
-# tini:    real init as PID 1 — forwards SIGTERM to node (the bot closes the
-#          Discord client and the Prisma pool on SIGTERM) and reaps zombies.
-RUN apk add --no-cache openssl tini \
+# tini: real init as PID 1 — forwards SIGTERM to node (the bot closes the
+#       Discord client and the Prisma pool on SIGTERM) and reaps zombies.
+RUN apk add --no-cache tini \
  && addgroup -S -g 10001 omnibot \
  && adduser -S -u 10001 -G omnibot -H -h /app omnibot
 

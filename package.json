@@ -26,12 +26,13 @@
     "new-module": "tsx scripts/new-module.ts",
     "prisma:consolidate": "tsx scripts/consolidate-schema.ts",
     "prisma:generate": "pnpm prisma:consolidate && prisma generate --no-hints",
-    "prisma:migrate": "pnpm prisma:consolidate && prisma migrate dev",
+    "prisma:migrate": "pnpm prisma:consolidate && prisma migrate dev && prisma generate --no-hints",
     "prisma:studio": "pnpm prisma:consolidate && prisma studio --no-hints"
   },
   "dependencies": {
     "@napi-rs/canvas": "^1.0.9",
-    "@prisma/client": "^6.19.3",
+    "@prisma/adapter-pg": "~7.9.1",
+    "@prisma/client": "~7.9.1",
     "croner": "^10.0.1",
     "discord.js": "^14.27.0",
     "i18next": "^26.4.2",
@@ -45,7 +46,7 @@
     "oxfmt": "^0.72.0",
     "oxlint": "^1.12.0",
     "pino-pretty": "^13.2.0",
-    "prisma": "^6.19.3",
+    "prisma": "~7.9.1",
     "tsx": "^4.20.5",
     "typescript": "^6.0.3",
     "vitest": "^5.0.0"
