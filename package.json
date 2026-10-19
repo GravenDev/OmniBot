@@ -23,7 +23,7 @@
     "test:integration": "vitest run --project integration",
     "prepare": "lefthook install -f || true",
     "format": "oxfmt --write && oxlint --fix --fix-suggestions",
-    "new-module": "tsx scripts/new-module.ts",
+    "new-module": "node scripts/new-module.ts",
     "prisma:generate": "prisma generate --no-hints",
     "prisma:migrate": "prisma migrate dev && prisma generate --no-hints",
     "prisma:studio": "prisma studio --no-hints"
