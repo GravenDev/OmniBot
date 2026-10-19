@@ -52,7 +52,7 @@ Briques partagées avec les autres modules : `#lib/task.ts` (tâches planifiées
 
 1. Déployer OmniBot : le conteneur `migrate` crée les tables `RngdleAccount`, `RngdleRoll` et `RngdleScoreTable`.
 2. Arrêter DJ4H, puis récupérer sa base : `docker cp <conteneur dj4h>:/app/data/dj4h.db .`
-3. Générer le SQL d'import des comptes et des salons de classement : `pnpm exec tsx scripts/export-dj4h-rngdle.ts dj4h.db > rngdle.sql`
+3. Générer le SQL d'import des comptes et des salons de classement : `node scripts/export-dj4h-rngdle.ts dj4h.db > rngdle.sql`
 4. L'appliquer dans le conteneur PostgreSQL : `docker exec -i <conteneur postgres> psql -U <utilisateur> -d <base> -v ON_ERROR_STOP=1 < rngdle.sql`. Le script est idempotent et fusionne le salon dans la configuration existante du serveur.
 5. Redémarrer le bot, qui garde la configuration des serveurs en cache.
 6. Activer le module avec `/modules`. Les tirages sont téléchargés à la synchronisation suivante, ou tout de suite avec `/rngdle-admin refresh`.

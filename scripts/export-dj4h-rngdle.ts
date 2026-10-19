@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 
 const [databasePath] = process.argv.slice(2);
 if (!databasePath) {
-  console.error("Usage: tsx scripts/export-dj4h-rngdle.ts <path/to/dj4h.db>");
+  console.error("Usage: node scripts/export-dj4h-rngdle.ts <path/to/dj4h.db>");
   process.exit(1);
 }
 
