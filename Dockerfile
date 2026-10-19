@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1.28
+# syntax=docker/dockerfile:1.28@sha256:bb22d9815c728170f72750f4e5b0d672e06176142e1d602c7e66c050100b7e5b
 
 # ---------------------------------------------------------------------------
 # OmniBot — production image
@@ -10,7 +10,7 @@
 # Alpine keeps the runtime small. Prisma 7 has no native query engine any more
 # (the client goes through node-postgres), so only the migrator carries a
 # platform-specific binary: the schema engine, fetched for musl at install.
-ARG NODE_IMAGE=node:24.21.0-alpine
+ARG NODE_IMAGE=node:24.21.0-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1
 
 # --- base: pnpm through corepack, shared by every stage --------------------
 FROM ${NODE_IMAGE} AS base
