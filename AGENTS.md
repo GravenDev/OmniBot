@@ -10,7 +10,6 @@ pnpm dev                  # run the bot with tsx
 pnpm build                # prisma:generate + tsc
 pnpm format               # oxfmt + oxlint --fix
 
-pnpm prisma:consolidate   # merge *.prisma module files → src/prisma/schema.prisma
 pnpm prisma:generate      # generate Prisma client (required before build)
 pnpm prisma:migrate       # create and apply a migration
 pnpm prisma:studio        # open Prisma Studio
@@ -52,7 +51,7 @@ The docs are also published as a VitePress site (sources in `docs/site/`) — ru
 
 ## Key rules
 
-- Never edit `src/prisma/schema.prisma` directly — edit the module's own `*.prisma` file and run `pnpm prisma:consolidate`.
+- Prisma reads every `*.prisma` file under `src/` (multi-file schema): models live in the module's own `*.prisma` file, and model names must be unique across modules.
 - Run `pnpm prisma:generate` before building after any schema change.
 - Import across directories with `#…` subpath imports (e.g. `#lib/config.js`, `#core/…`), not deep relative paths (`../../…`); keep same-directory imports relative (`./x.js`). Always keep the `.js` extension (NodeNext).
 

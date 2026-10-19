@@ -148,7 +148,7 @@ src/
 ├── core/      # framework: module loader, /config & /modules, command/event/interaction loaders
 ├── modules/   # one folder per feature module (commands/, listeners/, services/, *.config.ts, *.module.ts)
 ├── lib/       # shared contracts (module, config, registry, listener, …)
-└── prisma/    # consolidated schema + migrations (generated — never edit by hand)
+└── prisma/    # generator + datasource (dbinfo.prisma) and migrations; models live in each module
 ```
 
 Each module is a plugin: drop a folder under `src/modules/` and it is discovered

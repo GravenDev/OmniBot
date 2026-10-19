@@ -113,7 +113,6 @@ src/
 │   └── registry.ts             #   Registry: collects commands/listeners/handlers
 ├── prisma/                     # Database
 │   ├── dbinfo.prisma           #   Generator + datasource config
-│   ├── schema.prisma           #   Consolidated schema (auto-generated)
 │   └── migrations/             #   SQL migration files
 ├── utils/                      # Shared utilities
 │   └── colors.ts               #   Embed color constants
@@ -174,7 +173,7 @@ pnpm test:integration     # Run integration tests only
 pnpm format               # oxfmt + oxlint --fix
 
 # Database
-pnpm prisma:generate      # Consolidate schemas + generate Prisma client
+pnpm prisma:generate      # Generate the Prisma client
 pnpm prisma:migrate       # Create and apply a migration
 pnpm prisma:studio        # Open Prisma Studio (GUI)
 
