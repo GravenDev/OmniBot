@@ -1,6 +1,6 @@
 # Base de données
 
-OmniBot utilise [Prisma](https://www.prisma.io/) comme ORM avec une architecture de schéma multi-fichiers. Les modèles de base de données sont répartis entre les modules et consolidés au moment de la construction.
+OmniBot utilise [Prisma](https://www.prisma.io/) comme ORM avec le schéma multi-fichiers de Prisma. Les modèles de base de données vivent dans chaque module, à côté de son code, et Prisma les lit tous depuis `src/`.
 
 ## Architecture
 
@@ -10,7 +10,7 @@ OmniBot utilise [Prisma](https://www.prisma.io/) comme ORM avec une architecture
 src/
 ├── prisma/
 │   ├── dbinfo.prisma          # Configuration du générateur + datasource
-│   └── schema.prisma          # Schéma consolidé (auto-généré, ne pas éditer)
+│   └── migrations/            # Historique des migrations SQL
 ├── core/
 │   └── models/
 │       ├── config.prisma      # Modèle GuildConfiguration
@@ -65,7 +65,7 @@ model MonModele {
 pnpm prisma:generate
 ```
 
-Ceci exécute le script de consolidation puis `prisma generate`.
+Ceci exécute `prisma generate`.
 
 ### 4. Créer une migration
 
@@ -73,27 +73,23 @@ Ceci exécute le script de consolidation puis `prisma generate`.
 pnpm prisma:migrate
 ```
 
-Ceci exécute la consolidation puis `prisma migrate dev`, qui crée un nouveau fichier de migration dans `src/prisma/migrations/`, puis régénère le client : depuis Prisma 7, `migrate dev` ne le fait plus.
+Ceci exécute `prisma migrate dev`, qui crée un nouveau fichier de migration dans `src/prisma/migrations/`, puis régénère le client : depuis Prisma 7, `migrate dev` ne le fait plus.
 
-## Système de consolidation
+## Schéma multi-fichiers
 
-Au lieu de maintenir un seul fichier `schema.prisma` monolithique, le projet répartit les modèles dans des fichiers `*.prisma` dans chaque module. Le script de consolidation (`scripts/consolidate-schema.ts`) fusionne le tout :
+`prisma.config.ts` fait lire `src/` à Prisma : tout fichier `*.prisma` en dessous, à n'importe quelle profondeur, fait partie d'un même schéma. Il n'y a ni étape de fusion ni fichier de schéma généré : éditez le fichier `*.prisma` du module, puis lancez les commandes ci-dessous.
 
-1. Parcourt récursivement `src/` pour les fichiers `*.prisma` (sauf `src/prisma/` lui-même et `src/generated/`)
-2. Extrait les modèles de chaque fichier
-3. Les combine avec l'en-tête `dbinfo.prisma` dans `src/prisma/schema.prisma`
-4. Ajoute des commentaires identifiant le fichier source de chaque modèle
+- Les noms de modèles sont communs à tous les modules : deux modules ne peuvent pas déclarer chacun un `model Score`. Prisma signale le conflit en indiquant le fichier en cause.
+- Tout fichier `*.prisma` sous `src/` est pris en compte, fixtures de test comprises : gardez ces fichiers hors de `src/`.
+- Les migrations restent dans `src/prisma/migrations/`, à côté de `dbinfo.prisma` (`migrations.path` dans `prisma.config.ts`).
 
 ### Commandes
 
 ```bash
-pnpm prisma:consolidate   # Consolidation uniquement (pas de génération client)
-pnpm prisma:generate      # Consolidation + génération du client Prisma
-pnpm prisma:migrate       # Consolidation + création et application de migration
-pnpm prisma:studio        # Consolidation + ouverture de Prisma Studio
+pnpm prisma:generate      # Génère le client Prisma
+pnpm prisma:migrate       # Crée et applique une migration, puis régénère le client
+pnpm prisma:studio        # Ouvre Prisma Studio
 ```
-
-> **Important** : Ne modifiez jamais `src/prisma/schema.prisma` directement. Éditez toujours le fichier `*.prisma` du module concerné et exécutez `pnpm prisma:consolidate` (ou `pnpm prisma:generate`).
 
 ## Modèles actuels
 

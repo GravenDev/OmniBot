@@ -1,6 +1,6 @@
 # Database
 
-OmniBot uses [Prisma](https://www.prisma.io/) as its ORM with a multi-file schema architecture. Database models are distributed across modules and consolidated at build time.
+OmniBot uses [Prisma](https://www.prisma.io/) as its ORM with Prisma's multi-file schema. Database models live in each module, next to its code, and Prisma reads them all from `src/`.
 
 ## Architecture
 
@@ -10,7 +10,7 @@ OmniBot uses [Prisma](https://www.prisma.io/) as its ORM with a multi-file schem
 src/
 ├── prisma/
 │   ├── dbinfo.prisma          # Generator + datasource configuration
-│   └── schema.prisma          # Consolidated schema (auto-generated, do not edit)
+│   └── migrations/            # SQL migration history
 ├── core/
 │   └── models/
 │       ├── config.prisma      # GuildConfiguration model
@@ -65,7 +65,7 @@ model MyModel {
 pnpm prisma:generate
 ```
 
-This runs the consolidation script then `prisma generate`.
+This runs `prisma generate`.
 
 ### 4. Create a migration
 
@@ -73,27 +73,23 @@ This runs the consolidation script then `prisma generate`.
 pnpm prisma:migrate
 ```
 
-This runs consolidation then `prisma migrate dev`, which creates a new migration file in `src/prisma/migrations/`, then regenerates the client: since Prisma 7, `migrate dev` no longer does it.
+This runs `prisma migrate dev`, which creates a new migration file in `src/prisma/migrations/`, then regenerates the client: since Prisma 7, `migrate dev` no longer does it.
 
-## Consolidation System
+## Multi-file Schema
 
-Instead of maintaining a single monolithic `schema.prisma`, the project distributes models across `*.prisma` files in each module. The consolidation script (`scripts/consolidate-schema.ts`) merges everything:
+`prisma.config.ts` points Prisma at `src/`: every `*.prisma` file below it, at any depth, is part of one schema. There is no merge step and no generated schema file — edit the module's own `*.prisma` file and run the commands below.
 
-1. Recursively scans `src/` for `*.prisma` files (excluding `src/prisma/` itself and `src/generated/`)
-2. Extracts models from each file
-3. Combines them with the `dbinfo.prisma` header into `src/prisma/schema.prisma`
-4. Adds comments identifying each model's source file
+- Model names are shared by every module: two modules cannot both declare `model Score`. Prisma reports the clash with the file at fault.
+- Any `*.prisma` file under `src/` is picked up, test fixtures included: keep such files out of `src/`.
+- The migrations stay in `src/prisma/migrations/`, beside `dbinfo.prisma` (`migrations.path` in `prisma.config.ts`).
 
 ### Commands
 
 ```bash
-pnpm prisma:consolidate   # Consolidate only (no client generation)
-pnpm prisma:generate      # Consolidate + generate Prisma client
-pnpm prisma:migrate       # Consolidate + create and apply migration
-pnpm prisma:studio        # Consolidate + open Prisma Studio
+pnpm prisma:generate      # Generate the Prisma client
+pnpm prisma:migrate       # Create and apply a migration, then regenerate the client
+pnpm prisma:studio        # Open Prisma Studio
 ```
-
-> **Important**: Never edit `src/prisma/schema.prisma` directly. Always edit the module's own `*.prisma` file and run `pnpm prisma:consolidate` (or `pnpm prisma:generate`).
 
 ## Current Models
 
