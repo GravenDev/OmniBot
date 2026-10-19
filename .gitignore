@@ -149,3 +149,7 @@ pitchfork.local.toml
 
 # Claude Code agent worktrees
 .claude/worktrees/
+
+# Data
+/*.db
+/*.sql
