@@ -111,8 +111,8 @@ const I18N_FR = `{
 const MODEL_PRISMA = `// Database models for the __ID__ module.
 // Uncomment and adapt the example below, then run:
 //   pnpm prisma:generate && pnpm prisma:migrate
-// Model names must be unique across ALL modules (everything is consolidated
-// into a single schema).
+// Model names must be unique across ALL modules (Prisma reads every *.prisma
+// file under src/ as one schema).
 //
 // model __Pascal__Thing {
 //   id        String   @id @default(cuid())

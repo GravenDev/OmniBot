@@ -11,7 +11,11 @@ if (existsSync(".env")) process.loadEnvFile();
 // Commands that do connect (migrate, studio) report the missing URL themselves.
 const url = process.env["DATABASE_URL"];
 
+// Prisma's multi-file schema: every *.prisma under src/ is part of it, so each
+// module keeps its models next to its code. The migrations stay in src/prisma,
+// beside dbinfo.prisma (generator + datasource).
 export default defineConfig({
-  schema: path.join("src", "prisma"),
+  schema: "src",
+  migrations: { path: path.join("src", "prisma", "migrations") },
   datasource: url === undefined ? {} : { url },
 });

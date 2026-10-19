@@ -43,16 +43,15 @@ ARG TARGETPLATFORM
 RUN --mount=type=cache,id=pnpm-store-${TARGETPLATFORM},target=/pnpm/store,sharing=locked \
     pnpm install --frozen-lockfile --filter omni-bot
 
-# --- build: consolidate schema, generate the client, compile TypeScript ----
+# --- build: generate the Prisma client, compile TypeScript ---------------
 FROM deps AS build
 
 COPY tsconfig.json prisma.config.ts ./
-COPY scripts ./scripts
 COPY src ./src
 
-# `pnpm build` = consolidate *.prisma → src/prisma/schema.prisma,
-#               prisma generate → src/generated/prisma,
-#               tsc            → dist/
+# `pnpm build` = prisma generate → src/generated/prisma (from every *.prisma
+#                                  under src/),
+#               tsc             → dist/
 RUN pnpm build
 
 # tsc only emits the .ts files it compiles, so the runtime assets have to be
@@ -77,22 +76,21 @@ RUN --mount=type=cache,id=pnpm-store-${TARGETPLATFORM},target=/pnpm/store,sharin
     pnpm install --frozen-lockfile --prod --filter omni-bot
 
 # --- migrator: short-lived image that applies the Prisma migrations -------
-# It carries the pnpm-pinned Prisma CLI plus the consolidated schema and the
-# migration history. `--schema` points at the folder: Prisma merges every
-# *.prisma file in it (dbinfo.prisma holds the datasource) and reads
-# ./migrations from the same place. prisma.config.ts hands the CLI the
-# connection URL from DATABASE_URL.
+# It carries the pnpm-pinned Prisma CLI, prisma.config.ts (schema location and
+# connection URL from DATABASE_URL), dbinfo.prisma and the migration history.
+# Applying migrations needs the datasource, not the models: src/prisma alone
+# is a valid schema.
 FROM deps AS migrator
 
 COPY prisma.config.ts ./
-COPY --from=build /app/src/prisma ./prisma
+COPY src/prisma ./src/prisma
 
 USER node
 
 # The Prisma binary is invoked directly rather than through `pnpm exec`: this
 # container runs on an egress-less network, and corepack would try to re-fetch
 # pnpm for the unprivileged user.
-CMD ["/app/node_modules/.bin/prisma", "migrate", "deploy", "--schema", "/app/prisma"]
+CMD ["/app/node_modules/.bin/prisma", "migrate", "deploy"]
 
 # --- runtime: minimal production image ------------------------------------
 FROM ${NODE_IMAGE} AS runtime
