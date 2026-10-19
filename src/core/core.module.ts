@@ -24,6 +24,9 @@ export default defineModule({
   name: "Global Configuration",
   description:
     "The core module of the application, managing core commands and events. It is always loaded.",
+  // Never read: the core's commands are registered again on every startup,
+  // whatever this says, and the version checks only go through the feature
+  // modules. No need to bump it when /config, /modules or /pings change.
   version: "1.1.1",
   intents: [GatewayIntentBits.Guilds],
   config: coreConfigSchema satisfies CoreConfig,
