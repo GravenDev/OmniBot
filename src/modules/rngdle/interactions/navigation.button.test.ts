@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   account: vi.fn(),
   profileCard: vi.fn(),
   historyCard: vi.fn(),
+  timelineCard: vi.fn(),
+  trendCard: vi.fn(),
   overallPage: vi.fn(),
   refreshIfStale: vi.fn(),
 }));
@@ -20,6 +22,8 @@ vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
   ...(await importOriginal<object>()),
   profileCard: mocks.profileCard,
   historyCard: mocks.historyCard,
+  timelineCard: mocks.timelineCard,
+  trendCard: mocks.trendCard,
   overallPage: mocks.overallPage,
 }));
 
@@ -49,7 +53,13 @@ async function click(target: string) {
 beforeEach(() => {
   mocks.account.mockReset().mockResolvedValue(null);
   mocks.profileCard.mockReset().mockResolvedValue(Buffer.from("png"));
-  mocks.historyCard.mockReset().mockResolvedValue(Buffer.from("png"));
+  mocks.historyCard.mockReset().mockResolvedValue({
+    image: Buffer.from("png"),
+    page: 1,
+    pageCount: 2,
+  });
+  mocks.timelineCard.mockReset().mockResolvedValue(Buffer.from("png"));
+  mocks.trendCard.mockReset().mockResolvedValue(Buffer.from("png"));
   mocks.overallPage.mockReset().mockResolvedValue({
     image: Buffer.from("png"),
     page: 1,
@@ -104,10 +114,15 @@ describe("navigation button", () => {
       reply.components.flatMap((row) =>
         row.toJSON().components.map((button) => button.custom_id)
       )
-    ).toEqual(["rngdle-nav:history", "rngdle-nav:overall"]);
+    ).toEqual([
+      "rngdle-nav:history",
+      "rngdle-nav:trend",
+      "rngdle-nav:timeline",
+      "rngdle-nav:overall",
+    ]);
   });
 
-  it("shows the caller's own history, with the default count", async () => {
+  it("shows the caller's own history, with the default count and private pages", async () => {
     const account = { guildId: "guild", userId: "caller", username: "Lucky" };
     mocks.account.mockResolvedValue(account);
 
@@ -116,7 +131,9 @@ describe("navigation button", () => {
     expect(mocks.historyCard).toHaveBeenCalledWith(
       expect.anything(),
       account,
-      undefined
+      undefined,
+      expect.any(Date),
+      1
     );
     const [reply] = interaction.editReply.mock.calls[0]! as [
       {
@@ -129,7 +146,31 @@ describe("navigation button", () => {
       reply.components.flatMap((row) =>
         row.toJSON().components.map((button) => button.custom_id)
       )
-    ).toEqual(["rngdle-nav:profile", "rngdle-nav:overall"]);
+    ).toEqual([
+      expect.stringMatching(/^rngdle-history:0:caller::private:\d+$/),
+      expect.stringMatching(/^rngdle-history:indicator:caller::private:\d+$/),
+      expect.stringMatching(/^rngdle-history:2:caller::private:\d+$/),
+      "rngdle-nav:profile",
+      "rngdle-nav:trend",
+      "rngdle-nav:timeline",
+      "rngdle-nav:overall",
+    ]);
+  });
+
+  it.each([
+    ["timeline", "timelineCard", "timeline-Lucky.png"],
+    ["trend", "trendCard", "trend-Lucky.png"],
+  ] as const)("shows the caller's own %s", async (target, card, file) => {
+    const account = { guildId: "guild", userId: "caller", username: "Lucky" };
+    mocks.account.mockResolvedValue(account);
+
+    const interaction = await click(target);
+
+    expect(mocks[card].mock.calls[0]![1]).toBe(account);
+    const [reply] = interaction.editReply.mock.calls[0]! as [
+      { files: { name: string }[] },
+    ];
+    expect(reply.files[0]!.name).toBe(file);
   });
 
   it("tells an unlinked member privately how to link their account for the history", async () => {

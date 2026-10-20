@@ -6,6 +6,7 @@ import {
   MessageFlags,
   type ButtonInteraction,
 } from "discord.js";
+import type { TFunction } from "#lib/i18n.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import {
   overallPage,
@@ -26,6 +27,23 @@ function pageButton(customId: string, label: string, disabled: boolean) {
     .setLabel(label)
     .setStyle(ButtonStyle.Primary)
     .setDisabled(disabled);
+}
+
+export function pageRow(
+  t: TFunction,
+  id: (target: number | string) => string,
+  page: number,
+  pageCount: number
+) {
+  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+    pageButton(id(page - 1), t("config.previous"), page <= 1),
+    pageButton(
+      id("indicator"),
+      t("overall.page", { current: page, total: pageCount }),
+      true
+    ).setStyle(ButtonStyle.Success),
+    pageButton(id(page + 1), t("config.next"), page >= pageCount)
+  );
 }
 
 export async function overallPageMessage(
@@ -56,28 +74,7 @@ export async function overallPageMessage(
     content: periodText(context, period, now),
     files: [new AttachmentBuilder(result.image, { name: "leaderboard.png" })],
     attachments: [],
-    components: [
-      new ActionRowBuilder<ButtonBuilder>().addComponents(
-        pageButton(
-          id(result.page - 1),
-          context.t("config.previous"),
-          result.page <= 1
-        ),
-        pageButton(
-          id("indicator"),
-          context.t("overall.page", {
-            current: result.page,
-            total: result.pageCount,
-          }),
-          true
-        ).setStyle(ButtonStyle.Success),
-        pageButton(
-          id(result.page + 1),
-          context.t("config.next"),
-          result.page >= result.pageCount
-        )
-      ),
-    ],
+    components: [pageRow(context.t, id, result.page, result.pageCount)],
   };
 }
 

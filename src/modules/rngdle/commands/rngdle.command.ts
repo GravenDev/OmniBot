@@ -15,6 +15,8 @@ import {
   historyMessage,
   navigationRow,
   profileMessage,
+  timelineMessage,
+  trendMessage,
 } from "#modules/rngdle/interactions/navigation.button.js";
 import { overallPageMessage } from "#modules/rngdle/interactions/overall-page.button.js";
 import { unlinkConfirmMessage } from "#modules/rngdle/interactions/unlink-confirm.button.js";
@@ -29,6 +31,8 @@ import {
   HISTORY_MIN,
   parsePeriod,
   serverCard,
+  TREND_DAYS,
+  TREND_DEFAULT_DAYS,
   versusCard,
   type ViewContext,
 } from "#modules/rngdle/services/views.js";
@@ -103,6 +107,25 @@ async function history(interaction: Interaction, config: Config) {
       account,
       self,
       interaction.options.getInteger("count") ?? undefined
+    )
+  );
+}
+
+async function timeline(interaction: Interaction, config: Config) {
+  const { account, self } = await lookedUpAccount(interaction);
+  await interaction.editReply(
+    await timelineMessage(viewContext(interaction, config), account, self)
+  );
+}
+
+async function trend(interaction: Interaction, config: Config) {
+  const { account, self } = await lookedUpAccount(interaction);
+  await interaction.editReply(
+    await trendMessage(
+      viewContext(interaction, config),
+      account,
+      self,
+      interaction.options.getInteger("days") ?? undefined
     )
   );
 }
@@ -274,6 +297,8 @@ const subcommands: Record<
   leaderboard,
   profile,
   history,
+  timeline,
+  trend,
   "server-stats": serverStats,
   "leaderboard-all": leaderboardAll,
 };
@@ -342,6 +367,69 @@ export default declareCommand<RngdleConfigSchema>({
             })
             .setMinValue(HISTORY_MIN)
             .setMaxValue(HISTORY_MAX)
+        )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("timeline")
+        .setDescription("Show a player's mythic, anomaly and trash rolls")
+        .setDescriptionLocalizations({
+          fr: "Afficher les tirages mythiques, anomalies et trash d'un joueur",
+        })
+        .addUserOption((option) =>
+          option
+            .setName("member")
+            .setDescription("Member to look up (defaults to you)")
+            .setDescriptionLocalizations({
+              fr: "Membre à consulter (vous par défaut)",
+            })
+        )
+        .addStringOption((option) =>
+          option
+            .setName("username")
+            .setDescription("RNGdle username to look up")
+            .setDescriptionLocalizations({ fr: "Pseudo RNGdle à consulter" })
+            .setAutocomplete(true)
+        )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("trend")
+        .setDescription("Show a player's recent form")
+        .setDescriptionLocalizations({
+          fr: "Afficher la forme récente d'un joueur",
+        })
+        .addUserOption((option) =>
+          option
+            .setName("member")
+            .setDescription("Member to look up (defaults to you)")
+            .setDescriptionLocalizations({
+              fr: "Membre à consulter (vous par défaut)",
+            })
+        )
+        .addStringOption((option) =>
+          option
+            .setName("username")
+            .setDescription("RNGdle username to look up")
+            .setDescriptionLocalizations({ fr: "Pseudo RNGdle à consulter" })
+            .setAutocomplete(true)
+        )
+        .addIntegerOption((option) =>
+          option
+            .setName("days")
+            .setDescription(
+              `Number of days covered (defaults to ${TREND_DEFAULT_DAYS})`
+            )
+            .setDescriptionLocalizations({
+              fr: `Nombre de jours couverts (${TREND_DEFAULT_DAYS} par défaut)`,
+            })
+            .addChoices(
+              ...TREND_DAYS.map((days) => ({
+                name: `${days} days`,
+                name_localizations: { fr: `${days} jours` },
+                value: days,
+              }))
+            )
         )
     )
     .addSubcommand((sub) =>
