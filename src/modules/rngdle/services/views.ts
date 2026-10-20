@@ -18,6 +18,13 @@ import {
   renderOverallLeaderboard,
 } from "#modules/rngdle/rendering/leaderboards.js";
 import {
+  renderTimeline,
+  TIMELINE_TIERS,
+  type TimelineMonth,
+  type TimelineTier,
+} from "#modules/rngdle/rendering/timeline.js";
+import { movingWindow, renderTrend } from "#modules/rngdle/rendering/trend.js";
+import {
   renderVersus,
   type VersusPlayer,
 } from "#modules/rngdle/rendering/versus.js";
@@ -43,6 +50,9 @@ const OVERALL_PAGE_SIZE = 10;
 export const HISTORY_SIZE = 10;
 export const HISTORY_MIN = 5;
 export const HISTORY_MAX = 15;
+export const TREND_DAYS = [30, 90, 365] as const;
+export const TREND_DEFAULT_DAYS = 90;
+const TREND_MIN_PREVIOUS = 5;
 const CACHE_TTL_MS = 15_000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -73,6 +83,8 @@ export interface OverallPage {
   page: number;
   pageCount: number;
 }
+
+export type HistoryPage = OverallPage;
 
 function cached<T>(context: ViewContext, key: string, load: () => Promise<T>) {
   return cache.get(
@@ -464,20 +476,27 @@ export function historyCard(
   context: ViewContext,
   account: Account,
   count: number = HISTORY_SIZE,
-  now: Date = new Date()
-): Promise<Buffer | null> {
+  now: Date = new Date(),
+  requestedPage = 1
+): Promise<HistoryPage | null> {
   const size = Math.min(Math.max(count, HISTORY_MIN), HISTORY_MAX);
   const today = utcDayKey(now);
-  const key = `history:${account.userId}:${size}:${today}`;
+  const key = `history:${account.userId}:${size}:${today}:${requestedPage}`;
   return cached(context, key, async () => {
     const [rolls, table] = await Promise.all([
-      store.rolls(account.guildId, { userId: account.userId }),
+      store.rolls(account.guildId, {
+        userId: account.userId,
+        to: utcDayRange(0, now)[1],
+      }),
       store.scoreTable(),
     ]);
-    const recent = rolls.slice(-size).reverse();
-    if (recent.length === 0) {
+    if (rolls.length === 0) {
       return null;
     }
+    const pageCount = Math.ceil(rolls.length / size);
+    const page = Math.min(Math.max(requestedPage, 1), pageCount);
+    const end = rolls.length - (page - 1) * size;
+    const recent = rolls.slice(Math.max(0, end - size), end).reverse();
 
     const player = (
       await resolvePlayers(context.client, context.guildId, [account.userId])
@@ -513,7 +532,7 @@ export function historyCard(
     const average = averageScore(recent);
     const streaks = computeStreaks(rolls, now);
 
-    return renderHistory(
+    const image = await renderHistory(
       {
         username: player?.name ?? account.username,
         avatar: player?.avatar ?? null,
@@ -527,7 +546,14 @@ export function historyCard(
         bestStreak: streaks.best,
       },
       {
-        subtitle: (shown) => t("history.subtitle", { count: shown }),
+        subtitle: (shown) =>
+          page === 1
+            ? t("history.subtitle", { count: shown })
+            : t("history.subtitlePage", {
+                from: (page - 1) * size + 1,
+                to: (page - 1) * size + shown,
+                total: rolls.length,
+              }),
         averageScore: t("history.averageScore"),
         averageTier: (tier) => t("history.averageTier", { tier }),
         placement: t("history.placement"),
@@ -544,6 +570,233 @@ export function historyCard(
         number: t("leaderboard.header.number"),
         score: t("leaderboard.header.score"),
         placementHeader: t("leaderboard.header.placement"),
+      }
+    );
+    return { image, page, pageCount };
+  });
+}
+
+function nextMonth(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1));
+}
+
+function monthsBetween(locale: string, from: Date, to: Date): TimelineMonth[] {
+  const short = new Intl.DateTimeFormat(locale, {
+    month: "short",
+    timeZone: "UTC",
+  });
+  const withYear = new Intl.DateTimeFormat(locale, {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+  const months: TimelineMonth[] = [];
+  const first =
+    from.getTime() === Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), 1)
+      ? from
+      : nextMonth(from);
+  for (let start = first; start < to; start = nextMonth(start)) {
+    const format = start.getUTCMonth() === 0 ? withYear : short;
+    months.push({ start, label: format.format(start) });
+  }
+  return months;
+}
+
+export function timelineCard(
+  context: ViewContext,
+  account: Account,
+  now: Date = new Date()
+): Promise<Buffer | null> {
+  const key = `timeline:${account.userId}:${utcDayKey(now)}`;
+  return cached(context, key, async () => {
+    const [rolls, table] = await Promise.all([
+      store.rolls(account.guildId, {
+        userId: account.userId,
+        to: utcDayRange(0, now)[1],
+      }),
+      store.scoreTable(),
+    ]);
+    const firstRoll = rolls[0]?.rolledAt;
+    if (!firstRoll) {
+      return null;
+    }
+
+    const player = (
+      await resolvePlayers(context.client, context.guildId, [account.userId])
+    ).get(account.userId);
+    const from = new Date(
+      Date.UTC(firstRoll.getUTCFullYear(), firstRoll.getUTCMonth(), 1)
+    );
+    const to = nextMonth(now);
+    const formatDate = new Intl.DateTimeFormat(context.locale, {
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    });
+    const pins = rolls.flatMap((roll) => {
+      const tier = table.tierOf(roll.score);
+      return TIMELINE_TIERS.some((shown) => shown === tier)
+        ? [
+            {
+              at: roll.rolledAt,
+              tier: tier as TimelineTier,
+              score: roll.score,
+              dateText: formatDate.format(roll.rolledAt),
+            },
+          ]
+        : [];
+    });
+    const { t } = context;
+    const tierLabels = (prefix: string) =>
+      Object.fromEntries(
+        TIMELINE_TIERS.map((tier) => [tier, t(`${prefix}.${tier}`)])
+      ) as Record<TimelineTier, string>;
+
+    return renderTimeline(
+      {
+        username: player?.name ?? account.username,
+        avatar: player?.avatar ?? null,
+        from,
+        to,
+        firstRoll,
+        now,
+        months: monthsBetween(context.locale, from, to),
+        pins,
+        totalRolls: rolls.length,
+      },
+      {
+        subtitle: t("timeline.subtitle", {
+          count: rolls.length,
+          total: formatSpaced(rolls.length),
+          since: new Intl.DateTimeFormat(context.locale, {
+            month: "long",
+            year: "numeric",
+            timeZone: "UTC",
+          }).format(firstRoll),
+        }),
+        counts: tierLabels("timeline.count"),
+        legend: tierLabels("timeline.legend"),
+        expected: (value) =>
+          t("timeline.expected", {
+            value: formatExpected(context.locale, value),
+          }),
+        timeline: t("timeline.title"),
+      }
+    );
+  });
+}
+
+export function trendCard(
+  context: ViewContext,
+  account: Account,
+  days: number = TREND_DEFAULT_DAYS,
+  now: Date = new Date()
+): Promise<Buffer | null> {
+  const key = `trend:${account.userId}:${days}:${utcDayKey(now)}`;
+  return cached(context, key, async () => {
+    const from = utcDayRange(days - 1, now)[0];
+    const to = utcDayRange(0, now)[1];
+    const [rolls, table] = await Promise.all([
+      store.rolls(account.guildId, {
+        userId: account.userId,
+        from: new Date(from.getTime() - days * DAY_MS),
+        to,
+      }),
+      store.scoreTable(),
+    ]);
+    const period = rolls.filter((roll) => roll.rolledAt >= from);
+    const previous = rolls.filter((roll) => roll.rolledAt < from);
+    const stats = computeRollStats(period, table);
+    if (!stats) {
+      return null;
+    }
+
+    const player = (
+      await resolvePlayers(context.client, context.guildId, [account.userId])
+    ).get(account.userId);
+    const formatDate = new Intl.DateTimeFormat(context.locale, {
+      day: "numeric",
+      month: "short",
+      timeZone: "UTC",
+    });
+    const toRoll = (roll: typeof stats.best) => ({
+      number: roll.number,
+      score: roll.score,
+      tier: table.tierOf(roll.score),
+      dateText: formatDate.format(roll.rolledAt),
+    });
+    const trendRolls = period.map((roll) => ({
+      rolledAt: roll.rolledAt,
+      percent: table.percentOf(roll.score),
+      tier: table.tierOf(roll.score),
+    }));
+    const { t } = context;
+
+    return renderTrend(
+      {
+        username: player?.name ?? account.username,
+        avatar: player?.avatar ?? null,
+        from,
+        days,
+        months: monthsBetween(context.locale, from, to),
+        rolls: trendRolls,
+        best: toRoll(stats.best),
+        worst: toRoll(stats.worst),
+        averageScore: stats.averageScore,
+        averageTier: table.tierOf(stats.averageScore),
+        averagePercent:
+          trendRolls.reduce((sum, roll) => sum + roll.percent, 0) /
+          trendRolls.length,
+        upperHalf: trendRolls.filter((roll) => roll.percent > 50).length,
+        change:
+          previous.length >= TREND_MIN_PREVIOUS
+            ? (stats.averageScore / averageScore(previous) - 1) * 100
+            : null,
+        tierCounts: stats.tierCounts,
+      },
+      {
+        subtitle: t("trend.subtitle", {
+          count: days,
+          from: (from.getUTCFullYear() === now.getUTCFullYear()
+            ? formatDate
+            : new Intl.DateTimeFormat(context.locale, {
+                day: "numeric",
+                month: "short",
+                year: "numeric",
+                timeZone: "UTC",
+              })
+          ).format(from),
+          to: formatDate.format(now),
+        }),
+        bestRoll: t("profile.bestRoll"),
+        worstRoll: t("profile.worstRoll"),
+        roll: (number) => t("profile.roll", { number }),
+        averageScore: t("profile.averageScore"),
+        averageOver: (count) =>
+          t("profile.averageOver", { count, total: formatSpaced(count) }),
+        change: (percent) =>
+          t("trend.change", {
+            value: `${percent < 0 ? "−" : "+"}${Math.abs(Math.round(percent))}`,
+          }),
+        previous: t("trend.previous", { count: days }),
+        placement: t("history.placement"),
+        placementValue: (percent) =>
+          t(percent > 50 ? "history.top" : "history.bottom", {
+            percent: formatPercent(percent),
+          }),
+        upperHalf: (upper, total) =>
+          t("trend.upperHalf", { count: upper, total }),
+        tierBreakdown: t("profile.tierBreakdown"),
+        expected: t("profile.expected"),
+        expectedCount: (value) =>
+          t("profile.expectedCount", {
+            value: formatExpected(context.locale, value),
+          }),
+        chart: t("trend.chart"),
+        midline: t("trend.midline"),
+        movingAverage: t("trend.movingAverage", {
+          count: movingWindow(days),
+        }),
       }
     );
   });

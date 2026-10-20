@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   serverCard: vi.fn(),
   profileCard: vi.fn(),
   historyCard: vi.fn(),
+  timelineCard: vi.fn(),
+  trendCard: vi.fn(),
   overallPage: vi.fn(),
   setReminder: vi.fn(),
   mentionable: vi.fn(),
@@ -43,6 +45,8 @@ vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
   serverCard: mocks.serverCard,
   profileCard: mocks.profileCard,
   historyCard: mocks.historyCard,
+  timelineCard: mocks.timelineCard,
+  trendCard: mocks.trendCard,
   overallPage: mocks.overallPage,
 }));
 
@@ -114,7 +118,13 @@ beforeEach(() => {
   });
   mocks.serverCard.mockResolvedValue(Buffer.from("png"));
   mocks.profileCard.mockResolvedValue(Buffer.from("png"));
-  mocks.historyCard.mockResolvedValue(Buffer.from("png"));
+  mocks.historyCard.mockResolvedValue({
+    image: Buffer.from("png"),
+    page: 1,
+    pageCount: 1,
+  });
+  mocks.timelineCard.mockResolvedValue(Buffer.from("png"));
+  mocks.trendCard.mockResolvedValue(Buffer.from("png"));
   mocks.overallPage.mockResolvedValue({
     image: Buffer.from("png"),
     page: 1,
@@ -320,7 +330,9 @@ describe("/rngdle history", () => {
     expect(mocks.historyCard).toHaveBeenCalledWith(
       expect.anything(),
       account,
-      15
+      15,
+      expect.any(Date),
+      1
     );
     const [sent] = interaction.editReply.mock.calls[0]! as [
       { files: { name: string }[] },
@@ -341,10 +353,83 @@ describe("/rngdle history", () => {
     expect(mocks.historyCard).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ userId: "caller" }),
-      undefined
+      undefined,
+      expect.any(Date),
+      1
     );
     expect(interaction.editReply).toHaveBeenCalledWith({
       content: 'profile.noRolls {"username":"Lucky"}',
+    });
+  });
+});
+
+describe("/rngdle timeline", () => {
+  it("asks the caller to link an account first", async () => {
+    const interaction = interactionFor({ subcommand: "timeline" });
+    await run(interaction);
+
+    expect(mocks.timelineCard).not.toHaveBeenCalled();
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: "profile.notRegisteredSelf",
+    });
+  });
+
+  it("shows the looked-up player's timeline", async () => {
+    const account = { guildId: "guild", userId: "other", username: "Bob" };
+    mocks.accountByUsername.mockResolvedValue(account);
+    const interaction = interactionFor({
+      subcommand: "timeline",
+      username: "Bob",
+    });
+    await run(interaction);
+
+    expect(mocks.timelineCard).toHaveBeenCalledWith(expect.anything(), account);
+    const [sent] = interaction.editReply.mock.calls[0]! as [
+      { files: { name: string }[] },
+    ];
+    expect(sent.files[0]!.name).toBe("timeline-Bob.png");
+  });
+});
+
+describe("/rngdle trend", () => {
+  it("covers the requested number of days", async () => {
+    const account = { guildId: "guild", userId: "other", username: "Bob" };
+    mocks.accountByUsername.mockResolvedValue(account);
+    const interaction = interactionFor({
+      subcommand: "trend",
+      username: "Bob",
+      integers: { days: 365 },
+    });
+    await run(interaction);
+
+    expect(mocks.trendCard).toHaveBeenCalledWith(
+      expect.anything(),
+      account,
+      365
+    );
+    const [sent] = interaction.editReply.mock.calls[0]! as [
+      { files: { name: string }[] },
+    ];
+    expect(sent.files[0]!.name).toBe("trend-Bob.png");
+  });
+
+  it("names the default period when the player has no roll in it", async () => {
+    mocks.account.mockResolvedValue({
+      guildId: "guild",
+      userId: "caller",
+      username: "Lucky",
+    });
+    mocks.trendCard.mockResolvedValue(null);
+    const interaction = interactionFor({ subcommand: "trend" });
+    await run(interaction);
+
+    expect(mocks.trendCard).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ userId: "caller" }),
+      undefined
+    );
+    expect(interaction.editReply).toHaveBeenCalledWith({
+      content: 'trend.noRolls {"username":"Lucky","count":90}',
     });
   });
 });
@@ -406,17 +491,61 @@ describe("/rngdle navigation buttons", () => {
     ]);
   });
 
-  it("offers the history and the overall leaderboard under a profile", async () => {
+  it("offers the history, the trend, the timeline and the overall leaderboard under a profile", async () => {
     expect(customIds(await reply({ subcommand: "profile" }))).toEqual([
       "rngdle-nav:history",
+      "rngdle-nav:trend",
+      "rngdle-nav:timeline",
       "rngdle-nav:overall",
     ]);
   });
 
-  it("offers the profile and the overall leaderboard under a history", async () => {
+  it("offers the profile, the trend, the timeline and the overall leaderboard under a history", async () => {
     expect(customIds(await reply({ subcommand: "history" }))).toEqual([
       "rngdle-nav:profile",
+      "rngdle-nav:trend",
+      "rngdle-nav:timeline",
       "rngdle-nav:overall",
+    ]);
+  });
+
+  it("pages a long history, keeping the player, the count and the day", async () => {
+    mocks.historyCard.mockResolvedValue({
+      image: Buffer.from("png"),
+      page: 1,
+      pageCount: 3,
+    });
+    const ids = customIds(
+      await reply({ subcommand: "history", integers: { count: 15 } })
+    );
+    const day = Math.floor(Date.now() / 86_400_000);
+
+    expect(ids.slice(0, 3)).toEqual([
+      `rngdle-history:0:caller:15:public:${day}`,
+      `rngdle-history:indicator:caller:15:public:${day}`,
+      `rngdle-history:2:caller:15:public:${day}`,
+    ]);
+    expect(ids.slice(3)).toEqual([
+      "rngdle-nav:profile",
+      "rngdle-nav:trend",
+      "rngdle-nav:timeline",
+      "rngdle-nav:overall",
+    ]);
+  });
+
+  it("offers the profile, the history and the trend under a timeline", async () => {
+    expect(customIds(await reply({ subcommand: "timeline" }))).toEqual([
+      "rngdle-nav:profile",
+      "rngdle-nav:history",
+      "rngdle-nav:trend",
+    ]);
+  });
+
+  it("offers the profile, the history and the timeline under a trend", async () => {
+    expect(customIds(await reply({ subcommand: "trend" }))).toEqual([
+      "rngdle-nav:profile",
+      "rngdle-nav:history",
+      "rngdle-nav:timeline",
     ]);
   });
 });

@@ -42,7 +42,7 @@ const LEADER_BORDER = 2;
 const MAX_LEADERS = 3;
 const SERVER_STATS_WIDTH = 1200;
 
-interface BreakdownSizes {
+export interface BreakdownSizes {
   width: number;
   label: number;
   labelWidth: number;
@@ -55,7 +55,7 @@ interface BreakdownSizes {
   leaderStep: number;
 }
 
-const PROFILE_BREAKDOWN: BreakdownSizes = {
+export const PROFILE_BREAKDOWN: BreakdownSizes = {
   width: 390,
   label: 17,
   labelWidth: 118,
@@ -205,7 +205,7 @@ function drawMarker(ctx: SKRSContext2D, x: number, centerY: number): void {
   );
 }
 
-function tierBreakdown(
+export function tierBreakdown(
   title: string,
   expectedLabel: string,
   formatExpected: (value: number) => string,

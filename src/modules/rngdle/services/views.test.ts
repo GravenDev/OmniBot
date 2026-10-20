@@ -9,6 +9,8 @@ const mocks = vi.hoisted(() => ({
   renderServer: vi.fn(async (..._args: unknown[]) => Buffer.from("server")),
   renderVersus: vi.fn(async (..._args: unknown[]) => Buffer.from("versus")),
   renderHistory: vi.fn(async (..._args: unknown[]) => Buffer.from("history")),
+  renderTimeline: vi.fn(async (..._args: unknown[]) => Buffer.from("timeline")),
+  renderTrend: vi.fn(async (..._args: unknown[]) => Buffer.from("trend")),
   tierOf: vi.fn((_score: number) => "COMMON"),
 }));
 
@@ -37,6 +39,14 @@ vi.mock("#modules/rngdle/rendering/versus.js", () => ({
 vi.mock("#modules/rngdle/rendering/history.js", () => ({
   renderHistory: mocks.renderHistory,
 }));
+vi.mock("#modules/rngdle/rendering/timeline.js", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  renderTimeline: mocks.renderTimeline,
+}));
+vi.mock("#modules/rngdle/rendering/trend.js", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  renderTrend: mocks.renderTrend,
+}));
 vi.mock("#lib/imaging.js", () => ({
   fetchAvatar: async () => null,
   fetchImage: async () => null,
@@ -52,6 +62,8 @@ import {
   periodRange,
   profileCard,
   serverCard,
+  timelineCard,
+  trendCard,
   utcDayRange,
   versusCard,
   type ViewContext,
@@ -122,6 +134,8 @@ beforeEach(() => {
   mocks.renderServer.mockClear();
   mocks.renderVersus.mockClear();
   mocks.renderHistory.mockClear();
+  mocks.renderTimeline.mockClear();
+  mocks.renderTrend.mockClear();
   mocks.tierOf.mockReset().mockReturnValue("COMMON");
 });
 
@@ -480,7 +494,7 @@ describe("historyCard", () => {
       Array.from({ length: 20 }, (_, i) => day(i + 1, (i + 1) * 100))
     );
 
-    await historyCard(
+    const result = await historyCard(
       context,
       { ...account, guildId: context.guildId },
       5,
@@ -489,7 +503,9 @@ describe("historyCard", () => {
 
     expect(mocks.rolls).toHaveBeenCalledWith(context.guildId, {
       userId: "a",
+      to: new Date("2026-03-21T00:00:00Z"),
     });
+    expect(result).toMatchObject({ page: 1, pageCount: 4 });
     const data = rendered();
     expect(data.username).toBe("nick-a");
     expect(data.rows.map((row) => row.score)).toEqual([
@@ -528,6 +544,38 @@ describe("historyCard", () => {
     ]);
   });
 
+  it("pages through older rolls and keeps the page in range", async () => {
+    mocks.rolls.mockResolvedValue(
+      Array.from({ length: 12 }, (_, i) => day(i + 1, (i + 1) * 100))
+    );
+    const own = { ...account, guildId: context.guildId };
+    const subtitle = () =>
+      (
+        mocks.renderHistory.mock.calls.at(-1)![1] as {
+          subtitle: (count: number) => string;
+        }
+      ).subtitle(rendered().rows.length);
+
+    expect(await historyCard(context, own, 5, now, 2)).toMatchObject({
+      page: 2,
+      pageCount: 3,
+    });
+    expect(rendered().rows.map((row) => row.score)).toEqual([
+      700, 600, 500, 400, 300,
+    ]);
+    expect(subtitle()).toBe("history.subtitlePage");
+
+    expect(await historyCard(context, own, 5, now, 9)).toMatchObject({
+      page: 3,
+    });
+    expect(rendered().rows.map((row) => row.score)).toEqual([200, 100]);
+
+    expect(await historyCard(context, own, 5, now, 0)).toMatchObject({
+      page: 1,
+    });
+    expect(subtitle()).toBe("history.subtitle");
+  });
+
   it("keeps the count between 5 and 15", async () => {
     mocks.rolls.mockResolvedValue(
       Array.from({ length: 20 }, (_, i) => day(i + 1, 100))
@@ -542,6 +590,164 @@ describe("historyCard", () => {
 
     await historyCard(context, own, undefined, now);
     expect(rendered().rows).toHaveLength(10);
+  });
+});
+
+describe("timelineCard", () => {
+  const account = { guildId: "", userId: "a", username: "alice" };
+  const at = (iso: string, score: number) => ({
+    userId: "a",
+    number: score,
+    score,
+    badgeCount: 0,
+    rolledAt: new Date(iso),
+  });
+  const rendered = () =>
+    mocks.renderTimeline.mock.calls.at(-1)![0] as {
+      from: Date;
+      to: Date;
+      firstRoll: Date;
+      months: { start: Date; label: string }[];
+      pins: { tier: string; score: number; dateText: string }[];
+      totalRolls: number;
+    };
+  const now = new Date("2026-10-19T12:00:00Z");
+
+  it("returns null without rolls", async () => {
+    expect(
+      await timelineCard(context, { ...account, guildId: context.guildId })
+    ).toBeNull();
+    expect(mocks.renderTimeline).not.toHaveBeenCalled();
+  });
+
+  it("spans whole months and pins only mythic, anomaly and trash rolls", async () => {
+    mocks.tierOf.mockImplementation((score: number) =>
+      score >= 1000
+        ? "MYTHIC"
+        : score >= 500
+          ? "ANOMALY"
+          : score < 10
+            ? "TRASH"
+            : "COMMON"
+    );
+    mocks.rolls.mockResolvedValue([
+      at("2025-12-14T10:00:00Z", 100),
+      at("2026-01-03T10:00:00Z", 1500),
+      at("2026-02-10T10:00:00Z", 5),
+      at("2026-10-18T10:00:00Z", 600),
+    ]);
+
+    await timelineCard(context, { ...account, guildId: context.guildId }, now);
+
+    expect(mocks.rolls).toHaveBeenCalledWith(context.guildId, {
+      userId: "a",
+      to: new Date("2026-10-20T00:00:00Z"),
+    });
+    const data = rendered();
+    expect(data.from).toEqual(new Date("2025-12-01T00:00:00Z"));
+    expect(data.to).toEqual(new Date("2026-11-01T00:00:00Z"));
+    expect(data.firstRoll).toEqual(new Date("2025-12-14T10:00:00Z"));
+    expect(data.totalRolls).toBe(4);
+    expect(data.pins).toEqual([
+      expect.objectContaining({
+        tier: "MYTHIC",
+        score: 1500,
+        dateText: "Jan 3",
+      }),
+      expect.objectContaining({ tier: "TRASH", score: 5 }),
+      expect.objectContaining({ tier: "ANOMALY", score: 600 }),
+    ]);
+    expect(data.months).toHaveLength(11);
+    expect(data.months.slice(0, 3).map((month) => month.label)).toEqual([
+      "Dec",
+      "Jan 2026",
+      "Feb",
+    ]);
+  });
+});
+
+describe("trendCard", () => {
+  const account = { guildId: "", userId: "a", username: "alice" };
+  const daysAgo = (days: number, score: number) => ({
+    userId: "a",
+    number: score,
+    score,
+    badgeCount: 0,
+    rolledAt: new Date(Date.UTC(2026, 9, 19 - days, 10)),
+  });
+  const rendered = () =>
+    mocks.renderTrend.mock.calls.at(-1)![0] as {
+      from: Date;
+      days: number;
+      rolls: { percent: number }[];
+      best: { score: number };
+      worst: { score: number };
+      averageScore: number;
+      averagePercent: number;
+      upperHalf: number;
+      change: number | null;
+    };
+  const now = new Date("2026-10-19T12:00:00Z");
+  const serve = (rolls: ReturnType<typeof daysAgo>[]) =>
+    mocks.rolls.mockImplementation(
+      async (_guildId: string, filter: { from: Date; to: Date }) =>
+        rolls.filter(
+          (roll) => roll.rolledAt >= filter.from && roll.rolledAt < filter.to
+        )
+    );
+
+  it("returns null without a roll in the period", async () => {
+    serve([daysAgo(40, 100)]);
+
+    expect(
+      await trendCard(
+        context,
+        { ...account, guildId: context.guildId },
+        30,
+        now
+      )
+    ).toBeNull();
+    expect(mocks.renderTrend).not.toHaveBeenCalled();
+  });
+
+  it("sums up the period and compares it with the one before", async () => {
+    serve([
+      ...Array.from({ length: 5 }, (_, i) => daysAgo(31 + i, 400)),
+      daysAgo(29, 300),
+      daysAgo(10, 700),
+      daysAgo(0, 500),
+    ]);
+
+    await trendCard(context, { ...account, guildId: context.guildId }, 30, now);
+
+    expect(mocks.rolls).toHaveBeenCalledWith(context.guildId, {
+      userId: "a",
+      from: new Date("2026-08-21T00:00:00Z"),
+      to: new Date("2026-10-20T00:00:00Z"),
+    });
+    const data = rendered();
+    expect(data.from).toEqual(new Date("2026-09-20T00:00:00Z"));
+    expect(data.days).toBe(30);
+    expect(data.rolls.map((roll) => roll.percent)).toEqual([30, 70, 50]);
+    expect(data).toMatchObject({
+      best: { score: 700 },
+      worst: { score: 300 },
+      averageScore: 500,
+      averagePercent: 50,
+      upperHalf: 1,
+      change: 25,
+    });
+  });
+
+  it("leaves the change out when the period before has too few rolls", async () => {
+    serve([
+      ...Array.from({ length: 4 }, (_, i) => daysAgo(31 + i, 400)),
+      daysAgo(0, 500),
+    ]);
+
+    await trendCard(context, { ...account, guildId: context.guildId }, 30, now);
+
+    expect(rendered().change).toBeNull();
   });
 });
 

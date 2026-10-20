@@ -3,6 +3,7 @@ import { loggerMaker } from "#lib/logger.js";
 import { defineModule } from "#lib/module.js";
 import rngdleAdminCommand from "./commands/rngdle-admin.command.js";
 import rngdleCommand from "./commands/rngdle.command.js";
+import historyPageButton from "./interactions/history-page.button.js";
 import navigationButton from "./interactions/navigation.button.js";
 import overallPageButton from "./interactions/overall-page.button.js";
 import unlinkConfirmButton from "./interactions/unlink-confirm.button.js";
@@ -15,7 +16,7 @@ const rngdleModule = defineModule({
   id: "rngdle",
   name: "RNGdle",
   description:
-    "Tracks the members' rngdle.com rolls: leaderboards, profiles, server statistics and a daily leaderboard.",
+    "Tracks the members' rngdle.com rolls: leaderboards, profiles, histories, timelines, server statistics and a daily leaderboard.",
   version: "1.1.0",
   author: "LoicR",
 
@@ -29,6 +30,7 @@ const rngdleModule = defineModule({
     registry.register(overallPageButton);
     registry.register(unlinkConfirmButton);
     registry.register(navigationButton);
+    registry.register(historyPageButton);
     for (const task of rngdleTasks(rngdleModule)) {
       registry.register(task);
     }
