@@ -42,11 +42,15 @@ const PARAGRAPH_GAP = 0.8 * EM;
 const INDENT = 2 * EM;
 const MARKER_GAP = 0.5 * EM;
 const UNITS_PER_EM = 1000;
+const MAX_MACROS = 1000;
+const MAX_BUFFER = 2048;
+const RENDER_TIME_LIMIT_MS = 5000;
+const MAX_DRAWN_LENGTH = 4_000_000;
 
 const DISPLAY_MATH =
   /\$\$([\s\S]+?)\$\$|\\\[([\s\S]+?)\\\]|(\\begin\{((?:equation|align|alignat|gather|multline|flalign|eqnarray)\*?)\}[\s\S]*?\\end\{\4\})/g;
 const INLINE_PAREN_MATH = /\\\(([\s\S]+?)\\\)/g;
-export const INLINE_MATH = /((?<![\\$])\$(?=\S)[^$\n]*?\S\$(?![\d$]))/;
+export const INLINE_MATH = /((?<![\\$])\$(?=\S)[^$\n]*?\S\$(?![\w$]))/;
 const LIST_TOKEN =
   /(\\begin\{(?:itemize|enumerate)\}|\\end\{(?:itemize|enumerate)\}|\\item(?![a-zA-Z])(?:\s*\[[^\]]*\])?)/;
 const BULLETS = ["$\\bullet$", "–", "$\\ast$", "$\\cdot$"];
@@ -71,6 +75,8 @@ const newDocument = () =>
         "newcommand",
         "textmacros",
       ],
+      maxMacros: MAX_MACROS,
+      maxBuffer: MAX_BUFFER,
       formatError: (_jax: unknown, err: { message: string }) => {
         throw new FormulaError(err.message);
       },
@@ -82,7 +88,10 @@ const newDocument = () =>
     }),
   });
 
-type Document = ReturnType<typeof newDocument>;
+interface Renderer {
+  document: ReturnType<typeof newDocument>;
+  deadline: number;
+}
 
 let queue: Promise<unknown> = Promise.resolve();
 
@@ -118,8 +127,12 @@ interface Laid {
   kind: Block["kind"];
 }
 
-async function toSvg(document: Document, tex: string): Promise<Svg> {
-  const node = await document.convertPromise(tex, {
+async function toSvg(renderer: Renderer, tex: string): Promise<Svg> {
+  await new Promise(setImmediate);
+  if (Date.now() > renderer.deadline) {
+    throw new FormulaError("Too long to render");
+  }
+  const node = await renderer.document.convertPromise(tex, {
     display: true,
     em: EM,
     ex: EM / 2,
@@ -293,29 +306,30 @@ export function parseText(source: string): Block[] {
 
 const wordTex = (word: string) => `\\textstyle\\text{${word}}`;
 
-const literalTex = (word: string) =>
-  wordTex(
-    word.replace(/[\\{}$&#%_^~]/g, (char) => {
-      if (char === "\\") {
-        return "$\\backslash$";
-      }
-      return char === "^" || char === "~" ? `\\${char}{}` : `\\${char}`;
-    })
-  );
+export function literal(text: string): string {
+  return text.replace(/[\\{}$&#%_^~]/g, (char) => {
+    if (char === "\\") {
+      return "$\\backslash${}";
+    }
+    return char === "^" || char === "~" ? `\\${char}{}` : `\\${char}`;
+  });
+}
+
+const literalTex = (word: string) => wordTex(literal(word));
 
 async function layText(
-  document: Document,
+  renderer: Renderer,
   block: Extract<Block, { kind: "text" }>,
   cache: Map<string, Svg>
 ): Promise<Laid> {
   const svgOf = async (word: string) => {
     let svg = cache.get(word);
     if (!svg) {
-      svg = await toSvg(document, wordTex(word)).catch((err: unknown) => {
+      svg = await toSvg(renderer, wordTex(word)).catch((err: unknown) => {
         if (!(err instanceof FormulaError) || INLINE_MATH.test(word)) {
           throw err;
         }
-        return toSvg(document, literalTex(word));
+        return toSvg(renderer, literalTex(word));
       });
       cache.set(word, svg);
     }
@@ -385,8 +399,8 @@ async function layText(
   return { placed, width, height: top, centered: false, kind: "text" };
 }
 
-async function layDisplay(document: Document, tex: string): Promise<Laid> {
-  const svg = await toSvg(document, tex);
+async function layDisplay(renderer: Renderer, tex: string): Promise<Laid> {
+  const svg = await toSvg(renderer, tex);
   return {
     placed: [{ svg, x: 0, y: 0 }],
     width: svg.width,
@@ -428,20 +442,34 @@ async function drawSvg(
 
 async function draw(blocks: Block[], theme: Theme): Promise<Buffer> {
   const laid = await serialized(async () => {
-    const document = newDocument();
+    const renderer = {
+      document: newDocument(),
+      deadline: Date.now() + RENDER_TIME_LIMIT_MS,
+    };
     const cache = new Map<string, Svg>();
     const result: (Laid | "gap")[] = [];
     for (const block of blocks) {
       if (block.kind === "gap") {
         result.push("gap");
       } else if (block.kind === "display") {
-        result.push(await layDisplay(document, block.tex));
+        result.push(await layDisplay(renderer, block.tex));
       } else {
-        result.push(await layText(document, block, cache));
+        result.push(await layText(renderer, block, cache));
       }
     }
     return result;
   });
+
+  const drawnLength = laid.reduce(
+    (sum, item) =>
+      item === "gap"
+        ? sum
+        : item.placed.reduce((total, { svg }) => total + svg.svg.length, sum),
+    0
+  );
+  if (drawnLength > MAX_DRAWN_LENGTH) {
+    throw new FormulaError("Too complex to render");
+  }
 
   const contentWidth = Math.max(
     1,

@@ -288,6 +288,23 @@ describe("renderText", () => {
     expect(await textPixels(png)).toBeGreaterThan(100);
   });
 
+  it("rejects quickly a text whose macros expand into a huge drawing", async () => {
+    const tens = (macro: string) => macro.repeat(10);
+    const source =
+      String.raw`$\def\a{xxxxxxxxxx}\def\b{` +
+      tens(String.raw`\a`) +
+      String.raw`}\def\c{` +
+      tens(String.raw`\b`) +
+      String.raw`}\def\d{\c\c\c\c}$` +
+      String.raw` $\d$`.repeat(400);
+    const start = Date.now();
+
+    await expect(
+      renderText(source.slice(0, TEXT_MAX_LENGTH))
+    ).rejects.toBeInstanceOf(FormulaError);
+    expect(Date.now() - start).toBeLessThan(5000);
+  });
+
   it("rejects invalid math inside the text", async () => {
     await expect(renderText("Soit $\\frac{a$.")).rejects.toBeInstanceOf(
       FormulaError
