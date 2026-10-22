@@ -1,4 +1,4 @@
-import { AttachmentBuilder, type Client } from "discord.js";
+import { AttachmentBuilder, MessageFlags, type Client } from "discord.js";
 import configService from "#core/services/config.service.js";
 import mentionService from "#core/services/mention.service.js";
 import moduleService from "#core/services/module.service.js";
@@ -53,6 +53,7 @@ async function postDailyLeaderboard(
     allowedMentions: {
       users: await mentionService.mentionable(guildId, board.winnerIds),
     },
+    flags: MessageFlags.SuppressNotifications,
   });
   logger.info(`Daily leaderboard posted | guildId = ${guildId}`);
 }

@@ -1,4 +1,4 @@
-import { EmbedBuilder, type Client } from "discord.js";
+import { EmbedBuilder, MessageFlags, type Client } from "discord.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import type { ConfigProvider } from "#lib/config.js";
@@ -92,6 +92,7 @@ async function closeDays(
           ),
         ],
         allowedMentions: { parse: [] },
+        flags: MessageFlags.SuppressNotifications,
       });
       logger.info(
         `Daily point announced | guildId = ${guildId} | day = ${point.day} | userId = ${point.userId}`

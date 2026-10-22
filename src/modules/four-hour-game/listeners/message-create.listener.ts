@@ -1,4 +1,4 @@
-import { EmbedBuilder, type Message } from "discord.js";
+import { EmbedBuilder, MessageFlags, type Message } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
@@ -120,6 +120,7 @@ export default declareEventListener<"messageCreate", FourHourGameConfigSchema>({
           ),
         ],
         allowedMentions: { parse: [] },
+        flags: MessageFlags.SuppressNotifications,
       });
     } catch (err) {
       logger.error(
