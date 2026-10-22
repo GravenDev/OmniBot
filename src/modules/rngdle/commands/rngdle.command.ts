@@ -256,12 +256,15 @@ async function announce(interaction: Interaction, config: Config) {
   const enabled = interaction.options.getBoolean("enabled", true);
   await store.setAnnouncements(guildId, user.id, enabled);
   const channel = config.get("leaderboardChannel");
+  const linked = enabled && (await store.account(guildId, user.id)) !== null;
   await interaction.reply({
     content: !enabled
       ? config.t("announce.disabled")
-      : channel
-        ? config.t("announce.enabled", { channel: `<#${channel.id}>` })
-        : config.t("announce.enabledNoChannel"),
+      : !linked
+        ? config.t("announce.notRegistered")
+        : channel
+          ? config.t("announce.enabled", { channel: `<#${channel.id}>` })
+          : config.t("announce.enabledNoChannel"),
     flags: MessageFlags.Ephemeral,
   });
 }

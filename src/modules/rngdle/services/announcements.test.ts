@@ -221,7 +221,9 @@ describe("answerShare", () => {
   it("adds the highlights for a linked member", async () => {
     mocks.store.account.mockResolvedValue({ userId: "u1" });
     mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
-      filter?.userId ? [roll("u1", 100)] : []
+      filter?.userId && filter.to
+        ? [roll("u1", 100, new Date("2026-10-20T10:00:00Z"))]
+        : []
     );
     await answerShare(
       shareMessage() as never,
@@ -234,6 +236,46 @@ describe("answerShare", () => {
       }),
       expect.anything()
     );
+  });
+
+  it("files a linked member's result under the day of the stored roll", async () => {
+    const lateNight = new Date("2026-10-21T23:58:00Z");
+    mocks.store.account.mockResolvedValue({ userId: "u1" });
+    mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
+      filter?.from && filter.userId
+        ? [{ ...roll("u1", 30000, lateNight), number: 111883 }]
+        : []
+    );
+    await answerShare(
+      shareMessage() as never,
+      configWith({ shareCards: true }) as never
+    );
+
+    expect(mocks.store.claimAnnouncement).toHaveBeenCalledWith(
+      "g1",
+      "u1",
+      new Date("2026-10-21T00:00:00Z"),
+      111883
+    );
+    expect(mocks.render).toHaveBeenCalledWith(
+      expect.objectContaining({ number: 111883, score: 30000 }),
+      expect.anything()
+    );
+  });
+
+  it("ignores a linked member's result that is not today's roll", async () => {
+    mocks.store.account.mockResolvedValue({ userId: "u1" });
+    mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
+      filter?.from && filter.userId ? [roll("u1", 500)] : []
+    );
+    const message = shareMessage();
+    await answerShare(
+      message as never,
+      configWith({ shareCards: true }) as never
+    );
+
+    expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
+    expect(message.reply).not.toHaveBeenCalled();
   });
 });
 

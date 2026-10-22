@@ -22,7 +22,7 @@ export interface RollBadges {
   badges: RollBadge[];
 }
 
-const cache = new Map<number, RollBadges>();
+const cache = new Map<number, Promise<RollBadges>>();
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -72,32 +72,39 @@ export function parseRollBadges(
   };
 }
 
+async function requestRollBadges(number: number): Promise<RollBadges> {
+  const response = await fetch(`${BADGES_URL}?n=${number}`, {
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    headers: { "User-Agent": USER_AGENT },
+  });
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  const badges = parseRollBadges(number, await response.json());
+  if (!badges) {
+    throw new Error("Unexpected response");
+  }
+  return badges;
+}
+
 export async function fetchRollBadges(
   number: number
 ): Promise<RollBadges | null> {
-  const cached = cache.get(number);
-  if (cached) {
-    return cached;
-  }
-  try {
-    const response = await fetch(`${BADGES_URL}?n=${number}`, {
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      headers: { "User-Agent": USER_AGENT },
-    });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    const badges = parseRollBadges(number, await response.json());
-    if (!badges) {
-      throw new Error("Unexpected response");
-    }
+  let badges = cache.get(number);
+  if (!badges) {
+    badges = requestRollBadges(number);
     cache.set(number, badges);
     if (cache.size > CACHE_SIZE) {
       cache.delete(cache.keys().next().value!);
     }
-    return badges;
+  }
+  try {
+    return await badges;
   } catch (err) {
-    logger.warn({ err }, `Could not fetch the badges | number = ${number}`);
+    if (cache.get(number) === badges) {
+      cache.delete(number);
+      logger.warn({ err }, `Could not fetch the badges | number = ${number}`);
+    }
     return null;
   }
 }

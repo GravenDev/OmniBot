@@ -62,6 +62,10 @@ describe("parseShare", () => {
     expect(parseShare(content)).toBeNull();
   });
 
+  it("only reads the score after the header", () => {
+    expect(parseShare(`90 000 EP\n${SHARE}`)?.score).toBe(41731);
+  });
+
   it("does not read the next lines as part of a number", () => {
     expect(parseShare("RNGdle 🎲 12\n34\n\n5 EP")).toMatchObject({
       number: 12,

@@ -56,7 +56,8 @@ function parsePlacement(line: string): Placement | null {
 
 export function parseShare(content: string): SharedRoll | null {
   const header = HEADER.exec(content);
-  const score = SCORE.exec(content);
+  const result = content.slice(header?.index);
+  const score = SCORE.exec(result);
   if (!header || !score) {
     return null;
   }
@@ -75,7 +76,7 @@ export function parseShare(content: string): SharedRoll | null {
   let placement: Placement | null = null;
   const badges: SharedBadge[] = [];
   let hiddenBadges = 0;
-  for (const line of content.slice(header.index).split("\n")) {
+  for (const line of result.split("\n")) {
     const tierLine = TIER_LINE.exec(line);
     if (tierLine) {
       tier = tierLine[1]!.toUpperCase() as Tier;
