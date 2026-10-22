@@ -32,3 +32,19 @@ model RngdleReminder {
 
   @@id([guildId, userId])
 }
+
+model RngdleAnnouncement {
+  guildId String
+  userId  String
+  day     DateTime @db.Date
+  number  Int
+
+  @@id([guildId, userId, day])
+}
+
+model RngdleAnnouncementOptOut {
+  guildId String
+  userId  String
+
+  @@id([guildId, userId])
+}
