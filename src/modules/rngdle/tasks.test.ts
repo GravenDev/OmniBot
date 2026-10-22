@@ -1,4 +1,4 @@
-import type { Client } from "discord.js";
+import { MessageFlags, type Client } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
 import type { RngdleConfigSchema } from "./rngdle.config.js";
@@ -77,8 +77,10 @@ describe("daily leaderboard task", () => {
       {
         content: string;
         components: { toJSON(): { components: { custom_id?: string }[] } }[];
+        flags: number;
       },
     ];
+    expect(message.flags).toBe(MessageFlags.SuppressNotifications);
     expect(message.content.split("\n")).toEqual([
       "daily.message",
       "daily.participants",
