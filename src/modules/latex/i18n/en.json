@@ -1,0 +1,9 @@
+{
+  "config.autoDetect.name": "Automatic detection",
+  "config.autoDetect.description": "Renders the messages containing LaTeX ($…$, $$…$$, \\[…\\], \\begin{…}) as images.",
+  "config.theme.name": "Theme",
+  "config.theme.description": "Colors of the images: light (black on white) or dark (white on dark gray).",
+  "render.invalid": "This formula cannot be rendered: {{error}}",
+  "chat.invalid": "⚠️ This text cannot be rendered: {{error}}",
+  "chat.hint": "-# Edit your message to fix it."
+}

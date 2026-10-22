@@ -384,3 +384,32 @@ Supprime la citation. Il est réservé au membre qui a posté le lien, aux auteu
 | `ignoredRoles`       | Rôles (liste)      | Rôles optionnels portés uniquement par des membres qui ont aussi le rôle de membre : ignorés dans la comparaison des publics. |
 
 Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
+
+---
+
+## Module LaTeX
+
+Affiche des formules mathématiques LaTeX, ou des textes qui en contiennent, sous forme d'image : noir sur blanc par défaut, ou blanc sur gris foncé avec le thème `dark`.
+
+Le rendu passe par MathJax : les commandes de base de LaTeX et les extensions `amsmath`/`amssymb` (environnements `align`, `pmatrix`, `cases`…, `\mathbb`, `\mathfrak`…), `mathtools`, `boldsymbol`, `braket`, `cancel`, `color` et `mhchem` (`\ce{…}`) sont disponibles, ainsi que `\newcommand` et `\def`. Les documents LaTeX complets, `\usepackage` et TikZ ne le sont pas. Le texte est composé sur une largeur de 32 em, mot par mot, et les lignes coupées sont justifiées comme en LaTeX ; une formule centrée trop longue passe à la ligne à cette largeur. Une image qui dépasse encore 2 400 pixels de large ou 4 000 de haut est réduite.
+
+### `/latex <formula>`
+
+Répond publiquement avec l'image d'une formule, en mode « display » (comme entre `$$ … $$`). La formule s'écrit sans délimiteurs `$`, en 1 000 caractères au plus ; elle sert aussi de texte alternatif à l'image. Une formule invalide (commande inconnue, accolade manquante, macro qui s'appelle sans fin…) donne une réponse visible de soi seul, avec le message d'erreur de MathJax. Les macros définies par `\newcommand` ou `\def` ne valent que pour l'image où elles sont écrites.
+
+### Textes dans le chat
+
+Avec la détection automatique (activée par défaut), un message qui contient du LaTeX est rendu en image, en entier. Il en contient s'il a une formule entre `\[ … \]` ou `\( … \)`, un `\begin{…}` de l'un des environnements pris en charge ci-dessous, une formule entre `$$ … $$` qui tient en un mot ou contient l'un de `\ ^ _ { } =`, ou une formule `$ … $` dont le `$` ouvrant est suivi d'un caractère, le `$` fermant précédé d'un caractère et non suivi d'un chiffre, et dont le contenu a une lettre ou l'un de `\ ^ _ { } =` sans finir par `/`. Les prix (`5$ ou 10$`, `entre $5 et $10`, `$15$`, `earn $$$`), les variables de shell (`$SRC/$DST`) et le LaTeX dans du code (`` `…` ``, ` ```…``` `) ne déclenchent donc rien, pas plus qu'un message qui contient un spoiler (`||…||`), pour ne pas le dévoiler. La désactiver ne laisse que la commande `/latex`.
+
+Le texte est rendu avec ses formules entre `$ … $` au fil du texte, et entre `$$ … $$`, `\[ … \]` ou dans un environnement `equation`, `align`, `gather`, `multline`, `flalign`, `alignat` ou `eqnarray` (étoilé ou non) centrées sur leur propre ligne. Par exemple : `Montrer que toute fonction polynomiale bornée sur $\mathbb{R}$ est constante.` Le texte passe à la ligne tout seul ; chaque retour à la ligne du message, ou `\\`, commence une nouvelle ligne, et une ligne vide sépare deux paragraphes. Les listes `itemize` et `enumerate` sont mises en page avec leurs puces ou leurs numéros (`1.`, `(a)`, `i.`, `A.` selon la profondeur), imbriquées si besoin, et `\item[…]` choisit son propre repère. Les `%`, `&`, `#`, `_` et les `$` qui n'ouvrent ni ne ferment de formule (`5$`) s'affichent tels quels ; les commandes de texte LaTeX (`\textbf{…}`, `\emph{…}`, accents `\'e`…) sont interprétées, et un mot du texte que TeX ne sait pas lire (`x^2` ou `\alpha` hors des `$`, accolade orpheline…) s'affiche tel qu'il est écrit. Les mentions s'affichent avec le nom de la personne, du rôle ou du salon, et les emojis personnalisés avec leur nom (`:pi:`). Les autres environnements de texte (`center`, `tabular`…) ne sont pas pris en charge. Le texte fait au plus 4 000 caractères et sert de texte alternatif à l'image. Les messages des bots sont ignorés.
+
+Le bot répond au message sans notifier son auteur, et seulement dans les salons où il peut envoyer des messages, joindre des fichiers et lire l'historique. Si le texte ne peut pas être rendu, la réponse donne le message d'erreur de MathJax et invite l'auteur à modifier son message. Quand le message est modifié, la réponse est mise à jour ; s'il n'est plus à rendre (LaTeX retiré), elle est supprimée, et s'il le devient, le bot répond. Supprimer le message, seul ou dans une suppression groupée, supprime aussi la réponse. Le bot retient ses réponses en mémoire : après un redémarrage, il retrouve sa réponse à un message modifié qui contient toujours du LaTeX parmi les 20 messages suivants, mais il ne supprime plus la réponse d'un message supprimé ou dont le LaTeX est retiré.
+
+### Configuration — `/config latex`
+
+| Champ        | Type    | Description                                                                                 |
+| ------------ | ------- | ------------------------------------------------------------------------------------------- |
+| `autoDetect` | Booléen | Rend en image les messages qui contiennent du LaTeX. Activé par défaut.                     |
+| `theme`      | Choix   | `light` (noir sur blanc, par défaut) ou `dark` (blanc sur gris foncé), pour `/latex` aussi. |
+
+Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
