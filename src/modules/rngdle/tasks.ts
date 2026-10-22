@@ -7,6 +7,7 @@ import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
 import { navigationRow } from "./interactions/navigation.button.js";
 import type { RngdleConfigSchema } from "./rngdle.config.js";
+import { announceRolls } from "./services/announcements.js";
 import { fetchScoreTable } from "./services/api.js";
 import { buildDailyMessage } from "./services/recap.js";
 import {
@@ -113,6 +114,11 @@ export function rngdleTasks(module: Module<RngdleConfigSchema>) {
           );
         }
       },
+    }),
+    declareTask({
+      id: "announcements",
+      schedule: "*/5 * * * *",
+      run: (client) => announceRolls(client, module),
     }),
     declareTask({
       id: "score-table",

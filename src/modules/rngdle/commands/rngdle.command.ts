@@ -251,10 +251,25 @@ async function remind(interaction: Interaction, config: Config) {
   await reply(lines.join("\n"));
 }
 
+async function announce(interaction: Interaction, config: Config) {
+  const { guildId, user } = interaction;
+  const enabled = interaction.options.getBoolean("enabled", true);
+  await store.setAnnouncements(guildId, user.id, enabled);
+  const channel = config.get("leaderboardChannel");
+  await interaction.reply({
+    content: !enabled
+      ? config.t("announce.disabled")
+      : channel
+        ? config.t("announce.enabled", { channel: `<#${channel.id}>` })
+        : config.t("announce.enabledNoChannel"),
+    flags: MessageFlags.Ephemeral,
+  });
+}
+
 const personal: Record<
   string,
   (interaction: Interaction, config: Config) => Promise<void>
-> = { link, unlink, remind };
+> = { link, unlink, remind, announce };
 
 async function versus(interaction: Interaction, config: Config) {
   const first = interaction.options.getUser("player1", true);
@@ -534,6 +549,23 @@ export default declareCommand<RngdleConfigSchema>({
             .setDescription("Turn the daily reminder on or off")
             .setDescriptionLocalizations({
               fr: "Activer ou désactiver le rappel quotidien",
+            })
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("announce")
+        .setDescription("Post your new rolls in the daily leaderboard channel")
+        .setDescriptionLocalizations({
+          fr: "Publier vos nouveaux tirages dans le salon du classement quotidien",
+        })
+        .addBooleanOption((option) =>
+          option
+            .setName("enabled")
+            .setDescription("Turn the announcement of your rolls on or off")
+            .setDescriptionLocalizations({
+              fr: "Activer ou désactiver l'annonce de vos tirages",
             })
             .setRequired(true)
         )

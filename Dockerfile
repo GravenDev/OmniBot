@@ -97,7 +97,8 @@ FROM ${NODE_IMAGE} AS runtime
 
 # tini: real init as PID 1 — forwards SIGTERM to node (the bot closes the
 #       Discord client and the Prisma pool on SIGTERM) and reaps zombies.
-RUN apk add --no-cache tini \
+# font-noto-emoji: color emoji drawn in the RNGdle roll cards.
+RUN apk add --no-cache tini font-noto-emoji \
  && addgroup -S -g 10001 omnibot \
  && adduser -S -u 10001 -G omnibot -H -h /app omnibot
 

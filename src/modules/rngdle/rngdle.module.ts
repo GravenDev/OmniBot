@@ -7,6 +7,7 @@ import historyPageButton from "./interactions/history-page.button.js";
 import navigationButton from "./interactions/navigation.button.js";
 import overallPageButton from "./interactions/overall-page.button.js";
 import unlinkConfirmButton from "./interactions/unlink-confirm.button.js";
+import messageCreateListener from "./listeners/message-create.listener.js";
 import { rngdleConfigSchema } from "./rngdle.config.js";
 import { rngdleTasks } from "./tasks.js";
 
@@ -16,13 +17,17 @@ const rngdleModule = defineModule({
   id: "rngdle",
   name: "RNGdle",
   description:
-    "Tracks the members' rngdle.com rolls: leaderboards, profiles, histories, timelines, server statistics and a daily leaderboard.",
-  version: "1.2.0",
+    "Tracks the members' rngdle.com rolls: leaderboards, profiles, histories, timelines, server statistics, a daily leaderboard and a card for each new roll.",
+  version: "1.3.0",
   author: "LoicR",
 
   config: rngdleConfigSchema,
 
-  intents: [GatewayIntentBits.Guilds],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
 
   onLoad(_client, registry) {
     registry.register(rngdleCommand);
@@ -31,6 +36,7 @@ const rngdleModule = defineModule({
     registry.register(unlinkConfirmButton);
     registry.register(navigationButton);
     registry.register(historyPageButton);
+    registry.register(messageCreateListener);
     for (const task of rngdleTasks(rngdleModule)) {
       registry.register(task);
     }

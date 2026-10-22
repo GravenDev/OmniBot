@@ -169,6 +169,18 @@ Image comparant deux joueurs côte à côte, avec leur avatar et leur surnom sur
 
 Inscrit ou désinscrit le membre au rappel quotidien. Réponse visible de lui seul. Il faut un compte RNGdle lié pour s'inscrire ; sinon, le bot invite le membre à lier le sien avec `/rngdle link`. Si le membre a désactivé ses mentions avec `/pings`, la réponse le prévient qu'il ne sera pas notifié.
 
+### `/rngdle announce <enabled>`
+
+Active ou désactive la publication automatique des tirages du membre dans le salon du classement quotidien (activée par défaut). Réponse visible de lui seul. Les cartes sur les résultats qu'il colle lui-même ne sont pas concernées.
+
+### Cartes des tirages
+
+Le bot dessine une carte par tirage : numéro, score, palier et percentile, puis la liste complète des badges avec leurs EP, leur rareté et la part des numéros qui les obtiennent. Les badges englobés par un badge plus fort ne rapportent rien : ils sont grisés et marqués « inclus ». Au-delà de 24 badges, les suivants sont résumés en une ligne. La liste des badges vient du calculateur [rng.cubityfir.st](https://rng.cubityfir.st), qui recalcule les badges de n'importe quel numéro ; s'il ne répond pas en 5 secondes, la carte se contente des badges du résultat collé, ou n'affiche pas de badges. Pour un membre lié, la carte ajoute selon le cas : record personnel (au-dessus de tous ses tirages précédents), son rang du jour parmi les membres liés qui ont déjà tiré, et l'écart avec sa moyenne (à partir de 5 tirages précédents).
+
+- **Publication automatique** : toutes les 5 minutes, le bot synchronise les serveurs qui ont un salon du classement quotidien et y publie la carte de chaque nouveau tirage des membres liés, en les mentionnant sans les notifier (mention silencieuse). Les membres qui ont désactivé leurs mentions avec `/pings` sont cités sans être mentionnés. Seuls les tirages du jour UTC faits dans les 3 dernières heures sont publiés : lier un compte ou configurer le salon en fin de journée ne republie pas les tirages plus anciens.
+- **Résultat collé** : quand un membre colle dans un salon le résultat partagé par rngdle.com (« RNGdle 🎲 … » jusqu'à la ligne des EP), le bot y répond avec la carte, sans le mentionner. Cela marche aussi pour les membres non liés.
+- **Sans doublon** : un membre a au plus une carte par jour UTC et par serveur, qu'elle vienne de la publication automatique ou d'un résultat collé. Si l'envoi échoue, la carte est retentée au passage suivant.
+
 ### Classement quotidien
 
 Chaque jour à 01:00 UTC, le bot publie le classement de la veille dans le salon configuré. Le texte au-dessus de l'image félicite le ou les meilleurs joueurs, puis donne le nombre de participants de la veille, le tirage le plus rare s'il est au moins RARE (avec son percentile), le pire tirage quand au moins deux joueurs ont tiré et qu'il ne se confond pas avec le meilleur, et les séries qui atteignent ce jour-là 7, 30, 50, 100, 200 ou 365 jours, puis chaque centaine. Seuls les meilleurs joueurs reçoivent une notification (sauf ceux qui ont désactivé leurs mentions avec `/pings`) ; les autres joueurs cités apparaissent sans être notifiés. Si les séries ne tiennent pas dans un message Discord, les dernières sont résumées en une ligne. Les boutons « Mon profil », « Mon historique » et « Classement général » sont proposés sous l'image.
@@ -191,9 +203,10 @@ Chaque jour à 18:00 UTC, juste après la synchronisation, le bot poste dans le 
 
 ### Configuration — `/config rngdle`
 
-| Champ                | Type  | Description                                                                                  |
-| -------------------- | ----- | -------------------------------------------------------------------------------------------- |
-| `leaderboardChannel` | Salon | Salon du classement et du rappel quotidiens. Tant qu'il n'est pas défini, rien n'est publié. |
+| Champ                | Type    | Description                                                                                                                            |
+| -------------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `leaderboardChannel` | Salon   | Salon du classement et du rappel quotidiens, et des nouveaux tirages des membres liés. Tant qu'il n'est pas défini, rien n'est publié. |
+| `shareCards`         | Booléen | Répond par une carte aux résultats collés par les membres (activé par défaut).                                                         |
 
 ---
 

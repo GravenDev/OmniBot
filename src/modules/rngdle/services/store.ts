@@ -156,6 +156,69 @@ class RngdleStore implements Service {
     );
   }
 
+  async claimAnnouncement(
+    guildId: string,
+    userId: string,
+    day: Date,
+    number: number
+  ): Promise<boolean> {
+    const { count } = await prisma.rngdleAnnouncement.createMany({
+      data: [{ guildId, userId, day, number }],
+      skipDuplicates: true,
+    });
+    return count > 0;
+  }
+
+  async releaseAnnouncement(
+    guildId: string,
+    userId: string,
+    day: Date
+  ): Promise<void> {
+    await prisma.rngdleAnnouncement.deleteMany({
+      where: { guildId, userId, day },
+    });
+  }
+
+  async announcedUsers(guildId: string, day: Date): Promise<Set<string>> {
+    const rows = await prisma.rngdleAnnouncement.findMany({
+      where: { guildId, day },
+      select: { userId: true },
+    });
+    return new Set(rows.map((row) => row.userId));
+  }
+
+  async pruneAnnouncements(before: Date): Promise<void> {
+    await prisma.rngdleAnnouncement.deleteMany({
+      where: { day: { lt: before } },
+    });
+  }
+
+  async setAnnouncements(
+    guildId: string,
+    userId: string,
+    enabled: boolean
+  ): Promise<void> {
+    if (enabled) {
+      await prisma.rngdleAnnouncementOptOut.deleteMany({
+        where: { guildId, userId },
+      });
+      return;
+    }
+    await prisma.rngdleAnnouncementOptOut.upsert({
+      where: { guildId_userId: { guildId, userId } },
+      create: { guildId, userId },
+      update: {},
+    });
+  }
+
+  async announcementOptOuts(guildId: string): Promise<Set<string>> {
+    const rows = await prisma.rngdleAnnouncementOptOut.findMany({
+      where: { guildId },
+      select: { userId: true },
+    });
+    return new Set(rows.map((row) => row.userId));
+  }
+
   accounts(guildId: string): Promise<Account[]> {
     return prisma.rngdleAccount.findMany({
       where: { guildId },
