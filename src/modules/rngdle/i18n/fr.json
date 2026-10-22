@@ -43,6 +43,7 @@
   "announce.enabled": "C'est noté : vos nouveaux tirages seront publiés dans {{channel}}.",
   "announce.enabledNoChannel": "C'est noté. Vos tirages seront publiés dès que le salon du classement quotidien sera configuré.",
   "announce.disabled": "Vos tirages ne seront plus publiés automatiquement.",
+  "announce.notRegistered": "C'est noté, mais il faut un compte RNGdle lié pour que vos tirages soient publiés : `/rngdle link <pseudo>`.",
   "card.number": "Numéro du jour",
   "card.score": "Score",
   "card.badges": "Badges",

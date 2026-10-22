@@ -194,7 +194,7 @@ function badgeRows(count: number): number {
 
 function badgesHeight(data: RollCardData): number {
   if (data.badges.length === 0) {
-    return 0;
+    return data.badgeCount > 0 ? BADGES_HEADER : 0;
   }
   const hidden = data.badgeCount > Math.min(data.badges.length, MAX_BADGES);
   return (
@@ -411,7 +411,7 @@ function drawBadges(
   });
 
   const hidden = data.badgeCount - shown.length;
-  if (hidden > 0) {
+  if (hidden > 0 && shown.length > 0) {
     drawLine(
       ctx,
       labels.more(hidden),

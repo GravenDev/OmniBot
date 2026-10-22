@@ -206,7 +206,6 @@ export async function buildCard(
         t("card.probability", {
           percent: value.toLocaleString(context.locale, {
             maximumSignificantDigits: value < 1 ? 2 : 3,
-            maximumFractionDigits: value < 1 ? 3 : 0,
           }),
         }),
     }
@@ -318,6 +317,22 @@ function canReply(message: Message<true>): boolean {
   );
 }
 
+async function linkedRoll(
+  guildId: string,
+  pasted: CardRoll
+): Promise<CardRoll | null> {
+  const today = startOfUtcDay(pasted.rolledAt);
+  const recent = await store.rolls(guildId, {
+    userId: pasted.userId,
+    from: new Date(today.getTime() - DAY_MS),
+  });
+  const stored = recent.find((roll) => roll.number === pasted.number);
+  if (stored) {
+    return stored;
+  }
+  return recent.some((roll) => roll.rolledAt >= today) ? null : pasted;
+}
+
 export async function answerShare(
   message: Message,
   config: Config | undefined
@@ -332,21 +347,26 @@ export async function answerShare(
 
   const { guildId } = message;
   const userId = message.author.id;
-  const day = startOfUtcDay(message.createdAt);
-  if (!(await store.claimAnnouncement(guildId, userId, day, shared.number))) {
+  const pasted: CardRoll = {
+    userId,
+    number: shared.number,
+    score: shared.score,
+    badgeCount: shared.badges.length + shared.hiddenBadges,
+    rolledAt: message.createdAt,
+  };
+  const linked = (await store.account(guildId, userId)) !== null;
+  const roll = linked ? await linkedRoll(guildId, pasted) : pasted;
+  if (!roll) {
+    return;
+  }
+  const day = startOfUtcDay(roll.rolledAt);
+  if (!(await store.claimAnnouncement(guildId, userId, day, roll.number))) {
     return;
   }
   try {
-    const linked = (await store.account(guildId, userId)) !== null;
     const image = await buildCard(
       { client: message.client, guildId, t: config.t, locale: config.locale },
-      {
-        userId,
-        number: shared.number,
-        score: shared.score,
-        badgeCount: shared.badges.length + shared.hiddenBadges,
-        rolledAt: message.createdAt,
-      },
+      roll,
       shared,
       linked
     );

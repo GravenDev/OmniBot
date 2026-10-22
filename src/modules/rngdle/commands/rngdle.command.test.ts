@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   trendCard: vi.fn(),
   overallPage: vi.fn(),
   setReminder: vi.fn(),
+  setAnnouncements: vi.fn(),
   mentionable: vi.fn(),
 }));
 
@@ -28,6 +29,7 @@ vi.mock("#modules/rngdle/services/store.js", () => ({
     account: mocks.account,
     accountByUsername: mocks.accountByUsername,
     setReminder: mocks.setReminder,
+    setAnnouncements: mocks.setAnnouncements,
   },
 }));
 vi.mock("#core/services/mention.service.js", () => ({
@@ -258,6 +260,44 @@ describe("/rngdle remind", () => {
     expect(mocks.setReminder).toHaveBeenCalledWith("guild", "caller", false);
     expect(interaction.reply).toHaveBeenCalledWith({
       content: "remind.disabled",
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+});
+
+describe("/rngdle announce", () => {
+  it("tells an unlinked caller that nothing will be posted yet", async () => {
+    const interaction = interactionFor({
+      subcommand: "announce",
+      enabled: true,
+    });
+    await run(interaction);
+
+    expect(mocks.setAnnouncements).toHaveBeenCalledWith(
+      "guild",
+      "caller",
+      true
+    );
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: "announce.notRegistered",
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+
+  it("confirms the channel to a linked caller", async () => {
+    mocks.account.mockResolvedValue({
+      guildId: "guild",
+      userId: "caller",
+      username: "Alice",
+    });
+    const interaction = interactionFor({
+      subcommand: "announce",
+      enabled: true,
+    });
+    await run(interaction);
+
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: expect.stringMatching(/^announce\.enabled .*"<#channel>"/),
       flags: MessageFlags.Ephemeral,
     });
   });

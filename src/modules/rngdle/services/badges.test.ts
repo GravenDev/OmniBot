@@ -68,6 +68,19 @@ describe("fetchRollBadges", () => {
     );
   });
 
+  it("shares one request between simultaneous lookups", async () => {
+    const fetch = vi.fn(async () => Response.json(body(5151)));
+    vi.stubGlobal("fetch", fetch);
+
+    const [first, second] = await Promise.all([
+      fetchRollBadges(5151),
+      fetchRollBadges(5151),
+    ]);
+
+    expect(first).toEqual(second);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
   it("gives up without caching when the calculator fails", async () => {
     const fetch = vi.fn(async () => new Response("", { status: 503 }));
     vi.stubGlobal("fetch", fetch);
