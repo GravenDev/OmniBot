@@ -7,8 +7,9 @@ const mocks = vi.hoisted(() => ({
   config: vi.fn(),
   mentionable: vi.fn(async (_guildId: string, ids: string[]) => ids),
   syncGuild: vi.fn(async () => undefined),
+  refreshAccount: vi.fn(async (_account: unknown): Promise<void> => undefined),
   render: vi.fn(async () => Buffer.from("png")),
-  fetchBadges: vi.fn(async () => null),
+  fetchBadges: vi.fn(async (): Promise<unknown> => null),
   store: {
     claimAnnouncement: vi.fn(async () => true),
     releaseAnnouncement: vi.fn(async () => undefined),
@@ -45,7 +46,9 @@ vi.mock("#modules/rngdle/rendering/roll-card.js", () => ({
 }));
 vi.mock("./badges.js", () => ({ fetchRollBadges: mocks.fetchBadges }));
 vi.mock("./store.js", () => ({ default: mocks.store }));
-vi.mock("./sync.js", () => ({ default: { syncGuild: mocks.syncGuild } }));
+vi.mock("./sync.js", () => ({
+  default: { syncGuild: mocks.syncGuild, refreshAccount: mocks.refreshAccount },
+}));
 
 import {
   announceRolls,
@@ -53,6 +56,7 @@ import {
   computeHighlights,
 } from "./announcements.js";
 
+const ACCOUNT = { guildId: "g1", userId: "u1", username: "Alice" };
 const NOW = new Date("2026-10-22T12:00:00Z");
 const DAY = new Date("2026-10-22T00:00:00Z");
 const SHARE = "RNGdle 🎲 111883\n\n🟧 ANOMALY • Top 4%\n\n41 731 EP";
@@ -99,6 +103,8 @@ beforeEach(() => {
   mocks.store.announcementOptOuts.mockResolvedValue(new Set());
   mocks.store.rolls.mockResolvedValue([]);
   mocks.store.account.mockResolvedValue(null);
+  mocks.fetchBadges.mockResolvedValue(null);
+  mocks.refreshAccount.mockResolvedValue(undefined);
 });
 
 describe("computeHighlights", () => {
@@ -219,11 +225,13 @@ describe("answerShare", () => {
   });
 
   it("adds the highlights for a linked member", async () => {
-    mocks.store.account.mockResolvedValue({ userId: "u1" });
+    mocks.store.account.mockResolvedValue(ACCOUNT);
     mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
-      filter?.userId && filter.to
+      filter?.to
         ? [roll("u1", 100, new Date("2026-10-20T10:00:00Z"))]
-        : []
+        : filter?.userId
+          ? [{ ...roll("u1", 41731), number: 111883 }]
+          : []
     );
     await answerShare(
       shareMessage() as never,
@@ -240,7 +248,7 @@ describe("answerShare", () => {
 
   it("files a linked member's result under the day of the stored roll", async () => {
     const lateNight = new Date("2026-10-21T23:58:00Z");
-    mocks.store.account.mockResolvedValue({ userId: "u1" });
+    mocks.store.account.mockResolvedValue(ACCOUNT);
     mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
       filter?.from && filter.userId
         ? [{ ...roll("u1", 30000, lateNight), number: 111883 }]
@@ -264,7 +272,7 @@ describe("answerShare", () => {
   });
 
   it("ignores a linked member's result that is not today's roll", async () => {
-    mocks.store.account.mockResolvedValue({ userId: "u1" });
+    mocks.store.account.mockResolvedValue(ACCOUNT);
     mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
       filter?.from && filter.userId ? [roll("u1", 500)] : []
     );
@@ -276,6 +284,82 @@ describe("answerShare", () => {
 
     expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
     expect(message.reply).not.toHaveBeenCalled();
+  });
+
+  it("downloads a linked member's rolls before trusting a new result", async () => {
+    let synced = false;
+    mocks.refreshAccount.mockImplementation(async () => {
+      synced = true;
+    });
+    mocks.store.account.mockResolvedValue(ACCOUNT);
+    mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
+      synced && filter?.from && filter.userId
+        ? [{ ...roll("u1", 41731), number: 111883 }]
+        : []
+    );
+    const message = shareMessage();
+    await answerShare(
+      message as never,
+      configWith({ shareCards: true }) as never
+    );
+
+    expect(mocks.refreshAccount).toHaveBeenCalledWith(ACCOUNT);
+    expect(message.reply).toHaveBeenCalled();
+  });
+
+  it.each([
+    ["rngdle.com does not know the roll", async () => undefined],
+    [
+      "rngdle.com cannot be reached",
+      async () => {
+        throw new Error("down");
+      },
+    ],
+  ])(
+    "ignores a linked member's result when %s",
+    async (_, refresh: () => Promise<void>) => {
+      mocks.refreshAccount.mockImplementation(refresh);
+      mocks.store.account.mockResolvedValue(ACCOUNT);
+      const message = shareMessage();
+      await answerShare(
+        message as never,
+        configWith({ shareCards: true }) as never
+      );
+
+      expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
+      expect(message.reply).not.toHaveBeenCalled();
+    }
+  );
+
+  it("ignores a result whose score does not match its number", async () => {
+    mocks.fetchBadges.mockResolvedValue({
+      number: 111883,
+      score: 41730,
+      badges: [],
+    });
+    const message = shareMessage();
+    await answerShare(
+      message as never,
+      configWith({ shareCards: true }) as never
+    );
+
+    expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
+    expect(message.reply).not.toHaveBeenCalled();
+  });
+
+  it("accepts a result whose score matches the calculator", async () => {
+    mocks.fetchBadges.mockResolvedValue({
+      number: 111883,
+      score: 41731,
+      badges: [],
+    });
+    const message = shareMessage();
+    await answerShare(
+      message as never,
+      configWith({ shareCards: true }) as never
+    );
+
+    expect(message.reply).toHaveBeenCalled();
   });
 });
 

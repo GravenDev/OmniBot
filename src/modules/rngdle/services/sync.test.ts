@@ -64,6 +64,24 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe("refreshAccount", () => {
+  it("downloads one account's new rolls and lets its errors through", async () => {
+    const [account] = accountsOf(guildId, 1);
+    const rolls = [{ id: "r1" }];
+    const latest = new Date("2026-03-09T20:00:00Z");
+    mocks.latestRollDate.mockResolvedValue(latest);
+    mocks.fetchUserRolls.mockResolvedValue(rolls);
+
+    await sync.refreshAccount(account!);
+
+    expect(mocks.fetchUserRolls).toHaveBeenCalledWith("user0", latest);
+    expect(mocks.saveRolls).toHaveBeenCalledWith(account, rolls);
+
+    mocks.fetchUserRolls.mockRejectedValue(new Error("down"));
+    await expect(sync.refreshAccount(account!)).rejects.toThrow("down");
+  });
+});
+
 describe("syncGuild", () => {
   it("aggregates the report and counts failures without stopping the other accounts", async () => {
     mocks.accounts.mockResolvedValue(accountsOf(guildId, 3));

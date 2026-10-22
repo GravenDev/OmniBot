@@ -75,6 +75,12 @@ class RngdleSync implements Service {
     return total;
   }
 
+  async refreshAccount(account: Account): Promise<void> {
+    await this.exclusive(account.guildId, () =>
+      this.syncAccount(account, false)
+    );
+  }
+
   async refreshIfStale(guildId: string): Promise<void> {
     const fresh =
       Date.now() - (this.lastSync.get(guildId) ?? -Infinity) < STALE_AFTER_MS;

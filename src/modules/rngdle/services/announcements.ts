@@ -27,7 +27,7 @@ import { fetchRollBadges } from "./badges.js";
 import { nextUtcMidnight, startOfUtcDay } from "./reminders.js";
 import { formatPercent, TIERS, type Tier } from "./scoring.js";
 import { parseShare, type Placement, type SharedRoll } from "./share.js";
-import store, { type StoredRoll } from "./store.js";
+import store, { type Account, type StoredRoll } from "./store.js";
 import sync from "./sync.js";
 
 const logger = loggerMaker("rngdle");
@@ -317,20 +317,41 @@ function canReply(message: Message<true>): boolean {
   );
 }
 
-async function linkedRoll(
-  guildId: string,
+async function storedRoll(
+  account: Account,
   pasted: CardRoll
-): Promise<CardRoll | null> {
+): Promise<StoredRoll | null> {
   const today = startOfUtcDay(pasted.rolledAt);
-  const recent = await store.rolls(guildId, {
-    userId: pasted.userId,
+  const recent = await store.rolls(account.guildId, {
+    userId: account.userId,
     from: new Date(today.getTime() - DAY_MS),
   });
-  const stored = recent.find((roll) => roll.number === pasted.number);
-  if (stored) {
-    return stored;
+  return recent.find((roll) => roll.number === pasted.number) ?? null;
+}
+
+async function linkedRoll(
+  account: Account,
+  pasted: CardRoll
+): Promise<StoredRoll | null> {
+  const known = await storedRoll(account, pasted);
+  if (known) {
+    return known;
   }
-  return recent.some((roll) => roll.rolledAt >= today) ? null : pasted;
+  try {
+    await sync.refreshAccount(account);
+  } catch (err) {
+    logger.warn(
+      { err },
+      `Could not check a shared roll | guildId = ${account.guildId} | username = ${account.username}`
+    );
+    return null;
+  }
+  return storedRoll(account, pasted);
+}
+
+async function unlinkedRoll(pasted: CardRoll): Promise<CardRoll | null> {
+  const remote = await fetchRollBadges(pasted.number);
+  return remote && remote.score !== pasted.score ? null : pasted;
 }
 
 export async function answerShare(
@@ -354,8 +375,11 @@ export async function answerShare(
     badgeCount: shared.badges.length + shared.hiddenBadges,
     rolledAt: message.createdAt,
   };
-  const linked = (await store.account(guildId, userId)) !== null;
-  const roll = linked ? await linkedRoll(guildId, pasted) : pasted;
+  const account = await store.account(guildId, userId);
+  const linked = account !== null;
+  const roll = account
+    ? await linkedRoll(account, pasted)
+    : await unlinkedRoll(pasted);
   if (!roll) {
     return;
   }
