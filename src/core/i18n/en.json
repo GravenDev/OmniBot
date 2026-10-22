@@ -103,6 +103,9 @@
   "modules.message-quote.name": "Message Quote",
   "modules.message-quote.description": "Quotes the Discord messages whose link is posted, for members allowed to read them.",
 
+  "modules.latex.name": "LaTeX",
+  "modules.latex.description": "Renders LaTeX formulas as images with the /latex command, and the messages containing LaTeX.",
+
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Development module declaring all configuration types, used to test the configuration UI.",
 
