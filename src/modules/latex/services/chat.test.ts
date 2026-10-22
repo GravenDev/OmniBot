@@ -1,8 +1,10 @@
 import {
+  DiscordAPIError,
   type Message,
   type PartialMessage,
   PermissionFlagsBits,
   PermissionsBitField,
+  RESTJSONErrorCodes,
 } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
@@ -94,6 +96,7 @@ function makeMessage(
       return this.content;
     },
     partial: false,
+    editedTimestamp: Date.now() as number | null,
     channel,
     client: { user: { id: "bot" } },
     author: { bot },
@@ -130,6 +133,9 @@ describe("looksLikeLatex", () => {
     "Soit \\(x\\)",
     "\\begin{itemize} \\item a \\end{itemize}",
     "la variable $x$ est",
+    "la norme $||x||$",
+    "le triangle $ABC$",
+    "on pose $x + 1$",
   ])("detects %j", (content) => {
     expect(looksLikeLatex(content)).toBe(true);
   });
@@ -147,6 +153,15 @@ describe("looksLikeLatex", () => {
     "cp $SRC/$DST",
     "make $$ fast and earn $$$ today",
     "\\begin{tabular} sans formule",
+    "echo $HOME:$PATH",
+    "export PATH=$PATH:$HOME/bin",
+    "echo $FOO$BAR",
+    "PHP: $a=$b;",
+    "I paid $5 for a sandwich and my friend paid 7$",
+    "entre $5 et 10$ CAD",
+    "rate $5/h or 6$/h",
+    "\\[link\\](https://example.com)",
+    "regex \\(foo\\)",
   ])("ignores %j", (content) => {
     expect(looksLikeLatex(content)).toBe(false);
   });
@@ -203,6 +218,45 @@ describe("renderPosted", () => {
     await renderPosted(asMessage(message), makeConfig());
 
     expect(renderText).toHaveBeenCalledWith("@Alice :pi: $x$", "light");
+  });
+
+  it("renders the code as it is written", async () => {
+    const message = makeMessage(
+      "Soit $y^2$ :\n```bash\necho $x^$\n``` et `a_b`"
+    );
+    await renderPosted(asMessage(message), makeConfig());
+
+    expect(renderText).toHaveBeenCalledWith(
+      "Soit $y^2$ :\necho \\$x\\^{}\\$\n et a\\_b",
+      "light"
+    );
+  });
+
+  it("shortens a long MathJax error", async () => {
+    renderText.mockRejectedValueOnce(new FormulaError("x".repeat(2000)));
+    const message = makeMessage("$x$");
+    await renderPosted(asMessage(message), makeConfig());
+
+    const [payload] = message.reply.mock.calls[0]!;
+    expect(payload.content!.length).toBeLessThan(400);
+  });
+
+  it("gives up quietly when the message was deleted meanwhile", async () => {
+    const message = makeMessage("$x$");
+    message.reply.mockRejectedValueOnce(
+      new DiscordAPIError(
+        { code: RESTJSONErrorCodes.UnknownMessage, message: "Unknown Message" },
+        RESTJSONErrorCodes.UnknownMessage,
+        404,
+        "POST",
+        "/channels/1/messages",
+        {}
+      )
+    );
+
+    await expect(
+      renderPosted(asMessage(message), makeConfig())
+    ).resolves.toBeUndefined();
   });
 
   it("stays silent where it cannot reply with an image", async () => {
@@ -316,6 +370,34 @@ describe("renderEdited", () => {
     await Promise.all([posted, edited]);
 
     expect(onlyReply(message).delete).toHaveBeenCalled();
+  });
+
+  it("ignores an update of an uncached message that was not just edited", async () => {
+    const message = makeMessage("$b$");
+    message.editedTimestamp = null;
+
+    await renderEdited(
+      { partial: true } as unknown as PartialMessage,
+      asAny(message),
+      makeConfig()
+    );
+
+    expect(message.channel.messages.fetch).not.toHaveBeenCalled();
+    expect(message.reply).not.toHaveBeenCalled();
+  });
+
+  it("keeps the reply when it can no longer attach files", async () => {
+    const channel = makeChannel();
+    const message = makeMessage("$a$", channel);
+    await renderPosted(asMessage(message), makeConfig());
+    const before = { ...message };
+    channel.permissionsFor = () =>
+      new PermissionsBitField([PermissionFlagsBits.ViewChannel]);
+
+    message.content = "$b$";
+    await renderEdited(asAny(before), asAny(message), makeConfig());
+
+    expect(onlyReply(message).edit).not.toHaveBeenCalled();
   });
 
   it("ignores an update that leaves the text unchanged", async () => {

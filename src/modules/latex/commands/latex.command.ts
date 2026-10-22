@@ -41,10 +41,10 @@ export default declareCommand<LatexConfigSchema>({
     try {
       image = await renderFormula(formula, config.get("theme"));
     } catch (err) {
+      await interaction.deleteReply();
       if (!(err instanceof FormulaError)) {
         throw err;
       }
-      await interaction.deleteReply();
       await interaction.followUp({
         content: config.t("render.invalid", { error: err.message }),
         flags: MessageFlags.Ephemeral,

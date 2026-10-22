@@ -67,6 +67,9 @@ describe("/latex", () => {
   it("lets an unexpected error reach the dispatcher", async () => {
     renderFormula.mockRejectedValueOnce(new Error("boom"));
 
-    await expect(run("x").done).rejects.toThrow("boom");
+    const { interaction, done } = run("x");
+
+    await expect(done).rejects.toThrow("boom");
+    expect(interaction.deleteReply).toHaveBeenCalled();
   });
 });
