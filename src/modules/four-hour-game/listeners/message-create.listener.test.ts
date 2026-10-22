@@ -1,4 +1,4 @@
-import type { EmbedBuilder, Message } from "discord.js";
+import { MessageFlags, type EmbedBuilder, type Message } from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
 import { initTestI18n, makeTestConfig, silenceLogs } from "#lib/testing.js";
@@ -132,7 +132,10 @@ describe("four-hour-game messageCreate listener", () => {
     await listener.execute(message, fakeConfig());
 
     expect(message.channel.send).toHaveBeenCalledWith(
-      expect.objectContaining({ allowedMentions: { parse: [] } })
+      expect.objectContaining({
+        allowedMentions: { parse: [] },
+        flags: MessageFlags.SuppressNotifications,
+      })
     );
     expect(getRank).toHaveBeenCalledWith("guild-1", "bob");
     expect(memberFetch).toHaveBeenCalledWith("bob");

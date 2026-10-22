@@ -1,4 +1,4 @@
-import type { Client } from "discord.js";
+import { MessageFlags, type Client } from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
 import { initTestI18n, makeTestConfig, silenceLogs } from "#lib/testing.js";
@@ -112,6 +112,7 @@ describe("closeAllDays", () => {
     expect(send).toHaveBeenCalledTimes(2);
     const second = send.mock.calls[1]![0];
     expect(second.allowedMentions).toEqual({ parse: [] });
+    expect(second.flags).toBe(MessageFlags.SuppressNotifications);
     expect(second.embeds[0].toJSON().description).toMatch(
       /\nTotal : \*\*4 points du jour\*\* · 2ᵉ sur 2$/
     );
