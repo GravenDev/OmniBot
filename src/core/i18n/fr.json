@@ -27,7 +27,7 @@
   "config.enum.selectMultiple": "Sélectionnez une ou plusieurs valeurs",
   "config.enum.selectSingle": "Sélectionnez une valeur",
 
-  "admin.noPermission": "Vous n'avez pas la permission de gérer les modules.",
+  "admin.noPermission": "Il faut être administrateur du serveur pour faire ça.",
 
   "setConfig.title": "Définir {{key}}",
   "setConfig.label": "Entrez une valeur ({{type}}) :",

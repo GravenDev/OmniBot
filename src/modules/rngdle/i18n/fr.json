@@ -192,7 +192,6 @@
   "server.expectedCount": "/ {{value}}",
   "server.empty": "Aucun tirage n'est encore enregistré sur ce serveur.",
 
-  "admin.noPermission": "Vous devez être administrateur pour utiliser cette commande.",
   "admin.register.created": "{{user}} est maintenant lié au compte RNGdle `{{username}}` ({{count}} tirages importés).",
   "admin.register.renamed": "{{user}} est maintenant lié au compte RNGdle `{{username}}` ; les tirages de l'ancien compte ont été supprimés ({{count}} tirages importés).",
   "admin.register.unchanged": "{{user}} était déjà lié à `{{username}}` ({{count}} nouveaux tirages importés).",
