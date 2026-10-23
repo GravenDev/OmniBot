@@ -530,6 +530,13 @@ describe("FourHourGameService.setScore", () => {
     expect(scores.get(key("guild", "alice"))).toBe(7);
   });
 
+  it("refuses a score below 1, unset being the way to remove one", async () => {
+    await expect(service.setScore("guild", "alice", 0)).rejects.toThrow(
+      RangeError
+    );
+    expect(scores.has(key("guild", "alice"))).toBe(false);
+  });
+
   it("waits for the other writes of the server", async () => {
     let release!: () => void;
     const busy = service.resyncLastMessage(
@@ -537,7 +544,7 @@ describe("FourHourGameService.setScore", () => {
       "game",
       () =>
         new Promise((resolve) => {
-          release = () => resolve({ messages: [], complete: true });
+          release = () => resolve([]);
         })
     );
 
@@ -735,14 +742,10 @@ describe("FourHourGameService deletions and resync", () => {
       authorId,
       sentAt,
     }));
-  // A reading that reached the requested time.
   const history =
     (...entries: [authorId: string, sentAt: Date][]) =>
-    async () => ({ messages: messagesOf(entries), complete: true });
-  // A reading the page limit stopped before the requested time.
-  const partialHistory =
-    (...entries: [authorId: string, sentAt: Date][]) =>
-    async () => ({ messages: messagesOf(entries), complete: false });
+    async () =>
+      messagesOf(entries);
   const paris = (iso: string) => new Date(`${iso}+02:00`);
 
   it("falls back to the channel's real last message when the stored one is deleted", async () => {
@@ -918,7 +921,7 @@ describe("FourHourGameService deletions and resync", () => {
     await service.resyncLastMessage(
       "guild",
       "game",
-      partialHistory(
+      history(
         ["bob", paris("2026-10-14T12:00:00")],
         ["carol", paris("2026-10-14T13:00:00")]
       )
@@ -940,7 +943,7 @@ describe("FourHourGameService deletions and resync", () => {
     await service.resyncLastMessage(
       "guild",
       "game",
-      partialHistory(
+      history(
         ["bob", paris("2026-10-14T12:00:00")],
         ["bob", paris("2026-10-14T12:30:00")]
       )
@@ -1082,6 +1085,24 @@ describe("FourHourGameService deletions and resync", () => {
       authorId: "zed",
       sentAt: start,
     });
+  });
+
+  it("replays the replies that followed a message deleted while down", async () => {
+    await service.handleMessage(message("zed", start), DELAY);
+    await service.handleMessage(message("alice", at(60)), DELAY);
+
+    // alice's message is deleted while down: like a live deletion, zed's
+    // message is back in place, and bob then carol replied to it.
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["zed", start], ["bob", at(7200)], ["carol", at(10800)])
+    );
+
+    expect([...dailyBests.values()]).toEqual([
+      expect.objectContaining({ userId: "zed", heldSeconds: 7200 }),
+    ]);
+    expect(lastMessages.get("guild")?.authorId).toBe("carol");
   });
 
   it("credits nothing on resync for a message stored in another channel", async () => {

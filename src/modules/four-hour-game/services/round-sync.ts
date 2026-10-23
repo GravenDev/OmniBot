@@ -24,10 +24,7 @@ export async function syncRound(
   await fourHourGameService.resyncLastMessage(guildId, channel.id, (since) =>
     since
       ? fetchPlayerMessagesSince(channel, since)
-      : fetchPlayerMessages(channel).then((messages) => ({
-          messages,
-          complete: true,
-        }))
+      : fetchPlayerMessages(channel)
   );
 }
 
