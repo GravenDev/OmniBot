@@ -6,3 +6,15 @@ describe("/jd4h-admin access", () => {
     expect(command.requiresAdmin).toBe(true);
   });
 });
+
+describe("/jd4h-admin set", () => {
+  it("asks for a score of at least 1, unset being the way to remove it", () => {
+    const set = command.data
+      .toJSON()
+      .options?.find((option) => option.name === "set") as
+      | { options?: { name: string; min_value?: number }[] }
+      | undefined;
+    const score = set?.options?.find((option) => option.name === "score");
+    expect(score?.min_value).toBe(1);
+  });
+});

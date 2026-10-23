@@ -26,7 +26,7 @@ export type MessageResult =
   | Exclude<MessageOutcome, { kind: "point" }>
   | (Extract<MessageOutcome, { kind: "point" }> & { score: number });
 
-export type SetScoreResult = "created" | "updated" | "removed" | "absent";
+export type SetScoreResult = "created" | "updated";
 
 export interface PlayerRank {
   rank: number;
@@ -400,10 +400,6 @@ class FourHourGameService implements Service {
     userId: string,
     score: number
   ): Promise<SetScoreResult> {
-    if (score === 0) {
-      return (await this.deleteScore(guildId, userId)) ? "removed" : "absent";
-    }
-
     return this.queue.run(guildId, async () => {
       const existing = await this.getScore(guildId, userId);
       await prisma.fourHourGameScore.upsert({

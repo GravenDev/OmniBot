@@ -98,7 +98,7 @@ Génère une image du top 10 du serveur (rang, médailles pour le podium, avatar
 
 **Permission requise :** Administrateur
 
-Fixe le score d'un membre, ou le supprime. Fixer un score à 0 revient à le supprimer. Supprimer un score efface aussi l'historique des points du membre et ses points du jour, y compris son meilleur temps de la journée en cours (la journée concernée revient à la meilleure tenue enregistrée ensuite, s'il y en a une ; le message qu'il a encore en place peut de nouveau être crédité). La réponse ne parle de suppression que si un score ou un point du jour visible a été effacé, et les séries des autres joueurs sont alors calculées comme si ces points n'avaient pas existé ; le fixer à une autre valeur conserve l'historique. Réponses éphémères.
+Fixe le score d'un membre, à 1 au moins, ou le supprime avec `unset`. Supprimer un score efface aussi l'historique des points du membre et ses points du jour, y compris son meilleur temps de la journée en cours (la journée concernée revient à la meilleure tenue enregistrée ensuite, s'il y en a une : seul le meilleur temps de la journée est gardé, si bien que les tenues des autres joueurs plus tôt dans la journée sont perdues et ne peuvent pas reprendre le point ; le message qu'il a encore en place peut de nouveau être crédité). La réponse ne parle de suppression que si un score ou un point du jour visible a été effacé, et les séries des autres joueurs sont alors calculées comme si ces points n'avaient pas existé ; le fixer à une autre valeur conserve l'historique. Réponses éphémères.
 
 ### Configuration — `/config four-hour-game`
 
