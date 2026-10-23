@@ -39,7 +39,7 @@ import type {
   VersusWinners,
   Winner,
 } from "#modules/rngdle/services/versus.js";
-import { formatSpaced } from "./format.js";
+import { formatEp, formatSpaced } from "./format.js";
 import { ACCENT } from "./theme.js";
 
 const WIDTH = DEFAULT_WIDTH;
@@ -109,10 +109,6 @@ interface Line {
 }
 
 const SIDES: Side[] = ["left", "right"];
-
-function ep(value: number): string {
-  return `${formatSpaced(value)} EP`;
-}
 
 function fit(
   ctx: SKRSContext2D,
@@ -404,7 +400,7 @@ function lines(data: VersusImageData, labels: VersusLabels): Line[] {
   return [
     {
       label: labels.totalScore,
-      ...pair((player) => ({ text: ep(player.totalScore) })),
+      ...pair((player) => ({ text: formatEp(player.totalScore) })),
       winner: winners.totalScore,
     },
     {
@@ -417,7 +413,7 @@ function lines(data: VersusImageData, labels: VersusLabels): Line[] {
       ...pair(
         ({ average }) =>
           average && {
-            text: ep(average.score),
+            text: formatEp(average.score),
             color: TIER_COLORS[average.tier],
             subtext: average.tier,
           }
@@ -431,7 +427,7 @@ function lines(data: VersusImageData, labels: VersusLabels): Line[] {
           best && {
             text: formatSpaced(best.number),
             color: TIER_COLORS[best.tier],
-            subtext: `${best.tier} · ${ep(best.score)}`,
+            subtext: `${best.tier} · ${formatEp(best.score)}`,
           }
       ),
       winner: winners.bestRoll,

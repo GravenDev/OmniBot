@@ -17,7 +17,7 @@ import {
   type Tier,
   type TierOrError,
 } from "#modules/rngdle/services/scoring.js";
-import { formatSpaced } from "./format.js";
+import { formatEp, formatSpaced } from "./format.js";
 import { ACCENT } from "./theme.js";
 
 const HIGHLIGHTED_TIERS = new Set<TierOrError>([
@@ -156,14 +156,10 @@ export interface ServerStatsLabels {
   expectedCount: (value: number) => string;
 }
 
-function ep(value: number): string {
-  return `${formatSpaced(value)} EP`;
-}
-
 function scoreBox(title: string, score: number, tier: TierOrError): StatBox {
   return {
     title,
-    value: ep(score),
+    value: formatEp(score),
     color: TIER_COLORS[tier],
     highlight: HIGHLIGHTED_TIERS.has(tier),
   };
@@ -341,7 +337,7 @@ export function renderProfile(
           ...scoreBox(labels.averageScore, data.averageScore, data.averageTier),
           subtext: labels.averageOver(data.totalRolls),
         },
-        { title: labels.overallScore, value: ep(data.totalScore) },
+        { title: labels.overallScore, value: formatEp(data.totalScore) },
       ],
       [
         {
@@ -386,7 +382,7 @@ export function renderServerStats(
       ],
       [
         scoreBox(labels.averageScore, data.averageScore, data.averageTier),
-        { title: labels.overallScore, value: ep(data.overallScore) },
+        { title: labels.overallScore, value: formatEp(data.overallScore) },
       ],
       [{ title: labels.totalRolls, value: formatSpaced(data.totalRolls) }],
     ],

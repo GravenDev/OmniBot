@@ -10,7 +10,7 @@ import {
   type StatBox,
 } from "#lib/stat-card.js";
 import { TIER_COLORS, TIER_ODDS } from "#modules/rngdle/services/scoring.js";
-import { formatSpaced } from "./format.js";
+import { formatEp, formatSpaced } from "./format.js";
 import { ACCENT } from "./theme.js";
 
 export const TIMELINE_TIERS = ["MYTHIC", "ANOMALY", "TRASH"] as const;
@@ -276,7 +276,7 @@ export function renderTimeline(
           ctx.globalAlpha = 1;
           drawCentered(
             ctx,
-            `${formatSpaced(pin.score)} EP`,
+            formatEp(pin.score),
             pinX,
             top,
             SCORE_SIZE,
