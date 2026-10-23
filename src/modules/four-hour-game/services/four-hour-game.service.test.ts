@@ -537,7 +537,7 @@ describe("FourHourGameService.setScore", () => {
       "game",
       () =>
         new Promise((resolve) => {
-          release = () => resolve([]);
+          release = () => resolve({ messages: [], complete: true });
         })
     );
 
@@ -729,14 +729,20 @@ describe("FourHourGameService deletions and resync", () => {
     authorId,
     sentAt,
   });
+  const messagesOf = (entries: [authorId: string, sentAt: Date][]) =>
+    entries.map(([authorId, sentAt]) => ({
+      messageId: `${authorId}-${sentAt.getTime()}`,
+      authorId,
+      sentAt,
+    }));
+  // A reading that reached the requested time.
   const history =
     (...entries: [authorId: string, sentAt: Date][]) =>
-    async () =>
-      entries.map(([authorId, sentAt]) => ({
-        messageId: `${authorId}-${sentAt.getTime()}`,
-        authorId,
-        sentAt,
-      }));
+    async () => ({ messages: messagesOf(entries), complete: true });
+  // A reading the page limit stopped before the requested time.
+  const partialHistory =
+    (...entries: [authorId: string, sentAt: Date][]) =>
+    async () => ({ messages: messagesOf(entries), complete: false });
   const paris = (iso: string) => new Date(`${iso}+02:00`);
 
   it("falls back to the channel's real last message when the stored one is deleted", async () => {
@@ -899,6 +905,108 @@ describe("FourHourGameService deletions and resync", () => {
 
     expect(result.kind).not.toBe("point");
     expect(scores.size).toBe(0);
+  });
+
+  it("credits nobody for a period the reading could not reach", async () => {
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+
+    // The page limit stopped the reading at 12:00: alice's message was not
+    // read, and who held between 08:00 and 12:00 is unknown.
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      partialHistory(
+        ["bob", paris("2026-10-14T12:00:00")],
+        ["carol", paris("2026-10-14T13:00:00")]
+      )
+    );
+
+    expect(dailyBests.get(key("guild", "2026-10-14"))).toMatchObject({
+      userId: "bob",
+      heldSeconds: 3600,
+    });
+    expect(lastMessages.get("guild")?.authorId).toBe("carol");
+  });
+
+  it("stores the standing message after an unread period even without a hand-over", async () => {
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      partialHistory(
+        ["bob", paris("2026-10-14T12:00:00")],
+        ["bob", paris("2026-10-14T12:30:00")]
+      )
+    );
+
+    expect(dailyBests.size).toBe(0);
+    expect(lastMessages.get("guild")).toMatchObject({
+      authorId: "bob",
+      sentAt: paris("2026-10-14T12:00:00"),
+    });
+  });
+
+  it("reads back to the stored message, however many were posted since", async () => {
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+    const fetchHistory = vi.fn(
+      history(
+        ["alice", paris("2026-10-14T08:00:00")],
+        ["bob", paris("2026-10-14T09:00:00")],
+        ["carol", paris("2026-10-14T13:00:00")]
+      )
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      fetchHistory,
+      paris("2026-10-14T14:00:00")
+    );
+
+    expect(fetchHistory).toHaveBeenCalledWith(paris("2026-10-14T08:00:00"));
+    expect(dailyBests.get(key("guild", "2026-10-14"))).toMatchObject({
+      userId: "bob",
+      heldSeconds: 4 * 3600,
+    });
+    expect(lastMessages.get("guild")?.authorId).toBe("carol");
+  });
+
+  it("reads back no further than the start of the oldest open day", async () => {
+    closedDays.set("guild", "2026-10-13");
+    await service.handleMessage(
+      message("alice", paris("2026-10-12T20:00:00")),
+      DELAY
+    );
+    const fetchHistory = vi.fn(
+      history(
+        ["bob", paris("2026-10-13T23:00:00")],
+        ["carol", paris("2026-10-14T02:00:00")]
+      )
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      fetchHistory,
+      paris("2026-10-14T10:00:00")
+    );
+
+    expect(fetchHistory).toHaveBeenCalledWith(paris("2026-10-14T00:00:00"));
+    expect(dailyBests.get(key("guild", "2026-10-14"))).toMatchObject({
+      userId: "bob",
+      heldSeconds: 2 * 3600,
+    });
+    expect(lastMessages.get("guild")?.authorId).toBe("carol");
   });
 
   it("replays every hand-over missed while down", async () => {
