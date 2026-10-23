@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import prisma from "#lib/database.js";
+import { RevisionCounter } from "#lib/revision-cache.js";
 import { declareService, type Service } from "#lib/service.js";
 import type { RemoteRoll } from "./api.js";
 import {
@@ -57,15 +58,15 @@ function loadTable(data: unknown): ScoreTable | null {
 }
 
 class RngdleStore implements Service {
-  private readonly revisions = new Map<string, number>();
+  private readonly revisions = new RevisionCounter();
   private table: Promise<ScoreTable> | null = null;
 
   revision(guildId: string): number {
-    return this.revisions.get(guildId) ?? 0;
+    return this.revisions.get(guildId);
   }
 
   private touch(guildId: string): void {
-    this.revisions.set(guildId, this.revision(guildId) + 1);
+    this.revisions.bump(guildId);
   }
 
   async register(
