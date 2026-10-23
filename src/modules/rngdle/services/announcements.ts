@@ -195,11 +195,13 @@ export async function buildCard(
       number: roll.number,
       score: roll.score,
       tier: table.tierOf(roll.score),
-      placement: shared?.placement
-        ? placementText(t, shared.placement)
-        : t(percent > 50 ? "card.top" : "card.bottom", {
-            percent: formatPercent(percent),
-          }),
+      // A verified card ranks the recorded score, never the pasted text.
+      placement:
+        source === "pasted" && shared?.placement
+          ? placementText(t, shared.placement)
+          : t(percent > 50 ? "card.top" : "card.bottom", {
+              percent: formatPercent(percent),
+            }),
       badges,
       badgeCount,
       highlights,
@@ -359,9 +361,9 @@ export async function answerShare(
     const image = await buildCard(
       { client: message.client, guildId, t: config.t, locale: config.locale },
       genuine ? verified.roll : pasted,
-      // rngdle.com is the source of truth: nothing of the pasted text, such
-      // as altered badges or placement, makes it onto a verified card.
-      genuine ? null : shared,
+      // Only the badges of the pasted text may reach a verified card, when the
+      // calculator does not answer: nothing else lists them.
+      shared,
       genuine ? (verified.linked ? "linked" : "calculator") : "pasted"
     );
     await message.reply({
