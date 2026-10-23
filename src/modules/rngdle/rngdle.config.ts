@@ -10,7 +10,7 @@ export const rngdleConfigSchema = {
   shareCards: {
     name: "Cards on shared results",
     description:
-      "Replies with a card when a member pastes their RNGdle result in a channel.",
+      "Replies with a card when a member pastes their RNGdle result in the daily leaderboard channel.",
     type: ConfigType.BOOLEAN,
     defaultValue: true,
   },

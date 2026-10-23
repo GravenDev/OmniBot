@@ -2,7 +2,7 @@
   "config.leaderboardChannel.name": "Salon du classement quotidien",
   "config.leaderboardChannel.description": "Salon où le classement de la veille est posté chaque jour à 01:00 UTC, ainsi que les nouveaux tirages des membres liés.",
   "config.shareCards.name": "Cartes sur les résultats partagés",
-  "config.shareCards.description": "Répond par une carte quand un membre colle son résultat RNGdle dans un salon.",
+  "config.shareCards.description": "Répond par une carte quand un membre colle son résultat RNGdle dans le salon du classement quotidien.",
 
   "leaderboard.header.player": "Pseudo",
   "leaderboard.header.number": "Tirage",

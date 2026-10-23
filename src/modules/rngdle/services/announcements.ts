@@ -358,7 +358,12 @@ export async function answerShare(
   message: Message,
   config: Config | undefined
 ): Promise<void> {
-  if (!config?.get("shareCards") || message.author.bot || !message.inGuild()) {
+  if (
+    !config?.get("shareCards") ||
+    message.author.bot ||
+    !message.inGuild() ||
+    message.channelId !== config.get("leaderboardChannel")?.id
+  ) {
     return;
   }
   const shared = parseShare(message.content);
