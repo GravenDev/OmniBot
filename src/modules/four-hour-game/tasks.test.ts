@@ -10,9 +10,9 @@ import en from "./i18n/en.json" with { type: "json" };
 import fr from "./i18n/fr.json" with { type: "json" };
 
 const closeDays = vi.hoisted(() => vi.fn());
-const getDailyStandings = vi.hoisted(() => vi.fn());
+const getDailyRank = vi.hoisted(() => vi.fn());
 vi.mock("#modules/four-hour-game/services/four-hour-game.service.js", () => ({
-  default: { closeDays, getDailyStandings },
+  default: { closeDays, getDailyRank },
 }));
 
 const getActivatedGuildIds = vi.hoisted(() => vi.fn());
@@ -100,10 +100,11 @@ describe("closeAllDays", () => {
     send.mockReset();
     closeDays.mockReset();
     getActivatedGuildIds.mockResolvedValue(["guild"]);
-    getDailyStandings.mockResolvedValue([
-      { userId: "alice", score: 5, rank: 1 },
-      { userId: "bob", score: 4, rank: 2 },
-    ]);
+    getDailyRank.mockImplementation(async (_guildId, userId) =>
+      userId === "alice"
+        ? { score: 5, rank: { rank: 1, total: 2 } }
+        : { score: 4, rank: { rank: 2, total: 2 } }
+    );
     fetchWinnerAvatar.mockResolvedValue(null);
     getConfigForModuleIn.mockResolvedValue({
       ...config("fr"),
@@ -134,13 +135,15 @@ describe("closeAllDays", () => {
       { day: "2026-10-12", userId: "alice", heldSeconds: 3600 },
       { day: "2026-10-13", userId: "alice", heldSeconds: 7200 },
     ]);
-    getDailyStandings.mockImplementation(async (_guildId, day) => [
-      { userId: "alice", score: day === "2026-10-12" ? 1 : 2, rank: 1 },
-    ]);
+    getDailyRank.mockImplementation(async (_guildId, _userId, day) => ({
+      score: day === "2026-10-12" ? 1 : 2,
+      rank: { rank: 1, total: 1 },
+    }));
 
     await closeAllDays(client, module);
 
-    expect(getDailyStandings).toHaveBeenCalledWith("guild", "2026-10-12");
+    expect(getDailyRank).toHaveBeenCalledWith("guild", "alice", "2026-10-12");
+    expect(getDailyRank).toHaveBeenCalledWith("guild", "alice", "2026-10-13");
     const totals = send.mock.calls.map(
       ([options]) => options.embeds[0].toJSON().description.split("\n")[1]
     );

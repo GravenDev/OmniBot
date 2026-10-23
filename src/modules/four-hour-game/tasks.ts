@@ -70,20 +70,19 @@ async function closeDays(
   const guild = await client.guilds.fetch(guildId);
   for (const point of points) {
     try {
-      const standings = await fourHourGameService.getDailyStandings(
+      // The standings at the end of that day, not today's.
+      const { score, rank } = await fourHourGameService.getDailyRank(
         guildId,
+        point.userId,
         point.day
       );
-      const entry = standings.find((row) => row.userId === point.userId);
       await channel.send({
         embeds: [
           buildDailyPointEmbed(
             {
               ...point,
-              total: entry?.score ?? 0,
-              rank: entry
-                ? { rank: entry.rank, total: standings.length }
-                : null,
+              total: score,
+              rank,
               avatarUrl: await fetchWinnerAvatar(guild, point.userId),
             },
             config
