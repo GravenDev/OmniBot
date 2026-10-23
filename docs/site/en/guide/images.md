@@ -1,12 +1,12 @@
 # Generating Images
 
-Leaderboards and stat cards are rendered as PNG images with [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas) (prebuilt binaries, nothing to install). Two ready-made renderers cover most needs; lower-level helpers are there for anything else.
+Leaderboards and stat cards are rendered as PNG images with [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas) (prebuilt binaries, nothing to install). A ready-made stat card, and a table to draw in it, cover most needs; lower-level helpers are there for anything else.
 
-| Module                   | Provides                                                                                                                                                                                |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `#lib/leaderboard-table` | `renderLeaderboardTable`: ranked table with medals, avatars, names and your own columns                                                                                                 |
-| `#lib/stat-card`         | `renderStatCard`: card with a portrait, a title, an optional rank, a grid of stat boxes and a side panel                                                                                |
-| `#lib/imaging`           | Shared palette and font, default accent (`DEFAULT_ACCENT`), avatar download, circular images and ringed portraits (`drawPortrait`), highlighting (`drawHighlight`), fitted text, assets |
+| Module           | Provides                                                                                                                                                                                |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `#lib/table`     | `drawTable`, `playerColumn`, `drawCellText`: ranked table with medals, avatars, names and your own columns, drawn in a stat card                                                        |
+| `#lib/stat-card` | `renderStatCard`: card with a portrait, a title, an optional rank, a grid of stat boxes and a side panel                                                                                |
+| `#lib/imaging`   | Shared palette and font, default accent (`DEFAULT_ACCENT`), avatar download, circular images and ringed portraits (`drawPortrait`), highlighting (`drawHighlight`), fitted text, assets |
 
 The Outfit font and the gold, silver and bronze medals ship in `src/lib/assets/` and are loaded for you.
 
@@ -14,16 +14,22 @@ Each module declares its accent color in `rendering/theme.ts` (`export const ACC
 
 ## A Leaderboard
 
-Rows extend `LeaderboardEntry` (`rank`, `name`, `avatar`); the rank, medal, avatar and name columns are drawn for you. Describe the other columns:
+A ranked table is drawn by `drawTable` from `#lib/table`, in the footer of a stat card (see below): the card supplies the header (server icon, title, subtitle) and the table fills its width. With `rows: []`, the table starts right below the header.
+
+Rows extend `RankedPlayer` (`rank`, `name`, `avatar`); `playerColumn` draws the rank (a medal for the podium), the avatar and the name, under two headers, and takes the width the names may use before they shrink. Describe the other columns:
 
 ```typescript
-import { fetchAvatar } from "#lib/imaging.js";
+import { fetchAvatar, fetchImage, loadMedals } from "#lib/imaging.js";
+import { PANEL_PADDING, renderStatCard } from "#lib/stat-card.js";
 import {
-  renderLeaderboardTable,
-  type LeaderboardEntry,
-} from "#lib/leaderboard-table.js";
+  drawCellText,
+  drawTable,
+  playerColumn,
+  tableHeight,
+  type RankedPlayer,
+} from "#lib/table.js";
 
-interface Row extends LeaderboardEntry {
+interface Row extends RankedPlayer {
   points: number;
 }
 
@@ -35,22 +41,43 @@ const rows: Row[] = await Promise.all(
     points: player.points,
   }))
 );
+const medals = await loadMedals();
 
-const png = await renderLeaderboardTable({
-  headers: { rank: t("header.rank"), player: t("header.player") },
-  rows,
-  columns: [
-    {
-      header: t("header.points"),
-      x: 650,
-      maxWidth: 140,
-      cell: (row) => ({ text: String(row.points) }),
+const png = await renderStatCard({
+  accent: ACCENT,
+  width: 800,
+  image: await fetchImage(guild.iconURL({ extension: "png" })),
+  title: t("leaderboard.title"),
+  rows: [],
+  footer: {
+    height: tableHeight(rows.length),
+    draw(ctx, x, y, width) {
+      drawTable<Row>(ctx, x, y, width, {
+        rows,
+        columns: [
+          ...playerColumn(
+            { rank: t("header.rank"), player: t("header.player") },
+            420,
+            medals
+          ),
+          {
+            header: t("header.points"),
+            x: width - PANEL_PADDING,
+            align: "right",
+            draw: (c, row, cx, cy) =>
+              drawCellText(c, String(row.points), cx, cy, {
+                align: "right",
+                color: ACCENT,
+              }),
+          },
+        ],
+      });
     },
-  ],
+  },
 });
 ```
 
-A column can be right-aligned (`align: "right"`, `x` is then its right edge), and each cell can set its own `color`, font `family` or a small `icon` drawn before the text. Pass `caller` to add the viewer's own row under a separator when they are not on the page, `width` for a table wider than the default 800 px, and `accent`, the module's color, for the line under the header and the caller's row.
+Each column has a `header` and an `x`, its left edge, or its right edge with `align: "right"`; its `draw(ctx, row, x, centerY)` draws the cell, `drawCellText` for text (`align`, `color`, `size`, and `fitWidth` to shrink a long text). A column without `draw` only labels what another column draws below it. `tableHeight(rows, extra, titled)` gives the height to reserve. The table can also take a `title`, drawn inside the panel above a separator, an `extra` row (the viewer's own, when they are not on the page) under a separator, tinted with `extraAccent`, and a `highlight(row, index)` that tints a row. The RNGdle leaderboards and history (`src/modules/rngdle/rendering/`) and the 4h game leaderboards (`src/modules/four-hour-game/rendering/leaderboard-image.ts`) are built this way.
 
 ## A Stat Card
 
@@ -84,7 +111,7 @@ The card is 1000 px wide by default (`width` widens it), landscape, so Discord d
 - **Rows** hold one to three boxes, which share the row's width.
 - **A box** has a `title` and a `value`, and optionally a `color` (value, light tint and an edge on the left; `highlight: false` colors the value without highlighting the box), a `subtext`, a `trend` (`{ text, direction: "up" | "down" }`, a green or red arrow and text before the subtext) and a small corner `avatar`. Text that is too long shrinks to fit the box.
 - **An aside** (`{ width, draw(ctx, x, y, width, height) }`) adds a custom panel on the right of the boxes, as tall as them. `drawPanel`, `drawPanelTitle`, `drawText`, `drawFittedText` and `measureText` from `#lib/stat-card` keep it consistent with the rest of the card; the RNGdle tier breakdown is built this way (`src/modules/rngdle/rendering/cards.ts`).
-- **A footer** (`{ height, draw(ctx, x, y, width) }`) adds a custom section below the boxes, across the whole content width, and the card grows by its height. The RNGdle leaderboards and history draw their tables there (`src/modules/rngdle/rendering/table.ts`).
+- **A footer** (`{ height, draw(ctx, x, y, width) }`) adds a custom section below the boxes, across the whole content width, and the card grows by its height. Leaderboards draw their tables there (see above).
 
 ## Good Practices
 

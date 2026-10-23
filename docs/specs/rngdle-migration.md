@@ -36,7 +36,7 @@ src/modules/rngdle/
     └── cards.ts                # profil et statistiques du serveur
 ```
 
-Briques partagées avec les autres modules : `#lib/task.ts` (tâches planifiées), `#lib/keyed-queue.ts` (file par clé), `#lib/revision-cache.ts` (cache invalidé par révision), `#lib/imaging.ts`, `#lib/leaderboard-table.ts` et `#lib/stat-card.ts` (rendu, décrit dans le guide « Générer des images » ; le classement est aussi utilisé par le jeu des 4h).
+Briques partagées avec les autres modules : `#lib/task.ts` (tâches planifiées), `#lib/keyed-queue.ts` (file par clé), `#lib/revision-cache.ts` (cache invalidé par révision), `#lib/imaging.ts`, `#lib/table.ts` et `#lib/stat-card.ts` (rendu, décrit dans le guide « Générer des images » ; le tableau est aussi utilisé par le jeu des 4h).
 
 ## Décisions
 
