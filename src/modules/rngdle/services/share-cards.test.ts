@@ -6,10 +6,10 @@ const mocks = vi.hoisted(() => ({
   render: vi.fn(async () => Buffer.from("png")),
   fetchBadges: vi.fn(async (): Promise<unknown> => null),
   store: {
-    claimAnnouncement: vi.fn(async () => true),
-    hasAnnouncement: vi.fn(async () => false),
-    releaseAnnouncement: vi.fn(async () => undefined),
-    pruneAnnouncements: vi.fn(async () => undefined),
+    claimCard: vi.fn(async () => true),
+    hasCard: vi.fn(async () => false),
+    releaseCard: vi.fn(async () => undefined),
+    pruneCardClaims: vi.fn(async () => undefined),
     rolls: vi.fn(async (): Promise<StoredRoll[]> => []),
     account: vi.fn(async (): Promise<unknown> => null),
     scoreTable: vi.fn(async () => ({
@@ -35,7 +35,7 @@ vi.mock("./sync.js", () => ({
   default: { refreshAccount: mocks.refreshAccount },
 }));
 
-import { answerShare, computeHighlights, pruneCards } from "./announcements.js";
+import { answerShare, computeHighlights, pruneCards } from "./share-cards.js";
 
 const ACCOUNT = { guildId: "g1", userId: "u1", username: "Alice" };
 const NOW = new Date("2026-10-22T12:00:00Z");
@@ -85,8 +85,8 @@ beforeEach(() => {
   // Each test starts past the 10-minute check cooldown of the previous one.
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime((clock += 60 * MINUTE));
-  mocks.store.claimAnnouncement.mockResolvedValue(true);
-  mocks.store.hasAnnouncement.mockResolvedValue(false);
+  mocks.store.claimCard.mockResolvedValue(true);
+  mocks.store.hasCard.mockResolvedValue(false);
   mocks.store.rolls.mockResolvedValue([]);
   mocks.store.account.mockResolvedValue(null);
   mocks.fetchBadges.mockResolvedValue(null);
@@ -138,12 +138,7 @@ describe("answerShare", () => {
     const message = shareMessage();
     await answerShare(message as never, configWith(SHARING) as never);
 
-    expect(mocks.store.claimAnnouncement).toHaveBeenCalledWith(
-      "g1",
-      "u1",
-      DAY,
-      111883
-    );
+    expect(mocks.store.claimCard).toHaveBeenCalledWith("g1", "u1", DAY);
     expect(message.reply).toHaveBeenCalledWith({
       files: [expect.objectContaining({ name: "rngdle-roll.png" })],
       allowedMentions: { parse: [], repliedUser: false },
@@ -152,12 +147,12 @@ describe("answerShare", () => {
 
   it("draws a second card of the day from the pasted text alone", async () => {
     mocks.fetchBadges.mockResolvedValue(CALCULATOR);
-    mocks.store.claimAnnouncement.mockResolvedValue(false);
+    mocks.store.claimCard.mockResolvedValue(false);
     const message = shareMessage();
     await answerShare(message as never, configWith(SHARING) as never);
 
     expect(message.reply).toHaveBeenCalled();
-    expect(mocks.store.releaseAnnouncement).not.toHaveBeenCalled();
+    expect(mocks.store.releaseCard).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -167,7 +162,7 @@ describe("answerShare", () => {
     "for a linked member's roll pasted again, %s",
     async (_, storedScore, badgeRequests) => {
       mocks.store.account.mockResolvedValue(ACCOUNT);
-      mocks.store.claimAnnouncement.mockResolvedValue(false);
+      mocks.store.claimCard.mockResolvedValue(false);
       mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
         filter?.from && filter.userId
           ? [{ ...roll("u1", storedScore), number: 111883 }]
@@ -178,7 +173,7 @@ describe("answerShare", () => {
 
       expect(mocks.refreshAccount).not.toHaveBeenCalled();
       expect(mocks.fetchBadges).toHaveBeenCalledTimes(badgeRequests);
-      expect(mocks.store.releaseAnnouncement).not.toHaveBeenCalled();
+      expect(mocks.store.releaseCard).not.toHaveBeenCalled();
       expect(message.reply).toHaveBeenCalled();
     }
   );
@@ -208,7 +203,7 @@ describe("answerShare", () => {
   });
 
   it("draws a card from the pasted text alone, placement included", async () => {
-    mocks.store.hasAnnouncement.mockResolvedValue(true);
+    mocks.store.hasCard.mockResolvedValue(true);
     const pasted =
       "RNGdle 🎲 111883\n\n🟧 ANOMALY • Top 1%\n\n🟧 🍀 Lucky\n\n41 731 EP";
     await answerShare(
@@ -228,14 +223,14 @@ describe("answerShare", () => {
 
   it("sends no request once the member has a card today", async () => {
     mocks.store.account.mockResolvedValue(ACCOUNT);
-    mocks.store.hasAnnouncement.mockResolvedValue(true);
+    mocks.store.hasCard.mockResolvedValue(true);
     const message = shareMessage();
     await answerShare(message as never, configWith(SHARING) as never);
 
-    expect(mocks.store.hasAnnouncement).toHaveBeenCalledWith("g1", "u1", DAY);
+    expect(mocks.store.hasCard).toHaveBeenCalledWith("g1", "u1", DAY);
     expect(mocks.refreshAccount).not.toHaveBeenCalled();
     expect(mocks.fetchBadges).not.toHaveBeenCalled();
-    expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
+    expect(mocks.store.claimCard).not.toHaveBeenCalled();
     expect(message.reply).toHaveBeenCalled();
   });
 
@@ -280,7 +275,7 @@ describe("answerShare", () => {
     ],
   ])("ignores the message when %s", async (_, config, message) => {
     await answerShare(message as never, config as never);
-    expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
+    expect(mocks.store.claimCard).not.toHaveBeenCalled();
     expect(message.reply).not.toHaveBeenCalled();
   });
 
@@ -292,11 +287,7 @@ describe("answerShare", () => {
     await expect(
       answerShare(message as never, configWith(SHARING) as never)
     ).rejects.toThrow("boom");
-    expect(mocks.store.releaseAnnouncement).toHaveBeenCalledWith(
-      "g1",
-      "u1",
-      DAY
-    );
+    expect(mocks.store.releaseCard).toHaveBeenCalledWith("g1", "u1", DAY);
   });
 
   it.each([
@@ -308,7 +299,7 @@ describe("answerShare", () => {
     async (_, account, notLinked, firstOfTheDay = true) => {
       mocks.fetchBadges.mockResolvedValue(CALCULATOR);
       mocks.store.account.mockResolvedValue(account);
-      mocks.store.claimAnnouncement.mockResolvedValue(firstOfTheDay);
+      mocks.store.claimCard.mockResolvedValue(firstOfTheDay);
       mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
         filter?.userId ? [{ ...roll("u1", 41731), number: 111883 }] : []
       );
@@ -361,11 +352,10 @@ describe("answerShare", () => {
     );
     await answerShare(shareMessage() as never, configWith(SHARING) as never);
 
-    expect(mocks.store.claimAnnouncement).toHaveBeenCalledWith(
+    expect(mocks.store.claimCard).toHaveBeenCalledWith(
       "g1",
       "u1",
-      new Date("2026-10-21T00:00:00Z"),
-      111883
+      new Date("2026-10-21T00:00:00Z")
     );
     expect(mocks.render).toHaveBeenCalledWith(
       expect.objectContaining({ number: 111883, score: 30000 }),
@@ -381,7 +371,7 @@ describe("answerShare", () => {
     const message = shareMessage();
     await answerShare(message as never, configWith(SHARING) as never);
 
-    expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
+    expect(mocks.store.claimCard).not.toHaveBeenCalled();
     expect(mocks.render).toHaveBeenCalledWith(
       expect.objectContaining({ number: 111883, score: 41731, highlights: [] }),
       expect.anything()
@@ -422,7 +412,7 @@ describe("answerShare", () => {
       const message = shareMessage();
       await answerShare(message as never, configWith(SHARING) as never);
 
-      expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
+      expect(mocks.store.claimCard).not.toHaveBeenCalled();
       expect(message.reply).toHaveBeenCalled();
     }
   );
@@ -432,7 +422,7 @@ describe("answerShare", () => {
     const message = shareMessage();
     await answerShare(message as never, configWith(SHARING) as never);
 
-    expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
+    expect(mocks.store.claimCard).not.toHaveBeenCalled();
     expect(mocks.fetchBadges).toHaveBeenCalledTimes(1);
     expect(message.reply).toHaveBeenCalled();
   });
@@ -442,7 +432,7 @@ describe("answerShare", () => {
     const message = shareMessage();
     await answerShare(message as never, configWith(SHARING) as never);
 
-    expect(mocks.store.claimAnnouncement).toHaveBeenCalled();
+    expect(mocks.store.claimCard).toHaveBeenCalled();
     expect(message.reply).toHaveBeenCalled();
   });
 });
@@ -451,7 +441,7 @@ describe("pruneCards", () => {
   it("keeps the cards of today and yesterday", async () => {
     await pruneCards(NOW);
 
-    expect(mocks.store.pruneAnnouncements).toHaveBeenCalledWith(
+    expect(mocks.store.pruneCardClaims).toHaveBeenCalledWith(
       new Date("2026-10-21T00:00:00Z")
     );
   });

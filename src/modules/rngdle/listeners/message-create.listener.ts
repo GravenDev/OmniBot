@@ -1,6 +1,6 @@
 import { declareEventListener } from "#lib/listener.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
-import { answerShare } from "#modules/rngdle/services/announcements.js";
+import { answerShare } from "#modules/rngdle/services/share-cards.js";
 
 export default declareEventListener<"messageCreate", RngdleConfigSchema>({
   eventType: "messageCreate",
