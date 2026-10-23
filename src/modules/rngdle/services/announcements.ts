@@ -180,14 +180,18 @@ export async function buildCard(
     {
       name: player?.name ?? "?",
       avatar: player?.avatar ?? null,
-      subtitle: t("leaderboard.subtitle", {
-        date: new Intl.DateTimeFormat(context.locale, {
-          day: "numeric",
-          month: "long",
-          year: "numeric",
-          timeZone: "UTC",
-        }).format(roll.rolledAt),
-      }),
+      subtitle: [
+        t("leaderboard.subtitle", {
+          date: new Intl.DateTimeFormat(context.locale, {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+            timeZone: "UTC",
+          }).format(roll.rolledAt),
+        }),
+        // Only a linked member's recorded roll comes from rngdle.com itself.
+        ...(source === "linked" ? [] : [t("card.notLinked")]),
+      ].join(" · "),
       number: roll.number,
       score: roll.score,
       tier: table.tierOf(roll.score),

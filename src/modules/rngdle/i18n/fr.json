@@ -52,6 +52,7 @@
   "card.bottom": "Derniers {{percent}}",
   "card.personalBest": "Record personnel",
   "card.rank": "#{{rank}} sur {{count}} aujourd'hui",
+  "card.notLinked": "Non connecté",
   "card.vsAverage": "{{delta}} EP / moyenne",
 
   "overall.empty": "Aucun tirage n'est encore enregistré sur ce serveur.",
