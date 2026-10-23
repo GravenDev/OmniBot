@@ -94,7 +94,7 @@ Ces valeurs viennent de l'historique : un joueur dont tous les points sont anté
 
 ### `/jd4h leaderboard [type]`
 
-Génère une image du top 10 du serveur (rang, médailles pour le podium, avatar, surnom sur le serveur, score). Par défaut, c'est le classement des points des 4h ; `type: Points du jour` classe les joueurs par nombre de journées remportées (journées closes seulement), avec un rappel de la règle au-dessus de l'image. Dans les deux cas, les égalités sont départagées par identifiant Discord. Les membres à 0 point et ceux dont le compte Discord est introuvable n'y figurent pas. L'image est réutilisée pendant 15 secondes par serveur, langue et classement, et régénérée dès qu'un score change ou qu'une journée est close.
+Génère une image du top 10 du serveur : l'icône du serveur, le titre « Jeu des 4h » et le classement affiché en sous-titre, puis un tableau (rang, médailles pour le podium, avatar, surnom sur le serveur, points). Par défaut, c'est le classement des points des 4h (« Classement des points ») ; `type: Points du jour` classe les joueurs par nombre de journées remportées (journées closes seulement, « Points du jour »), avec un rappel de la règle au-dessus de l'image. Dans les deux cas, les égalités sont départagées par identifiant Discord. Les membres à 0 point et ceux dont le compte Discord est introuvable n'y figurent pas. L'image est réutilisée pendant 15 secondes par serveur, langue et classement, et régénérée dès qu'un score change ou qu'une journée est close.
 
 ### `/jd4h-admin set <member> <score>` et `/jd4h-admin unset <member>`
 
