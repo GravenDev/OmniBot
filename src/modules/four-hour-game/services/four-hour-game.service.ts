@@ -6,6 +6,7 @@ import { declareService, type Service } from "#lib/service.js";
 import { standingOf } from "./channel-history.js";
 import {
   dayOf,
+  nextDay,
   previousDay,
   splitHold,
   startOfDay,
@@ -26,7 +27,7 @@ export type MessageResult =
   | Exclude<MessageOutcome, { kind: "point" }>
   | (Extract<MessageOutcome, { kind: "point" }> & { score: number });
 
-export type SetScoreResult = "created" | "updated" | "removed" | "absent";
+export type SetScoreResult = "created" | "updated";
 
 export interface PlayerRank {
   rank: number;
@@ -304,26 +305,41 @@ class FourHourGameService implements Service {
       const last = await prisma.fourHourGameLastMessage.findUnique({
         where: { guildId },
       });
-      const history = await fetchHistory();
       if (!last || last.channelId !== channelId) {
-        await this.storeLastMessage(guildId, channelId, standingOf(history));
+        const latest = await fetchHistory(null);
+        await this.storeLastMessage(guildId, channelId, standingOf(latest));
         return;
       }
 
-      const oldest = history[0];
-      const deleted =
-        !history.some((message) => message.messageId === last.messageId) &&
-        (!oldest || oldest.sentAt <= last.sentAt);
-      if (deleted) {
-        await this.storeLastMessage(guildId, channelId, standingOf(history));
+      // Only the days not closed yet can be credited: reading further back
+      // than their start would be useless.
+      const closedDay = await this.getClosedDay(guildId, now);
+      const openSince = startOfDay(nextDay(closedDay));
+      const since = last.sentAt < openSince ? openSince : last.sentAt;
+      const history = await fetchHistory(since);
+      const found = history.some(
+        (message) => message.messageId === last.messageId
+      );
+
+      // When the stored message was not read, the replay starts at the one in
+      // place at its time: the stored one was deleted while down (the
+      // previous message is back in place, as with a live deletion), or it is
+      // older than the open days. If the page limit stopped the reading
+      // first, it starts at the oldest message read, and the period it could
+      // not reach is credited to nobody.
+      const start: ChannelMessage | null = found
+        ? last
+        : (standingOf(history.filter((message) => message.sentAt <= since)) ??
+          history[0] ??
+          null);
+      if (!start) {
         return;
       }
-
       const holds: { authorId: string; from: Date; to: Date }[] = [];
-      let current: ChannelMessage = last;
+      let current = start;
       for (const message of history) {
         if (
-          message.sentAt > last.sentAt &&
+          message.sentAt > start.sentAt &&
           message.authorId !== current.authorId
         ) {
           holds.push({
@@ -334,11 +350,10 @@ class FourHourGameService implements Service {
           current = message;
         }
       }
-      if (holds.length === 0) {
+      if (holds.length === 0 && found) {
         return;
       }
 
-      const closedDay = await this.getClosedDay(guildId, now);
       for (const hold of holds) {
         await this.creditHolds(
           guildId,
@@ -400,18 +415,20 @@ class FourHourGameService implements Service {
     userId: string,
     score: number
   ): Promise<SetScoreResult> {
-    if (score === 0) {
-      return (await this.deleteScore(guildId, userId)) ? "removed" : "absent";
+    // /jd4h-admin set asks for 1 at least: unset removes a score.
+    if (!Number.isInteger(score) || score < 1) {
+      throw new RangeError(`Invalid score: ${score}`);
     }
-
-    const existing = await this.getScore(guildId, userId);
-    await prisma.fourHourGameScore.upsert({
-      where: { guildId_userId: { guildId, userId } },
-      create: { guildId, userId, score },
-      update: { score },
+    return this.queue.run(guildId, async () => {
+      const existing = await this.getScore(guildId, userId);
+      await prisma.fourHourGameScore.upsert({
+        where: { guildId_userId: { guildId, userId } },
+        create: { guildId, userId, score },
+        update: { score },
+      });
+      this.bumpRevision(guildId);
+      return existing === null ? "created" : "updated";
     });
-    this.bumpRevision(guildId);
-    return existing === null ? "created" : "updated";
   }
 
   deleteScore(guildId: string, userId: string): Promise<boolean> {

@@ -3,7 +3,10 @@ import moduleService from "#core/services/module.service.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
-import { fetchPlayerMessages } from "./channel-history.js";
+import {
+  fetchPlayerMessages,
+  fetchPlayerMessagesSince,
+} from "./channel-history.js";
 import fourHourGameService from "./four-hour-game.service.js";
 
 const logger = loggerMaker("four-hour-game");
@@ -18,8 +21,10 @@ export async function syncRound(
     return;
   }
 
-  await fourHourGameService.resyncLastMessage(guildId, channel.id, () =>
-    fetchPlayerMessages(channel)
+  await fourHourGameService.resyncLastMessage(guildId, channel.id, (since) =>
+    since
+      ? fetchPlayerMessagesSince(channel, since)
+      : fetchPlayerMessages(channel)
   );
 }
 
