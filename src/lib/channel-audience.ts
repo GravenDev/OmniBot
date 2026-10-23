@@ -53,3 +53,23 @@ export function widensAudience(
       !grants(source, role, READ_PERMISSIONS)
   );
 }
+
+// The ids of the channels and categories a module's config excludes.
+export function excludedIdsOf(
+  ...lists: readonly ({ id: string }[] | null | undefined)[]
+): Set<string> {
+  return new Set(lists.flatMap((list) => list ?? []).map(({ id }) => id));
+}
+
+// Whether a channel is excluded: itself, its category, or for a thread its
+// parent channel and that channel's category.
+export function isExcluded(
+  channel: GuildBasedChannel,
+  excludedIds: ReadonlySet<string>
+): boolean {
+  const ids = [channel.id, channel.parentId];
+  if (channel.isThread()) {
+    ids.push(channel.parent?.parentId ?? null);
+  }
+  return ids.some((id) => id !== null && excludedIds.has(id));
+}

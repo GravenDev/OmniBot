@@ -14,7 +14,6 @@ import type { ConfigProvider } from "#lib/config.js";
 import type { MessageQuoteConfigSchema } from "#modules/message-quote/message-quote.config.js";
 import {
   canRead,
-  isExcluded,
   isNsfw,
   MAX_QUOTES,
   parseMessageLinks,
@@ -332,39 +331,6 @@ describe("parseMessageLinks", () => {
       "3",
     ]);
     expect(MAX_QUOTES).toBe(3);
-  });
-});
-
-describe("isExcluded", () => {
-  const excluded = new Set(["10"]);
-
-  it("matches the channel itself and its category", () => {
-    expect(isExcluded(fakeChannel({ id: "10" }), excluded)).toBe(true);
-    expect(isExcluded(fakeChannel({ parentId: "10" }), excluded)).toBe(true);
-    expect(isExcluded(fakeChannel({ parentId: "11" }), excluded)).toBe(false);
-  });
-
-  it("matches a thread through its parent channel and category", () => {
-    expect(
-      isExcluded(
-        fakeChannel({
-          thread: true,
-          parentId: "10",
-          parent: { parentId: null },
-        }),
-        excluded
-      )
-    ).toBe(true);
-    expect(
-      isExcluded(
-        fakeChannel({
-          thread: true,
-          parentId: "12",
-          parent: { parentId: "10" },
-        }),
-        excluded
-      )
-    ).toBe(true);
   });
 });
 

@@ -10,7 +10,12 @@ import {
   type Message,
   PermissionFlagsBits,
 } from "discord.js";
-import { READ_PERMISSIONS, widensAudience } from "#lib/channel-audience.js";
+import {
+  excludedIdsOf,
+  isExcluded,
+  READ_PERMISSIONS,
+  widensAudience,
+} from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
 import {
@@ -64,17 +69,6 @@ export function parseMessageLinks(
     }
   }
   return links;
-}
-
-export function isExcluded(
-  channel: GuildBasedChannel,
-  excludedIds: ReadonlySet<string>
-): boolean {
-  const ids = [channel.id, channel.parentId];
-  if (channel.isThread()) {
-    ids.push(channel.parent?.parentId ?? null);
-  }
-  return ids.some((id) => id !== null && excludedIds.has(id));
 }
 
 export function isNsfw(channel: GuildBasedChannel): boolean {
@@ -266,11 +260,9 @@ export async function quoteLinks(
     return;
   }
 
-  const excludedIds = new Set(
-    [
-      ...(config.get("excludedChannels") ?? []),
-      ...(config.get("excludedCategories") ?? []),
-    ].map((channel) => channel.id)
+  const excludedIds = excludedIdsOf(
+    config.get("excludedChannels"),
+    config.get("excludedCategories")
   );
   if (isExcluded(message.channel, excludedIds)) {
     return;

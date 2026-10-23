@@ -3,7 +3,11 @@ import {
   type GuildTextBasedChannel,
   PermissionFlagsBits,
 } from "discord.js";
-import { widensAudience } from "#lib/channel-audience.js";
+import {
+  excludedIdsOf,
+  isExcluded,
+  widensAudience,
+} from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { MessageLogConfigSchema } from "#modules/message-log/message-log.config.js";
 
@@ -19,17 +23,6 @@ const REQUIRED_PERMISSIONS = [
   PermissionFlagsBits.EmbedLinks,
 ];
 
-export function isExcluded(
-  channel: GuildBasedChannel,
-  excludedIds: ReadonlySet<string>
-): boolean {
-  const ids = [channel.id, channel.parentId];
-  if (channel.isThread()) {
-    ids.push(channel.parent?.parentId ?? null);
-  }
-  return ids.some((id) => id !== null && excludedIds.has(id));
-}
-
 export function logTargetFor(
   source: GuildBasedChannel | null,
   config: ConfigProvider<MessageLogConfigSchema>
@@ -38,11 +31,9 @@ export function logTargetFor(
   if (!source || !logChannel?.isSendable() || logChannel.isDMBased()) {
     return null;
   }
-  const excludedIds = new Set(
-    [
-      ...(config.get("excludedChannels") ?? []),
-      ...(config.get("excludedCategories") ?? []),
-    ].map((excluded) => excluded.id)
+  const excludedIds = excludedIdsOf(
+    config.get("excludedChannels"),
+    config.get("excludedCategories")
   );
   excludedIds.add(logChannel.id);
   if (isExcluded(source, excludedIds)) {
