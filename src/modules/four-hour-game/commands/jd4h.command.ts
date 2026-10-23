@@ -7,7 +7,7 @@ import {
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
-import { fetchImage } from "#lib/imaging.js";
+import { fetchAvatar } from "#lib/imaging.js";
 import { resolvePlayers } from "#lib/players.js";
 import { RevisionCache } from "#lib/revision-cache.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
@@ -47,9 +47,7 @@ async function showScore(
       if (!profile) {
         return null;
       }
-      const avatar = await fetchImage(
-        shown.displayAvatarURL({ extension: "png", size: 128 })
-      );
+      const avatar = await fetchAvatar(shown);
       return renderProfileCard(
         profile,
         { name: shown.displayName, avatar },
