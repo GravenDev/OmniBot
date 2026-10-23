@@ -4,6 +4,7 @@
   "config.shareCards.name": "Cards on shared results",
   "config.shareCards.description": "Replies with a card when a member pastes their RNGdle result in the RNGdle channel.",
 
+  "leaderboard.header.rank": "Rank",
   "leaderboard.header.player": "Player",
   "leaderboard.header.number": "Roll",
   "leaderboard.header.score": "Score",

@@ -67,6 +67,7 @@ export interface DailyLeaderboardData {
 }
 
 export interface DailyLeaderboardLabels {
+  rank: string;
   title: string;
   averageScore: string;
   players: string;
@@ -106,6 +107,8 @@ export interface OverallLeaderboardData {
 }
 
 export interface OverallLeaderboardLabels {
+  rank: string;
+  player: string;
   title: string;
   players: string;
   rolls: string;
@@ -185,7 +188,11 @@ export async function renderDailyLeaderboard(
         drawTable<DailyRow>(ctx, x, y, width, {
           rows: data.rows,
           columns: [
-            playerColumn(labels.player, 180, medals),
+            ...playerColumn(
+              { rank: labels.rank, player: labels.player },
+              180,
+              medals
+            ),
             {
               header: labels.number,
               x: 320,
@@ -229,7 +236,8 @@ export async function renderOverallLeaderboard(
   const medals = await loadMedals();
   const rankingHeight = tableHeight(
     data.ranking.length,
-    data.caller !== undefined
+    data.caller !== undefined,
+    true
   );
 
   return renderStatCard({
@@ -255,11 +263,16 @@ export async function renderOverallLeaderboard(
       draw(ctx, x, y, width) {
         const bestWidth = width - RANKING_WIDTH - GAP;
         drawTable<RankingRow>(ctx, x, y, RANKING_WIDTH, {
+          title: labels.ranking,
           rows: data.ranking,
           extra: data.caller,
           extraAccent: ACCENT,
           columns: [
-            playerColumn(labels.ranking, 160, medals),
+            ...playerColumn(
+              { rank: labels.rank, player: labels.player },
+              160,
+              medals
+            ),
             {
               header: labels.rollCount,
               x: 320,
@@ -293,9 +306,14 @@ export async function renderOverallLeaderboard(
           ],
         });
         drawTable<BestRollRow>(ctx, x + RANKING_WIDTH + GAP, y, bestWidth, {
+          title: labels.bestRoll,
           rows: data.bestRolls,
           columns: [
-            playerColumn(labels.bestRoll, 140, medals),
+            ...playerColumn(
+              { rank: labels.rank, player: labels.player },
+              140,
+              medals
+            ),
             {
               header: labels.number,
               x: 270,
