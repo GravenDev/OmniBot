@@ -1,5 +1,5 @@
+import { formatInteger } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
-import { formatSpaced } from "#modules/rngdle/rendering/format.js";
 import { DAY_MS } from "./days.js";
 import type { ScoreTable, TierOrError } from "./scoring.js";
 import { computeStreaks } from "./stats.js";
@@ -119,7 +119,7 @@ export function buildDailyMessage(
       lines.push(
         t("daily.worst", {
           user: mention(recap.worst.userId),
-          score: formatSpaced(recap.worst.score),
+          score: formatInteger(recap.worst.score, locale),
           count: recap.worst.score,
         })
       );

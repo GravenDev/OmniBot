@@ -38,6 +38,8 @@ export interface HistoryImageData {
 }
 
 export interface HistoryLabels {
+  // The locale of the numbers drawn on the card.
+  locale: string;
   subtitle: (count: number) => string;
   averageScore: string;
   averageTier: (tier: TierOrError) => string;
@@ -76,7 +78,7 @@ export async function renderHistory(
       [
         {
           title: labels.averageScore,
-          value: formatEp(data.averageScore),
+          value: formatEp(data.averageScore, labels.locale),
           color: TIER_COLORS[data.averageTier],
           subtext: labels.averageTier(data.averageTier),
         },

@@ -1,4 +1,5 @@
 import type { Image, SKRSContext2D } from "@napi-rs/canvas";
+import { formatInteger } from "#lib/format.js";
 import {
   createBoard,
   drawHighlight,
@@ -39,7 +40,7 @@ import type {
   VersusWinners,
   Winner,
 } from "#modules/rngdle/services/versus.js";
-import { formatEp, formatSpaced } from "./format.js";
+import { formatEp } from "./format.js";
 import { ACCENT } from "./theme.js";
 
 const WIDTH = DEFAULT_WIDTH;
@@ -83,6 +84,8 @@ export interface VersusImageData {
 }
 
 export interface VersusLabels {
+  // The locale of the numbers drawn on the card.
+  locale: string;
   vs: string;
   totalScore: string;
   totalRolls: string;
@@ -377,7 +380,10 @@ function drawDuel(
     drawValue(
       ctx,
       hasDays
-        ? { text: formatSpaced(duel[side]), subtext: labels.wins(duel[side]) }
+        ? {
+            text: formatInteger(duel[side], labels.locale),
+            subtext: labels.wins(duel[side]),
+          }
         : null,
       side,
       centerY,
@@ -400,12 +406,16 @@ function lines(data: VersusImageData, labels: VersusLabels): Line[] {
   return [
     {
       label: labels.totalScore,
-      ...pair((player) => ({ text: formatEp(player.totalScore) })),
+      ...pair((player) => ({
+        text: formatEp(player.totalScore, labels.locale),
+      })),
       winner: winners.totalScore,
     },
     {
       label: labels.totalRolls,
-      ...pair((player) => ({ text: formatSpaced(player.totalRolls) })),
+      ...pair((player) => ({
+        text: formatInteger(player.totalRolls, labels.locale),
+      })),
       winner: winners.totalRolls,
     },
     {
@@ -413,7 +423,7 @@ function lines(data: VersusImageData, labels: VersusLabels): Line[] {
       ...pair(
         ({ average }) =>
           average && {
-            text: formatEp(average.score),
+            text: formatEp(average.score, labels.locale),
             color: TIER_COLORS[average.tier],
             subtext: average.tier,
           }
@@ -425,9 +435,9 @@ function lines(data: VersusImageData, labels: VersusLabels): Line[] {
       ...pair(
         ({ best }) =>
           best && {
-            text: formatSpaced(best.number),
+            text: formatInteger(best.number, labels.locale),
             color: TIER_COLORS[best.tier],
-            subtext: `${best.tier} · ${formatEp(best.score)}`,
+            subtext: `${best.tier} · ${formatEp(best.score, labels.locale)}`,
           }
       ),
       winner: winners.bestRoll,
@@ -435,7 +445,9 @@ function lines(data: VersusImageData, labels: VersusLabels): Line[] {
     {
       label: labels.maxBadges,
       ...pair(({ maxBadges }) =>
-        maxBadges === null ? null : { text: formatSpaced(maxBadges) }
+        maxBadges === null
+          ? null
+          : { text: formatInteger(maxBadges, labels.locale) }
       ),
       winner: winners.maxBadges,
     },

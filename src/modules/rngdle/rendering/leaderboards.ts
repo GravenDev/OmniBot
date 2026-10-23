@@ -1,4 +1,5 @@
 import type { Image } from "@napi-rs/canvas";
+import { formatInteger } from "#lib/format.js";
 import { loadMedals, PALETTE } from "#lib/imaging.js";
 import {
   drawText,
@@ -12,12 +13,7 @@ import {
   TIER_COLORS,
   type TierOrError,
 } from "#modules/rngdle/services/scoring.js";
-import {
-  formatCompact,
-  formatEp,
-  formatIndex,
-  formatSpaced,
-} from "./format.js";
+import { formatCompact, formatEp, formatIndex } from "./format.js";
 import {
   drawCellText,
   drawDelta,
@@ -67,6 +63,8 @@ export interface DailyLeaderboardData {
 }
 
 export interface DailyLeaderboardLabels {
+  // The locale of the numbers drawn on the card.
+  locale: string;
   rank: string;
   title: string;
   averageScore: string;
@@ -107,6 +105,8 @@ export interface OverallLeaderboardData {
 }
 
 export interface OverallLeaderboardLabels {
+  // The locale of the numbers drawn on the card.
+  locale: string;
   rank: string;
   player: string;
   title: string;
@@ -146,21 +146,23 @@ export async function renderDailyLeaderboard(
   const boxes: StatBox[] = [
     {
       title: labels.averageScore,
-      value: formatEp(average.score),
+      value: formatEp(average.score, labels.locale),
       color: TIER_COLORS[average.tier],
       highlight: false,
       trend: trend(average.score, average.previous),
       subtext:
         average.previous === null
           ? labels.rollCount(average.rolls)
-          : labels.previous(formatSpaced(average.previous)),
+          : labels.previous(formatInteger(average.previous, labels.locale)),
     },
     {
       title: labels.players,
-      value: formatSpaced(players.count),
+      value: formatInteger(players.count, labels.locale),
       trend: trend(players.count, players.previous),
       ...(players.previous !== null && {
-        subtext: labels.previous(formatSpaced(players.previous)),
+        subtext: labels.previous(
+          formatInteger(players.previous, labels.locale)
+        ),
       }),
     },
   ];
@@ -248,11 +250,17 @@ export async function renderOverallLeaderboard(
     subtitle: data.subtitle,
     rows: [
       [
-        { title: labels.players, value: formatSpaced(data.players) },
-        { title: labels.rolls, value: formatSpaced(data.rolls) },
+        {
+          title: labels.players,
+          value: formatInteger(data.players, labels.locale),
+        },
+        {
+          title: labels.rolls,
+          value: formatInteger(data.rolls, labels.locale),
+        },
         {
           title: labels.averageScore,
-          value: formatEp(data.average.score),
+          value: formatEp(data.average.score, labels.locale),
           color: TIER_COLORS[data.average.tier],
           subtext: labels.perRoll,
         },
@@ -278,10 +286,16 @@ export async function renderOverallLeaderboard(
               x: 320,
               align: "right",
               draw: (c, row, cx, cy) =>
-                drawCellText(c, formatSpaced(row.rolls), cx, cy, {
-                  align: "right",
-                  color: PALETTE.subtext,
-                }),
+                drawCellText(
+                  c,
+                  formatInteger(row.rolls, labels.locale),
+                  cx,
+                  cy,
+                  {
+                    align: "right",
+                    color: PALETTE.subtext,
+                  }
+                ),
             },
             {
               header: labels.total,

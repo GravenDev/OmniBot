@@ -14,6 +14,7 @@ const PNG_SIGNATURE = Buffer.from([
 ]);
 
 const labels: VersusLabels = {
+  locale: "fr",
   vs: "VS",
   totalScore: "Overall Score",
   totalRolls: "Total Rolls",

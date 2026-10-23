@@ -74,6 +74,7 @@ function serverStats(leaders: number): ServerStatsImageData {
 
 describe("renderProfile", () => {
   const labels = {
+    locale: "fr",
     bestRoll: "Best Roll",
     worstRoll: "Worst Roll",
     roll: (number: string) => `roll ${number}`,
@@ -113,6 +114,7 @@ describe("renderProfile", () => {
 
 describe("renderServerStats", () => {
   const labels = {
+    locale: "fr",
     title: "RNGdle - Server Stats",
     bestRoll: "Best Roll OAT",
     worstRoll: "Worst Roll OAT",

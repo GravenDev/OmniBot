@@ -1,4 +1,5 @@
 import type { Image, SKRSContext2D } from "@napi-rs/canvas";
+import { formatInteger } from "#lib/format.js";
 import { PALETTE, rgb, type Rgb } from "#lib/imaging.js";
 import {
   drawPanel,
@@ -10,7 +11,7 @@ import {
   type StatBox,
 } from "#lib/stat-card.js";
 import { TIER_COLORS, TIER_ODDS } from "#modules/rngdle/services/scoring.js";
-import { formatEp, formatSpaced } from "./format.js";
+import { formatEp } from "./format.js";
 import { ACCENT } from "./theme.js";
 
 export const TIMELINE_TIERS = ["MYTHIC", "ANOMALY", "TRASH"] as const;
@@ -73,6 +74,8 @@ export interface TimelineImageData {
 }
 
 export interface TimelineLabels {
+  // The locale of the numbers drawn on the card.
+  locale: string;
   subtitle: string;
   counts: Record<TimelineTier, string>;
   legend: Record<TimelineTier, string>;
@@ -207,7 +210,7 @@ export function renderTimeline(
     data.pins.filter((pin) => pin.tier === tier).length;
   const countBox = (tier: TimelineTier): StatBox => ({
     title: labels.counts[tier],
-    value: formatSpaced(count(tier)),
+    value: formatInteger(count(tier), labels.locale),
     subtext: labels.expected(data.totalRolls * TIER_ODDS[tier]),
     ...(count(tier) > 0 && { color: TIER_COLORS[tier], highlight: true }),
   });
@@ -276,7 +279,7 @@ export function renderTimeline(
           ctx.globalAlpha = 1;
           drawCentered(
             ctx,
-            formatEp(pin.score),
+            formatEp(pin.score, labels.locale),
             pinX,
             top,
             SCORE_SIZE,
