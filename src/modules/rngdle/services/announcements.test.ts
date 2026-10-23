@@ -183,7 +183,7 @@ describe("answerShare", () => {
     }
   );
 
-  it("draws a verified card from the recorded roll only", async () => {
+  it("ranks a verified card from the recorded score, with the pasted badges when the calculator is down", async () => {
     mocks.store.account.mockResolvedValue(ACCOUNT);
     mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
       filter?.from && filter.userId
@@ -200,8 +200,27 @@ describe("answerShare", () => {
     expect(mocks.render).toHaveBeenCalledWith(
       expect.objectContaining({
         placement: 'card.top {"percent":"4%"}',
-        badges: [],
-        badgeCount: 3,
+        badges: [expect.objectContaining({ label: "Lucky", ep: null })],
+        badgeCount: 1,
+      }),
+      expect.anything()
+    );
+  });
+
+  it("draws a card from the pasted text alone, placement included", async () => {
+    mocks.store.hasAnnouncement.mockResolvedValue(true);
+    const pasted =
+      "RNGdle 🎲 111883\n\n🟧 ANOMALY • Top 1%\n\n🟧 🍀 Lucky\n\n41 731 EP";
+    await answerShare(
+      shareMessage(pasted) as never,
+      configWith(SHARING) as never
+    );
+
+    expect(mocks.render).toHaveBeenCalledWith(
+      expect.objectContaining({
+        placement: 'card.top {"percent":"1%"}',
+        badges: [expect.objectContaining({ label: "Lucky" })],
+        badgeCount: 1,
       }),
       expect.anything()
     );
