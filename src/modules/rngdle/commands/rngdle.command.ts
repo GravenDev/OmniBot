@@ -6,6 +6,7 @@ import {
   MessageFlags,
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
+  type SlashCommandSubcommandBuilder,
 } from "discord.js";
 import mentionService from "#core/services/mention.service.js";
 import { declareCommand } from "#lib/command.js";
@@ -303,6 +304,26 @@ const subcommands: Record<
   "leaderboard-all": leaderboardAll,
 };
 
+// The member and username options of the commands that look up a player.
+function withPlayerOptions(sub: SlashCommandSubcommandBuilder) {
+  return sub
+    .addUserOption((option) =>
+      option
+        .setName("member")
+        .setDescription("Member to look up (defaults to you)")
+        .setDescriptionLocalizations({
+          fr: "Membre à consulter (vous par défaut)",
+        })
+    )
+    .addStringOption((option) =>
+      option
+        .setName("username")
+        .setDescription("RNGdle username to look up")
+        .setDescriptionLocalizations({ fr: "Pseudo RNGdle à consulter" })
+        .setAutocomplete(true)
+    );
+}
+
 export default declareCommand<RngdleConfigSchema>({
   data: new SlashCommandBuilder()
     .setName("rngdle")
@@ -316,121 +337,67 @@ export default declareCommand<RngdleConfigSchema>({
         .setDescriptionLocalizations({ fr: "Afficher le classement du jour" })
     )
     .addSubcommand((sub) =>
-      sub
-        .setName("profile")
-        .setDescription("Show a player's profile")
-        .setDescriptionLocalizations({ fr: "Afficher le profil d'un joueur" })
-        .addUserOption((option) =>
-          option
-            .setName("member")
-            .setDescription("Member to look up (defaults to you)")
-            .setDescriptionLocalizations({
-              fr: "Membre à consulter (vous par défaut)",
-            })
-        )
-        .addStringOption((option) =>
-          option
-            .setName("username")
-            .setDescription("RNGdle username to look up")
-            .setDescriptionLocalizations({ fr: "Pseudo RNGdle à consulter" })
-            .setAutocomplete(true)
-        )
+      withPlayerOptions(
+        sub
+          .setName("profile")
+          .setDescription("Show a player's profile")
+          .setDescriptionLocalizations({ fr: "Afficher le profil d'un joueur" })
+      )
     )
     .addSubcommand((sub) =>
-      sub
-        .setName("history")
-        .setDescription("Show a player's latest rolls")
-        .setDescriptionLocalizations({
-          fr: "Afficher les derniers tirages d'un joueur",
-        })
-        .addUserOption((option) =>
-          option
-            .setName("member")
-            .setDescription("Member to look up (defaults to you)")
-            .setDescriptionLocalizations({
-              fr: "Membre à consulter (vous par défaut)",
-            })
-        )
-        .addStringOption((option) =>
-          option
-            .setName("username")
-            .setDescription("RNGdle username to look up")
-            .setDescriptionLocalizations({ fr: "Pseudo RNGdle à consulter" })
-            .setAutocomplete(true)
-        )
-        .addIntegerOption((option) =>
-          option
-            .setName("count")
-            .setDescription("Number of rolls to show (defaults to 10)")
-            .setDescriptionLocalizations({
-              fr: "Nombre de tirages affichés (10 par défaut)",
-            })
-            .setMinValue(HISTORY_MIN)
-            .setMaxValue(HISTORY_MAX)
-        )
+      withPlayerOptions(
+        sub
+          .setName("history")
+          .setDescription("Show a player's latest rolls")
+          .setDescriptionLocalizations({
+            fr: "Afficher les derniers tirages d'un joueur",
+          })
+      ).addIntegerOption((option) =>
+        option
+          .setName("count")
+          .setDescription("Number of rolls to show (defaults to 10)")
+          .setDescriptionLocalizations({
+            fr: "Nombre de tirages affichés (10 par défaut)",
+          })
+          .setMinValue(HISTORY_MIN)
+          .setMaxValue(HISTORY_MAX)
+      )
     )
     .addSubcommand((sub) =>
-      sub
-        .setName("timeline")
-        .setDescription("Show a player's mythic, anomaly and trash rolls")
-        .setDescriptionLocalizations({
-          fr: "Afficher les tirages mythiques, anomalies et trash d'un joueur",
-        })
-        .addUserOption((option) =>
-          option
-            .setName("member")
-            .setDescription("Member to look up (defaults to you)")
-            .setDescriptionLocalizations({
-              fr: "Membre à consulter (vous par défaut)",
-            })
-        )
-        .addStringOption((option) =>
-          option
-            .setName("username")
-            .setDescription("RNGdle username to look up")
-            .setDescriptionLocalizations({ fr: "Pseudo RNGdle à consulter" })
-            .setAutocomplete(true)
-        )
+      withPlayerOptions(
+        sub
+          .setName("timeline")
+          .setDescription("Show a player's mythic, anomaly and trash rolls")
+          .setDescriptionLocalizations({
+            fr: "Afficher les tirages mythiques, anomalies et trash d'un joueur",
+          })
+      )
     )
     .addSubcommand((sub) =>
-      sub
-        .setName("trend")
-        .setDescription("Show a player's recent form")
-        .setDescriptionLocalizations({
-          fr: "Afficher la forme récente d'un joueur",
-        })
-        .addUserOption((option) =>
-          option
-            .setName("member")
-            .setDescription("Member to look up (defaults to you)")
-            .setDescriptionLocalizations({
-              fr: "Membre à consulter (vous par défaut)",
-            })
-        )
-        .addStringOption((option) =>
-          option
-            .setName("username")
-            .setDescription("RNGdle username to look up")
-            .setDescriptionLocalizations({ fr: "Pseudo RNGdle à consulter" })
-            .setAutocomplete(true)
-        )
-        .addIntegerOption((option) =>
-          option
-            .setName("days")
-            .setDescription(
-              `Number of days covered (defaults to ${TREND_DEFAULT_DAYS})`
-            )
-            .setDescriptionLocalizations({
-              fr: `Nombre de jours couverts (${TREND_DEFAULT_DAYS} par défaut)`,
-            })
-            .addChoices(
-              ...TREND_DAYS.map((days) => ({
-                name: `${days} days`,
-                name_localizations: { fr: `${days} jours` },
-                value: days,
-              }))
-            )
-        )
+      withPlayerOptions(
+        sub
+          .setName("trend")
+          .setDescription("Show a player's recent form")
+          .setDescriptionLocalizations({
+            fr: "Afficher la forme récente d'un joueur",
+          })
+      ).addIntegerOption((option) =>
+        option
+          .setName("days")
+          .setDescription(
+            `Number of days covered (defaults to ${TREND_DEFAULT_DAYS})`
+          )
+          .setDescriptionLocalizations({
+            fr: `Nombre de jours couverts (${TREND_DEFAULT_DAYS} par défaut)`,
+          })
+          .addChoices(
+            ...TREND_DAYS.map((days) => ({
+              name: `${days} days`,
+              name_localizations: { fr: `${days} jours` },
+              value: days,
+            }))
+          )
+      )
     )
     .addSubcommand((sub) =>
       sub
