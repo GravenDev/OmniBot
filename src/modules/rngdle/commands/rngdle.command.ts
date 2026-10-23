@@ -251,28 +251,10 @@ async function remind(interaction: Interaction, config: Config) {
   await reply(lines.join("\n"));
 }
 
-async function announce(interaction: Interaction, config: Config) {
-  const { guildId, user } = interaction;
-  const enabled = interaction.options.getBoolean("enabled", true);
-  await store.setAnnouncements(guildId, user.id, enabled);
-  const channel = config.get("leaderboardChannel");
-  const linked = enabled && (await store.account(guildId, user.id)) !== null;
-  await interaction.reply({
-    content: !enabled
-      ? config.t("announce.disabled")
-      : !linked
-        ? config.t("announce.notRegistered")
-        : channel
-          ? config.t("announce.enabled", { channel: `<#${channel.id}>` })
-          : config.t("announce.enabledNoChannel"),
-    flags: MessageFlags.Ephemeral,
-  });
-}
-
 const personal: Record<
   string,
   (interaction: Interaction, config: Config) => Promise<void>
-> = { link, unlink, remind, announce };
+> = { link, unlink, remind };
 
 async function versus(interaction: Interaction, config: Config) {
   const first = interaction.options.getUser("player1", true);
@@ -552,23 +534,6 @@ export default declareCommand<RngdleConfigSchema>({
             .setDescription("Turn the daily reminder on or off")
             .setDescriptionLocalizations({
               fr: "Activer ou désactiver le rappel quotidien",
-            })
-            .setRequired(true)
-        )
-    )
-    .addSubcommand((sub) =>
-      sub
-        .setName("announce")
-        .setDescription("Post your new rolls in the daily leaderboard channel")
-        .setDescriptionLocalizations({
-          fr: "Publier vos nouveaux tirages dans le salon du classement quotidien",
-        })
-        .addBooleanOption((option) =>
-          option
-            .setName("enabled")
-            .setDescription("Turn the announcement of your rolls on or off")
-            .setDescriptionLocalizations({
-              fr: "Activer ou désactiver l'annonce de vos tirages",
             })
             .setRequired(true)
         )
