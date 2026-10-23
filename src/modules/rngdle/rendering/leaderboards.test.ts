@@ -23,6 +23,7 @@ const table = (rows: number) => 52 + rows * 58 + 12;
 
 describe("renderDailyLeaderboard", () => {
   const labels = {
+    rank: "Rang",
     title: "Classement du jour",
     averageScore: "Score moyen",
     players: "Joueurs",
@@ -90,6 +91,8 @@ describe("renderDailyLeaderboard", () => {
 
 describe("renderOverallLeaderboard", () => {
   const labels = {
+    rank: "Rang",
+    player: "Pseudo",
     title: "Classement général",
     players: "Joueurs",
     rolls: "Tirages",
@@ -142,8 +145,9 @@ describe("renderOverallLeaderboard", () => {
       tier: "MYTHIC",
     })),
   });
+  // The tables' titles inside their panels, the index note below.
   const footer = (rows: number, extra: boolean) =>
-    table(rows) + (extra ? 14 + 58 : 0) + 34;
+    38 + table(rows) + (extra ? 14 + 58 : 0) + 34;
 
   it.each([
     ["without caller", ranking, undefined, footer(4, false)],

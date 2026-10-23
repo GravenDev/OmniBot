@@ -4,6 +4,7 @@
   "config.shareCards.name": "Cartes sur les résultats partagés",
   "config.shareCards.description": "Répond par une carte quand un membre colle son résultat RNGdle dans le salon RNGdle.",
 
+  "leaderboard.header.rank": "Rang",
   "leaderboard.header.player": "Pseudo",
   "leaderboard.header.number": "Tirage",
   "leaderboard.header.score": "Score",
