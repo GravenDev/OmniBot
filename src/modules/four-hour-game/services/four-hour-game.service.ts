@@ -1,6 +1,7 @@
 import prisma from "#lib/database.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
+import { RevisionCounter } from "#lib/revision-cache.js";
 import { declareService, type Service } from "#lib/service.js";
 import { standingOf } from "./channel-history.js";
 import {
@@ -54,14 +55,14 @@ export interface LeaderboardEntry {
 
 class FourHourGameService implements Service {
   private readonly queue = new KeyedQueue();
-  private readonly revisions = new Map<string, number>();
+  private readonly revisions = new RevisionCounter();
 
   getRevision(guildId: string): number {
-    return this.revisions.get(guildId) ?? 0;
+    return this.revisions.get(guildId);
   }
 
   private bumpRevision(guildId: string): void {
-    this.revisions.set(guildId, this.getRevision(guildId) + 1);
+    this.revisions.bump(guildId);
   }
 
   handleMessage(

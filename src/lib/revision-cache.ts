@@ -33,3 +33,17 @@ export class RevisionCache {
     return value;
   }
 }
+
+// Counts the changes of each key: a RevisionCache entry built at an older
+// revision is loaded again.
+export class RevisionCounter {
+  private readonly revisions = new Map<string, number>();
+
+  get(key: string): number {
+    return this.revisions.get(key) ?? 0;
+  }
+
+  bump(key: string): void {
+    this.revisions.set(key, this.get(key) + 1);
+  }
+}

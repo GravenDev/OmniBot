@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { RevisionCache } from "./revision-cache.js";
+import { RevisionCache, RevisionCounter } from "./revision-cache.js";
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -46,5 +46,18 @@ describe("RevisionCache", () => {
     await cache.get("c", 0, load);
 
     expect(load).toHaveBeenCalledTimes(3);
+  });
+});
+
+describe("RevisionCounter", () => {
+  it("counts the changes of each key apart", () => {
+    const revisions = new RevisionCounter();
+    revisions.bump("a");
+    revisions.bump("a");
+    revisions.bump("b");
+
+    expect(revisions.get("a")).toBe(2);
+    expect(revisions.get("b")).toBe(1);
+    expect(revisions.get("c")).toBe(0);
   });
 });
