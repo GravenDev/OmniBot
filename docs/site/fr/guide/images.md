@@ -1,12 +1,12 @@
 # Générer des images
 
-Les classements et les fiches de statistiques sont rendus en images PNG avec [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas) (binaires précompilés, rien à installer). Deux générateurs prêts à l'emploi couvrent l'essentiel des besoins ; des fonctions de plus bas niveau sont là pour le reste.
+Les classements et les fiches de statistiques sont rendus en images PNG avec [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas) (binaires précompilés, rien à installer). Une fiche de statistiques prête à l'emploi, et un tableau à dessiner dedans, couvrent l'essentiel des besoins ; des fonctions de plus bas niveau sont là pour le reste.
 
-| Module                   | Fournit                                                                                                                                                                                                    |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `#lib/leaderboard-table` | `renderLeaderboardTable` : tableau classé avec médailles, avatars, pseudos et vos propres colonnes                                                                                                         |
-| `#lib/stat-card`         | `renderStatCard` : fiche avec portrait, titre, rang optionnel, grille de cases de statistiques et panneau latéral                                                                                          |
-| `#lib/imaging`           | Palette et police communes, accent par défaut (`DEFAULT_ACCENT`), téléchargement d'avatars, images rondes et portraits cerclés (`drawPortrait`), mise en avant (`drawHighlight`), texte ajusté, ressources |
+| Module           | Fournit                                                                                                                                                                                                    |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `#lib/table`     | `drawTable`, `playerColumn`, `drawCellText` : tableau classé avec médailles, avatars, pseudos et vos propres colonnes, dessiné dans une fiche                                                              |
+| `#lib/stat-card` | `renderStatCard` : fiche avec portrait, titre, rang optionnel, grille de cases de statistiques et panneau latéral                                                                                          |
+| `#lib/imaging`   | Palette et police communes, accent par défaut (`DEFAULT_ACCENT`), téléchargement d'avatars, images rondes et portraits cerclés (`drawPortrait`), mise en avant (`drawHighlight`), texte ajusté, ressources |
 
 La police Outfit et les médailles or, argent et bronze sont fournies dans `src/lib/assets/` et chargées pour vous.
 
@@ -14,16 +14,22 @@ Chaque module déclare sa couleur d'accent dans `rendering/theme.ts` (`export co
 
 ## Un classement
 
-Les lignes étendent `LeaderboardEntry` (`rank`, `name`, `avatar`) : les colonnes rang, médaille, avatar et pseudo sont dessinées pour vous. Décrivez les autres colonnes :
+Un tableau classé est dessiné par `drawTable` de `#lib/table`, dans le pied d'une fiche de statistiques (voir plus bas) : la fiche fournit l'en-tête (icône du serveur, titre, sous-titre) et le tableau occupe toute sa largeur. Avec `rows: []`, le tableau commence juste sous l'en-tête.
+
+Les lignes étendent `RankedPlayer` (`rank`, `name`, `avatar`) ; `playerColumn` dessine le rang (une médaille pour le podium), l'avatar et le pseudo, sous deux en-têtes, et reçoit la largeur que les pseudos peuvent occuper avant de rétrécir. Décrivez les autres colonnes :
 
 ```typescript
-import { fetchAvatar } from "#lib/imaging.js";
+import { fetchAvatar, fetchImage, loadMedals } from "#lib/imaging.js";
+import { PANEL_PADDING, renderStatCard } from "#lib/stat-card.js";
 import {
-  renderLeaderboardTable,
-  type LeaderboardEntry,
-} from "#lib/leaderboard-table.js";
+  drawCellText,
+  drawTable,
+  playerColumn,
+  tableHeight,
+  type RankedPlayer,
+} from "#lib/table.js";
 
-interface Row extends LeaderboardEntry {
+interface Row extends RankedPlayer {
   points: number;
 }
 
@@ -35,22 +41,43 @@ const rows: Row[] = await Promise.all(
     points: player.points,
   }))
 );
+const medals = await loadMedals();
 
-const png = await renderLeaderboardTable({
-  headers: { rank: t("header.rank"), player: t("header.player") },
-  rows,
-  columns: [
-    {
-      header: t("header.points"),
-      x: 650,
-      maxWidth: 140,
-      cell: (row) => ({ text: String(row.points) }),
+const png = await renderStatCard({
+  accent: ACCENT,
+  width: 800,
+  image: await fetchImage(guild.iconURL({ extension: "png" })),
+  title: t("leaderboard.title"),
+  rows: [],
+  footer: {
+    height: tableHeight(rows.length),
+    draw(ctx, x, y, width) {
+      drawTable<Row>(ctx, x, y, width, {
+        rows,
+        columns: [
+          ...playerColumn(
+            { rank: t("header.rank"), player: t("header.player") },
+            420,
+            medals
+          ),
+          {
+            header: t("header.points"),
+            x: width - PANEL_PADDING,
+            align: "right",
+            draw: (c, row, cx, cy) =>
+              drawCellText(c, String(row.points), cx, cy, {
+                align: "right",
+                color: ACCENT,
+              }),
+          },
+        ],
+      });
     },
-  ],
+  },
 });
 ```
 
-Une colonne peut être alignée à droite (`align: "right"`, `x` est alors son bord droit), et chaque cellule peut fixer sa `color`, sa police (`family`) ou une petite `icon` dessinée avant le texte. Passez `caller` pour ajouter, sous un séparateur, la ligne de la personne qui consulte quand elle n'est pas sur la page, `width` pour un tableau plus large que les 800 px par défaut, et `accent`, la couleur du module, pour le liseré sous l'en-tête et la ligne de l'appelant.
+Chaque colonne a un `header` et un `x`, son bord gauche, ou son bord droit avec `align: "right"` ; son `draw(ctx, row, x, centerY)` dessine la cellule, `drawCellText` pour du texte (`align`, `color`, `size`, et `fitWidth` pour rétrécir un texte trop long). Une colonne sans `draw` ne fait qu'étiqueter ce qu'une autre colonne dessine en dessous. `tableHeight(rows, extra, titled)` donne la hauteur à réserver. Le tableau accepte aussi un `title`, dessiné dans le panneau au-dessus d'un séparateur, une ligne `extra` (celle de la personne qui consulte, quand elle n'est pas sur la page) sous un séparateur, teintée de `extraAccent`, et un `highlight(row, index)` qui teinte une ligne. Les classements et l'historique de RNGdle (`src/modules/rngdle/rendering/`) et les classements du jeu des 4h (`src/modules/four-hour-game/rendering/leaderboard-image.ts`) sont construits ainsi.
 
 ## Une fiche de statistiques
 
@@ -84,7 +111,7 @@ La fiche fait 1000 px de large par défaut (`width` pour l'élargir), en paysage
 - **Les lignes** contiennent une à trois cases, qui se partagent la largeur de la ligne.
 - **Une case** a un `title` et une `value`, et éventuellement une `color` (valeur, teinte légère et liseré sur le bord gauche ; `highlight: false` colore la valeur sans mettre la case en avant), un `subtext`, une `trend` (`{ text, direction: "up" | "down" }`, une flèche et un texte verts ou rouges avant le `subtext`) et un petit `avatar` dans le coin. Un texte trop long rétrécit pour tenir dans la case.
 - **Un panneau latéral** (`{ width, draw(ctx, x, y, width, height) }`) ajoute un panneau personnalisé à droite des cases, de la même hauteur qu'elles. `drawPanel`, `drawPanelTitle`, `drawText`, `drawFittedText` et `measureText` de `#lib/stat-card` le gardent cohérent avec le reste de la fiche ; la répartition par palier de RNGdle est construite ainsi (`src/modules/rngdle/rendering/cards.ts`).
-- **Un pied** (`{ height, draw(ctx, x, y, width) }`) ajoute une section personnalisée sous les cases, sur toute la largeur du contenu, et la fiche grandit d'autant. Les classements et l'historique de RNGdle y dessinent leurs tableaux (`src/modules/rngdle/rendering/table.ts`).
+- **Un pied** (`{ height, draw(ctx, x, y, width) }`) ajoute une section personnalisée sous les cases, sur toute la largeur du contenu, et la fiche grandit d'autant. Les classements y dessinent leurs tableaux (voir plus haut).
 
 ## Bonnes pratiques
 

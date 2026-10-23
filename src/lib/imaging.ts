@@ -21,7 +21,6 @@ export type Rgb = readonly [number, number, number];
 export const PALETTE = {
   background: [25, 25, 25],
   header: [50, 50, 50],
-  rowEven: [35, 35, 35],
   rowOdd: [45, 45, 45],
   box: [35, 35, 35],
   border: [52, 52, 52],
@@ -104,7 +103,7 @@ export function fetchAvatar(
   return fetchImage(user.displayAvatarURL({ extension: "png", size }));
 }
 
-export function fillBand(
+function fillBand(
   ctx: SKRSContext2D,
   color: Rgb,
   top: number,
