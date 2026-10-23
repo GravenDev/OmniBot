@@ -6,6 +6,7 @@ import { declareService, type Service } from "#lib/service.js";
 import { standingOf } from "./channel-history.js";
 import {
   dayOf,
+  nextDay,
   previousDay,
   splitHold,
   startOfDay,
@@ -304,26 +305,41 @@ class FourHourGameService implements Service {
       const last = await prisma.fourHourGameLastMessage.findUnique({
         where: { guildId },
       });
-      const history = await fetchHistory();
       if (!last || last.channelId !== channelId) {
+        const { messages } = await fetchHistory(null);
+        await this.storeLastMessage(guildId, channelId, standingOf(messages));
+        return;
+      }
+
+      // Only the days not closed yet can be credited: reading further back
+      // than their start would be useless.
+      const closedDay = await this.getClosedDay(guildId, now);
+      const openSince = startOfDay(nextDay(closedDay));
+      const bounded = last.sentAt < openSince;
+      const { messages: history, complete } = await fetchHistory(
+        bounded ? openSince : last.sentAt
+      );
+      const found = history.some(
+        (message) => message.messageId === last.messageId
+      );
+      if (!found && complete && !bounded) {
+        // Deleted while down.
         await this.storeLastMessage(guildId, channelId, standingOf(history));
         return;
       }
 
-      const oldest = history[0];
-      const deleted =
-        !history.some((message) => message.messageId === last.messageId) &&
-        (!oldest || oldest.sentAt <= last.sentAt);
-      if (deleted) {
-        await this.storeLastMessage(guildId, channelId, standingOf(history));
+      // Not read, yet not deleted: older than the open days, or beyond the
+      // page limit. The replay starts at the oldest message read; a period
+      // the reading could not reach is credited to nobody.
+      const start: ChannelMessage | undefined = found ? last : history[0];
+      if (!start) {
         return;
       }
-
       const holds: { authorId: string; from: Date; to: Date }[] = [];
-      let current: ChannelMessage = last;
+      let current = start;
       for (const message of history) {
         if (
-          message.sentAt > last.sentAt &&
+          message.sentAt > start.sentAt &&
           message.authorId !== current.authorId
         ) {
           holds.push({
@@ -334,11 +350,10 @@ class FourHourGameService implements Service {
           current = message;
         }
       }
-      if (holds.length === 0) {
+      if (holds.length === 0 && found) {
         return;
       }
 
-      const closedDay = await this.getClosedDay(guildId, now);
       for (const hold of holds) {
         await this.creditHolds(
           guildId,
