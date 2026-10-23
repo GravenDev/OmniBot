@@ -8,6 +8,7 @@ import {
 } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
+import { DAY_MS } from "#modules/rngdle/services/days.js";
 import {
   overallPage,
   parsePeriod,
@@ -17,7 +18,6 @@ import {
 } from "#modules/rngdle/services/views.js";
 
 const CUSTOM_ID = "rngdle-overall";
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 export type Visibility = "public" | "private";
 

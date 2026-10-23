@@ -1,19 +1,9 @@
 import type { TFunction } from "#lib/i18n.js";
+import { nextUtcMidnight, startOfUtcDay } from "./days.js";
 
 export const REMINDER_HOUR_UTC = 18;
 
 const MESSAGE_LIMIT = 2000;
-
-export function startOfUtcDay(date: Date): Date {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-  );
-}
-
-export function nextUtcMidnight(date: Date): Date {
-  const start = startOfUtcDay(date);
-  return new Date(start.getTime() + 24 * 60 * 60 * 1000);
-}
 
 export function reminderTime(date: Date): Date {
   const start = startOfUtcDay(date);

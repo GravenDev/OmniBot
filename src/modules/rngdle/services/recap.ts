@@ -1,5 +1,6 @@
 import type { TFunction } from "#lib/i18n.js";
 import { formatSpaced } from "#modules/rngdle/rendering/format.js";
+import { DAY_MS } from "./days.js";
 import type { ScoreTable, TierOrError } from "./scoring.js";
 import { computeStreaks } from "./stats.js";
 import type { StoredRoll } from "./store.js";
@@ -35,7 +36,7 @@ export function computeDailyRecap(
     day.getUTCMonth(),
     day.getUTCDate()
   );
-  const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+  const dayEnd = dayStart + DAY_MS;
   const dayRolls = history.filter((roll) => {
     const time = roll.rolledAt.getTime();
     return time >= dayStart && time < dayEnd;

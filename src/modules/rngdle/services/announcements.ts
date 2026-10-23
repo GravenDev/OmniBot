@@ -19,7 +19,7 @@ import {
 import { ACCENT } from "#modules/rngdle/rendering/theme.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
 import { fetchRollBadges } from "./badges.js";
-import { nextUtcMidnight, startOfUtcDay } from "./reminders.js";
+import { DAY_MS, nextUtcMidnight, startOfUtcDay } from "./days.js";
 import { formatPercent, TIERS, type Tier } from "./scoring.js";
 import { parseShare, type Placement, type SharedRoll } from "./share.js";
 import store, { type Account, type StoredRoll } from "./store.js";
@@ -27,7 +27,6 @@ import sync from "./sync.js";
 
 const logger = loggerMaker("rngdle");
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const AVERAGE_MIN_ROLLS = 5;
 const RANK_ICONS = ["🥇", "🥈", "🥉"];
 const CARD_NAME = "rngdle-roll.png";

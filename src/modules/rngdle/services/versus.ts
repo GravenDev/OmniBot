@@ -1,3 +1,4 @@
+import { utcDayNumber } from "./days.js";
 import type { StoredRoll } from "./store.js";
 
 export type Side = "left" | "right";
@@ -34,8 +35,6 @@ export interface Versus {
   winners: VersusWinners;
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 function summarize(rolls: StoredRoll[]): VersusSide {
   let totalScore = 0;
   let maxBadges = 0;
@@ -60,7 +59,7 @@ function summarize(rolls: StoredRoll[]): VersusSide {
 function bestByDay(rolls: StoredRoll[]): Map<number, number> {
   const days = new Map<number, number>();
   for (const roll of rolls) {
-    const day = Math.floor(roll.rolledAt.getTime() / DAY_MS);
+    const day = utcDayNumber(roll.rolledAt);
     days.set(day, Math.max(days.get(day) ?? -Infinity, roll.score));
   }
   return days;

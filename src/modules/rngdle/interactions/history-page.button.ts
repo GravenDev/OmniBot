@@ -1,9 +1,8 @@
 import { MessageFlags, type ButtonInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
+import { DAY_MS } from "#modules/rngdle/services/days.js";
 import store from "#modules/rngdle/services/store.js";
 import { HISTORY_PAGE_ID, historyMessage } from "./navigation.button.js";
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 export default declareInteractionHandler<ButtonInteraction>({
   customId: HISTORY_PAGE_ID,
