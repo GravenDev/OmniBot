@@ -140,14 +140,16 @@ export function drawHighlight(
     edge = "left",
   }: { radius?: number; edge?: "left" | "right" } = {}
 ): void {
+  // Relative to the current opacity, so a dimmed item keeps a dimmed tint.
+  const opacity = ctx.globalAlpha;
   ctx.save();
   ctx.beginPath();
   ctx.roundRect(x, y, width, height, radius);
   ctx.clip();
   ctx.fillStyle = rgb(color);
-  ctx.globalAlpha = HIGHLIGHT_ALPHA;
+  ctx.globalAlpha = opacity * HIGHLIGHT_ALPHA;
   ctx.fillRect(x, y, width, height);
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = opacity;
   const edgeX = edge === "left" ? x : x + width - HIGHLIGHT_EDGE;
   ctx.fillRect(edgeX, y, HIGHLIGHT_EDGE, height);
   ctx.restore();

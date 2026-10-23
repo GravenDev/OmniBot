@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import type { Image, SKRSContext2D } from "@napi-rs/canvas";
 import {
   createBoard,
+  drawHighlight,
   drawPortrait,
   FONT,
   fillTextCentered,
@@ -311,9 +312,7 @@ function drawBadge(
 ) {
   const color = badge.tier ? TIER_COLORS[badge.tier] : PALETTE.subtext;
   ctx.globalAlpha = badge.ep === 0 ? DIMMED_ALPHA : 1;
-  roundRect(ctx, x, y, width, CELL_HEIGHT, 10, alpha(color, 0.08));
-  ctx.fillStyle = rgb(color);
-  ctx.fillRect(x, y, 5, CELL_HEIGHT);
+  drawHighlight(ctx, x, y, width, CELL_HEIGHT, color, { radius: 10 });
   drawLine(ctx, badge.emoji, x + 22, y + CELL_HEIGHT / 2, 24, PALETTE.text);
 
   const right = x + width - 16;
