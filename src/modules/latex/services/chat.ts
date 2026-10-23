@@ -3,11 +3,11 @@ import {
   DiscordAPIError,
   type Message,
   type PartialMessage,
-  PermissionFlagsBits,
   RESTJSONErrorCodes,
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
+import { canReplyWithFile } from "#lib/permissions.js";
 import type { LatexConfigSchema } from "#modules/latex/latex.config.js";
 import {
   FormulaError,
@@ -166,26 +166,12 @@ async function findReply(
   );
 }
 
-function canReply(message: Message<true>): boolean {
-  const permissions = message.channel.permissionsFor(message.client.user);
-  return (
-    permissions?.has([
-      PermissionFlagsBits.ViewChannel,
-      message.channel.isThread()
-        ? PermissionFlagsBits.SendMessagesInThreads
-        : PermissionFlagsBits.SendMessages,
-      PermissionFlagsBits.AttachFiles,
-      PermissionFlagsBits.ReadMessageHistory,
-    ]) ?? false
-  );
-}
-
 async function reply(
   message: Message<true>,
   text: string,
   config: Config
 ): Promise<void> {
-  if (!canReply(message)) {
+  if (!canReplyWithFile(message)) {
     return;
   }
   const sent = await message
@@ -261,7 +247,7 @@ export async function renderEdited(
       return;
     }
     remember(message.id, existing.id);
-    if (!canReply(message)) {
+    if (!canReplyWithFile(message)) {
       return;
     }
     await existing
