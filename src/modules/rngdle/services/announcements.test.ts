@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   fetchBadges: vi.fn(async (): Promise<unknown> => null),
   store: {
     claimAnnouncement: vi.fn(async () => true),
+    hasAnnouncement: vi.fn(async () => false),
     releaseAnnouncement: vi.fn(async () => undefined),
     pruneAnnouncements: vi.fn(async () => undefined),
     rolls: vi.fn(async (): Promise<StoredRoll[]> => []),
@@ -40,6 +41,10 @@ const ACCOUNT = { guildId: "g1", userId: "u1", username: "Alice" };
 const NOW = new Date("2026-10-22T12:00:00Z");
 const DAY = new Date("2026-10-22T00:00:00Z");
 const SHARE = "RNGdle 🎲 111883\n\n🟧 ANOMALY • Top 4%\n\n41 731 EP";
+const CALCULATOR = { number: 111883, score: 41731, badges: [] };
+const MINUTE = 60 * 1000;
+
+let clock = NOW.getTime();
 
 const t = (key: string, options?: Record<string, unknown>) =>
   options ? `${key} ${JSON.stringify(options)}` : key;
@@ -77,7 +82,11 @@ function shareMessage(content = SHARE) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Each test starts past the 10-minute check cooldown of the previous one.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime((clock += 60 * MINUTE));
   mocks.store.claimAnnouncement.mockResolvedValue(true);
+  mocks.store.hasAnnouncement.mockResolvedValue(false);
   mocks.store.rolls.mockResolvedValue([]);
   mocks.store.account.mockResolvedValue(null);
   mocks.fetchBadges.mockResolvedValue(null);
@@ -125,6 +134,7 @@ describe("computeHighlights", () => {
 
 describe("answerShare", () => {
   it("replies to a shared result with a card, without pinging", async () => {
+    mocks.fetchBadges.mockResolvedValue(CALCULATOR);
     const message = shareMessage();
     await answerShare(message as never, configWith(SHARING) as never);
 
@@ -140,13 +150,63 @@ describe("answerShare", () => {
     });
   });
 
-  it("stays silent when the roll was already shown today", async () => {
+  it("draws a second card of the day from the pasted text alone", async () => {
+    mocks.fetchBadges.mockResolvedValue(CALCULATOR);
     mocks.store.claimAnnouncement.mockResolvedValue(false);
     const message = shareMessage();
     await answerShare(message as never, configWith(SHARING) as never);
 
-    expect(message.reply).not.toHaveBeenCalled();
-    expect(mocks.render).not.toHaveBeenCalled();
+    expect(message.reply).toHaveBeenCalled();
+    expect(mocks.store.releaseAnnouncement).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["the same score keeps its recorded data", 41731, 1],
+    ["another score is drawn as pasted", 40000, 0],
+  ])(
+    "for a linked member's roll pasted again, %s",
+    async (_, storedScore, badgeRequests) => {
+      mocks.store.account.mockResolvedValue(ACCOUNT);
+      mocks.store.claimAnnouncement.mockResolvedValue(false);
+      mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
+        filter?.from && filter.userId
+          ? [{ ...roll("u1", storedScore), number: 111883 }]
+          : []
+      );
+      const message = shareMessage();
+      await answerShare(message as never, configWith(SHARING) as never);
+
+      expect(mocks.refreshAccount).not.toHaveBeenCalled();
+      expect(mocks.fetchBadges).toHaveBeenCalledTimes(badgeRequests);
+      expect(mocks.store.releaseAnnouncement).not.toHaveBeenCalled();
+      expect(message.reply).toHaveBeenCalled();
+    }
+  );
+
+  it("sends no request once the member has a card today", async () => {
+    mocks.store.account.mockResolvedValue(ACCOUNT);
+    mocks.store.hasAnnouncement.mockResolvedValue(true);
+    const message = shareMessage();
+    await answerShare(message as never, configWith(SHARING) as never);
+
+    expect(mocks.store.hasAnnouncement).toHaveBeenCalledWith("g1", "u1", DAY);
+    expect(mocks.refreshAccount).not.toHaveBeenCalled();
+    expect(mocks.fetchBadges).not.toHaveBeenCalled();
+    expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
+    expect(message.reply).toHaveBeenCalled();
+  });
+
+  it("checks a member's results at most once every 10 minutes", async () => {
+    mocks.store.account.mockResolvedValue(ACCOUNT);
+    const config = configWith(SHARING) as never;
+    await answerShare(shareMessage() as never, config);
+    vi.setSystemTime(clock + 9 * MINUTE);
+    await answerShare(shareMessage() as never, config);
+    expect(mocks.refreshAccount).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(clock + 10 * MINUTE);
+    await answerShare(shareMessage() as never, config);
+    expect(mocks.refreshAccount).toHaveBeenCalledTimes(2);
   });
 
   it.each([
@@ -182,6 +242,7 @@ describe("answerShare", () => {
   });
 
   it("frees the day when the reply fails", async () => {
+    mocks.fetchBadges.mockResolvedValue(CALCULATOR);
     const message = shareMessage();
     message.reply.mockRejectedValue(new Error("boom"));
 
@@ -247,7 +308,7 @@ describe("answerShare", () => {
     );
   });
 
-  it("ignores a linked member's result that is not today's roll", async () => {
+  it("draws a linked member's result that is not today's roll as pasted", async () => {
     mocks.store.account.mockResolvedValue(ACCOUNT);
     mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
       filter?.from && filter.userId ? [roll("u1", 500)] : []
@@ -256,7 +317,10 @@ describe("answerShare", () => {
     await answerShare(message as never, configWith(SHARING) as never);
 
     expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
-    expect(message.reply).not.toHaveBeenCalled();
+    expect(mocks.render).toHaveBeenCalledWith(
+      expect.objectContaining({ number: 111883, score: 41731, highlights: [] }),
+      expect.anything()
+    );
   });
 
   it("downloads a linked member's rolls before trusting a new result", async () => {
@@ -286,7 +350,7 @@ describe("answerShare", () => {
       },
     ],
   ])(
-    "ignores a linked member's result when %s",
+    "draws a linked member's result as pasted when %s",
     async (_, refresh: () => Promise<void>) => {
       mocks.refreshAccount.mockImplementation(refresh);
       mocks.store.account.mockResolvedValue(ACCOUNT);
@@ -294,32 +358,26 @@ describe("answerShare", () => {
       await answerShare(message as never, configWith(SHARING) as never);
 
       expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
-      expect(message.reply).not.toHaveBeenCalled();
+      expect(message.reply).toHaveBeenCalled();
     }
   );
 
-  it("ignores a result whose score does not match its number", async () => {
-    mocks.fetchBadges.mockResolvedValue({
-      number: 111883,
-      score: 41730,
-      badges: [],
-    });
+  it("draws a result whose score does not match its number as pasted", async () => {
+    mocks.fetchBadges.mockResolvedValue({ ...CALCULATOR, score: 41730 });
     const message = shareMessage();
     await answerShare(message as never, configWith(SHARING) as never);
 
     expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
-    expect(message.reply).not.toHaveBeenCalled();
+    expect(mocks.fetchBadges).toHaveBeenCalledTimes(1);
+    expect(message.reply).toHaveBeenCalled();
   });
 
   it("accepts a result whose score matches the calculator", async () => {
-    mocks.fetchBadges.mockResolvedValue({
-      number: 111883,
-      score: 41731,
-      badges: [],
-    });
+    mocks.fetchBadges.mockResolvedValue(CALCULATOR);
     const message = shareMessage();
     await answerShare(message as never, configWith(SHARING) as never);
 
+    expect(mocks.store.claimAnnouncement).toHaveBeenCalled();
     expect(message.reply).toHaveBeenCalled();
   });
 });

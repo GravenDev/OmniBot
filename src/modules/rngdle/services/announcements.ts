@@ -31,6 +31,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const AVERAGE_MIN_ROLLS = 5;
 const RANK_ICONS = ["🥇", "🥈", "🥉"];
 const CARD_NAME = "rngdle-roll.png";
+const CHECK_COOLDOWN_MS = 10 * 60 * 1000;
+
+const lastChecks = new Map<string, number>();
 
 type Config = ConfigProvider<RngdleConfigSchema>;
 
@@ -40,6 +43,10 @@ interface CardContext {
   t: TFunction;
   locale: string;
 }
+
+// Where the data of a card comes from: a roll rngdle.com recorded for a
+// linked member, a result the calculator confirmed, or the pasted text alone.
+type CardSource = "linked" | "calculator" | "pasted";
 
 interface CardRoll {
   userId: string;
@@ -55,9 +62,11 @@ function tierOf(rarity: string): Tier | null {
 
 async function cardBadges(
   roll: CardRoll,
-  shared: SharedRoll | null
+  shared: SharedRoll | null,
+  source: CardSource
 ): Promise<{ badges: CardBadge[]; badgeCount: number }> {
-  const remote = await fetchRollBadges(roll.number);
+  const remote =
+    source === "pasted" ? null : await fetchRollBadges(roll.number);
   if (remote) {
     return {
       badges: remote.badges.map((badge) => ({
@@ -152,15 +161,17 @@ export async function buildCard(
   context: CardContext,
   roll: CardRoll,
   shared: SharedRoll | null,
-  linked: boolean
+  source: CardSource
 ): Promise<Buffer> {
   const { t } = context;
   const [table, { badges, badgeCount }, players, highlights] =
     await Promise.all([
       store.scoreTable(),
-      cardBadges(roll, shared),
+      cardBadges(roll, shared, source),
       resolvePlayers(context.client, context.guildId, [roll.userId]),
-      linked ? linkedHighlights(context, roll) : Promise.resolve([]),
+      source === "linked"
+        ? linkedHighlights(context, roll)
+        : Promise.resolve([]),
     ]);
   const percent = table.percentOf(roll.score);
   const player = players.get(roll.userId);
@@ -226,6 +237,21 @@ function canReply(message: Message<true>): boolean {
   );
 }
 
+interface Verified {
+  roll: CardRoll;
+  linked: boolean;
+}
+
+function mayCheck(guildId: string, userId: string): boolean {
+  const key = `${guildId}:${userId}`;
+  const now = Date.now();
+  if (now - (lastChecks.get(key) ?? -Infinity) < CHECK_COOLDOWN_MS) {
+    return false;
+  }
+  lastChecks.set(key, now);
+  return true;
+}
+
 async function storedRoll(
   account: Account,
   pasted: CardRoll
@@ -238,14 +264,10 @@ async function storedRoll(
   return recent.find((roll) => roll.number === pasted.number) ?? null;
 }
 
-async function linkedRoll(
+async function refreshedRoll(
   account: Account,
   pasted: CardRoll
 ): Promise<StoredRoll | null> {
-  const known = await storedRoll(account, pasted);
-  if (known) {
-    return known;
-  }
   try {
     await sync.refreshAccount(account);
   } catch (err) {
@@ -258,9 +280,38 @@ async function linkedRoll(
   return storedRoll(account, pasted);
 }
 
-async function unlinkedRoll(pasted: CardRoll): Promise<CardRoll | null> {
+async function calculatorRoll(pasted: CardRoll): Promise<CardRoll | null> {
   const remote = await fetchRollBadges(pasted.number);
-  return remote && remote.score !== pasted.score ? null : pasted;
+  return remote?.score === pasted.score ? pasted : null;
+}
+
+// Checks a pasted result against the rolls rngdle.com recorded (linked
+// member) or against the calculator (unlinked member). Only the first result
+// of the day is checked, at most once per member every 10 minutes: any other
+// one gets an unverified card, drawn without a single request.
+async function verify(
+  guildId: string,
+  userId: string,
+  pasted: CardRoll
+): Promise<Verified | null> {
+  const account = await store.account(guildId, userId);
+  const known = account ? await storedRoll(account, pasted) : null;
+  if (known) {
+    return { roll: known, linked: true };
+  }
+  const today = startOfUtcDay(pasted.rolledAt);
+  if (
+    (await store.hasAnnouncement(guildId, userId, today)) ||
+    !mayCheck(guildId, userId)
+  ) {
+    return null;
+  }
+  if (account) {
+    const roll = await refreshedRoll(account, pasted);
+    return roll && { roll, linked: true };
+  }
+  const roll = await calculatorRoll(pasted);
+  return roll && { roll, linked: false };
 }
 
 export async function answerShare(
@@ -289,31 +340,32 @@ export async function answerShare(
     badgeCount: shared.badges.length + shared.hiddenBadges,
     rolledAt: message.createdAt,
   };
-  const account = await store.account(guildId, userId);
-  const linked = account !== null;
-  const roll = account
-    ? await linkedRoll(account, pasted)
-    : await unlinkedRoll(pasted);
-  if (!roll) {
-    return;
-  }
-  const day = startOfUtcDay(roll.rolledAt);
-  if (!(await store.claimAnnouncement(guildId, userId, day, roll.number))) {
-    return;
-  }
+  const verified = await verify(guildId, userId, pasted);
+  const day = verified && startOfUtcDay(verified.roll.rolledAt);
+  const claimed =
+    verified !== null &&
+    day !== null &&
+    (await store.claimAnnouncement(guildId, userId, day, verified.roll.number));
+  // A linked member who pastes again a roll already shown keeps its real
+  // data, as long as the text matches what rngdle.com recorded.
+  const genuine =
+    verified !== null &&
+    (claimed || (verified.linked && verified.roll.score === pasted.score));
   try {
     const image = await buildCard(
       { client: message.client, guildId, t: config.t, locale: config.locale },
-      roll,
+      genuine ? verified.roll : pasted,
       shared,
-      linked
+      genuine ? (verified.linked ? "linked" : "calculator") : "pasted"
     );
     await message.reply({
       files: [new AttachmentBuilder(image, { name: CARD_NAME })],
       allowedMentions: { parse: [], repliedUser: false },
     });
   } catch (err) {
-    await store.releaseAnnouncement(guildId, userId, day);
+    if (claimed) {
+      await store.releaseAnnouncement(guildId, userId, day);
+    }
     throw err;
   }
 }
