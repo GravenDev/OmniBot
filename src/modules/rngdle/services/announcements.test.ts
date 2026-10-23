@@ -72,6 +72,8 @@ function roll(
   return { userId, number: score, score, badgeCount: 3, rolledAt };
 }
 
+const SHARING = { shareCards: true, leaderboardChannel: { id: "c1" } };
+
 function configWith(values: Record<string, unknown>) {
   return { get: (key: string) => values[key], t, locale: "fr" };
 }
@@ -85,6 +87,7 @@ function shareMessage(content = SHARE) {
     content,
     author: { id: "u1", bot: false },
     guildId: "g1",
+    channelId: "c1",
     createdAt: NOW,
     client: { user: { id: "bot" } },
     inGuild: () => true,
@@ -149,10 +152,7 @@ describe("computeHighlights", () => {
 describe("answerShare", () => {
   it("replies to a shared result with a card, without pinging", async () => {
     const message = shareMessage();
-    await answerShare(
-      message as never,
-      configWith({ shareCards: true }) as never
-    );
+    await answerShare(message as never, configWith(SHARING) as never);
 
     expect(mocks.store.claimAnnouncement).toHaveBeenCalledWith(
       "g1",
@@ -169,25 +169,36 @@ describe("answerShare", () => {
   it("stays silent when the roll was already shown today", async () => {
     mocks.store.claimAnnouncement.mockResolvedValue(false);
     const message = shareMessage();
-    await answerShare(
-      message as never,
-      configWith({ shareCards: true }) as never
-    );
+    await answerShare(message as never, configWith(SHARING) as never);
 
     expect(message.reply).not.toHaveBeenCalled();
     expect(mocks.render).not.toHaveBeenCalled();
   });
 
   it.each([
-    ["the feature is off", configWith({ shareCards: false }), shareMessage()],
+    [
+      "the feature is off",
+      configWith({ ...SHARING, shareCards: false }),
+      shareMessage(),
+    ],
+    [
+      "no leaderboard channel is set",
+      configWith({ shareCards: true }),
+      shareMessage(),
+    ],
+    [
+      "it is posted outside the leaderboard channel",
+      configWith(SHARING),
+      { ...shareMessage(), channelId: "c2" },
+    ],
     [
       "the message is not a result",
-      configWith({ shareCards: true }),
+      configWith(SHARING),
       shareMessage("bonjour"),
     ],
     [
       "a bot posted it",
-      configWith({ shareCards: true }),
+      configWith(SHARING),
       { ...shareMessage(), author: { id: "u1", bot: true } },
     ],
   ])("ignores the message when %s", async (_, config, message) => {
@@ -201,7 +212,7 @@ describe("answerShare", () => {
     message.reply.mockRejectedValue(new Error("boom"));
 
     await expect(
-      answerShare(message as never, configWith({ shareCards: true }) as never)
+      answerShare(message as never, configWith(SHARING) as never)
     ).rejects.toThrow("boom");
     expect(mocks.store.releaseAnnouncement).toHaveBeenCalledWith(
       "g1",
@@ -212,10 +223,7 @@ describe("answerShare", () => {
 
   it("leaves the highlights out for a member who is not linked", async () => {
     mocks.store.rolls.mockResolvedValue([roll("u1", 100)]);
-    await answerShare(
-      shareMessage() as never,
-      configWith({ shareCards: true }) as never
-    );
+    await answerShare(shareMessage() as never, configWith(SHARING) as never);
 
     expect(mocks.store.rolls).not.toHaveBeenCalled();
     expect(mocks.render).toHaveBeenCalledWith(
@@ -233,10 +241,7 @@ describe("answerShare", () => {
           ? [{ ...roll("u1", 41731), number: 111883 }]
           : []
     );
-    await answerShare(
-      shareMessage() as never,
-      configWith({ shareCards: true }) as never
-    );
+    await answerShare(shareMessage() as never, configWith(SHARING) as never);
 
     expect(mocks.render).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -254,10 +259,7 @@ describe("answerShare", () => {
         ? [{ ...roll("u1", 30000, lateNight), number: 111883 }]
         : []
     );
-    await answerShare(
-      shareMessage() as never,
-      configWith({ shareCards: true }) as never
-    );
+    await answerShare(shareMessage() as never, configWith(SHARING) as never);
 
     expect(mocks.store.claimAnnouncement).toHaveBeenCalledWith(
       "g1",
@@ -277,10 +279,7 @@ describe("answerShare", () => {
       filter?.from && filter.userId ? [roll("u1", 500)] : []
     );
     const message = shareMessage();
-    await answerShare(
-      message as never,
-      configWith({ shareCards: true }) as never
-    );
+    await answerShare(message as never, configWith(SHARING) as never);
 
     expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
     expect(message.reply).not.toHaveBeenCalled();
@@ -298,10 +297,7 @@ describe("answerShare", () => {
         : []
     );
     const message = shareMessage();
-    await answerShare(
-      message as never,
-      configWith({ shareCards: true }) as never
-    );
+    await answerShare(message as never, configWith(SHARING) as never);
 
     expect(mocks.refreshAccount).toHaveBeenCalledWith(ACCOUNT);
     expect(message.reply).toHaveBeenCalled();
@@ -321,10 +317,7 @@ describe("answerShare", () => {
       mocks.refreshAccount.mockImplementation(refresh);
       mocks.store.account.mockResolvedValue(ACCOUNT);
       const message = shareMessage();
-      await answerShare(
-        message as never,
-        configWith({ shareCards: true }) as never
-      );
+      await answerShare(message as never, configWith(SHARING) as never);
 
       expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
       expect(message.reply).not.toHaveBeenCalled();
@@ -338,10 +331,7 @@ describe("answerShare", () => {
       badges: [],
     });
     const message = shareMessage();
-    await answerShare(
-      message as never,
-      configWith({ shareCards: true }) as never
-    );
+    await answerShare(message as never, configWith(SHARING) as never);
 
     expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
     expect(message.reply).not.toHaveBeenCalled();
@@ -354,10 +344,7 @@ describe("answerShare", () => {
       badges: [],
     });
     const message = shareMessage();
-    await answerShare(
-      message as never,
-      configWith({ shareCards: true }) as never
-    );
+    await answerShare(message as never, configWith(SHARING) as never);
 
     expect(message.reply).toHaveBeenCalled();
   });
