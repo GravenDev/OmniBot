@@ -2,6 +2,7 @@ import {
   ContainerBuilder,
   InteractionContextType,
   MessageFlags,
+  PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
 import coreModule from "#core/core.module.js";
@@ -12,14 +13,12 @@ import { configurationMessage } from "#core/utils/core-messages.js";
 import { declareCommand } from "#lib/command.js";
 import { Colors } from "#utils/colors.js";
 
-const PERMISSION_ADMINISTRATOR = 0x8;
-
 export default declareCommand({
   data: new SlashCommandBuilder()
     .setName("config")
     .setDescription("Configure the modules of the bot")
     .setDescriptionLocalizations({ fr: "Configurer les modules du bot" })
-    .setDefaultMemberPermissions(PERMISSION_ADMINISTRATOR)
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .setContexts([InteractionContextType.Guild])
     .addStringOption((option) =>
       option
