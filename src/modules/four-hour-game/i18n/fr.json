@@ -37,12 +37,15 @@
   "duration.minutes": "{{value}} min",
   "duration.seconds": "{{value}} s",
 
+  "leaderboard.title": "Jeu des 4h",
+  "leaderboard.subtitle": "Classement des points",
   "leaderboard.empty": "Personne n'a encore marqué de point.",
   "leaderboard.daily.title": "**Points du jour** : un point chaque jour au message resté le plus longtemps sans réponse.",
+  "leaderboard.daily.subtitle": "Points du jour",
   "leaderboard.daily.empty": "Personne n'a encore remporté de point du jour.",
   "leaderboard.header.rank": "Rang",
   "leaderboard.header.player": "Pseudo",
-  "leaderboard.header.score": "Score",
+  "leaderboard.header.score": "Points",
 
   "admin.set.created": "Score de {{user}} fixé à **{{score}}**.",
   "admin.set.updated": "Score de {{user}} mis à jour : **{{score}}**.",
