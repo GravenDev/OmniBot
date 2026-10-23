@@ -44,7 +44,6 @@
   "leaderboard.header.player": "Pseudo",
   "leaderboard.header.score": "Score",
 
-  "admin.noPermission": "Vous devez être administrateur pour utiliser cette commande.",
   "admin.set.created": "Score de {{user}} fixé à **{{score}}**.",
   "admin.set.updated": "Score de {{user}} mis à jour : **{{score}}**.",
   "admin.unset.done": "Score de {{user}} supprimé.",
