@@ -18,14 +18,24 @@ vi.mock("#modules/rngdle/services/store.js", () => ({
     },
   },
 }));
+const syncGuild = vi.hoisted(() => vi.fn());
+const FullSyncCooldownError = vi.hoisted(
+  () =>
+    class extends Error {
+      constructor(readonly retryAt: Date) {
+        super("cooldown");
+      }
+    }
+);
 vi.mock("#modules/rngdle/services/sync.js", () => ({
   default: {
     exclusive: async (_guildId: string, task: () => Promise<unknown>) => {
       order.push("queue");
       return task();
     },
+    syncGuild,
   },
-  FullSyncCooldownError: class extends Error {},
+  FullSyncCooldownError,
 }));
 vi.mock("#modules/rngdle/services/linking.js", () => ({ linkAccount }));
 
@@ -143,5 +153,36 @@ describe("/rngdle-admin register", () => {
 describe("/rngdle-admin access", () => {
   it("is checked by the command dispatcher, before anything runs", () => {
     expect(command.requiresAdmin).toBe(true);
+  });
+});
+
+describe("/rngdle-admin refresh", () => {
+  it("rounds the end of the full-sync cooldown up to the next second", async () => {
+    syncGuild.mockRejectedValue(
+      new FullSyncCooldownError(new Date(1_792_717_793_001))
+    );
+    const interaction = {
+      guildId: "guild",
+      inGuild: () => true,
+      user: { id: "admin" },
+      options: {
+        getSubcommand: () => "refresh",
+        getBoolean: () => true,
+      },
+      deferReply: vi.fn(),
+      editReply: vi.fn(),
+    };
+
+    await command.execute(
+      interaction as unknown as ChatInputCommandInteraction,
+      {
+        t: (key: string, options?: Record<string, unknown>) =>
+          `${key} ${JSON.stringify(options)}`,
+      } as unknown as ConfigProvider<RngdleConfigSchema>
+    );
+
+    expect(interaction.editReply).toHaveBeenCalledWith(
+      'admin.refresh.cooldown {"time":"<t:1792717794:R>"}'
+    );
   });
 });
