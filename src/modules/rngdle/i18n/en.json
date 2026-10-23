@@ -52,6 +52,7 @@
   "card.bottom": "Bottom {{percent}}",
   "card.personalBest": "Personal best",
   "card.rank": "#{{rank}} of {{count}} today",
+  "card.notLinked": "Not connected",
   "card.vsAverage": "{{delta}} EP vs average",
 
   "overall.empty": "No roll has been recorded on this server yet.",

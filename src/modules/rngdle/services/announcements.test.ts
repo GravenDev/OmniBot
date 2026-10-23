@@ -256,6 +256,28 @@ describe("answerShare", () => {
     );
   });
 
+  it.each([
+    ["an unlinked member's result", null, true],
+    ["a linked member's recorded roll", ACCOUNT, false],
+    ["a linked member's recorded roll pasted again", ACCOUNT, false, false],
+  ])(
+    "sets the not-connected mark right on %s",
+    async (_, account, notLinked, firstOfTheDay = true) => {
+      mocks.fetchBadges.mockResolvedValue(CALCULATOR);
+      mocks.store.account.mockResolvedValue(account);
+      mocks.store.claimAnnouncement.mockResolvedValue(firstOfTheDay);
+      mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
+        filter?.userId ? [{ ...roll("u1", 41731), number: 111883 }] : []
+      );
+      await answerShare(shareMessage() as never, configWith(SHARING) as never);
+
+      const [[data]] = mocks.render.mock.calls as unknown as [
+        [{ subtitle: string }],
+      ];
+      expect(data.subtitle.endsWith(" · card.notLinked")).toBe(notLinked);
+    }
+  );
+
   it("leaves the highlights out for a member who is not linked", async () => {
     mocks.store.rolls.mockResolvedValue([roll("u1", 100)]);
     await answerShare(shareMessage() as never, configWith(SHARING) as never);
