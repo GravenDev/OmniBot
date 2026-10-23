@@ -8,6 +8,7 @@ import {
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { fetchAvatar } from "#lib/imaging.js";
+import { NO_MENTIONS } from "#lib/mentions.js";
 import { resolvePlayers } from "#lib/players.js";
 import { RevisionCache } from "#lib/revision-cache.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
@@ -60,7 +61,7 @@ async function showScore(
   if (!image) {
     await interaction.editReply({
       content: config.t("score.none", { user: `<@${user.id}>` }),
-      allowedMentions: { parse: [] },
+      allowedMentions: NO_MENTIONS,
     });
     return;
   }

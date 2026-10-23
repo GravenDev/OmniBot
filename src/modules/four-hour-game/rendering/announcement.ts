@@ -1,12 +1,13 @@
 import { EmbedBuilder, MessageFlags } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
+import { NO_MENTIONS } from "#lib/mentions.js";
 import { formatRank } from "#modules/four-hour-game/services/formatting.js";
 import type { PlayerRank } from "#modules/four-hour-game/services/four-hour-game.service.js";
 import { Colors } from "#utils/colors.js";
 
 // Announcements credit the winner by name without pinging anyone.
 export const ANNOUNCEMENT_OPTIONS = {
-  allowedMentions: { parse: [] },
+  allowedMentions: NO_MENTIONS,
   flags: MessageFlags.SuppressNotifications,
 } as const;
 

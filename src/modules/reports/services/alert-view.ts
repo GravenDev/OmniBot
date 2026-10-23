@@ -9,6 +9,7 @@ import {
 } from "discord.js";
 import { formatDuration } from "#lib/duration.js";
 import type { TFunction } from "#lib/i18n.js";
+import { NO_MENTIONS } from "#lib/mentions.js";
 import type { Action, AuthorHistory, Report, ReportStatus } from "./store.js";
 
 export const CONTENT_LIMIT = 1500;
@@ -319,6 +320,6 @@ export function purgedMessage(reportId: number, t: TFunction) {
   return {
     components: [container],
     flags: MessageFlags.IsComponentsV2 as const,
-    allowedMentions: { parse: [] } satisfies MessageMentionOptions,
+    allowedMentions: NO_MENTIONS,
   };
 }

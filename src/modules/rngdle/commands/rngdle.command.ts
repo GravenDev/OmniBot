@@ -12,6 +12,7 @@ import mentionService from "#core/services/mention.service.js";
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
+import { NO_MENTIONS } from "#lib/mentions.js";
 import {
   historyMessage,
   navigationRow,
@@ -56,7 +57,7 @@ function viewContext(interaction: Interaction, config: Config): ViewContext {
 }
 
 const ephemeral = { flags: MessageFlags.Ephemeral } as const;
-const noPings = { allowedMentions: { parse: [] } } as const;
+const noPings = { allowedMentions: NO_MENTIONS } as const;
 
 async function replyWithImage(
   interaction: Interaction,

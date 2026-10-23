@@ -3,6 +3,7 @@ import type { ConfigProvider } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
 import { PALETTE } from "#lib/imaging.js";
 import { loggerMaker } from "#lib/logger.js";
+import { NO_MENTIONS_REPLY } from "#lib/mentions.js";
 import { canReplyWithFile } from "#lib/permissions.js";
 import { resolvePlayers } from "#lib/players.js";
 import { TREND_COLORS } from "#lib/stat-card.js";
@@ -347,7 +348,7 @@ export async function answerShare(
     );
     await message.reply({
       files: [new AttachmentBuilder(image, { name: CARD_NAME })],
-      allowedMentions: { parse: [], repliedUser: false },
+      allowedMentions: NO_MENTIONS_REPLY,
     });
   } catch (err) {
     if (claimed) {

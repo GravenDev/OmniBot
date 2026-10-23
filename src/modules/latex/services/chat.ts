@@ -7,6 +7,7 @@ import {
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
+import { NO_MENTIONS_REPLY } from "#lib/mentions.js";
 import { canReplyWithFile } from "#lib/permissions.js";
 import type { LatexConfigSchema } from "#modules/latex/latex.config.js";
 import {
@@ -177,7 +178,7 @@ async function reply(
   const sent = await message
     .reply({
       ...(await payloadFor(text, config)),
-      allowedMentions: { parse: [], repliedUser: false },
+      allowedMentions: NO_MENTIONS_REPLY,
     })
     .catch(ignoreGone);
   if (sent) {
