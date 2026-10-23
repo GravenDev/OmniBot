@@ -268,7 +268,7 @@ export function dailyLeaderboard(
           worstBy: (name, percent) =>
             t("leaderboard.worstBy", {
               name,
-              percent: formatPercent(percent),
+              percent: formatPercent(percent, context.locale),
             }),
           rank: t("leaderboard.header.rank"),
           player: t("leaderboard.header.player"),
@@ -566,7 +566,7 @@ export function historyCard(
         placement: t("history.placement"),
         placementValue: (percent) =>
           t(percent > 50 ? "history.top" : "history.bottom", {
-            percent: formatPercent(percent),
+            percent: formatPercent(percent, context.locale),
           }),
         upperHalf: (upper, total) =>
           t("history.upperHalf", { count: upper, total }),
@@ -794,7 +794,7 @@ export function trendCard(
         placement: t("history.placement"),
         placementValue: (percent) =>
           t(percent > 50 ? "history.top" : "history.bottom", {
-            percent: formatPercent(percent),
+            percent: formatPercent(percent, context.locale),
           }),
         upperHalf: (upper, total) =>
           t("trend.upperHalf", { count: upper, total }),

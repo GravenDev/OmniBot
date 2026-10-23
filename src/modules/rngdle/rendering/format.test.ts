@@ -14,8 +14,16 @@ describe("formatCompact", () => {
     [999_999, "1000.0k"],
     [2_000_000, "2.0M"],
     [1_234_567_890, "1.2B"],
-  ])("formats %s as %s", (value, text) => {
-    expect(formatCompact(value)).toBe(text);
+  ])("formats %s in English as %s", (value, text) => {
+    expect(formatCompact(value, "en")).toBe(text);
+  });
+
+  it.each([
+    [1000, "1,0k"],
+    [2_500_000, "2,5M"],
+    [1_234_567_890, "1,2Md"],
+  ])("formats %s in French as %s", (value, text) => {
+    expect(formatCompact(value, "fr")).toBe(text);
   });
 });
 
@@ -26,7 +34,7 @@ describe("formatIndex", () => {
     [999.6, "1.0k"],
     [12_345.4, "12.3k"],
   ])("formats %s as %s", (value, text) => {
-    expect(formatIndex(value)).toBe(text);
+    expect(formatIndex(value, "en")).toBe(text);
   });
 });
 
@@ -35,9 +43,9 @@ describe("formatShort", () => {
     [999, "en", "999"],
     [1000, "en", "1k"],
     [1500, "en", "1.5k"],
-    [2_500_000, "fr", "2.5M"],
+    [2_500_000, "fr", "2,5M"],
     [1_234_567_890, "en", "1.2B"],
-    [1_234_567_890, "fr", "1.2Md"],
+    [1_234_567_890, "fr", "1,2Md"],
     [3_000_000_000, "fr", "3Md"],
   ])("formats %s in %s as %s", (value, locale, text) => {
     expect(formatShort(value, locale)).toBe(text);
@@ -53,7 +61,7 @@ describe("formatExpected", () => {
     ["fr", 9.96, "10"],
     ["en", 61.25, "61"],
     ["fr", 61_728, "61 728"],
-    ["fr", 3_086_400, "3.1M"],
+    ["fr", 3_086_400, "3,1M"],
   ])("formats %s %s as %s", (locale, value, text) => {
     expect(formatExpected(locale, value)).toBe(text);
   });

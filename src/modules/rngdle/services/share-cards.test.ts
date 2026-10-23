@@ -203,7 +203,7 @@ describe("answerShare", () => {
 
     expect(mocks.render).toHaveBeenCalledWith(
       expect.objectContaining({
-        placement: 'card.top {"percent":"4%"}',
+        placement: 'card.top {"percent":"4 %"}',
         badges: [expect.objectContaining({ label: "Lucky", ep: null })],
         badgeCount: 1,
       }),
@@ -222,7 +222,7 @@ describe("answerShare", () => {
 
     expect(mocks.render).toHaveBeenCalledWith(
       expect.objectContaining({
-        placement: 'card.top {"percent":"1%"}',
+        placement: 'card.top {"percent":"1 %"}',
         badges: [expect.objectContaining({ label: "Lucky" })],
         badgeCount: 1,
       }),

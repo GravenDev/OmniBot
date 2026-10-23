@@ -1,4 +1,5 @@
 import type { Image, SKRSContext2D } from "@napi-rs/canvas";
+import { formatPercentage } from "#lib/format.js";
 import {
   drawCircularImage,
   drawHighlight,
@@ -52,7 +53,6 @@ const NAME_X = 100;
 
 const ICON_SIZE = 30;
 const ICON_GAP = 10;
-const PLACEMENT_WIDEST = "99%";
 const DELTA_WIDEST = "+00.0k";
 const ARROW_GAP = 8;
 const ARROW_WIDTH = 14;
@@ -306,13 +306,14 @@ export function drawPlacement(
   tier: TierOrError,
   right: number,
   centerY: number,
-  icons: PlacementIcons
+  icons: PlacementIcons,
+  locale: string
 ): void {
-  drawCellText(ctx, formatPercent(percent), right, centerY, {
+  drawCellText(ctx, formatPercent(percent, locale), right, centerY, {
     align: "right",
     color: TIER_COLORS[tier],
   });
-  const textWidth = ctx.measureText(PLACEMENT_WIDEST).width;
+  const textWidth = ctx.measureText(formatPercentage(99, locale)).width;
   ctx.drawImage(
     percent > 50 ? icons.up : icons.down,
     right - textWidth - ICON_GAP - ICON_SIZE,
@@ -322,9 +323,9 @@ export function drawPlacement(
   );
 }
 
-export function formatDelta(delta: number): string {
+export function formatDelta(delta: number, locale: string): string {
   const sign = delta > 0 ? "+" : delta < 0 ? "-" : "";
-  return sign + formatCompact(Math.abs(delta));
+  return sign + formatCompact(Math.abs(delta), locale);
 }
 
 export function drawDelta(
@@ -332,7 +333,8 @@ export function drawDelta(
   delta: number | null,
   right: number,
   centerY: number,
-  newLabel: string
+  newLabel: string,
+  locale: string
 ): void {
   if (delta === null || delta === 0) {
     drawCellText(ctx, delta === null ? newLabel : "=", right, centerY, {
@@ -343,7 +345,7 @@ export function drawDelta(
     return;
   }
   const direction = delta > 0 ? "up" : "down";
-  drawCellText(ctx, formatDelta(delta), right, centerY, {
+  drawCellText(ctx, formatDelta(delta, locale), right, centerY, {
     align: "right",
     color: TREND_COLORS[direction],
     size: SMALL_FONT,

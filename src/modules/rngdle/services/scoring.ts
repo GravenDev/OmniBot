@@ -1,3 +1,4 @@
+import { formatPercentage } from "#lib/format.js";
 import type { Rgb } from "#lib/imaging.js";
 
 export const TIERS = [
@@ -162,8 +163,9 @@ export class ScoreTable {
   }
 }
 
-export function formatPercent(percent: number): string {
-  return percent > 50
-    ? `${Math.floor(100 - percent)}%`
-    : `${Math.ceil(percent)}%`;
+export function formatPercent(percent: number, locale: string): string {
+  return formatPercentage(
+    percent > 50 ? Math.floor(100 - percent) : Math.ceil(percent),
+    locale
+  );
 }

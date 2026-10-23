@@ -1,4 +1,4 @@
-import { formatInteger } from "#lib/format.js";
+import { decimalSeparator, formatInteger } from "#lib/format.js";
 
 const THRESHOLDS = [1_000_000_000, 1_000_000, 1_000] as const;
 
@@ -17,17 +17,28 @@ export function formatEp(value: number, locale: string): string {
   return `${formatInteger(value, locale)} EP`;
 }
 
-export function formatCompact(value: number): string {
-  return abbreviate(value, ["B", "M", "k"], (scaled) => scaled.toFixed(1));
+// French abbreviates billions as "Md" (milliards).
+function suffixesFor(locale: string): string[] {
+  return [locale === "fr" ? "Md" : "B", "M", "k"];
 }
 
-export function formatIndex(value: number): string {
-  return formatCompact(Math.round(value));
+function withDecimalSeparator(text: string, locale: string): string {
+  return text.replace(".", decimalSeparator(locale));
+}
+
+export function formatCompact(value: number, locale: string): string {
+  return abbreviate(value, suffixesFor(locale), (scaled) =>
+    withDecimalSeparator(scaled.toFixed(1), locale)
+  );
+}
+
+export function formatIndex(value: number, locale: string): string {
+  return formatCompact(Math.round(value), locale);
 }
 
 export function formatShort(value: number, locale: string): string {
-  return abbreviate(value, [locale === "fr" ? "Md" : "B", "M", "k"], (scaled) =>
-    scaled.toFixed(1).replace(".0", "")
+  return abbreviate(value, suffixesFor(locale), (scaled) =>
+    withDecimalSeparator(scaled.toFixed(1).replace(".0", ""), locale)
   );
 }
 
