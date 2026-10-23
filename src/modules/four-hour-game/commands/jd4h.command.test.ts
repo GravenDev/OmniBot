@@ -36,13 +36,19 @@ vi.mock("#modules/four-hour-game/rendering/leaderboard-image.js", () => ({
 const renderStatCard = vi.hoisted(() => vi.fn());
 vi.mock("#lib/stat-card.js", () => ({ renderStatCard }));
 
-const fetchImage = vi.hoisted(() => vi.fn());
+const fetchAvatar = vi.hoisted(() => vi.fn());
 vi.mock("#lib/imaging.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("#lib/imaging.js")>()),
-  fetchImage,
+  fetchAvatar,
 }));
 
 const { default: command } = await import("./jd4h.command.js");
+
+// The avatar shown on the card: the server member's, else the account's.
+const fetchedAvatarUrl = () =>
+  (
+    fetchAvatar.mock.calls[0]![0] as { displayAvatarURL(): string }
+  ).displayAvatarURL();
 
 const PNG = Buffer.from("png");
 
@@ -69,7 +75,7 @@ beforeEach(() => {
   getProfile.mockReset();
   getRevision.mockReset().mockReturnValue(++revision);
   renderStatCard.mockReset().mockResolvedValue(PNG);
-  fetchImage.mockReset().mockResolvedValue(null);
+  fetchAvatar.mockReset().mockResolvedValue(null);
 });
 
 const keyConfig = {
@@ -286,7 +292,7 @@ describe("/jd4h score", () => {
       optionMember: guildMember("Bobby", "https://cdn/guilds/bob.png"),
     });
 
-    expect(fetchImage).toHaveBeenCalledWith("https://cdn/guilds/bob.png");
+    expect(fetchedAvatarUrl()).toBe("https://cdn/guilds/bob.png");
     const card = renderedCard();
     expect(card).toMatchObject({
       title: "Bobby",
@@ -308,7 +314,7 @@ describe("/jd4h score", () => {
 
     await runScore({ option: user("bob", "Bob"), optionMember: null });
 
-    expect(fetchImage).toHaveBeenCalledWith("https://cdn/users/bob.png");
+    expect(fetchedAvatarUrl()).toBe("https://cdn/users/bob.png");
     expect(renderedCard().title).toBe("Bob");
   });
 
@@ -320,7 +326,7 @@ describe("/jd4h score", () => {
     });
 
     expect(getProfile).toHaveBeenCalledWith("guild", "caller");
-    expect(fetchImage).toHaveBeenCalledWith("https://cdn/guilds/caller.png");
+    expect(fetchedAvatarUrl()).toBe("https://cdn/guilds/caller.png");
     expect(renderedCard().title).toBe("Captain");
   });
 
