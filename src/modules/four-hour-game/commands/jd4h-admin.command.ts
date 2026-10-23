@@ -18,8 +18,6 @@ const logger = loggerMaker("four-hour-game");
 const SET_SCORE_MESSAGES: Record<SetScoreResult, string> = {
   created: "admin.set.created",
   updated: "admin.set.updated",
-  removed: "admin.unset.done",
-  absent: "admin.unset.none",
 };
 
 export default declareCommand<FourHourGameConfigSchema>({
@@ -46,11 +44,11 @@ export default declareCommand<FourHourGameConfigSchema>({
         .addIntegerOption((option) =>
           option
             .setName("score")
-            .setDescription("New score (0 removes it)")
+            .setDescription("New score (use unset to remove it)")
             .setDescriptionLocalizations({
-              fr: "Nouveau score (0 le supprime)",
+              fr: "Nouveau score (unset pour le supprimer)",
             })
-            .setMinValue(0)
+            .setMinValue(1)
             .setMaxValue(MAX_SCORE)
             .setRequired(true)
         )
