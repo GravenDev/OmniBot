@@ -223,9 +223,7 @@ export async function buildCard(
 }
 
 export async function pruneCards(now = new Date()): Promise<void> {
-  await store.pruneAnnouncements(
-    new Date(startOfUtcDay(now).getTime() - DAY_MS)
-  );
+  await store.pruneCardClaims(new Date(startOfUtcDay(now).getTime() - DAY_MS));
 }
 
 function canReply(message: Message<true>): boolean {
@@ -306,7 +304,7 @@ async function verify(
   }
   const today = startOfUtcDay(pasted.rolledAt);
   if (
-    (await store.hasAnnouncement(guildId, userId, today)) ||
+    (await store.hasCard(guildId, userId, today)) ||
     !mayCheck(guildId, userId)
   ) {
     return null;
@@ -350,7 +348,7 @@ export async function answerShare(
   const claimed =
     verified !== null &&
     day !== null &&
-    (await store.claimAnnouncement(guildId, userId, day, verified.roll.number));
+    (await store.claimCard(guildId, userId, day));
   // A linked member who pastes again a roll already shown keeps its real
   // data, as long as the text matches what rngdle.com recorded.
   const genuine =
@@ -371,7 +369,7 @@ export async function answerShare(
     });
   } catch (err) {
     if (claimed) {
-      await store.releaseAnnouncement(guildId, userId, day);
+      await store.releaseCard(guildId, userId, day);
     }
     throw err;
   }

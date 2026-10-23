@@ -33,11 +33,11 @@ model RngdleReminder {
   @@id([guildId, userId])
 }
 
-model RngdleAnnouncement {
+// One verified card per member, per UTC day and per server.
+model RngdleCardClaim {
   guildId String
   userId  String
   day     DateTime @db.Date
-  number  Int
 
   @@id([guildId, userId, day])
 }

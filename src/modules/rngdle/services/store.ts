@@ -156,42 +156,33 @@ class RngdleStore implements Service {
     );
   }
 
-  async claimAnnouncement(
+  async claimCard(
     guildId: string,
     userId: string,
-    day: Date,
-    number: number
+    day: Date
   ): Promise<boolean> {
-    const { count } = await prisma.rngdleAnnouncement.createMany({
-      data: [{ guildId, userId, day, number }],
+    const { count } = await prisma.rngdleCardClaim.createMany({
+      data: [{ guildId, userId, day }],
       skipDuplicates: true,
     });
     return count > 0;
   }
 
-  async hasAnnouncement(
-    guildId: string,
-    userId: string,
-    day: Date
-  ): Promise<boolean> {
-    const count = await prisma.rngdleAnnouncement.count({
+  async hasCard(guildId: string, userId: string, day: Date): Promise<boolean> {
+    const count = await prisma.rngdleCardClaim.count({
       where: { guildId, userId, day },
     });
     return count > 0;
   }
 
-  async releaseAnnouncement(
-    guildId: string,
-    userId: string,
-    day: Date
-  ): Promise<void> {
-    await prisma.rngdleAnnouncement.deleteMany({
+  async releaseCard(guildId: string, userId: string, day: Date): Promise<void> {
+    await prisma.rngdleCardClaim.deleteMany({
       where: { guildId, userId, day },
     });
   }
 
-  async pruneAnnouncements(before: Date): Promise<void> {
-    await prisma.rngdleAnnouncement.deleteMany({
+  async pruneCardClaims(before: Date): Promise<void> {
+    await prisma.rngdleCardClaim.deleteMany({
       where: { day: { lt: before } },
     });
   }
