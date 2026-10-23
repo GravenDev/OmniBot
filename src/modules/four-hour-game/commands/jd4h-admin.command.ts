@@ -3,7 +3,6 @@ import {
   MessageFlags,
   SlashCommandBuilder,
 } from "discord.js";
-import { requireAdmin } from "#core/utils/require-admin.js";
 import { declareCommand } from "#lib/command.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
@@ -24,6 +23,8 @@ const SET_SCORE_MESSAGES: Record<SetScoreResult, string> = {
 };
 
 export default declareCommand<FourHourGameConfigSchema>({
+  requiresAdmin: true,
+
   data: new SlashCommandBuilder()
     .setName("jd4h-admin")
     .setDescription("4h game admin commands")
@@ -72,9 +73,6 @@ export default declareCommand<FourHourGameConfigSchema>({
 
   async execute(interaction, config) {
     if (!interaction.inGuild()) {
-      return;
-    }
-    if (!(await requireAdmin(interaction, config.t))) {
       return;
     }
 

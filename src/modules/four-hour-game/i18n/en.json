@@ -46,7 +46,6 @@
   "leaderboard.header.player": "Player",
   "leaderboard.header.score": "Score",
 
-  "admin.noPermission": "You must be an administrator to use this command.",
   "admin.set.created": "{{user}}'s score set to **{{score}}**.",
   "admin.set.updated": "{{user}}'s score updated to **{{score}}**.",
   "admin.unset.done": "{{user}}'s score removed.",
