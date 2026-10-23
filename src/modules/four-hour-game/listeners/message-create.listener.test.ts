@@ -192,6 +192,19 @@ describe("buildPointEmbed", () => {
     expect(embed.timestamp).toBe(heldSince.toISOString());
   });
 
+  it("sends the whole announcement, in green", () => {
+    expect(buildPointEmbed(announcement, config("fr")).toJSON()).toEqual({
+      title: "Point gagné !",
+      description:
+        "<@bob> marque un point ! Son message est resté sans réponse pendant **4 h 12 min**.\n" +
+        "Total : **42 points** · 3ᵉ sur 17",
+      color: 0x00ff00,
+      thumbnail: { url: "https://cdn/bob.png" },
+      footer: { text: "Message posté" },
+      timestamp: heldSince.toISOString(),
+    });
+  });
+
   it("speaks English and handles a first point", () => {
     const embed = buildPointEmbed(
       { ...announcement, score: 1, rank: { rank: 1, total: 1 } },

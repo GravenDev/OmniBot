@@ -62,6 +62,17 @@ describe("buildDailyPointEmbed", () => {
     expect(embed.thumbnail?.url).toBe("https://cdn/bob.png");
   });
 
+  it("sends the whole announcement, in green", () => {
+    expect(buildDailyPointEmbed(announcement, config("fr")).toJSON()).toEqual({
+      title: "Point du jour",
+      description:
+        "<@bob> remporte le point du mardi 13 octobre : son message est resté sans réponse **6 h 30 min**, plus longtemps que tout autre ce jour-là.\n" +
+        "Total : **4 points du jour** · 2ᵉ sur 9",
+      color: 0x00ff00,
+      thumbnail: { url: "https://cdn/bob.png" },
+    });
+  });
+
   it("speaks English and leaves out what is unknown", () => {
     const embed = buildDailyPointEmbed(
       { ...announcement, total: 1, rank: null, avatarUrl: null },
