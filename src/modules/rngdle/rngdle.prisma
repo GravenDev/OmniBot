@@ -17,7 +17,7 @@ model RngdleRoll {
 
   @@id([guildId, rollId])
   @@index([guildId, rolledAt])
-  @@index([guildId, userId])
+  @@index([guildId, userId, rolledAt])
 }
 
 model RngdleScoreTable {
