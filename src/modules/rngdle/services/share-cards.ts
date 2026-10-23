@@ -1,5 +1,6 @@
 import { AttachmentBuilder, type Client, type Message } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { formatInteger } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
 import { PALETTE } from "#lib/imaging.js";
 import { loggerMaker } from "#lib/logger.js";
@@ -7,7 +8,6 @@ import { NO_MENTIONS_REPLY } from "#lib/mentions.js";
 import { canReplyWithFile } from "#lib/permissions.js";
 import { resolvePlayers } from "#lib/players.js";
 import { TREND_COLORS } from "#lib/stat-card.js";
-import { formatSpaced } from "#modules/rngdle/rendering/format.js";
 import {
   renderRollCard,
   type CardBadge,
@@ -98,7 +98,8 @@ export function computeHighlights(
   t: TFunction,
   roll: CardRoll,
   previous: StoredRoll[],
-  today: StoredRoll[]
+  today: StoredRoll[],
+  locale: string
 ): CardHighlight[] {
   const highlights: CardHighlight[] = [];
   if (
@@ -127,7 +128,7 @@ export function computeHighlights(
     highlights.push({
       icon: delta >= 0 ? "📈" : "📉",
       text: t("card.vsAverage", {
-        delta: `${delta >= 0 ? "+" : "−"}${formatSpaced(Math.abs(delta))}`,
+        delta: `${delta >= 0 ? "+" : "−"}${formatInteger(Math.abs(delta), locale)}`,
       }),
       color: delta >= 0 ? TREND_COLORS.up : TREND_COLORS.down,
     });
@@ -144,7 +145,7 @@ async function linkedHighlights(
     store.rolls(context.guildId, { userId: roll.userId, to: day }),
     store.rolls(context.guildId, { from: day, to: nextUtcMidnight(day) }),
   ]);
-  return computeHighlights(context.t, roll, previous, today);
+  return computeHighlights(context.t, roll, previous, today, context.locale);
 }
 
 function placementText(t: TFunction, placement: Placement): string {
@@ -203,6 +204,7 @@ export async function buildCard(
       highlights,
     },
     {
+      locale: context.locale,
       number: t("card.number"),
       score: t("card.score"),
       badges: t("card.badges"),

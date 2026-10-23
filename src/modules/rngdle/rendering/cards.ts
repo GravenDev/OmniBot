@@ -1,4 +1,5 @@
 import type { Image, SKRSContext2D } from "@napi-rs/canvas";
+import { formatInteger } from "#lib/format.js";
 import { drawCircularImage, PALETTE, rgb } from "#lib/imaging.js";
 import {
   drawPanel,
@@ -17,7 +18,7 @@ import {
   type Tier,
   type TierOrError,
 } from "#modules/rngdle/services/scoring.js";
-import { formatEp, formatSpaced } from "./format.js";
+import { formatEp } from "./format.js";
 import { ACCENT } from "./theme.js";
 
 const HIGHLIGHTED_TIERS = new Set<TierOrError>([
@@ -109,6 +110,8 @@ export interface ProfileImageData {
 }
 
 export interface ProfileLabels {
+  // The locale of the numbers drawn on the card.
+  locale: string;
   bestRoll: string;
   worstRoll: string;
   roll: (number: string) => string;
@@ -143,6 +146,8 @@ export interface ServerStatsImageData {
 }
 
 export interface ServerStatsLabels {
+  // The locale of the numbers drawn on the card.
+  locale: string;
   title: string;
   bestRoll: string;
   worstRoll: string;
@@ -156,10 +161,15 @@ export interface ServerStatsLabels {
   expectedCount: (value: number) => string;
 }
 
-function scoreBox(title: string, score: number, tier: TierOrError): StatBox {
+function scoreBox(
+  title: string,
+  score: number,
+  tier: TierOrError,
+  locale: string
+): StatBox {
   return {
     title,
-    value: formatEp(score),
+    value: formatEp(score, locale),
     color: TIER_COLORS[tier],
     highlight: HIGHLIGHTED_TIERS.has(tier),
   };
@@ -205,6 +215,7 @@ export function tierBreakdown(
   title: string,
   expectedLabel: string,
   formatExpected: (value: number) => string,
+  locale: string,
   counts: Record<Tier, number>,
   sizes: BreakdownSizes,
   leaders?: Record<Tier, (Image | null)[]>
@@ -288,7 +299,7 @@ export function tierBreakdown(
         }
         drawMarker(ctx, centerX, centerY);
 
-        const text = formatSpaced(count);
+        const text = formatInteger(count, locale);
         drawText(
           ctx,
           text,
@@ -319,8 +330,8 @@ export function renderProfile(
   labels: ProfileLabels
 ): Promise<Buffer> {
   const rollBox = (title: string, roll: ProfileRoll): StatBox => ({
-    ...scoreBox(title, roll.score, roll.tier),
-    subtext: `${labels.roll(formatSpaced(roll.number))} · ${roll.dateText}`,
+    ...scoreBox(title, roll.score, roll.tier, labels.locale),
+    subtext: `${labels.roll(formatInteger(roll.number, labels.locale))} · ${roll.dateText}`,
   });
   return renderStatCard({
     accent: ACCENT,
@@ -334,10 +345,18 @@ export function renderProfile(
       ],
       [
         {
-          ...scoreBox(labels.averageScore, data.averageScore, data.averageTier),
+          ...scoreBox(
+            labels.averageScore,
+            data.averageScore,
+            data.averageTier,
+            labels.locale
+          ),
           subtext: labels.averageOver(data.totalRolls),
         },
-        { title: labels.overallScore, value: formatEp(data.totalScore) },
+        {
+          title: labels.overallScore,
+          value: formatEp(data.totalScore, labels.locale),
+        },
       ],
       [
         {
@@ -355,6 +374,7 @@ export function renderProfile(
       labels.tierBreakdown,
       labels.expected,
       labels.expectedCount,
+      labels.locale,
       data.tierCounts,
       PROFILE_BREAKDOWN
     ),
@@ -366,8 +386,8 @@ export function renderServerStats(
   labels: ServerStatsLabels
 ): Promise<Buffer> {
   const rollBox = (title: string, roll: ServerStatsRoll): StatBox => ({
-    ...scoreBox(title, roll.score, roll.tier),
-    subtext: `${labels.roll(formatSpaced(roll.number))} · ${labels.by(roll.playerName)}`,
+    ...scoreBox(title, roll.score, roll.tier, labels.locale),
+    subtext: `${labels.roll(formatInteger(roll.number, labels.locale))} · ${labels.by(roll.playerName)}`,
     avatar: roll.avatar,
   });
   return renderStatCard({
@@ -381,15 +401,29 @@ export function renderServerStats(
         rollBox(labels.worstRoll, data.worst),
       ],
       [
-        scoreBox(labels.averageScore, data.averageScore, data.averageTier),
-        { title: labels.overallScore, value: formatEp(data.overallScore) },
+        scoreBox(
+          labels.averageScore,
+          data.averageScore,
+          data.averageTier,
+          labels.locale
+        ),
+        {
+          title: labels.overallScore,
+          value: formatEp(data.overallScore, labels.locale),
+        },
       ],
-      [{ title: labels.totalRolls, value: formatSpaced(data.totalRolls) }],
+      [
+        {
+          title: labels.totalRolls,
+          value: formatInteger(data.totalRolls, labels.locale),
+        },
+      ],
     ],
     aside: tierBreakdown(
       labels.tierBreakdown,
       labels.expected,
       labels.expectedCount,
+      labels.locale,
       data.tierCounts,
       SERVER_BREAKDOWN,
       data.tierLeaders

@@ -9,6 +9,7 @@ import {
 } from "./timeline.js";
 
 const labels = {
+  locale: "fr",
   subtitle: "Frise · depuis juin 2026 · 130 tirages",
   counts: { MYTHIC: "Mythiques", ANOMALY: "Anomalies", TRASH: "Trash" },
   legend: { MYTHIC: "Mythique", ANOMALY: "Anomalie", TRASH: "Trash" },

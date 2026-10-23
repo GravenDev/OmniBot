@@ -1,3 +1,5 @@
+import { formatInteger } from "#lib/format.js";
+
 const THRESHOLDS = [1_000_000_000, 1_000_000, 1_000] as const;
 
 function abbreviate(
@@ -11,16 +13,8 @@ function abbreviate(
     : format(value / THRESHOLDS[index]!) + suffixes[index];
 }
 
-export function formatSpaced(value: number): string {
-  const sign = value < 0 ? "-" : "";
-  return (
-    sign +
-    String(Math.trunc(Math.abs(value))).replace(/\B(?=(\d{3})+(?!\d))/g, " ")
-  );
-}
-
-export function formatEp(value: number): string {
-  return `${formatSpaced(value)} EP`;
+export function formatEp(value: number, locale: string): string {
+  return `${formatInteger(value, locale)} EP`;
 }
 
 export function formatCompact(value: number): string {
@@ -47,6 +41,6 @@ export function formatExpected(locale: string, value: number): string {
   }
   const rounded = Math.round(value);
   return rounded < 100_000
-    ? formatSpaced(rounded)
+    ? formatInteger(rounded, locale)
     : formatShort(rounded, locale);
 }

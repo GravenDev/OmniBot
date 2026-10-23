@@ -1,4 +1,5 @@
 import type { Image } from "@napi-rs/canvas";
+import { formatInteger } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
 import { renderStatCard, type StatCard } from "#lib/stat-card.js";
 import { formatHeldTime } from "#modules/four-hour-game/services/formatting.js";
@@ -10,10 +11,6 @@ const MISSING = "—";
 export interface ProfilePlayer {
   name: string;
   avatar: Image | null;
-}
-
-function formatNumber(value: number, locale: string): string {
-  return new Intl.NumberFormat(locale).format(value).replace(/[  ]/g, " ");
 }
 
 export function buildProfileCard(
@@ -43,11 +40,11 @@ export function buildProfileCard(
       [
         {
           title: t("profile.points"),
-          value: formatNumber(profile.score, locale),
+          value: formatInteger(profile.score, locale),
         },
         {
           title: t("profile.month"),
-          value: known(formatNumber(profile.monthPoints, locale)),
+          value: known(formatInteger(profile.monthPoints, locale)),
         },
         {
           title: t("profile.bestHold"),
@@ -60,10 +57,10 @@ export function buildProfileCard(
       [
         {
           title: t("profile.streak"),
-          value: known(formatNumber(profile.currentStreak, locale)),
+          value: known(formatInteger(profile.currentStreak, locale)),
           ...(hasHistory && {
             subtext: t("profile.streakRecord", {
-              record: formatNumber(profile.bestStreak, locale),
+              record: formatInteger(profile.bestStreak, locale),
             }),
           }),
         },
@@ -75,7 +72,7 @@ export function buildProfileCard(
         },
         {
           title: t("profile.daily"),
-          value: formatNumber(profile.dailyPoints, locale),
+          value: formatInteger(profile.dailyPoints, locale),
           ...(profile.dailyRank && {
             subtext: t("profile.dailyRank", {
               rank: profile.dailyRank.rank,

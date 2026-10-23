@@ -97,12 +97,18 @@ describe("computeHighlights", () => {
   const today = roll("me", 5000);
 
   it("celebrates a personal best above every previous roll", () => {
-    const highlights = computeHighlights(t, today, [roll("me", 4000)], []);
+    const highlights = computeHighlights(
+      t,
+      today,
+      [roll("me", 4000)],
+      [],
+      "fr"
+    );
     expect(highlights.map((h) => h.text)).toEqual(["card.personalBest"]);
   });
 
   it("does not call the first roll a personal best", () => {
-    expect(computeHighlights(t, today, [], [])).toEqual([]);
+    expect(computeHighlights(t, today, [], [], "fr")).toEqual([]);
   });
 
   it("ranks the roll among the other players of the day", () => {
@@ -110,7 +116,8 @@ describe("computeHighlights", () => {
       t,
       today,
       [],
-      [today, roll("a", 9000), roll("b", 100)]
+      [today, roll("a", 9000), roll("b", 100)],
+      "fr"
     );
     expect(highlights).toEqual([
       expect.objectContaining({
@@ -124,10 +131,12 @@ describe("computeHighlights", () => {
     const previous = [1000, 2000, 3000, 4000, 5000].map((score) =>
       roll("me", score)
     );
-    const below = computeHighlights(t, roll("me", 2000), previous, []);
+    const below = computeHighlights(t, roll("me", 2000), previous, [], "fr");
     expect(below.at(-1)?.text).toBe('card.vsAverage {"delta":"−1 000"}');
     expect(
-      computeHighlights(t, today, previous.slice(1), []).map((h) => h.text)
+      computeHighlights(t, today, previous.slice(1), [], "fr").map(
+        (h) => h.text
+      )
     ).not.toContain(expect.stringContaining("vsAverage"));
   });
 });

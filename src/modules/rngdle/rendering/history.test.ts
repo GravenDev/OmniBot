@@ -4,6 +4,7 @@ import { TIER_COLORS } from "#modules/rngdle/services/scoring.js";
 import { renderHistory, type HistoryRow } from "./history.js";
 
 const labels = {
+  locale: "fr",
   subtitle: (count: number) => `Historique · ${count} derniers tirages`,
   averageScore: "Score moyen",
   averageTier: (tier: string) => `${tier} en moyenne`,

@@ -1,4 +1,5 @@
 import type { Image, SKRSContext2D } from "@napi-rs/canvas";
+import { formatInteger } from "#lib/format.js";
 import { PALETTE, rgb } from "#lib/imaging.js";
 import {
   drawPanel,
@@ -16,7 +17,7 @@ import {
   type TierOrError,
 } from "#modules/rngdle/services/scoring.js";
 import { PROFILE_BREAKDOWN, tierBreakdown } from "./cards.js";
-import { formatEp, formatSpaced } from "./format.js";
+import { formatEp } from "./format.js";
 import { ACCENT } from "./theme.js";
 import type { TimelineMonth } from "./timeline.js";
 
@@ -73,6 +74,8 @@ export interface TrendImageData {
 }
 
 export interface TrendLabels {
+  // The locale of the numbers drawn on the card.
+  locale: string;
   subtitle: string;
   bestRoll: string;
   worstRoll: string;
@@ -228,10 +231,10 @@ export function renderTrend(
 ): Promise<Buffer> {
   const rollBox = (title: string, roll: TrendBestRoll): StatBox => ({
     title,
-    value: formatEp(roll.score),
+    value: formatEp(roll.score, labels.locale),
     color: TIER_COLORS[roll.tier],
     highlight: true,
-    subtext: `${labels.roll(formatSpaced(roll.number))} · ${roll.dateText}`,
+    subtext: `${labels.roll(formatInteger(roll.number, labels.locale))} · ${roll.dateText}`,
   });
   const total = data.rolls.length;
 
@@ -248,7 +251,7 @@ export function renderTrend(
       [
         {
           title: labels.averageScore,
-          value: formatEp(data.averageScore),
+          value: formatEp(data.averageScore, labels.locale),
           color: TIER_COLORS[data.averageTier],
           subtext:
             data.change === null ? labels.averageOver(total) : labels.previous,
@@ -272,6 +275,7 @@ export function renderTrend(
       labels.tierBreakdown,
       labels.expected,
       labels.expectedCount,
+      labels.locale,
       data.tierCounts,
       PROFILE_BREAKDOWN
     ),

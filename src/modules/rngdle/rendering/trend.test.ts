@@ -4,6 +4,7 @@ import { TIER_COLORS } from "#modules/rngdle/services/scoring.js";
 import { movingAverage, movingWindow, renderTrend } from "./trend.js";
 
 const labels = {
+  locale: "fr",
   subtitle: "Tendance · 30 derniers jours",
   bestRoll: "Meilleur tirage",
   worstRoll: "Pire tirage",

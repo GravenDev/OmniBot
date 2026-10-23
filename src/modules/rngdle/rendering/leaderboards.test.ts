@@ -23,6 +23,7 @@ const table = (rows: number) => 52 + rows * 58 + 12;
 
 describe("renderDailyLeaderboard", () => {
   const labels = {
+    locale: "fr",
     rank: "Rang",
     title: "Classement du jour",
     averageScore: "Score moyen",
@@ -91,6 +92,7 @@ describe("renderDailyLeaderboard", () => {
 
 describe("renderOverallLeaderboard", () => {
   const labels = {
+    locale: "fr",
     rank: "Rang",
     player: "Pseudo",
     title: "Classement général",

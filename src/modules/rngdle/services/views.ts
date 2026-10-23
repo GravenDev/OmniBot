@@ -1,5 +1,6 @@
 import type { Image } from "@napi-rs/canvas";
 import type { Client, Guild } from "discord.js";
+import { formatInteger } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
 import { fetchImage } from "#lib/imaging.js";
 import { resolvePlayers } from "#lib/players.js";
@@ -8,10 +9,7 @@ import {
   renderProfile,
   renderServerStats,
 } from "#modules/rngdle/rendering/cards.js";
-import {
-  formatExpected,
-  formatSpaced,
-} from "#modules/rngdle/rendering/format.js";
+import { formatExpected } from "#modules/rngdle/rendering/format.js";
 import { renderHistory } from "#modules/rngdle/rendering/history.js";
 import {
   renderDailyLeaderboard,
@@ -256,13 +254,17 @@ export function dailyLeaderboard(
             : null,
         },
         {
+          locale: context.locale,
           title: t("leaderboard.title"),
           averageScore: t("leaderboard.averageScore"),
           players: t("leaderboard.players"),
           worstRoll: t("leaderboard.worstRoll"),
           previous: (value) => t("leaderboard.previous", { value }),
           rollCount: (count) =>
-            t("leaderboard.rollCount", { count, total: formatSpaced(count) }),
+            t("leaderboard.rollCount", {
+              count,
+              total: formatInteger(count, context.locale),
+            }),
           worstBy: (name, percent) =>
             t("leaderboard.worstBy", {
               name,
@@ -372,6 +374,7 @@ export function overallPage(
         })),
       },
       {
+        locale: context.locale,
         title: t("overall.title"),
         players: t("overall.players"),
         rolls: t("overall.rolls"),
@@ -448,11 +451,15 @@ export function profileCard(
         tierCounts: stats.tierCounts,
       },
       {
+        locale: context.locale,
         bestRoll: t("profile.bestRoll"),
         worstRoll: t("profile.worstRoll"),
         roll: (number) => t("profile.roll", { number }),
         averageOver: (count) =>
-          t("profile.averageOver", { count, total: formatSpaced(count) }),
+          t("profile.averageOver", {
+            count,
+            total: formatInteger(count, context.locale),
+          }),
         averageScore: t("profile.averageScore"),
         streak: t("profile.streak"),
         streakValue: (count) => t("profile.streakValue", { count }),
@@ -545,6 +552,7 @@ export function historyCard(
         bestStreak: streaks.best,
       },
       {
+        locale: context.locale,
         subtitle: (shown) =>
           page === 1
             ? t("history.subtitle", { count: shown })
@@ -664,9 +672,10 @@ export function timelineCard(
         totalRolls: rolls.length,
       },
       {
+        locale: context.locale,
         subtitle: t("timeline.subtitle", {
           count: rolls.length,
-          total: formatSpaced(rolls.length),
+          total: formatInteger(rolls.length, context.locale),
           since: new Intl.DateTimeFormat(context.locale, {
             month: "long",
             year: "numeric",
@@ -754,6 +763,7 @@ export function trendCard(
         tierCounts: stats.tierCounts,
       },
       {
+        locale: context.locale,
         subtitle: t("trend.subtitle", {
           count: days,
           from: (from.getUTCFullYear() === now.getUTCFullYear()
@@ -772,7 +782,10 @@ export function trendCard(
         roll: (number) => t("profile.roll", { number }),
         averageScore: t("profile.averageScore"),
         averageOver: (count) =>
-          t("profile.averageOver", { count, total: formatSpaced(count) }),
+          t("profile.averageOver", {
+            count,
+            total: formatInteger(count, context.locale),
+          }),
         change: (percent) =>
           t("trend.change", {
             value: `${percent < 0 ? "−" : "+"}${Math.abs(Math.round(percent))}`,
@@ -852,6 +865,7 @@ export function versusCard(
         winners: versus.winners,
       },
       {
+        locale: context.locale,
         vs: t("versus.vs"),
         totalScore: t("versus.totalScore"),
         totalRolls: t("versus.totalRolls"),
@@ -918,6 +932,7 @@ export function serverCard(
         tierLeaders,
       },
       {
+        locale: context.locale,
         title: t("server.title"),
         bestRoll: t("server.bestRoll"),
         worstRoll: t("server.worstRoll"),

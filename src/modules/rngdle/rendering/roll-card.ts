@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import type { Image, SKRSContext2D } from "@napi-rs/canvas";
+import { formatInteger } from "#lib/format.js";
 import {
   createBoard,
   drawHighlight,
@@ -18,7 +19,7 @@ import {
   type Tier,
   type TierOrError,
 } from "#modules/rngdle/services/scoring.js";
-import { formatSpaced } from "./format.js";
+import {} from "./format.js";
 import { ACCENT } from "./theme.js";
 
 const ASSETS = new URL("../assets/", import.meta.url);
@@ -78,6 +79,8 @@ export interface RollCardData {
 }
 
 export interface RollCardLabels {
+  // The locale of the numbers drawn on the card.
+  locale: string;
   number: string;
   score: string;
   badges: string;
@@ -149,9 +152,12 @@ function drawGrouped(
   centerY: number,
   size: number,
   color: Rgb,
-  align: "left" | "right"
+  align: "left" | "right",
+  locale: string
 ): void {
-  const groups = formatSpaced(value).split(" ");
+  // The French groups are spaced apart; an English number keeps its commas
+  // and is drawn as one group.
+  const groups = formatInteger(value, locale).split(" ");
   setFont(ctx, size, MONO_FONT);
   const gap = size * 0.22;
   const widths = groups.map((group) => ctx.measureText(group).width);
@@ -263,7 +269,8 @@ function drawHero(
     HERO_TOP + 108,
     96,
     PALETTE.text,
-    "left"
+    "left",
+    labels.locale
   );
 
   const pillY = HERO_TOP + 196;
@@ -295,7 +302,16 @@ function drawHero(
       align: "right",
     }
   );
-  drawGrouped(ctx, data.score, right, HERO_TOP + 108, 64, ACCENT, "right");
+  drawGrouped(
+    ctx,
+    data.score,
+    right,
+    HERO_TOP + 108,
+    64,
+    ACCENT,
+    "right",
+    labels.locale
+  );
   drawLine(ctx, "EP", right, pillY, 28, PALETTE.subtext, {
     base: MONO_FONT,
     align: "right",
@@ -351,7 +367,16 @@ function drawBadge(
       }
     );
   } else if (badge.ep !== null) {
-    drawGrouped(ctx, badge.ep, right, y + CELL_HEIGHT / 2, 20, color, "right");
+    drawGrouped(
+      ctx,
+      badge.ep,
+      right,
+      y + CELL_HEIGHT / 2,
+      20,
+      color,
+      "right",
+      labels.locale
+    );
   }
   ctx.globalAlpha = 1;
 }

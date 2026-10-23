@@ -5,21 +5,7 @@ import {
   formatExpected,
   formatIndex,
   formatShort,
-  formatSpaced,
 } from "./format.js";
-
-describe("formatSpaced", () => {
-  it.each([
-    [0, "0"],
-    [999, "999"],
-    [1000, "1 000"],
-    [1_234_567, "1 234 567"],
-    [-1_234_567, "-1 234 567"],
-    [1234.9, "1 234"],
-  ])("formats %s as %s", (value, text) => {
-    expect(formatSpaced(value)).toBe(text);
-  });
-});
 
 describe("formatCompact", () => {
   it.each([
@@ -75,7 +61,8 @@ describe("formatExpected", () => {
 
 describe("formatEp", () => {
   it("spaces the thousands and adds the unit", () => {
-    expect(formatEp(41731)).toBe("41 731 EP");
-    expect(formatEp(0)).toBe("0 EP");
+    expect(formatEp(41731, "fr")).toBe("41 731 EP");
+    expect(formatEp(41731, "en")).toBe("41,731 EP");
+    expect(formatEp(0, "fr")).toBe("0 EP");
   });
 });
