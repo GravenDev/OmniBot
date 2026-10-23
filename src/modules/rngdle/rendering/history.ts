@@ -5,7 +5,7 @@ import {
   TIER_COLORS,
   type TierOrError,
 } from "#modules/rngdle/services/scoring.js";
-import { formatCompact, formatSpaced } from "./format.js";
+import { formatCompact, formatEp } from "./format.js";
 import {
   drawCellText,
   drawPlacement,
@@ -76,7 +76,7 @@ export async function renderHistory(
       [
         {
           title: labels.averageScore,
-          value: `${formatSpaced(data.averageScore)} EP`,
+          value: formatEp(data.averageScore),
           color: TIER_COLORS[data.averageTier],
           subtext: labels.averageTier(data.averageTier),
         },

@@ -12,7 +12,12 @@ import {
   TIER_COLORS,
   type TierOrError,
 } from "#modules/rngdle/services/scoring.js";
-import { formatCompact, formatIndex, formatSpaced } from "./format.js";
+import {
+  formatCompact,
+  formatEp,
+  formatIndex,
+  formatSpaced,
+} from "./format.js";
 import {
   drawCellText,
   drawDelta,
@@ -116,10 +121,6 @@ export interface OverallLeaderboardLabels {
   score: string;
 }
 
-function ep(value: number): string {
-  return `${formatSpaced(value)} EP`;
-}
-
 function trend(current: number, previous: number | null): Trend | undefined {
   if (previous === null || current === previous) {
     return undefined;
@@ -142,7 +143,7 @@ export async function renderDailyLeaderboard(
   const boxes: StatBox[] = [
     {
       title: labels.averageScore,
-      value: ep(average.score),
+      value: formatEp(average.score),
       color: TIER_COLORS[average.tier],
       highlight: false,
       trend: trend(average.score, average.previous),
@@ -243,7 +244,7 @@ export async function renderOverallLeaderboard(
         { title: labels.rolls, value: formatSpaced(data.rolls) },
         {
           title: labels.averageScore,
-          value: ep(data.average.score),
+          value: formatEp(data.average.score),
           color: TIER_COLORS[data.average.tier],
           subtext: labels.perRoll,
         },

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   formatCompact,
+  formatEp,
   formatExpected,
   formatIndex,
   formatShort,
@@ -69,5 +70,12 @@ describe("formatExpected", () => {
     ["fr", 3_086_400, "3.1M"],
   ])("formats %s %s as %s", (locale, value, text) => {
     expect(formatExpected(locale, value)).toBe(text);
+  });
+});
+
+describe("formatEp", () => {
+  it("spaces the thousands and adds the unit", () => {
+    expect(formatEp(41731)).toBe("41 731 EP");
+    expect(formatEp(0)).toBe("0 EP");
   });
 });

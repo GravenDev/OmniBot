@@ -19,6 +19,10 @@ export function formatSpaced(value: number): string {
   );
 }
 
+export function formatEp(value: number): string {
+  return `${formatSpaced(value)} EP`;
+}
+
 export function formatCompact(value: number): string {
   return abbreviate(value, ["B", "M", "k"], (scaled) => scaled.toFixed(1));
 }

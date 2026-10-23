@@ -16,7 +16,7 @@ import {
   type TierOrError,
 } from "#modules/rngdle/services/scoring.js";
 import { PROFILE_BREAKDOWN, tierBreakdown } from "./cards.js";
-import { formatSpaced } from "./format.js";
+import { formatEp, formatSpaced } from "./format.js";
 import { ACCENT } from "./theme.js";
 import type { TimelineMonth } from "./timeline.js";
 
@@ -228,7 +228,7 @@ export function renderTrend(
 ): Promise<Buffer> {
   const rollBox = (title: string, roll: TrendBestRoll): StatBox => ({
     title,
-    value: `${formatSpaced(roll.score)} EP`,
+    value: formatEp(roll.score),
     color: TIER_COLORS[roll.tier],
     highlight: true,
     subtext: `${labels.roll(formatSpaced(roll.number))} · ${roll.dateText}`,
@@ -248,7 +248,7 @@ export function renderTrend(
       [
         {
           title: labels.averageScore,
-          value: `${formatSpaced(data.averageScore)} EP`,
+          value: formatEp(data.averageScore),
           color: TIER_COLORS[data.averageTier],
           subtext:
             data.change === null ? labels.averageOver(total) : labels.previous,
