@@ -1,6 +1,6 @@
 {
   "config.leaderboardChannel.name": "Salon du classement quotidien",
-  "config.leaderboardChannel.description": "Salon où le classement de la veille est posté chaque jour à 01:00 UTC, ainsi que les nouveaux tirages des membres liés.",
+  "config.leaderboardChannel.description": "Salon où le classement de la veille est posté chaque jour à 01:00 UTC, et où les membres collent leurs résultats pour obtenir une carte.",
   "config.shareCards.name": "Cartes sur les résultats partagés",
   "config.shareCards.description": "Répond par une carte quand un membre colle son résultat RNGdle dans le salon du classement quotidien.",
 
@@ -39,11 +39,6 @@
   "remind.disabled": "Vous ne recevrez plus de rappel RNGdle.",
   "remind.notRegistered": "Il faut un compte RNGdle lié pour recevoir les rappels : `/rngdle link <pseudo>`.",
 
-  "announce.message": "🎲 {{user}} vient de tirer son RNGdle du jour !",
-  "announce.enabled": "C'est noté : vos nouveaux tirages seront publiés dans {{channel}}.",
-  "announce.enabledNoChannel": "C'est noté. Vos tirages seront publiés dès que le salon du classement quotidien sera configuré.",
-  "announce.disabled": "Vos tirages ne seront plus publiés automatiquement.",
-  "announce.notRegistered": "C'est noté, mais il faut un compte RNGdle lié pour que vos tirages soient publiés : `/rngdle link <pseudo>`.",
   "card.number": "Numéro du jour",
   "card.score": "Score",
   "card.badges": "Badges",

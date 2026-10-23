@@ -4,7 +4,7 @@ export const rngdleConfigSchema = {
   leaderboardChannel: {
     name: "Daily leaderboard channel",
     description:
-      "Channel where yesterday's leaderboard is posted every day at 01:00 UTC, along with the linked members' new rolls.",
+      "Channel where yesterday's leaderboard is posted every day at 01:00 UTC, and where members paste their results to get a card.",
     type: ConfigType.CHANNEL,
   },
   shareCards: {

@@ -1,20 +1,13 @@
-import { MessageFlags } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StoredRoll } from "./store.js";
 
 const mocks = vi.hoisted(() => ({
-  activated: vi.fn(async (): Promise<string[]> => ["g1"]),
-  config: vi.fn(),
-  mentionable: vi.fn(async (_guildId: string, ids: string[]) => ids),
-  syncGuild: vi.fn(async () => undefined),
   refreshAccount: vi.fn(async (_account: unknown): Promise<void> => undefined),
   render: vi.fn(async () => Buffer.from("png")),
   fetchBadges: vi.fn(async (): Promise<unknown> => null),
   store: {
     claimAnnouncement: vi.fn(async () => true),
     releaseAnnouncement: vi.fn(async () => undefined),
-    announcedUsers: vi.fn(async () => new Set<string>()),
-    announcementOptOuts: vi.fn(async () => new Set<string>()),
     pruneAnnouncements: vi.fn(async () => undefined),
     rolls: vi.fn(async (): Promise<StoredRoll[]> => []),
     account: vi.fn(async (): Promise<unknown> => null),
@@ -29,15 +22,6 @@ vi.mock("#lib/logger.js", () => {
   const logger = { error: vi.fn(), warn: vi.fn() };
   return { loggerMaker: () => logger };
 });
-vi.mock("#core/services/module.service.js", () => ({
-  default: { getActivatedGuildIds: mocks.activated },
-}));
-vi.mock("#core/services/config.service.js", () => ({
-  default: { getConfigForModuleIn: mocks.config },
-}));
-vi.mock("#core/services/mention.service.js", () => ({
-  default: { mentionable: mocks.mentionable },
-}));
 vi.mock("#lib/players.js", () => ({
   resolvePlayers: async () => new Map(),
 }));
@@ -47,14 +31,10 @@ vi.mock("#modules/rngdle/rendering/roll-card.js", () => ({
 vi.mock("./badges.js", () => ({ fetchRollBadges: mocks.fetchBadges }));
 vi.mock("./store.js", () => ({ default: mocks.store }));
 vi.mock("./sync.js", () => ({
-  default: { syncGuild: mocks.syncGuild, refreshAccount: mocks.refreshAccount },
+  default: { refreshAccount: mocks.refreshAccount },
 }));
 
-import {
-  announceRolls,
-  answerShare,
-  computeHighlights,
-} from "./announcements.js";
+import { answerShare, computeHighlights, pruneCards } from "./announcements.js";
 
 const ACCOUNT = { guildId: "g1", userId: "u1", username: "Alice" };
 const NOW = new Date("2026-10-22T12:00:00Z");
@@ -78,10 +58,6 @@ function configWith(values: Record<string, unknown>) {
   return { get: (key: string) => values[key], t, locale: "fr" };
 }
 
-function leaderboardChannel() {
-  return { id: "c1", isSendable: () => true, send: vi.fn(async () => ({})) };
-}
-
 function shareMessage(content = SHARE) {
   return {
     content,
@@ -102,8 +78,6 @@ function shareMessage(content = SHARE) {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.store.claimAnnouncement.mockResolvedValue(true);
-  mocks.store.announcedUsers.mockResolvedValue(new Set());
-  mocks.store.announcementOptOuts.mockResolvedValue(new Set());
   mocks.store.rolls.mockResolvedValue([]);
   mocks.store.account.mockResolvedValue(null);
   mocks.fetchBadges.mockResolvedValue(null);
@@ -350,63 +324,12 @@ describe("answerShare", () => {
   });
 });
 
-describe("announceRolls", () => {
-  it("posts each new roll once, with a silent mention", async () => {
-    const channel = leaderboardChannel();
-    mocks.config.mockResolvedValue(configWith({ leaderboardChannel: channel }));
-    mocks.store.rolls.mockResolvedValue([roll("u1", 10), roll("u2", 20)]);
-    mocks.store.announcedUsers.mockResolvedValue(new Set(["u2"]));
-    mocks.mentionable.mockResolvedValue([]);
+describe("pruneCards", () => {
+  it("keeps the cards of today and yesterday", async () => {
+    await pruneCards(NOW);
 
-    await announceRolls({} as never, { id: "rngdle" } as never, NOW);
-
-    expect(mocks.syncGuild).toHaveBeenCalledWith("g1");
-    expect(mocks.store.rolls).toHaveBeenCalledWith("g1", {
-      from: new Date("2026-10-22T09:00:00Z"),
-    });
-    expect(channel.send).toHaveBeenCalledTimes(1);
-    expect(channel.send).toHaveBeenCalledWith(
-      expect.objectContaining({
-        content: 'announce.message {"user":"<@u1>"}',
-        flags: MessageFlags.SuppressNotifications,
-        allowedMentions: { users: [] },
-      })
-    );
-  });
-
-  it("skips the members who turned their announcements off", async () => {
-    const channel = leaderboardChannel();
-    mocks.config.mockResolvedValue(configWith({ leaderboardChannel: channel }));
-    mocks.store.rolls.mockResolvedValue([roll("u1", 10)]);
-    mocks.store.announcementOptOuts.mockResolvedValue(new Set(["u1"]));
-
-    await announceRolls({} as never, { id: "rngdle" } as never, NOW);
-
-    expect(mocks.store.claimAnnouncement).not.toHaveBeenCalled();
-    expect(channel.send).not.toHaveBeenCalled();
-  });
-
-  it("does nothing on a server without a daily leaderboard channel", async () => {
-    mocks.config.mockResolvedValue(configWith({}));
-
-    await announceRolls({} as never, { id: "rngdle" } as never, NOW);
-
-    expect(mocks.syncGuild).not.toHaveBeenCalled();
-    expect(mocks.store.rolls).not.toHaveBeenCalled();
-  });
-
-  it("frees the day when the post fails, so the next run retries", async () => {
-    const channel = leaderboardChannel();
-    channel.send.mockRejectedValue(new Error("boom"));
-    mocks.config.mockResolvedValue(configWith({ leaderboardChannel: channel }));
-    mocks.store.rolls.mockResolvedValue([roll("u1", 10)]);
-
-    await announceRolls({} as never, { id: "rngdle" } as never, NOW);
-
-    expect(mocks.store.releaseAnnouncement).toHaveBeenCalledWith(
-      "g1",
-      "u1",
-      DAY
+    expect(mocks.store.pruneAnnouncements).toHaveBeenCalledWith(
+      new Date("2026-10-21T00:00:00Z")
     );
   });
 });

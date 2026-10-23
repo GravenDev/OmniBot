@@ -1,18 +1,13 @@
 import {
   AttachmentBuilder,
-  MessageFlags,
   PermissionFlagsBits,
   type Client,
   type Message,
 } from "discord.js";
-import configService from "#core/services/config.service.js";
-import mentionService from "#core/services/mention.service.js";
-import moduleService from "#core/services/module.service.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
 import { PALETTE } from "#lib/imaging.js";
 import { loggerMaker } from "#lib/logger.js";
-import type { Module } from "#lib/module.js";
 import { resolvePlayers } from "#lib/players.js";
 import { TREND_COLORS } from "#lib/stat-card.js";
 import { formatSpaced } from "#modules/rngdle/rendering/format.js";
@@ -33,7 +28,6 @@ import sync from "./sync.js";
 const logger = loggerMaker("rngdle");
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const ANNOUNCE_WINDOW_MS = 3 * 60 * 60 * 1000;
 const AVERAGE_MIN_ROLLS = 5;
 const RANK_ICONS = ["🥇", "🥈", "🥉"];
 const CARD_NAME = "rngdle-roll.png";
@@ -212,95 +206,10 @@ export async function buildCard(
   );
 }
 
-async function announce(
-  client: Client<true>,
-  config: Config,
-  guildId: string,
-  roll: StoredRoll
-): Promise<void> {
-  const channel = config.get("leaderboardChannel");
-  if (!channel?.isSendable()) {
-    return;
-  }
-  const day = startOfUtcDay(roll.rolledAt);
-  if (
-    !(await store.claimAnnouncement(guildId, roll.userId, day, roll.number))
-  ) {
-    return;
-  }
-  try {
-    const image = await buildCard(
-      { client, guildId, t: config.t, locale: config.locale },
-      roll,
-      null,
-      true
-    );
-    const mentionable = await mentionService.mentionable(guildId, [
-      roll.userId,
-    ]);
-    await channel.send({
-      content: config.t("announce.message", { user: `<@${roll.userId}>` }),
-      files: [new AttachmentBuilder(image, { name: CARD_NAME })],
-      flags: MessageFlags.SuppressNotifications,
-      allowedMentions: { users: mentionable },
-    });
-  } catch (err) {
-    await store.releaseAnnouncement(guildId, roll.userId, day);
-    throw err;
-  }
-}
-
-async function announceGuild(
-  client: Client<true>,
-  module: Module<RngdleConfigSchema>,
-  guildId: string,
-  now: Date
-): Promise<void> {
-  const config = await configService.getConfigForModuleIn(module, guildId);
-  if (!config.get("leaderboardChannel")?.isSendable()) {
-    return;
-  }
-  await sync.syncGuild(guildId);
-
-  const day = startOfUtcDay(now);
-  const since = new Date(
-    Math.max(day.getTime(), now.getTime() - ANNOUNCE_WINDOW_MS)
-  );
-  const [rolls, announced, optOuts] = await Promise.all([
-    store.rolls(guildId, { from: since }),
-    store.announcedUsers(guildId, day),
-    store.announcementOptOuts(guildId),
-  ]);
-  for (const roll of rolls) {
-    if (announced.has(roll.userId) || optOuts.has(roll.userId)) {
-      continue;
-    }
-    announced.add(roll.userId);
-    await announce(client, config, guildId, roll).catch((err: unknown) =>
-      logger.error(
-        { err },
-        `Failed to announce a roll | guildId = ${guildId} | userId = ${roll.userId}`
-      )
-    );
-  }
-}
-
-export async function announceRolls(
-  client: Client<true>,
-  module: Module<RngdleConfigSchema>,
-  now = new Date()
-): Promise<void> {
+export async function pruneCards(now = new Date()): Promise<void> {
   await store.pruneAnnouncements(
     new Date(startOfUtcDay(now).getTime() - DAY_MS)
   );
-  for (const guildId of await moduleService.getActivatedGuildIds(module.id)) {
-    await announceGuild(client, module, guildId, now).catch((err: unknown) =>
-      logger.error(
-        { err },
-        `Failed to announce the rolls | guildId = ${guildId}`
-      )
-    );
-  }
 }
 
 function canReply(message: Message<true>): boolean {

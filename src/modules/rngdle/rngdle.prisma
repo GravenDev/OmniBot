@@ -41,10 +41,3 @@ model RngdleAnnouncement {
 
   @@id([guildId, userId, day])
 }
-
-model RngdleAnnouncementOptOut {
-  guildId String
-  userId  String
-
-  @@id([guildId, userId])
-}

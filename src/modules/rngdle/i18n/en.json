@@ -1,6 +1,6 @@
 {
   "config.leaderboardChannel.name": "Daily leaderboard channel",
-  "config.leaderboardChannel.description": "Channel where yesterday's leaderboard is posted every day at 01:00 UTC, along with the linked members' new rolls.",
+  "config.leaderboardChannel.description": "Channel where yesterday's leaderboard is posted every day at 01:00 UTC, and where members paste their results to get a card.",
   "config.shareCards.name": "Cards on shared results",
   "config.shareCards.description": "Replies with a card when a member pastes their RNGdle result in the daily leaderboard channel.",
 
@@ -39,11 +39,6 @@
   "remind.disabled": "You won't get RNGdle reminders anymore.",
   "remind.notRegistered": "You need a linked RNGdle account to get reminders: `/rngdle link <username>`.",
 
-  "announce.message": "🎲 {{user}} just rolled today's RNGdle!",
-  "announce.enabled": "Done: your new rolls will be posted in {{channel}}.",
-  "announce.enabledNoChannel": "Done. Your rolls will be posted once the daily leaderboard channel is configured.",
-  "announce.disabled": "Your rolls won't be posted automatically anymore.",
-  "announce.notRegistered": "Done, but your rolls can only be posted once you link your RNGdle account: `/rngdle link <username>`.",
   "card.number": "Today's number",
   "card.score": "Score",
   "card.badges": "Badges",
