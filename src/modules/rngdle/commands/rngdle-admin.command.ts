@@ -2,6 +2,7 @@ import {
   EmbedBuilder,
   InteractionContextType,
   MessageFlags,
+  PermissionFlagsBits,
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
 } from "discord.js";
@@ -14,7 +15,6 @@ import store from "#modules/rngdle/services/store.js";
 import sync, { FullSyncCooldownError } from "#modules/rngdle/services/sync.js";
 import { Colors } from "#utils/colors.js";
 
-const PERMISSION_ADMINISTRATOR = 0x8;
 const USERNAME_MAX_LENGTH = 64;
 
 const logger = loggerMaker("rngdle");
@@ -154,7 +154,7 @@ export default declareCommand<RngdleConfigSchema>({
     .setName("rngdle-admin")
     .setDescription("RNGdle admin commands")
     .setDescriptionLocalizations({ fr: "Administration RNGdle" })
-    .setDefaultMemberPermissions(PERMISSION_ADMINISTRATOR)
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .setContexts([InteractionContextType.Guild])
     .addSubcommand((sub) =>
       sub

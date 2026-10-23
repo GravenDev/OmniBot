@@ -1,6 +1,7 @@
 import {
   InteractionContextType,
   MessageFlags,
+  PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
@@ -10,7 +11,6 @@ import fourHourGameService, {
   type SetScoreResult,
 } from "#modules/four-hour-game/services/four-hour-game.service.js";
 
-const PERMISSION_ADMINISTRATOR = 0x8;
 const MAX_SCORE = 1_000_000_000;
 
 const logger = loggerMaker("four-hour-game");
@@ -29,7 +29,7 @@ export default declareCommand<FourHourGameConfigSchema>({
     .setName("jd4h-admin")
     .setDescription("4h game admin commands")
     .setDescriptionLocalizations({ fr: "Administration du jeu des 4h" })
-    .setDefaultMemberPermissions(PERMISSION_ADMINISTRATOR)
+    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .setContexts([InteractionContextType.Guild])
     .addSubcommand((sub) =>
       sub
