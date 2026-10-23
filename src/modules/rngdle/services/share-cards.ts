@@ -1,13 +1,9 @@
-import {
-  AttachmentBuilder,
-  PermissionFlagsBits,
-  type Client,
-  type Message,
-} from "discord.js";
+import { AttachmentBuilder, type Client, type Message } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
 import { PALETTE } from "#lib/imaging.js";
 import { loggerMaker } from "#lib/logger.js";
+import { canReplyWithFile } from "#lib/permissions.js";
 import { resolvePlayers } from "#lib/players.js";
 import { TREND_COLORS } from "#lib/stat-card.js";
 import { formatSpaced } from "#modules/rngdle/rendering/format.js";
@@ -226,20 +222,6 @@ export async function pruneCards(now = new Date()): Promise<void> {
   await store.pruneCardClaims(new Date(startOfUtcDay(now).getTime() - DAY_MS));
 }
 
-function canReply(message: Message<true>): boolean {
-  const permissions = message.channel.permissionsFor(message.client.user);
-  return (
-    permissions?.has([
-      PermissionFlagsBits.ViewChannel,
-      message.channel.isThread()
-        ? PermissionFlagsBits.SendMessagesInThreads
-        : PermissionFlagsBits.SendMessages,
-      PermissionFlagsBits.AttachFiles,
-      PermissionFlagsBits.ReadMessageHistory,
-    ]) ?? false
-  );
-}
-
 interface Verified {
   roll: CardRoll;
   linked: boolean;
@@ -330,7 +312,7 @@ export async function answerShare(
     return;
   }
   const shared = parseShare(message.content);
-  if (!shared || !canReply(message)) {
+  if (!shared || !canReplyWithFile(message)) {
     return;
   }
 
