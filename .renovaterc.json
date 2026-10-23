@@ -36,6 +36,12 @@
       "automerge": true
     },
     {
+      "description": "Node.js security fixes ship as patch releases, and no image scanner sees the runtime itself (Trivy does not catalogue the node binary; Grype matches it through NVD, which lags). A 1-day delay instead of 7 brings them in time; the docker check still gates the merge.",
+      "matchPackageNames": ["node"],
+      "matchUpdateTypes": ["patch"],
+      "minimumReleaseAge": "1 day"
+    },
+    {
       "description": "Pin digests for all GitHub Actions",
       "matchManagers": ["github-actions"],
       "pinDigests": true
