@@ -1,3 +1,4 @@
+import { utcDayNumber } from "./days.js";
 import { TIERS, type ScoreTable, type Tier } from "./scoring.js";
 import type { StoredRoll } from "./store.js";
 
@@ -28,19 +29,14 @@ export interface Streaks {
 }
 
 const TIER_LEADERS = 3;
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-function utcDay(date: Date): number {
-  return Math.floor(date.getTime() / DAY_MS);
-}
 
 export function computeStreaks(
   rolls: Pick<StoredRoll, "rolledAt">[],
   now: Date
 ): Streaks {
-  const days = [...new Set(rolls.map((roll) => utcDay(roll.rolledAt)))].sort(
-    (a, b) => a - b
-  );
+  const days = [
+    ...new Set(rolls.map((roll) => utcDayNumber(roll.rolledAt))),
+  ].sort((a, b) => a - b);
 
   let best = 0;
   let run = 0;
@@ -51,7 +47,7 @@ export function computeStreaks(
     previous = day;
   }
 
-  const today = utcDay(now);
+  const today = utcDayNumber(now);
   const current =
     previous !== undefined && (previous === today || previous === today - 1)
       ? run

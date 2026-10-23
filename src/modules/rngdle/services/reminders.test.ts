@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  nextUtcMidnight,
-  reminderMessages,
-  reminderTimestamp,
-  startOfUtcDay,
-} from "./reminders.js";
+import { nextUtcMidnight, startOfUtcDay } from "./days.js";
+import { reminderMessages, reminderTimestamp } from "./reminders.js";
 
 const t = (key: string, options: Record<string, unknown> = {}) =>
   `${key}|${options["users"]}|${options["deadline"]}`;

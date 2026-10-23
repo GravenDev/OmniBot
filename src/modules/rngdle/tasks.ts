@@ -9,12 +9,9 @@ import { navigationRow } from "./interactions/navigation.button.js";
 import type { RngdleConfigSchema } from "./rngdle.config.js";
 import { pruneCards } from "./services/announcements.js";
 import { fetchScoreTable } from "./services/api.js";
+import { startOfUtcDay } from "./services/days.js";
 import { buildDailyMessage } from "./services/recap.js";
-import {
-  REMINDER_HOUR_UTC,
-  reminderMessages,
-  startOfUtcDay,
-} from "./services/reminders.js";
+import { REMINDER_HOUR_UTC, reminderMessages } from "./services/reminders.js";
 import store from "./services/store.js";
 import sync from "./services/sync.js";
 import { dailyLeaderboard, dailyRecap } from "./services/views.js";

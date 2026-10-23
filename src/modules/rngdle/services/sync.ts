@@ -4,6 +4,7 @@ import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
 import { fetchUserRolls, RngdleUserNotFoundError } from "./api.js";
+import { startOfUtcDay } from "./days.js";
 import store, { type Account } from "./store.js";
 
 const logger = loggerMaker("rngdle");
@@ -24,12 +25,6 @@ export class FullSyncCooldownError extends Error {
   constructor(readonly retryAt: Date) {
     super("A full sync ran recently on this guild");
   }
-}
-
-function startOfUtcDay(date: Date): Date {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
-  );
 }
 
 class RngdleSync implements Service {

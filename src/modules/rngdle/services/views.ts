@@ -28,6 +28,7 @@ import {
   renderVersus,
   type VersusPlayer,
 } from "#modules/rngdle/rendering/versus.js";
+import { DAY_MS, utcDayNumber } from "./days.js";
 import { computeDailyRecap, type DailyRecap } from "./recap.js";
 import { formatPercent, TIERS, type Tier } from "./scoring.js";
 import {
@@ -54,7 +55,6 @@ export const TREND_DAYS = [30, 90, 365] as const;
 export const TREND_DEFAULT_DAYS = 90;
 const TREND_MIN_PREVIOUS = 5;
 const CACHE_TTL_MS = 15_000;
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 const cache = new RevisionCache(CACHE_TTL_MS);
 
@@ -118,10 +118,6 @@ export function periodRange(period: Period, now = new Date()): DateRange {
     return { from: new Date(start), to: new Date(start + 7 * DAY_MS) };
   }
   return {};
-}
-
-function utcDayKey(date: Date): number {
-  return Math.floor(date.getTime() / DAY_MS);
 }
 
 function averageScore(rolls: StoredRoll[]): number {
@@ -480,7 +476,7 @@ export function historyCard(
   requestedPage = 1
 ): Promise<HistoryPage | null> {
   const size = Math.min(Math.max(count, HISTORY_MIN), HISTORY_MAX);
-  const today = utcDayKey(now);
+  const today = utcDayNumber(now);
   const key = `history:${account.userId}:${size}:${today}:${requestedPage}`;
   return cached(context, key, async () => {
     const [rolls, table] = await Promise.all([
@@ -515,7 +511,7 @@ export function historyCard(
     const currentYear = now.getUTCFullYear();
     const { t } = context;
     const rows = recent.map((roll) => {
-      const isToday = utcDayKey(roll.rolledAt) === today;
+      const isToday = utcDayNumber(roll.rolledAt) === today;
       const format =
         roll.rolledAt.getUTCFullYear() === currentYear
           ? formatDate
@@ -607,7 +603,7 @@ export function timelineCard(
   account: Account,
   now: Date = new Date()
 ): Promise<Buffer | null> {
-  const key = `timeline:${account.userId}:${utcDayKey(now)}`;
+  const key = `timeline:${account.userId}:${utcDayNumber(now)}`;
   return cached(context, key, async () => {
     const [rolls, table] = await Promise.all([
       store.rolls(account.guildId, {
@@ -692,7 +688,7 @@ export function trendCard(
   days: number = TREND_DEFAULT_DAYS,
   now: Date = new Date()
 ): Promise<Buffer | null> {
-  const key = `trend:${account.userId}:${days}:${utcDayKey(now)}`;
+  const key = `trend:${account.userId}:${days}:${utcDayNumber(now)}`;
   return cached(context, key, async () => {
     const from = utcDayRange(days - 1, now)[0];
     const to = utcDayRange(0, now)[1];

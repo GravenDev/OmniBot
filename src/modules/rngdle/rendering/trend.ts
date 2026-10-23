@@ -9,6 +9,7 @@ import {
   renderStatCard,
   type StatBox,
 } from "#lib/stat-card.js";
+import { DAY_MS } from "#modules/rngdle/services/days.js";
 import {
   TIER_COLORS,
   type Tier,
@@ -23,7 +24,6 @@ const SHORT_WINDOW = 7;
 const LONG_WINDOW = 30;
 const LONG_PERIOD = 90;
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const CHART_HEIGHT = 300;
 const CHART_TOP = 56;
 const CHART_BOTTOM = 44;
