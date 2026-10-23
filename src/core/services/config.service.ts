@@ -8,6 +8,7 @@ import {
   type ConfigSchema,
 } from "#lib/config.js";
 import database from "#lib/database.js";
+import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { declareService } from "#lib/service.js";
@@ -19,7 +20,8 @@ const pendingLoads = new Map<
   string,
   Promise<Record<string, ConfigData<ConfigSchema>>>
 >();
-const writeChains = new Map<string, Promise<unknown>>();
+// Config writes of a guild run one at a time.
+const writes = new KeyedQueue();
 
 class ConfigService {
   /**
@@ -134,22 +136,16 @@ class ConfigService {
       return { locale, updatedModuleConfig };
     };
 
-    const previous = writeChains.get(guildId) ?? Promise.resolve();
-    const next = previous.then(write, write);
-    const settled = next.catch(() => undefined);
-    writeChains.set(guildId, settled);
-    void settled.then(() => {
-      if (writeChains.get(guildId) === settled) writeChains.delete(guildId);
-    });
-
-    return next.then(async ({ locale, updatedModuleConfig }) => {
-      const deserializedConfig = await this.deserializeConfigData(
-        module,
-        updatedModuleConfig,
-        guildId
-      );
-      return new ConfigProvider(module, deserializedConfig, locale);
-    });
+    return writes
+      .run(guildId, write)
+      .then(async ({ locale, updatedModuleConfig }) => {
+        const deserializedConfig = await this.deserializeConfigData(
+          module,
+          updatedModuleConfig,
+          guildId
+        );
+        return new ConfigProvider(module, deserializedConfig, locale);
+      });
   }
 
   async getFullConfigForGuild(
