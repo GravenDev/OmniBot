@@ -7,7 +7,7 @@ import {
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
-import { fetchAvatar } from "#lib/imaging.js";
+import { fetchAvatar, fetchImage } from "#lib/imaging.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import { resolvePlayers } from "#lib/players.js";
 import { RevisionCache } from "#lib/revision-cache.js";
@@ -109,11 +109,29 @@ async function buildLeaderboardImage(
     return null;
   }
 
-  return renderLeaderboard(rows, {
-    rank: config.t("leaderboard.header.rank"),
-    player: config.t("leaderboard.header.player"),
-    score: config.t("leaderboard.header.score"),
-  });
+  const guild =
+    interaction.guild ??
+    (await interaction.client.guilds
+      .fetch(interaction.guildId)
+      .catch(() => null));
+  const icon = await fetchImage(
+    guild?.iconURL({ extension: "png", size: 128 }) ?? null
+  );
+  return renderLeaderboard(
+    { icon, rows },
+    {
+      locale: config.locale,
+      title: config.t("leaderboard.title"),
+      subtitle: config.t(
+        board === "daily"
+          ? "leaderboard.daily.subtitle"
+          : "leaderboard.subtitle"
+      ),
+      rank: config.t("leaderboard.header.rank"),
+      player: config.t("leaderboard.header.player"),
+      score: config.t("leaderboard.header.score"),
+    }
+  );
 }
 
 async function showLeaderboard(

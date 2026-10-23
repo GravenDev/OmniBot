@@ -37,9 +37,11 @@ const renderStatCard = vi.hoisted(() => vi.fn());
 vi.mock("#lib/stat-card.js", () => ({ renderStatCard }));
 
 const fetchAvatar = vi.hoisted(() => vi.fn());
+const fetchImage = vi.hoisted(() => vi.fn());
 vi.mock("#lib/imaging.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("#lib/imaging.js")>()),
   fetchAvatar,
+  fetchImage,
 }));
 
 const { default: command } = await import("./jd4h.command.js");
@@ -76,6 +78,7 @@ beforeEach(() => {
   getRevision.mockReset().mockReturnValue(++revision);
   renderStatCard.mockReset().mockResolvedValue(PNG);
   fetchAvatar.mockReset().mockResolvedValue(null);
+  fetchImage.mockReset().mockResolvedValue(null);
 });
 
 const keyConfig = {
@@ -88,6 +91,7 @@ let guild = 0;
 function leaderboardInteraction(type: string | null = null) {
   return {
     guildId: `guild-${++guild}`,
+    guild: { iconURL: () => "https://cdn/icon.png" },
     client: { id: "client" },
     inGuild: () => true,
     options: { getSubcommand: () => "leaderboard", getString: () => type },
@@ -124,10 +128,38 @@ describe("/jd4h leaderboard", () => {
       interaction.guildId,
       ["alice", "ghost", "bob"]
     );
-    expect(renderLeaderboard.mock.calls[0]![0]).toEqual([
+    expect(renderLeaderboard.mock.calls[0]![0]).toHaveProperty("rows", [
       { rank: 1, name: "Alice (server)", score: 12, avatar: null },
       { rank: 3, name: "Bob (server)", score: 3, avatar: null },
     ]);
+  });
+
+  it.each([
+    [null, "leaderboard.subtitle"],
+    ["daily", "leaderboard.daily.subtitle"],
+  ])("titles the %s card and shows the server icon", async (type, subtitle) => {
+    const icon = { width: 128 };
+    fetchImage.mockResolvedValue(icon);
+    getLeaderboard.mockResolvedValue([{ rank: 1, userId: "alice", score: 12 }]);
+    getDailyStandings.mockResolvedValue([
+      { rank: 1, userId: "alice", score: 3 },
+    ]);
+    resolvePlayers.mockResolvedValue(
+      new Map([["alice", { name: "Alice", avatar: null }]])
+    );
+
+    await command.execute(leaderboardInteraction(type), keyConfig);
+
+    expect(fetchImage).toHaveBeenCalledWith("https://cdn/icon.png");
+    expect(renderLeaderboard.mock.calls[0]![0]).toHaveProperty("icon", icon);
+    expect(renderLeaderboard.mock.calls[0]![1]).toEqual({
+      locale: "en",
+      title: "leaderboard.title",
+      subtitle,
+      rank: "leaderboard.header.rank",
+      player: "leaderboard.header.player",
+      score: "leaderboard.header.score",
+    });
   });
 
   it("answers with the empty message when no player can be found", async () => {
@@ -157,7 +189,7 @@ describe("/jd4h leaderboard", () => {
     await command.execute(interaction, keyConfig);
 
     expect(resolvePlayers.mock.calls.at(-1)![2]).toHaveLength(10);
-    expect(renderLeaderboard.mock.calls[0]![0]).toEqual([
+    expect(renderLeaderboard.mock.calls[0]![0]).toHaveProperty("rows", [
       { rank: 1, name: "One", score: 20, avatar: null },
     ]);
     expect(interaction.editReply).toHaveBeenCalledWith(
@@ -180,7 +212,11 @@ describe("/jd4h leaderboard", () => {
     await command.execute(hold, keyConfig);
     await command.execute(daily, keyConfig);
 
-    expect(renderLeaderboard.mock.calls.map(([rows]) => rows)).toEqual([
+    expect(
+      renderLeaderboard.mock.calls.map(
+        ([data]) => (data as { rows: unknown }).rows
+      )
+    ).toEqual([
       [{ rank: 1, name: "Alice", score: 12, avatar: null }],
       [{ rank: 1, name: "Alice", score: 3, avatar: null }],
     ]);

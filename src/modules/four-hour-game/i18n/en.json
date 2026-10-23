@@ -39,12 +39,15 @@
   "duration.minutes": "{{value}}m",
   "duration.seconds": "{{value}}s",
 
+  "leaderboard.title": "4h game",
+  "leaderboard.subtitle": "Points leaderboard",
   "leaderboard.empty": "Nobody has scored yet.",
   "leaderboard.daily.title": "**Daily points**: one point each day for the message that went unanswered the longest.",
+  "leaderboard.daily.subtitle": "Daily points",
   "leaderboard.daily.empty": "Nobody has won a daily point yet.",
   "leaderboard.header.rank": "Rank",
   "leaderboard.header.player": "Player",
-  "leaderboard.header.score": "Score",
+  "leaderboard.header.score": "Points",
 
   "admin.set.created": "{{user}}'s score set to **{{score}}**.",
   "admin.set.updated": "{{user}}'s score updated to **{{score}}**.",
