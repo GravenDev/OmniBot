@@ -169,6 +169,17 @@ class RngdleStore implements Service {
     return count > 0;
   }
 
+  async hasAnnouncement(
+    guildId: string,
+    userId: string,
+    day: Date
+  ): Promise<boolean> {
+    const count = await prisma.rngdleAnnouncement.count({
+      where: { guildId, userId, day },
+    });
+    return count > 0;
+  }
+
   async releaseAnnouncement(
     guildId: string,
     userId: string,
