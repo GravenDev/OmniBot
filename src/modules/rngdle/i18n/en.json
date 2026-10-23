@@ -1,8 +1,8 @@
 {
-  "config.leaderboardChannel.name": "Daily leaderboard channel",
-  "config.leaderboardChannel.description": "Channel where yesterday's leaderboard is posted every day at 01:00 UTC, and where members paste their results to get a card.",
+  "config.leaderboardChannel.name": "RNGdle channel",
+  "config.leaderboardChannel.description": "Channel for the daily leaderboard and reminder, where members paste their results to get a card.",
   "config.shareCards.name": "Cards on shared results",
-  "config.shareCards.description": "Replies with a card when a member pastes their RNGdle result in the daily leaderboard channel.",
+  "config.shareCards.description": "Replies with a card when a member pastes their RNGdle result in the RNGdle channel.",
 
   "leaderboard.header.player": "Player",
   "leaderboard.header.number": "Roll",
@@ -34,7 +34,7 @@
 
   "remind.message": "⏰ RNGdle reminder: {{users}}, you haven't rolled today yet! Today's roll ends {{deadline}}: <https://www.rngdle.com>",
   "remind.enabled": "Done: if you haven't rolled yet, you'll be pinged every day at {{time}} in {{channel}}.",
-  "remind.enabledNoChannel": "Done. Reminders are posted in the daily leaderboard channel, which an administrator still has to set with `/config rngdle`.",
+  "remind.enabledNoChannel": "Done. Reminders are posted in the RNGdle channel, which an administrator still has to set with `/config rngdle`.",
   "remind.pingsDisabled": "You turned your mentions off with `/pings`: your name will show in the reminder, but you won't be notified.",
   "remind.disabled": "You won't get RNGdle reminders anymore.",
   "remind.notRegistered": "You need a linked RNGdle account to get reminders: `/rngdle link <username>`.",

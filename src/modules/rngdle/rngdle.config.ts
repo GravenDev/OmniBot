@@ -2,15 +2,15 @@ import { ConfigType, type ConfigSchema } from "#lib/config.js";
 
 export const rngdleConfigSchema = {
   leaderboardChannel: {
-    name: "Daily leaderboard channel",
+    name: "RNGdle channel",
     description:
-      "Channel where yesterday's leaderboard is posted every day at 01:00 UTC, and where members paste their results to get a card.",
+      "Channel for the daily leaderboard and reminder, where members paste their results to get a card.",
     type: ConfigType.CHANNEL,
   },
   shareCards: {
     name: "Cards on shared results",
     description:
-      "Replies with a card when a member pastes their RNGdle result in the daily leaderboard channel.",
+      "Replies with a card when a member pastes their RNGdle result in the RNGdle channel.",
     type: ConfigType.BOOLEAN,
     defaultValue: true,
   },

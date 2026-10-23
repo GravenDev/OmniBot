@@ -1,8 +1,8 @@
 {
-  "config.leaderboardChannel.name": "Salon du classement quotidien",
-  "config.leaderboardChannel.description": "Salon où le classement de la veille est posté chaque jour à 01:00 UTC, et où les membres collent leurs résultats pour obtenir une carte.",
+  "config.leaderboardChannel.name": "Salon RNGdle",
+  "config.leaderboardChannel.description": "Salon du classement et du rappel quotidiens, où les membres collent leurs résultats pour obtenir une carte.",
   "config.shareCards.name": "Cartes sur les résultats partagés",
-  "config.shareCards.description": "Répond par une carte quand un membre colle son résultat RNGdle dans le salon du classement quotidien.",
+  "config.shareCards.description": "Répond par une carte quand un membre colle son résultat RNGdle dans le salon RNGdle.",
 
   "leaderboard.header.player": "Pseudo",
   "leaderboard.header.number": "Tirage",
@@ -34,7 +34,7 @@
 
   "remind.message": "⏰ Rappel RNGdle : {{users}}, vous n'avez pas encore tiré aujourd'hui ! Le tirage du jour se termine {{deadline}} : <https://www.rngdle.com>",
   "remind.enabled": "C'est noté : si vous n'avez pas encore tiré, vous serez mentionné chaque jour à {{time}} dans {{channel}}.",
-  "remind.enabledNoChannel": "C'est noté. Les rappels sont postés dans le salon du classement quotidien, qu'un administrateur doit encore configurer avec `/config rngdle`.",
+  "remind.enabledNoChannel": "C'est noté. Les rappels sont postés dans le salon RNGdle, qu'un administrateur doit encore configurer avec `/config rngdle`.",
   "remind.pingsDisabled": "Vous avez désactivé vos mentions avec `/pings` : votre nom apparaîtra dans le rappel, mais vous ne serez pas notifié.",
   "remind.disabled": "Vous ne recevrez plus de rappel RNGdle.",
   "remind.notRegistered": "Il faut un compte RNGdle lié pour recevoir les rappels : `/rngdle link <pseudo>`.",
