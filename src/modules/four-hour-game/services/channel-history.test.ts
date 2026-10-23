@@ -100,12 +100,8 @@ describe("fetchPlayerMessagesSince", () => {
   it("pages back until it reads a message of that time or older", async () => {
     const { channel, fetch } = pagedChannel(250);
 
-    const { messages, complete } = await fetchPlayerMessagesSince(
-      channel,
-      new Date(120_000)
-    );
+    const messages = await fetchPlayerMessagesSince(channel, new Date(120_000));
 
-    expect(complete).toBe(true);
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(messages[0]!.sentAt.getTime()).toBeLessThanOrEqual(120_000);
     expect(messages.at(-1)!.sentAt).toEqual(new Date(250_000));
@@ -117,25 +113,17 @@ describe("fetchPlayerMessagesSince", () => {
   it("stops at the start of the channel", async () => {
     const { channel, fetch } = pagedChannel(30);
 
-    const { messages, complete } = await fetchPlayerMessagesSince(
-      channel,
-      new Date(0)
-    );
+    const messages = await fetchPlayerMessagesSince(channel, new Date(0));
 
-    expect(complete).toBe(true);
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(messages).toHaveLength(30);
   });
 
-  it("gives up after 50 pages and says so", async () => {
+  it("gives up after 50 pages", async () => {
     const { channel, fetch } = pagedChannel(6_000);
 
-    const { messages, complete } = await fetchPlayerMessagesSince(
-      channel,
-      new Date(0)
-    );
+    const messages = await fetchPlayerMessagesSince(channel, new Date(0));
 
-    expect(complete).toBe(false);
     expect(fetch).toHaveBeenCalledTimes(50);
     expect(messages).toHaveLength(5_000);
   });

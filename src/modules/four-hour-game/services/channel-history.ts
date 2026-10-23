@@ -1,5 +1,5 @@
 import type { Message, TextBasedChannel } from "discord.js";
-import type { ChannelHistory, ChannelMessage } from "./types.js";
+import type { ChannelMessage } from "./types.js";
 
 const HISTORY_DEPTH = 50;
 const PAGE_SIZE = 100;
@@ -31,12 +31,12 @@ export async function fetchPlayerMessages(
 }
 
 // The player messages posted since `since`, plus the one that was in place
-// then: pages back until a message of that time or older is read. `complete`
-// is false when the page limit stopped the reading first.
+// then: pages back until a message of that time or older is read, or until
+// the page limit.
 export async function fetchPlayerMessagesSince(
   channel: TextBasedChannel,
   since: Date
-): Promise<ChannelHistory> {
+): Promise<ChannelMessage[]> {
   const read: Message[] = [];
   let before: string | undefined;
   for (let page = 0; page < MAX_PAGES; page++) {
@@ -60,11 +60,11 @@ export async function fetchPlayerMessagesSince(
       batch.length < PAGE_SIZE ||
       oldest.createdTimestamp <= since.getTime()
     ) {
-      return { messages: toChannelMessages(read), complete: true };
+      break;
     }
     before = oldest.id;
   }
-  return { messages: toChannelMessages(read), complete: false };
+  return toChannelMessages(read);
 }
 
 export function standingOf(

@@ -12,12 +12,7 @@ export interface GameMessage extends ChannelMessage {
 
 export type LatestMessageFetcher = () => Promise<ChannelMessage | null>;
 
-// Chronological player messages of the game channel; `complete` tells
-// whether the reading reached the requested time.
-export interface ChannelHistory {
-  messages: ChannelMessage[];
-  complete: boolean;
-}
-
-// The latest messages when `since` is null, else every message since then.
-export type HistoryFetcher = (since: Date | null) => Promise<ChannelHistory>;
+// Chronological player messages of the game channel: the latest ones when
+// `since` is null, else every one since then and the one in place at that
+// time, unless the reading stopped before reaching it.
+export type HistoryFetcher = (since: Date | null) => Promise<ChannelMessage[]>;

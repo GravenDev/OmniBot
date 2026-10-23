@@ -306,8 +306,8 @@ class FourHourGameService implements Service {
         where: { guildId },
       });
       if (!last || last.channelId !== channelId) {
-        const { messages } = await fetchHistory(null);
-        await this.storeLastMessage(guildId, channelId, standingOf(messages));
+        const latest = await fetchHistory(null);
+        await this.storeLastMessage(guildId, channelId, standingOf(latest));
         return;
       }
 
@@ -315,23 +315,23 @@ class FourHourGameService implements Service {
       // than their start would be useless.
       const closedDay = await this.getClosedDay(guildId, now);
       const openSince = startOfDay(nextDay(closedDay));
-      const bounded = last.sentAt < openSince;
-      const { messages: history, complete } = await fetchHistory(
-        bounded ? openSince : last.sentAt
-      );
+      const since = last.sentAt < openSince ? openSince : last.sentAt;
+      const history = await fetchHistory(since);
       const found = history.some(
         (message) => message.messageId === last.messageId
       );
-      if (!found && complete && !bounded) {
-        // Deleted while down.
-        await this.storeLastMessage(guildId, channelId, standingOf(history));
-        return;
-      }
 
-      // Not read, yet not deleted: older than the open days, or beyond the
-      // page limit. The replay starts at the oldest message read; a period
-      // the reading could not reach is credited to nobody.
-      const start: ChannelMessage | undefined = found ? last : history[0];
+      // When the stored message was not read, the replay starts at the one in
+      // place at its time: the stored one was deleted while down (the
+      // previous message is back in place, as with a live deletion), or it is
+      // older than the open days. If the page limit stopped the reading
+      // first, it starts at the oldest message read, and the period it could
+      // not reach is credited to nobody.
+      const start: ChannelMessage | null = found
+        ? last
+        : (standingOf(history.filter((message) => message.sentAt <= since)) ??
+          history[0] ??
+          null);
       if (!start) {
         return;
       }
@@ -415,6 +415,10 @@ class FourHourGameService implements Service {
     userId: string,
     score: number
   ): Promise<SetScoreResult> {
+    // /jd4h-admin set asks for 1 at least: unset removes a score.
+    if (!Number.isInteger(score) || score < 1) {
+      throw new RangeError(`Invalid score: ${score}`);
+    }
     return this.queue.run(guildId, async () => {
       const existing = await this.getScore(guildId, userId);
       await prisma.fourHourGameScore.upsert({
