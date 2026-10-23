@@ -1,6 +1,6 @@
 import { AttachmentBuilder, type Client, type Message } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
-import { formatInteger } from "#lib/format.js";
+import { formatInteger, formatPercentage } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
 import { PALETTE } from "#lib/imaging.js";
 import { loggerMaker } from "#lib/logger.js";
@@ -148,9 +148,13 @@ async function linkedHighlights(
   return computeHighlights(context.t, roll, previous, today, context.locale);
 }
 
-function placementText(t: TFunction, placement: Placement): string {
+function placementText(
+  t: TFunction,
+  placement: Placement,
+  locale: string
+): string {
   return t(placement.top ? "card.top" : "card.bottom", {
-    percent: `${placement.percent}%`,
+    percent: formatPercentage(placement.percent, locale, 2),
   });
 }
 
@@ -195,9 +199,9 @@ export async function buildCard(
       // A verified card ranks the recorded score, never the pasted text.
       placement:
         source === "pasted" && shared?.placement
-          ? placementText(t, shared.placement)
+          ? placementText(t, shared.placement, context.locale)
           : t(percent > 50 ? "card.top" : "card.bottom", {
-              percent: formatPercent(percent),
+              percent: formatPercent(percent, context.locale),
             }),
       badges,
       badgeCount,

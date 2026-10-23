@@ -124,12 +124,16 @@ export interface OverallLeaderboardLabels {
   score: string;
 }
 
-function trend(current: number, previous: number | null): Trend | undefined {
+function trend(
+  current: number,
+  previous: number | null,
+  locale: string
+): Trend | undefined {
   if (previous === null || current === previous) {
     return undefined;
   }
   return {
-    text: formatDelta(current - previous),
+    text: formatDelta(current - previous, locale),
     direction: current > previous ? "up" : "down",
   };
 }
@@ -149,7 +153,7 @@ export async function renderDailyLeaderboard(
       value: formatEp(average.score, labels.locale),
       color: TIER_COLORS[average.tier],
       highlight: false,
-      trend: trend(average.score, average.previous),
+      trend: trend(average.score, average.previous, labels.locale),
       subtext:
         average.previous === null
           ? labels.rollCount(average.rolls)
@@ -158,7 +162,7 @@ export async function renderDailyLeaderboard(
     {
       title: labels.players,
       value: formatInteger(players.count, labels.locale),
-      trend: trend(players.count, players.previous),
+      trend: trend(players.count, players.previous, labels.locale),
       ...(players.previous !== null && {
         subtext: labels.previous(
           formatInteger(players.previous, labels.locale)
@@ -169,7 +173,7 @@ export async function renderDailyLeaderboard(
   if (worst) {
     boxes.push({
       title: labels.worstRoll,
-      value: `${formatCompact(worst.score)} EP`,
+      value: `${formatCompact(worst.score, labels.locale)} EP`,
       color: TIER_COLORS.TRASH,
       subtext: labels.worstBy(worst.name, worst.percent),
       avatar: worst.avatar,
@@ -206,23 +210,44 @@ export async function renderDailyLeaderboard(
               x: 550,
               align: "right",
               draw: (c, row, cx, cy) =>
-                drawCellText(c, formatCompact(row.score), cx, cy, {
-                  align: "right",
-                }),
+                drawCellText(
+                  c,
+                  formatCompact(row.score, labels.locale),
+                  cx,
+                  cy,
+                  {
+                    align: "right",
+                  }
+                ),
             },
             {
               header: labels.delta,
               x: 670,
               align: "right",
               draw: (c, row, cx, cy) =>
-                drawDelta(c, row.delta, cx, cy, labels.newPlayer),
+                drawDelta(
+                  c,
+                  row.delta,
+                  cx,
+                  cy,
+                  labels.newPlayer,
+                  labels.locale
+                ),
             },
             {
               header: labels.placement,
               x: right,
               align: "right",
               draw: (c, row, cx, cy) =>
-                drawPlacement(c, row.percent, row.tier, cx, cy, icons),
+                drawPlacement(
+                  c,
+                  row.percent,
+                  row.tier,
+                  cx,
+                  cy,
+                  icons,
+                  labels.locale
+                ),
             },
           ],
         });
@@ -302,17 +327,23 @@ export async function renderOverallLeaderboard(
               x: 440,
               align: "right",
               draw: (c, row, cx, cy) =>
-                drawCellText(c, formatCompact(row.total), cx, cy, {
-                  align: "right",
-                  color: PALETTE.subtext,
-                }),
+                drawCellText(
+                  c,
+                  formatCompact(row.total, labels.locale),
+                  cx,
+                  cy,
+                  {
+                    align: "right",
+                    color: PALETTE.subtext,
+                  }
+                ),
             },
             {
               header: labels.index,
               x: RANKING_WIDTH - PANEL_PADDING,
               align: "right",
               draw: (c, row, cx, cy) =>
-                drawCellText(c, formatIndex(row.index), cx, cy, {
+                drawCellText(c, formatIndex(row.index, labels.locale), cx, cy, {
                   align: "right",
                   color: ACCENT,
                 }),
@@ -339,10 +370,16 @@ export async function renderOverallLeaderboard(
               x: bestWidth - PANEL_PADDING,
               align: "right",
               draw: (c, row, cx, cy) =>
-                drawCellText(c, formatCompact(row.score), cx, cy, {
-                  align: "right",
-                  color: TIER_COLORS[row.tier],
-                }),
+                drawCellText(
+                  c,
+                  formatCompact(row.score, labels.locale),
+                  cx,
+                  cy,
+                  {
+                    align: "right",
+                    color: TIER_COLORS[row.tier],
+                  }
+                ),
             },
           ],
         });

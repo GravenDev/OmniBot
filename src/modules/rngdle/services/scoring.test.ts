@@ -110,7 +110,11 @@ describe("formatPercent", () => {
     [49.5, "50%"],
     [0.5, "1%"],
   ])("formats %s as %s", (percent, text) => {
-    expect(formatPercent(percent)).toBe(text);
+    expect(formatPercent(percent, "en")).toBe(text);
+  });
+
+  it("spaces the sign in French", () => {
+    expect(formatPercent(90.5, "fr")).toBe("9 %");
   });
 });
 

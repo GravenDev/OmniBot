@@ -9,7 +9,11 @@ describe("formatDelta", () => {
     [-999, "-999"],
     [0, "0"],
   ])("formats %d as %s", (delta, text) => {
-    expect(formatDelta(delta)).toBe(text);
+    expect(formatDelta(delta, "en")).toBe(text);
+  });
+
+  it("uses the decimal comma in French", () => {
+    expect(formatDelta(-5_600, "fr")).toBe("-5,6k");
   });
 });
 

@@ -125,16 +125,30 @@ export async function renderHistory(
               x: 690,
               align: "right",
               draw: (c, row, cx, cy) =>
-                drawCellText(c, formatCompact(row.score), cx, cy, {
-                  align: "right",
-                }),
+                drawCellText(
+                  c,
+                  formatCompact(row.score, labels.locale),
+                  cx,
+                  cy,
+                  {
+                    align: "right",
+                  }
+                ),
             },
             {
               header: labels.placementHeader,
               x: width - PANEL_PADDING,
               align: "right",
               draw: (c, row, cx, cy) =>
-                drawPlacement(c, row.percent, row.tier, cx, cy, icons),
+                drawPlacement(
+                  c,
+                  row.percent,
+                  row.tier,
+                  cx,
+                  cy,
+                  icons,
+                  labels.locale
+                ),
             },
           ],
         });
