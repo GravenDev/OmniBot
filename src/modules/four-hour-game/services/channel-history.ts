@@ -1,5 +1,5 @@
 import type { Message, TextBasedChannel } from "discord.js";
-import type { ChannelMessage } from "./four-hour-game.service.js";
+import type { ChannelMessage } from "./types.js";
 
 const HISTORY_DEPTH = 50;
 

@@ -1,8 +1,9 @@
-export interface GameMessageInfo {
-  channelId: string;
-  authorId: string;
-  sentAt: Date;
-}
+import type { GameMessage } from "./types.js";
+
+export type GameMessageInfo = Pick<
+  GameMessage,
+  "channelId" | "authorId" | "sentAt"
+>;
 
 export type MessageOutcome =
   | { kind: "first" }

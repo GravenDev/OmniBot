@@ -12,36 +12,18 @@ import {
 } from "./daily.js";
 import { evaluateMessage, type MessageOutcome } from "./game-rules.js";
 import { computeProfileStats, type ProfileStats } from "./profile.js";
+import type {
+  ChannelMessage,
+  GameMessage,
+  HistoryFetcher,
+  LatestMessageFetcher,
+} from "./types.js";
 
 const logger = loggerMaker("four-hour-game");
 
-export interface GameMessage {
-  guildId: string;
-  channelId: string;
-  messageId: string;
-  authorId: string;
-  sentAt: Date;
-}
-
 export type MessageResult =
   | Exclude<MessageOutcome, { kind: "point" }>
-  | {
-      kind: "point";
-      winnerId: string;
-      score: number;
-      heldSeconds: number;
-      heldSince: Date;
-    };
-
-export interface ChannelMessage {
-  messageId: string;
-  authorId: string;
-  sentAt: Date;
-}
-
-export type LatestMessageFetcher = () => Promise<ChannelMessage | null>;
-
-export type HistoryFetcher = () => Promise<ChannelMessage[]>;
+  | (Extract<MessageOutcome, { kind: "point" }> & { score: number });
 
 export type SetScoreResult = "created" | "updated" | "removed" | "absent";
 
