@@ -1,4 +1,4 @@
-import type { ChatInputCommandInteraction } from "discord.js";
+import { MessageFlags, type ChatInputCommandInteraction } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
@@ -71,7 +71,7 @@ describe("/rngdle-admin register", () => {
       options ? `${key} ${JSON.stringify(options)}` : key,
   } as unknown as ConfigProvider<RngdleConfigSchema>;
 
-  function registerInteraction() {
+  function registerInteraction(username = " Alice ") {
     return {
       guildId: "guild",
       inGuild: () => true,
@@ -79,7 +79,7 @@ describe("/rngdle-admin register", () => {
       options: {
         getSubcommand: () => "register",
         getUser: () => ({ id: "member" }),
-        getString: () => " Alice ",
+        getString: () => username,
       },
       deferReply: vi.fn(),
       editReply: vi.fn(),
@@ -124,4 +124,21 @@ describe("/rngdle-admin register", () => {
       expect(interaction.editReply).toHaveBeenCalledWith(reply);
     }
   );
+
+  it("refuses a blank username without calling rngdle.com", async () => {
+    linkAccount.mockClear();
+    const interaction = registerInteraction("   ");
+
+    await command.execute(
+      interaction as unknown as ChatInputCommandInteraction,
+      config
+    );
+
+    expect(linkAccount).not.toHaveBeenCalled();
+    expect(interaction.deferReply).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: 'admin.register.notFound {"username":""}',
+      flags: MessageFlags.Ephemeral,
+    });
+  });
 });

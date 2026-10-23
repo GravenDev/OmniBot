@@ -30,6 +30,13 @@ async function register(interaction: Interaction, config: Config) {
   const { guildId } = interaction;
   const member = interaction.options.getUser("member", true);
   const username = interaction.options.getString("username", true).trim();
+  if (!username) {
+    await interaction.reply({
+      content: config.t("admin.register.notFound", { username }),
+      ...ephemeral,
+    });
+    return;
+  }
   await interaction.deferReply(ephemeral);
 
   const outcome = await linkAccount(guildId, member.id, username);
