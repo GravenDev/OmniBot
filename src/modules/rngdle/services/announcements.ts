@@ -359,7 +359,9 @@ export async function answerShare(
     const image = await buildCard(
       { client: message.client, guildId, t: config.t, locale: config.locale },
       genuine ? verified.roll : pasted,
-      shared,
+      // rngdle.com is the source of truth: nothing of the pasted text, such
+      // as altered badges or placement, makes it onto a verified card.
+      genuine ? null : shared,
       genuine ? (verified.linked ? "linked" : "calculator") : "pasted"
     );
     await message.reply({
