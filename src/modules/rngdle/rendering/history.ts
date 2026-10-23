@@ -1,19 +1,13 @@
 import type { Image } from "@napi-rs/canvas";
 import { PALETTE } from "#lib/imaging.js";
 import { PANEL_PADDING, renderStatCard } from "#lib/stat-card.js";
+import { drawCellText, drawTable, tableHeight } from "#lib/table.js";
 import {
   TIER_COLORS,
   type TierOrError,
 } from "#modules/rngdle/services/scoring.js";
 import { formatCompact, formatEp } from "./format.js";
-import {
-  drawCellText,
-  drawPlacement,
-  drawRollNumber,
-  drawTable,
-  loadPlacementIcons,
-  tableHeight,
-} from "./table.js";
+import { drawPlacement, drawRollNumber, loadPlacementIcons } from "./table.js";
 import { ACCENT } from "./theme.js";
 
 export interface HistoryRow {
