@@ -530,6 +530,26 @@ describe("FourHourGameService.setScore", () => {
     expect(scores.get(key("guild", "alice"))).toBe(7);
   });
 
+  it("waits for the other writes of the server", async () => {
+    let release!: () => void;
+    const busy = service.resyncLastMessage(
+      "guild",
+      "game",
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve([]);
+        })
+    );
+
+    const set = service.setScore("guild", "alice", 3);
+    await sleep(10);
+    expect(scores.has(key("guild", "alice"))).toBe(false);
+
+    release();
+    await Promise.all([busy, set]);
+    expect(scores.get(key("guild", "alice"))).toBe(3);
+  });
+
   it("treats a score of zero as removing it", async () => {
     scores.set(key("guild", "alice"), 4);
 
