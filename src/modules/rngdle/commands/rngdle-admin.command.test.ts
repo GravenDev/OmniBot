@@ -10,9 +10,6 @@ vi.mock("#lib/logger.js", () => {
   const logger = { info: vi.fn(), warn: vi.fn() };
   return { loggerMaker: () => logger };
 });
-vi.mock("#core/utils/require-admin.js", () => ({
-  requireAdmin: async () => true,
-}));
 vi.mock("#modules/rngdle/services/store.js", () => ({
   default: {
     unregister: async () => {
@@ -140,5 +137,11 @@ describe("/rngdle-admin register", () => {
       content: 'admin.register.notFound {"username":""}',
       flags: MessageFlags.Ephemeral,
     });
+  });
+});
+
+describe("/rngdle-admin access", () => {
+  it("is checked by the command dispatcher, before anything runs", () => {
+    expect(command.requiresAdmin).toBe(true);
   });
 });

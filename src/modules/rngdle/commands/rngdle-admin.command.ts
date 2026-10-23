@@ -5,7 +5,6 @@ import {
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
 } from "discord.js";
-import { requireAdmin } from "#core/utils/require-admin.js";
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
@@ -149,6 +148,8 @@ const subcommands: Record<
 > = { register, delete: unregister, show, refresh, clear };
 
 export default declareCommand<RngdleConfigSchema>({
+  requiresAdmin: true,
+
   data: new SlashCommandBuilder()
     .setName("rngdle-admin")
     .setDescription("RNGdle admin commands")
@@ -225,7 +226,7 @@ export default declareCommand<RngdleConfigSchema>({
     ),
 
   async execute(interaction, config) {
-    if (interaction.inGuild() && (await requireAdmin(interaction, config.t))) {
+    if (interaction.inGuild()) {
       await subcommands[interaction.options.getSubcommand()]?.(
         interaction,
         config
