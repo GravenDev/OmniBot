@@ -1279,6 +1279,14 @@ describe("daily points", () => {
       { userId: "alice", score: 2, rank: 1 },
       { userId: "bob", score: 1, rank: 2 },
     ]);
+    expect(await service.getDailyRank("guild", "bob", "2026-10-13")).toEqual({
+      score: 1,
+      rank: { rank: 2, total: 2 },
+    });
+    expect(await service.getDailyRank("guild", "bob", "2026-10-12")).toEqual({
+      score: 1,
+      rank: { rank: 1, total: 1 },
+    });
   });
 
   it("returns a profile for a player with only daily points", async () => {

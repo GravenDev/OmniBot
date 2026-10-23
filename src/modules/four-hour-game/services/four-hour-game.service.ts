@@ -182,12 +182,9 @@ class FourHourGameService implements Service {
 
   private async creditHolds(
     guildId: string,
-    userId: string | undefined,
+    userId: string,
     holds: readonly DayHold[]
   ): Promise<void> {
-    if (!userId) {
-      return;
-    }
     for (const { day, seconds } of holds) {
       const best = await prisma.fourHourGameDailyBest.findUnique({
         where: { guildId_day: { guildId, day } },
@@ -211,16 +208,9 @@ class FourHourGameService implements Service {
     return this.queue.run(guildId, async () => {
       const today = dayOf(now);
       const yesterday = previousDay(today);
-      const state = await prisma.fourHourGameDailyState.findUnique({
-        where: { guildId },
-      });
-      if (!state) {
-        await prisma.fourHourGameDailyState.create({
-          data: { guildId, closedDay: yesterday },
-        });
-        return [];
-      }
-      if (state.closedDay >= yesterday) {
+      // A state created here is already closed up to yesterday.
+      const closedDay = await this.getClosedDay(guildId, now);
+      if (closedDay >= yesterday) {
         return [];
       }
 
@@ -231,18 +221,18 @@ class FourHourGameService implements Service {
         await this.creditHolds(
           guildId,
           live.authorId,
-          splitHold(live.sentAt, startOfDay(today), state.closedDay)
+          splitHold(live.sentAt, startOfDay(today), closedDay)
         );
       }
 
       const [closed, { count }] = await prisma.$transaction([
         prisma.fourHourGameDailyBest.findMany({
-          where: { guildId, day: { gt: state.closedDay, lte: yesterday } },
+          where: { guildId, day: { gt: closedDay, lte: yesterday } },
           select: { day: true, userId: true, heldSeconds: true },
           orderBy: { day: "asc" },
         }),
         prisma.fourHourGameDailyState.updateMany({
-          where: { guildId, closedDay: state.closedDay },
+          where: { guildId, closedDay },
           data: { closedDay: yesterday },
         }),
       ]);
@@ -285,9 +275,10 @@ class FourHourGameService implements Service {
 
   async getDailyRank(
     guildId: string,
-    userId: string
+    userId: string,
+    upTo?: string
   ): Promise<{ score: number; rank: PlayerRank | null }> {
-    const standings = await this.getDailyStandings(guildId);
+    const standings = await this.getDailyStandings(guildId, upTo);
     const entry = standings.find((row) => row.userId === userId);
     return entry
       ? {
@@ -393,17 +384,9 @@ class FourHourGameService implements Service {
       ) {
         return false;
       }
-      await this.replaceLastMessage(guildId, channelId, fetchLatest);
+      await this.storeLastMessage(guildId, channelId, await fetchLatest());
       return true;
     });
-  }
-
-  private async replaceLastMessage(
-    guildId: string,
-    channelId: string,
-    fetchLatest: LatestMessageFetcher
-  ): Promise<void> {
-    await this.storeLastMessage(guildId, channelId, await fetchLatest());
   }
 
   private async storeLastMessage(
