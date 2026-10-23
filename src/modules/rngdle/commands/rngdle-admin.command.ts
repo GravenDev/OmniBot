@@ -9,6 +9,7 @@ import {
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
+import { NO_MENTIONS } from "#lib/mentions.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
 import { linkAccount } from "#modules/rngdle/services/linking.js";
 import store from "#modules/rngdle/services/store.js";
@@ -23,7 +24,7 @@ type Interaction = ChatInputCommandInteraction<"cached" | "raw">;
 type Config = ConfigProvider<RngdleConfigSchema>;
 
 const ephemeral = { flags: MessageFlags.Ephemeral } as const;
-const noPings = { allowedMentions: { parse: [] } } as const;
+const noPings = { allowedMentions: NO_MENTIONS } as const;
 
 async function register(interaction: Interaction, config: Config) {
   const { guildId } = interaction;

@@ -8,6 +8,7 @@ import type {
   ReadonlyCollection,
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { NO_MENTIONS } from "#lib/mentions.js";
 import type { MessageLogConfigSchema } from "#modules/message-log/message-log.config.js";
 import { type DeleterLookup, findDeleter } from "./audit.js";
 import {
@@ -20,8 +21,6 @@ import { type LogTarget, logTargetFor } from "./routing.js";
 
 type Config = ConfigProvider<MessageLogConfigSchema>;
 type AnyMessage = Message | PartialMessage;
-
-const NO_MENTIONS = { parse: [] };
 
 async function send(
   target: LogTarget,

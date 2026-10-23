@@ -18,6 +18,7 @@ import {
 } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
+import { NO_MENTIONS_REPLY } from "#lib/mentions.js";
 import {
   deleteButton,
   QUOTE_CUSTOM_ID,
@@ -247,7 +248,7 @@ export function quoteReply(
         deleteButton(t, allowedUserIds)
       ),
     ],
-    allowedMentions: { parse: [], repliedUser: false },
+    allowedMentions: NO_MENTIONS_REPLY,
   };
 }
 
