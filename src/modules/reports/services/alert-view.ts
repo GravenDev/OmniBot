@@ -5,6 +5,8 @@ import {
   ContainerBuilder,
   escapeMarkdown,
   MessageFlags,
+  time,
+  TimestampStyles,
   type MessageMentionOptions,
 } from "discord.js";
 import { formatDuration } from "#lib/duration.js";
@@ -77,17 +79,15 @@ function quote(text: string): string {
     .join("\n");
 }
 
-function timestamp(date: Date, style: "f" | "R"): string {
-  return `<t:${Math.floor(date.getTime() / 1000)}:${style}>`;
-}
-
 function statusLine(report: Report, t: TFunction): string {
   if (report.status === "open") {
     return t("alert.status.open");
   }
   return t(`alert.status.${report.status}`, {
     moderator: report.handledBy ? `<@${report.handledBy}>` : "—",
-    when: report.handledAt ? timestamp(report.handledAt, "R") : "",
+    when: report.handledAt
+      ? time(report.handledAt, TimestampStyles.RelativeTime)
+      : "",
   });
 }
 
@@ -125,7 +125,7 @@ function actionLine(action: Action, t: TFunction): string {
     ? ` — ${truncate(action.reason.replace(/\s+/g, " "), REASON_LIMIT)}`
     : "";
   const failed = action.failed ? ` ${t("alert.actionFailed")}` : "";
-  return `- ${timestamp(action.createdAt, "f")} <@${action.moderatorId}> : ${label}${reason}${failed}`;
+  return `- ${time(action.createdAt, TimestampStyles.ShortDateTime)} <@${action.moderatorId}> : ${label}${reason}${failed}`;
 }
 
 function contentBlock(report: Report, t: TFunction): string {
@@ -244,7 +244,9 @@ export function alertMessage(report: Report, options: AlertOptions) {
       channel: `<#${report.channelId}>`,
       url: messageUrl(report),
     }),
-    t("alert.sent", { when: timestamp(report.messageCreatedAt, "f") }),
+    t("alert.sent", {
+      when: time(report.messageCreatedAt, TimestampStyles.ShortDateTime),
+    }),
     reportersBlock(report, t),
     history.total > 0
       ? t("alert.history", {

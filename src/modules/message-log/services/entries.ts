@@ -1,7 +1,9 @@
 import {
   AttachmentBuilder,
-  type Collection,
   EmbedBuilder,
+  time,
+  TimestampStyles,
+  type Collection,
   type Message,
   type PartialMessage,
   type ReadonlyCollection,
@@ -31,10 +33,6 @@ export function truncate(text: string, limit: number): string {
 
 export function isAuthoredByMember(message: Message): boolean {
   return !message.author.bot && !message.webhookId && !message.system;
-}
-
-function timestamp(message: Message): string {
-  return `<t:${Math.floor(message.createdTimestamp / 1000)}:f>`;
 }
 
 function attachmentLines(message: Message): string[] {
@@ -77,7 +75,12 @@ function deletedDescription(
       author: `<@${message.author.id}>`,
       channel: `<#${message.channelId}>`,
     })}**`,
-    t("sentAt", { sentAt: timestamp(message) }),
+    t("sentAt", {
+      sentAt: time(
+        new Date(message.createdTimestamp),
+        TimestampStyles.ShortDateTime
+      ),
+    }),
   ];
   if (deletedBy) {
     header.push(t("deleted.by", { moderator: `<@${deletedBy}>` }));

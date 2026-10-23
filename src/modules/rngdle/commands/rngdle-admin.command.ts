@@ -4,6 +4,8 @@ import {
   MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
+  time,
+  TimestampStyles,
   type ChatInputCommandInteraction,
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
@@ -126,7 +128,11 @@ async function refresh(interaction: Interaction, config: Config) {
     }
     await interaction.editReply(
       config.t("admin.refresh.cooldown", {
-        time: `<t:${Math.ceil(err.retryAt.getTime() / 1000)}:R>`,
+        // Rounded up: the cooldown is not over before that second.
+        time: time(
+          Math.ceil(err.retryAt.getTime() / 1000),
+          TimestampStyles.RelativeTime
+        ),
       })
     );
   }

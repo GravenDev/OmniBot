@@ -1,3 +1,4 @@
+import { TimestampStyles, time } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
 import { nextUtcMidnight, startOfUtcDay } from "./days.js";
 
@@ -10,11 +11,8 @@ export function reminderTime(date: Date): Date {
   return new Date(start.getTime() + REMINDER_HOUR_UTC * 60 * 60 * 1000);
 }
 
-const timestamp = (date: Date, style: string) =>
-  `<t:${Math.floor(date.getTime() / 1000)}:${style}>`;
-
 export function reminderTimestamp(now: Date): string {
-  return timestamp(reminderTime(now), "t");
+  return time(reminderTime(now), TimestampStyles.ShortTime);
 }
 
 export interface ReminderMessage {
@@ -31,7 +29,7 @@ export function reminderMessages(
   if (userIds.length === 0) {
     return [];
   }
-  const deadline = timestamp(nextUtcMidnight(now), "R");
+  const deadline = time(nextUtcMidnight(now), TimestampStyles.RelativeTime);
   const render = (ids: string[]) =>
     t("remind.message", {
       users: ids.map((id) => `<@${id}>`).join(" "),
