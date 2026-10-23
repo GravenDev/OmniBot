@@ -97,12 +97,18 @@ FROM ${NODE_IMAGE} AS runtime
 
 # tini: real init as PID 1 — forwards SIGTERM to node (the bot closes the
 #       Discord client and the Prisma pool on SIGTERM) and reaps zombies.
+#
+# The bot only ever runs `node`: npm, npx, corepack and yarn, shipped with the
+# Node image, are removed. They are dead weight here, and their bundled
+# dependencies are what an image scanner would otherwise keep reporting.
 RUN apk add --no-cache tini font-noto-emoji \
+ && rm -r /usr/local/lib/node_modules /opt/yarn-v* \
+ && rm /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+       /usr/local/bin/yarn /usr/local/bin/yarnpkg \
  && addgroup -S -g 10001 omnibot \
  && adduser -S -u 10001 -G omnibot -H -h /app omnibot
 
-ENV NODE_ENV=production \
-    NPM_CONFIG_UPDATE_NOTIFIER=false
+ENV NODE_ENV=production
 
 WORKDIR /app
 
