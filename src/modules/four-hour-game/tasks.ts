@@ -1,14 +1,17 @@
-import { EmbedBuilder, MessageFlags, type Client } from "discord.js";
+import type { Client, EmbedBuilder } from "discord.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
-import { Colors } from "#utils/colors.js";
 import type { FourHourGameConfigSchema } from "./four-hour-game.config.js";
+import {
+  ANNOUNCEMENT_OPTIONS,
+  buildAnnouncementEmbed,
+} from "./rendering/announcement.js";
 import { GAME_TIME_ZONE } from "./services/daily.js";
-import { formatHeldTime, formatRank } from "./services/formatting.js";
+import { formatHeldTime } from "./services/formatting.js";
 import fourHourGameService, {
   type DailyPoint,
   type PlayerRank,
@@ -33,25 +36,20 @@ export function buildDailyPointEmbed(
     month: "long",
     timeZone: "UTC",
   }).format(new Date(`${announcement.day}T00:00:00Z`));
-  const headline = config.t("daily.description", {
-    user: `<@${announcement.userId}>`,
-    date,
-    duration: formatHeldTime(announcement.heldSeconds, config.t),
-  });
-  const total = config.t("daily.total", { count: announcement.total });
-  const summary = announcement.rank
-    ? `${total} · ${formatRank(announcement.rank, config.t)}`
-    : total;
-
-  const embed = new EmbedBuilder()
-    .setTitle(config.t("daily.title"))
-    .setDescription(`${headline}\n${summary}`)
-    .setColor(Colors.FullGreen);
-
-  if (announcement.avatarUrl) {
-    embed.setThumbnail(announcement.avatarUrl);
-  }
-  return embed;
+  return buildAnnouncementEmbed(
+    {
+      title: config.t("daily.title"),
+      headline: config.t("daily.description", {
+        user: `<@${announcement.userId}>`,
+        date,
+        duration: formatHeldTime(announcement.heldSeconds, config.t),
+      }),
+      total: config.t("daily.total", { count: announcement.total }),
+      rank: announcement.rank,
+      avatarUrl: announcement.avatarUrl,
+    },
+    config.t
+  );
 }
 
 async function closeDays(
@@ -91,8 +89,7 @@ async function closeDays(
             config
           ),
         ],
-        allowedMentions: { parse: [] },
-        flags: MessageFlags.SuppressNotifications,
+        ...ANNOUNCEMENT_OPTIONS,
       });
       logger.info(
         `Daily point announced | guildId = ${guildId} | day = ${point.day} | userId = ${point.userId}`

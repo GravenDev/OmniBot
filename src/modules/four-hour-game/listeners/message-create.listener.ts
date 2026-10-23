@@ -1,18 +1,18 @@
-import { EmbedBuilder, MessageFlags, type Message } from "discord.js";
+import type { EmbedBuilder, Message } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
-import { isPlayerMessage } from "#modules/four-hour-game/services/channel-history.js";
 import {
-  formatHeldTime,
-  formatRank,
-} from "#modules/four-hour-game/services/formatting.js";
+  ANNOUNCEMENT_OPTIONS,
+  buildAnnouncementEmbed,
+} from "#modules/four-hour-game/rendering/announcement.js";
+import { isPlayerMessage } from "#modules/four-hour-game/services/channel-history.js";
+import { formatHeldTime } from "#modules/four-hour-game/services/formatting.js";
 import fourHourGameService, {
   type PlayerRank,
 } from "#modules/four-hour-game/services/four-hour-game.service.js";
 import { fetchWinnerAvatar } from "#modules/four-hour-game/services/winner-avatar.js";
-import { Colors } from "#utils/colors.js";
 
 const logger = loggerMaker("four-hour-game");
 
@@ -29,26 +29,21 @@ export function buildPointEmbed(
   announcement: PointAnnouncement,
   config: ConfigProvider<FourHourGameConfigSchema>
 ): EmbedBuilder {
-  const headline = config.t("point.description", {
-    user: `<@${announcement.winnerId}>`,
-    duration: formatHeldTime(announcement.heldSeconds, config.t),
-  });
-  const total = config.t("point.total", { count: announcement.score });
-  const summary = announcement.rank
-    ? `${total} · ${formatRank(announcement.rank, config.t)}`
-    : total;
-
-  const embed = new EmbedBuilder()
-    .setTitle(config.t("point.title"))
-    .setDescription(`${headline}\n${summary}`)
+  return buildAnnouncementEmbed(
+    {
+      title: config.t("point.title"),
+      headline: config.t("point.description", {
+        user: `<@${announcement.winnerId}>`,
+        duration: formatHeldTime(announcement.heldSeconds, config.t),
+      }),
+      total: config.t("point.total", { count: announcement.score }),
+      rank: announcement.rank,
+      avatarUrl: announcement.avatarUrl,
+    },
+    config.t
+  )
     .setFooter({ text: config.t("point.postedAt") })
-    .setTimestamp(announcement.heldSince)
-    .setColor(Colors.FullGreen);
-
-  if (announcement.avatarUrl) {
-    embed.setThumbnail(announcement.avatarUrl);
-  }
-  return embed;
+    .setTimestamp(announcement.heldSince);
 }
 
 async function fetchRank(
@@ -119,8 +114,7 @@ export default declareEventListener<"messageCreate", FourHourGameConfigSchema>({
             config
           ),
         ],
-        allowedMentions: { parse: [] },
-        flags: MessageFlags.SuppressNotifications,
+        ...ANNOUNCEMENT_OPTIONS,
       });
     } catch (err) {
       logger.error(
