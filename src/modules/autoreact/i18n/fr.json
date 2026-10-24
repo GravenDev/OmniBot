@@ -1,6 +1,11 @@
 {
   "set.done": "Les nouveaux messages de {{channel}} recevront la réaction {{emoji}}.",
   "set.invalidEmoji": "« {{emoji}} » n'est pas un emoji utilisable : choisissez un emoji Unicode ou un emoji d'un serveur où se trouve le bot.",
+  "set.missingPermissions": "Le bot ne peut pas réagir dans {{channel}} : il lui manque {{permissions}}.",
+
+  "permission.ViewChannel": "Voir le salon",
+  "permission.ReadMessageHistory": "Voir les anciens messages",
+  "permission.AddReactions": "Ajouter des réactions",
 
   "remove.done": "Plus de réaction automatique dans {{channel}}.",
   "remove.none": "Aucune réaction automatique n'est configurée dans {{channel}}.",

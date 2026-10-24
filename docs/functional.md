@@ -269,13 +269,14 @@ Ajoute automatiquement une réaction à chaque nouveau message des salons config
 
 - Le bot réagit à tous les nouveaux messages du salon, y compris ceux des autres bots et des webhooks ; il ignore ses propres messages et les messages système (épinglage, arrivée d'un membre…).
 - Les fils de discussion ne sont pas concernés : un message posté dans un fil n'est pas dans le salon parent.
-- Si l'emoji n'existe plus (emoji personnalisé supprimé), la réaction automatique du salon est retirée.
-- Si le bot n'a pas accès au salon ou pas la permission d'ajouter des réactions, il cesse d'essayer dans ce salon pendant 10 minutes, puis réessaie.
-- La suppression d'un salon retire sa réaction automatique.
+- Si un emoji personnalisé n'existe plus, la réaction automatique du salon est retirée. Un emoji Unicode refusé par Discord n'est pas retiré : le salon est mis en pause.
+- Si le bot n'a pas accès au salon, ou s'il lui manque la permission de voir les anciens messages ou d'ajouter des réactions, il cesse d'essayer dans ce salon pendant 10 minutes, puis réessaie.
+- Un membre qui a bloqué le bot ne reçoit simplement pas la réaction.
+- Quand le module est actif, la suppression d'un salon retire sa réaction automatique ; sinon l'entrée est retirée au prochain `/autoreact list`.
 
 ### `/autoreact set <channel> <emoji>`
 
-Définit la réaction ajoutée dans un salon textuel ou d'annonces, et remplace la précédente s'il y en avait une. L'emoji peut être un emoji Unicode, un emoji personnalisé (`<:nom:id>`) ou le simple nom d'un emoji du serveur. Un emoji personnalisé est refusé si le bot n'est sur aucun serveur qui le possède.
+Définit la réaction ajoutée dans un salon textuel ou d'annonces, et remplace la précédente s'il y en avait une. L'emoji peut être un emoji Unicode, un emoji personnalisé (`<:nom:id>`) ou le simple nom d'un emoji du serveur. Un emoji personnalisé doit appartenir au serveur, ou à un autre serveur du bot tel que connu à son démarrage : un emoji ajouté depuis sur un autre serveur est refusé jusqu'au prochain redémarrage. La commande est aussi refusée si le bot ne peut pas réagir dans le salon (voir le salon, voir les anciens messages, ajouter des réactions).
 
 ### `/autoreact remove <channel>`
 
