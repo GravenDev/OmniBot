@@ -8,7 +8,7 @@ Leaderboards and stat cards are rendered as PNG images with [`@napi-rs/canvas`](
 | `#lib/stat-card` | `renderStatCard`: card with a portrait, a title, an optional rank, a grid of stat boxes and a side panel                                                                                |
 | `#lib/imaging`   | Shared palette and font, default accent (`DEFAULT_ACCENT`), avatar download, circular images and ringed portraits (`drawPortrait`), highlighting (`drawHighlight`), fitted text, assets |
 
-The Outfit font and the gold, silver and bronze medals ship in `src/lib/assets/` and are loaded for you.
+The Outfit font and the gold, silver and bronze medals ship in `src/lib/assets/` and are loaded for you. Outfit has no emojis: `font()` adds the system's emoji font when there is one (Noto Color Emoji, installed by the Docker image), so that names containing emojis render. Always go through `font()` rather than setting `ctx.font` by hand.
 
 Each module declares its accent color in `rendering/theme.ts` (`export const ACCENT: Rgb = [77, 163, 255];`) and passes it as `accent` to every renderer, so all its images look alike. Without `accent`, `DEFAULT_ACCENT` applies.
 

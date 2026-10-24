@@ -1,5 +1,3 @@
-import { existsSync } from "node:fs";
-import { pathToFileURL } from "node:url";
 import type { Image, SKRSContext2D } from "@napi-rs/canvas";
 import { formatInteger } from "#lib/format.js";
 import {
@@ -8,6 +6,7 @@ import {
   drawPortrait,
   FONT,
   fillTextCentered,
+  font,
   PALETTE,
   registerFont,
   rgb,
@@ -24,14 +23,6 @@ import { ACCENT } from "./theme.js";
 
 const ASSETS = new URL("../assets/", import.meta.url);
 const MONO_FONT = "SpaceMonoBold";
-const EMOJI_FONT = "RngdleEmoji";
-const EMOJI_FONT_FILES = [
-  "/usr/share/fonts/noto/NotoColorEmoji.ttf",
-  "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
-  "/usr/share/fonts/noto-emoji/NotoColorEmoji.ttf",
-  "C:/Windows/Fonts/seguiemj.ttf",
-  "/System/Library/Fonts/Apple Color Emoji.ttc",
-];
 
 const WIDTH = 1000;
 const MARGIN = 40;
@@ -90,31 +81,13 @@ export interface RollCardLabels {
   probability: (percent: number) => string;
 }
 
-let emojiFamily: string | null | undefined;
-
-function emojiFont(): string | null {
-  if (emojiFamily === undefined) {
-    const file = EMOJI_FONT_FILES.find((path) => existsSync(path));
-    emojiFamily = file ? EMOJI_FONT : null;
-    if (file) {
-      registerFont(pathToFileURL(file), EMOJI_FONT);
-    }
-  }
-  return emojiFamily;
-}
-
-function family(base: string): string {
-  const emoji = emojiFont();
-  return emoji ? `${base}, ${emoji}` : base;
-}
-
 function setFont(
   ctx: SKRSContext2D,
   size: number,
   base: string = FONT,
   spacing = 0
 ): void {
-  ctx.font = `${size}px ${family(base)}`;
+  ctx.font = font(size, base);
   ctx.letterSpacing = `${spacing}px`;
 }
 
