@@ -73,6 +73,15 @@ function logSendError(error: unknown, where: string, guildId: string): void {
 
 /** Reinstalls guild commands for every enabled module (Discord purges them on kick). */
 async function reinstallModuleCommands(guild: Guild): Promise<void> {
+  try {
+    await moduleService.resetVersionsOfUnloadedModulesIn(guild.id);
+  } catch (err) {
+    logger.error(
+      { err },
+      `Failed to reset unloaded module versions | guild = ${guild.id}`
+    );
+  }
+
   let states: Awaited<ReturnType<typeof moduleService.getAllModulesStateIn>>;
   try {
     states = await moduleService.getAllModulesStateIn(guild.id);
@@ -99,15 +108,6 @@ async function reinstallModuleCommands(guild: Guild): Promise<void> {
         `Failed to reinstall commands | module = ${mod.id} | guild = ${guild.id}`
       );
     }
-  }
-
-  try {
-    await moduleService.resetVersionsOfUnloadedModulesIn(guild.id);
-  } catch (err) {
-    logger.error(
-      { err },
-      `Failed to reset unloaded module versions | guild = ${guild.id}`
-    );
   }
 }
 

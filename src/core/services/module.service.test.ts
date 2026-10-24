@@ -5,13 +5,14 @@ import type { Module } from "#lib/module.js";
 // client; stub both so importing it never boots the bot or hits a database.
 vi.mock("#core/runtime.js", () => ({ modules: [], client: {} }));
 
-const { findMany, findFirst, upsert } = vi.hoisted(() => ({
+const { findMany, findFirst, upsert, updateMany } = vi.hoisted(() => ({
   findMany: vi.fn(),
   findFirst: vi.fn(),
   upsert: vi.fn(),
+  updateMany: vi.fn(),
 }));
 vi.mock("#lib/database.js", () => ({
-  default: { moduleActivation: { findMany, findFirst, upsert } },
+  default: { moduleActivation: { findMany, findFirst, upsert, updateMany } },
   Prisma: {},
 }));
 
@@ -83,6 +84,30 @@ describe("reconcileActivatedVersions", () => {
     await moduleService.reconcileActivatedVersions(module);
 
     expect(upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("resetVersionsOfUnloadedModulesIn", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    (modules as unknown as Module[]).push(module);
+  });
+
+  afterEach(() => {
+    modules.length = 0;
+  });
+
+  it("blanks the version of the guild's enabled modules that are not loaded", async () => {
+    await moduleService.resetVersionsOfUnloadedModulesIn("guild-1");
+
+    expect(updateMany).toHaveBeenCalledWith({
+      where: {
+        guildId: "guild-1",
+        activated: true,
+        moduleId: { notIn: ["thread-creator"] },
+      },
+      data: { activatedVersion: "" },
+    });
   });
 });
 

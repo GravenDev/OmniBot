@@ -1,4 +1,4 @@
-import { DiscordAPIError } from "discord.js";
+import { DiscordAPIError, MessageFlags } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { mockModules } = vi.hoisted(() => ({ mockModules: [] as any[] }));
@@ -167,12 +167,30 @@ describe("handleCommand", () => {
   });
 
   it("tells the user a command of an unloaded module is unavailable", async () => {
+    const t = vi.fn((key: string) => key);
+    getConfigForModuleIn.mockResolvedValueOnce({ t });
     const interaction = fakeCommand("ghost");
     await listener.execute(interaction, undefined);
 
-    expect(interaction.reply).toHaveBeenCalledWith(
-      expect.objectContaining({ content: "command.unavailable" })
+    expect(getConfigForModuleIn).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "core" }),
+      "guild-1"
     );
+    expect(t).toHaveBeenCalledWith("command.unavailable", {
+      commandName: "ghost",
+    });
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: "command.unavailable",
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+
+  it("stays silent on an unknown command outside a guild", async () => {
+    const interaction = fakeCommand("ghost", { guild: null, guildId: null });
+    await listener.execute(interaction, undefined);
+
+    expect(getConfigForModuleIn).not.toHaveBeenCalled();
+    expect(interaction.reply).not.toHaveBeenCalled();
   });
 
   it("uses followUp when the interaction was already answered", async () => {
