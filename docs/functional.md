@@ -8,7 +8,7 @@ Documentation du comportement visible par les utilisateurs et administrateurs de
 
 Quand le bot est invité sur un serveur, ses données sont initialisées et un message de bienvenue est posté dans le salon système (ou envoyé en MP au propriétaire si le salon système est indisponible). Le message pointe vers `/modules` et `/config`. Rien d'autre n'est activé automatiquement : seuls les administrateurs décident quels modules activer.
 
-Quand le bot quitte un serveur, rien n'est effacé : si le bot est réinvité plus tard, la configuration et les modules activés sont restaurés automatiquement (y compris leurs commandes).
+Quand le bot quitte un serveur, rien n'est effacé : si le bot est réinvité plus tard, la configuration et les modules activés sont restaurés automatiquement (y compris leurs commandes). Si les commandes d'un module ne peuvent pas être réinstallées à ce moment-là, le module reste activé et le bot réessaie à son prochain démarrage.
 
 ## Module Core
 
