@@ -51,6 +51,7 @@ This copy lets moderators review the message even if its author edits or deletes
 
 - **4-hour game**: each player's score, the history of their points (time held and date), the best time of each day, and the last message of the game channel (channel, message and author IDs, time sent).
 - **RNGdle**: the RNGdle username a member links to their Discord account, their rolls downloaded from rngdle.com (number, score, badge count and date), their daily reminder subscription, and for each day whether they already got their verified card.
+- **Clash of Code**: for each game whose link is posted, its CodinGame identifier, its mode, its start date and the channel and message IDs of the link; for each player, their CodinGame ID, nickname and avatar ID, and the Discord ID of the member who linked their account to it; for each participation, the rank, score, time, character count and language.
 
 ### Automatic Reactions
 
@@ -68,7 +69,8 @@ Some modules read message content to work, without saving it to the database:
 - **Message Quote** reads the message whose link a member posts, to post a quote of it;
 - **LaTeX** reads messages to find formulas and render them as images;
 - **Thread Creator** can use the first 50 characters of a message in the name of the thread it creates;
-- **RNGdle** reads messages in the RNGdle channel only, to recognize a pasted result and reply with a card.
+- **RNGdle** reads messages in the RNGdle channel only, to recognize a pasted result and reply with a card;
+- **Clash of Code** reads messages in the channels chosen by the administrators (every channel when none is chosen), to spot game links: only the game identifier is kept.
 
 What these modules post stays on the Discord server, under the control of its administrators. The bot ignores messages from other bots, except Auto React, which also adds its reaction to them without reading them.
 
@@ -83,6 +85,7 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 - **Activity statistics**: deleted after 90 days.
 - **RNGdle**: rolls, username and reminder subscription are kept until the member unlinks with `/rngdle unlink`, or an administrator unlinks them. The record of a claimed card is deleted the next day.
 - **4-hour game**: scores and point history are kept until an administrator deletes the player's score.
+- **Clash of Code**: games, players and their results are kept with no time limit, for the leaderboard's history. The link to a Discord account is removed when the member unlinks with `/coc unlink`, or an administrator unlinks them.
 - **Mention preference and automatic reactions**: kept until the member, or an administrator, removes them.
 
 To request deletion of your data, contact the instance operator.
@@ -91,13 +94,14 @@ To request deletion of your data, contact the instance operator.
 
 OmniBot does not sell the collected data or share it with any third party. It does not use it for advertising, marketing analytics or to train artificial intelligence models.
 
-The bot contacts three external services:
+The bot contacts four external services:
 
 - **the Discord API**, which receives data as part of normal bot operation (sending messages, responding to interactions, registering commands);
 - **rngdle.com**, for the RNGdle module: the bot sends it the linked RNGdle usernames to download their rolls, and fetches the site's score table;
-- **rng.cubityfir.st**, for the RNGdle module: the bot sends it a roll number to get the list of its badges.
+- **rng.cubityfir.st**, for the RNGdle module: the bot sends it a roll number to get the list of its badges;
+- **codingame.com**, for the Clash of Code module: the bot sends it a game identifier, taken from the posted link, to get its result, and fetches the players' avatars from static.codingame.com.
 
-No Discord identifier or message content is sent to rngdle.com or rng.cubityfir.st.
+No Discord identifier or message content is sent to rngdle.com, rng.cubityfir.st or codingame.com.
 
 ## Open Source
 

@@ -215,7 +215,7 @@ Les données viennent d'une API publique mais non documentée de CodinGame : si 
 
 ### Comportement automatique
 
-Quand un membre poste un lien de partie (`https://www.codingame.com/clashofcode/clash/<id>`, y compris la page de résultat `…/clash/report/<id>`), le bot ajoute la réaction ⏳ au message et interroge CodinGame jusqu'à la fin de la partie : toutes les minutes tant qu'elle n'a pas commencé, toutes les 15 secondes ensuite. À la fin, il retire la réaction et répond au message avec l'image du résultat (rang, joueur, score, temps, et nombre de caractères en mode Shortest) et le nom du ou des gagnants, sans mentionner personne.
+Quand un membre poste un lien de partie (`https://www.codingame.com/clashofcode/clash/<id>`, y compris la page de résultat `…/clash/report/<id>`), le bot ajoute la réaction ⏳ au message et interroge CodinGame jusqu'à la fin de la partie : toutes les minutes tant qu'elle n'a pas commencé, toutes les 15 secondes ensuite. À la fin, il retire la réaction et répond au message avec l'image du résultat (rang, joueur, score, temps, et nombre de caractères en mode Shortest) et le nom du ou des gagnants. La réponse part en @silent : l'auteur du lien est mentionné, sans notification, et personne d'autre.
 
 - Au plus 3 parties sont suivies par message ; les liens dans du code ou sous spoiler sont ignorés, de même que les messages des bots.
 - Une partie déjà enregistrée ou déjà suivie sur le serveur n'est pas suivie une deuxième fois.
@@ -249,6 +249,8 @@ Lie votre compte Discord à un joueur CodinGame déjà vu dans une partie du ser
 | Champ      | Type            | Description                                                                                               |
 | ---------- | --------------- | --------------------------------------------------------------------------------------------------------- |
 | `channels` | Liste de salons | Salons (et leurs fils) où les liens de partie sont suivis. Vide par défaut : tous les salons sont suivis. |
+
+Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
 
 ---
 

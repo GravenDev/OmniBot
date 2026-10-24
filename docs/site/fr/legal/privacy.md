@@ -51,6 +51,7 @@ Cette copie permet aux modérateurs de juger le message même si son auteur le m
 
 - **Jeu des 4h** : le score de chaque joueur, l'historique de ses points (temps tenu et date), le meilleur temps de chaque journée, et le dernier message du salon de jeu (ID du salon, du message et de son auteur, heure d'envoi).
 - **RNGdle** : le pseudo RNGdle qu'un membre lie à son compte Discord, ses tirages téléchargés depuis rngdle.com (numéro, score, nombre de badges et date), son inscription au rappel quotidien, et pour chaque jour le fait qu'il a déjà obtenu sa carte vérifiée.
+- **Clash of Code** : pour chaque partie dont le lien est posté, son identifiant CodinGame, son mode, sa date de début et l'ID du salon et du message du lien ; pour chaque joueur, son ID, son pseudo et l'ID de son avatar CodinGame, et l'ID Discord du membre qui y a lié son compte ; pour chaque participation, le rang, le score, le temps, le nombre de caractères et le langage.
 
 ### Réactions automatiques
 
@@ -68,7 +69,8 @@ Certains modules lisent le contenu des messages pour fonctionner, sans l'enregis
 - **Message Quote** lit le message dont un membre poste le lien, pour en publier une citation ;
 - **LaTeX** lit les messages pour repérer les formules et les rendre en image ;
 - **Thread Creator** peut reprendre les 50 premiers caractères d'un message dans le nom du fil qu'il crée ;
-- **RNGdle** lit les messages du seul salon RNGdle, pour reconnaître un résultat collé et y répondre avec une carte.
+- **RNGdle** lit les messages du seul salon RNGdle, pour reconnaître un résultat collé et y répondre avec une carte ;
+- **Clash of Code** lit les messages des salons choisis par les administrateurs (tous les salons si aucun n'est choisi), pour repérer les liens de partie : seul l'identifiant de la partie est conservé.
 
 Ce que ces modules publient reste sur le serveur Discord, sous le contrôle de ses administrateurs. Le bot ignore les messages des autres bots, sauf Auto React, qui leur ajoute aussi sa réaction sans les lire.
 
@@ -83,6 +85,7 @@ Les données sont stockées dans une base de données PostgreSQL gérée par l'o
 - **Statistiques d'activité** : supprimées au bout de 90 jours.
 - **RNGdle** : les tirages, le pseudo et l'inscription au rappel sont conservés jusqu'à ce que le membre se délie avec `/rngdle unlink`, ou qu'un administrateur le délie. L'indication de carte obtenue est supprimée le lendemain.
 - **Jeu des 4h** : les scores et l'historique des points sont conservés jusqu'à ce qu'un administrateur supprime le score du joueur.
+- **Clash of Code** : les parties, les joueurs et leurs résultats sont conservés sans limite de durée, pour l'historique du classement. La liaison à un compte Discord est retirée quand le membre se délie avec `/coc unlink`, ou qu'un administrateur le délie.
 - **Préférence de mention et réactions automatiques** : conservées jusqu'à ce que le membre, ou un administrateur, les retire.
 
 Pour demander la suppression de vos données, contactez l'opérateur de l'instance.
@@ -91,13 +94,14 @@ Pour demander la suppression de vos données, contactez l'opérateur de l'instan
 
 OmniBot ne vend pas les données collectées et ne les partage avec aucun tiers. Il ne s'en sert pas pour de la publicité, de l'analyse marketing ni pour entraîner des modèles d'intelligence artificielle.
 
-Le bot contacte trois services externes :
+Le bot contacte quatre services externes :
 
 - **l'API Discord**, qui reçoit des données dans le cadre du fonctionnement normal du bot (envoi de messages, réponse aux interactions, enregistrement des commandes) ;
 - **rngdle.com**, pour le module RNGdle : le bot y envoie les pseudos RNGdle liés, pour télécharger les tirages, et récupère la table des scores du site ;
-- **rng.cubityfir.st**, pour le module RNGdle : le bot y envoie le numéro d'un tirage, pour obtenir la liste de ses badges.
+- **rng.cubityfir.st**, pour le module RNGdle : le bot y envoie le numéro d'un tirage, pour obtenir la liste de ses badges ;
+- **codingame.com**, pour le module Clash of Code : le bot y envoie l'identifiant d'une partie, tiré du lien posté, pour en obtenir le résultat, et récupère les avatars des joueurs sur static.codingame.com.
 
-Aucun identifiant Discord ni contenu de message n'est envoyé à rngdle.com ni à rng.cubityfir.st.
+Aucun identifiant Discord ni contenu de message n'est envoyé à rngdle.com, à rng.cubityfir.st ni à codingame.com.
 
 ## Open Source
 
