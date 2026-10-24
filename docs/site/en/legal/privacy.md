@@ -40,7 +40,7 @@ When a member turns off their mentions with `/pings`, the bot stores the guild I
 
 When a member reports a message with the Reports module, the bot stores:
 
-- a copy of the reported message: its text, its edited version if the author edits it afterwards, and the links to its attachments;
+- a copy of the reported message: its text, its edited version if the author edits it afterwards, and the name and link of its attachments and stickers;
 - the IDs of the author, channel and message, and the date the message was sent;
 - the ID of each member who reported it, with the reason they gave, if any;
 - the moderators' decisions: moderator ID, sanction, reason and duration.
@@ -57,9 +57,13 @@ This copy lets moderators review the message even if its author edits or deletes
 
 The Auto React module stores, for each configured channel, the emoji to add. It stores nothing about members.
 
+### Sticky Messages
+
+The Sticky Messages module stores, for each configured channel, the text of the sticky message written by an administrator and the ID of its last post. It stores nothing about members and does not read their messages: a new message only triggers the repost.
+
 ### Activity Statistics
 
-When the Server Stats module is enabled on a guild, the bot counts every day, per guild, the messages per channel and per member, the reactions per emoji, and the members joining and leaving. Only counters are stored, never message content. These counters are deleted after 90 days. The daily report posted on the guild may list the most active members; administrators can turn this off.
+When the Server Stats module is enabled on a guild, the bot counts every day, per guild, the messages per channel and per member, the reactions per emoji, and the members joining and leaving. Only counters are stored, along with the date tracking started on the guild, never message content nor who joined or left. These counters are deleted after 90 days. The daily report posted on the guild may list the most active members; administrators can turn this off.
 
 ## Message Content Read Without Being Stored
 
@@ -72,7 +76,7 @@ Some modules read message content to work, without saving it to the database:
 - **RNGdle** reads messages in the RNGdle channel only, to recognize a pasted result and reply with a card;
 - **Clash of Code** reads messages in the channels chosen by the administrators (every channel when none is chosen), to spot game links: only the game identifier is kept.
 
-What these modules post stays on the Discord server, under the control of its administrators. The bot ignores messages from other bots, except Auto React, which also adds its reaction to them without reading them.
+What these modules post stays on the Discord server, under the control of its administrators. The bot ignores messages from other bots, with three exceptions: Auto React also adds its reaction to them, Sticky Messages also reposts its message after them, both without reading them, and Message Quote quotes a bot's message when a member posts its link.
 
 ## Data Storage
 
@@ -82,11 +86,12 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 
 - **Module configuration and activation**: kept as long as the bot is on the guild. When the bot leaves a guild (kick or removal), they are deliberately kept so everything is restored automatically if the bot is re-invited. Disabling a module deletes neither its configuration nor its data: they remain subject to the periods below.
 - **Reports**: an open report is kept until it is closed. A closed report is deleted, message copy included, after 90 days; each guild's administrators can change this period.
-- **Activity statistics**: deleted after 90 days.
-- **RNGdle**: rolls, username and reminder subscription are kept until the member unlinks with `/rngdle unlink`, or an administrator unlinks them. The record of a claimed card is deleted the next day.
+- **Activity statistics**: counters are deleted after 90 days, a period that cannot be changed. The date tracking started is kept with no time limit.
+- **RNGdle**: rolls, username and reminder subscription are kept until the member unlinks with `/rngdle unlink`, or an administrator unlinks them. The record of a claimed card is deleted two days later.
 - **4-hour game**: scores and point history are kept until an administrator deletes the player's score.
 - **Clash of Code**: games, players and their results are kept with no time limit, for the leaderboard's history. The link to a Discord account is removed when the member unlinks with `/coc unlink`, or an administrator unlinks them.
 - **Mention preference and automatic reactions**: kept until the member, or an administrator, removes them.
+- **Sticky messages**: kept until an administrator removes them with `/sticky remove`, or the channel is deleted.
 
 To request deletion of your data, contact the instance operator.
 
@@ -98,10 +103,10 @@ The bot contacts four external services:
 
 - **the Discord API**, which receives data as part of normal bot operation (sending messages, responding to interactions, registering commands);
 - **rngdle.com**, for the RNGdle module: the bot sends it the linked RNGdle usernames to download their rolls, and fetches the site's score table;
-- **rng.cubityfir.st**, for the RNGdle module: the bot sends it a roll number to get the list of its badges;
+- **rng.cubityfir.st**, for the RNGdle module: the bot sends it a roll number to get the list of its badges; for an unlinked member, that number is the one of the result they pasted;
 - **codingame.com**, for the Clash of Code module: the bot sends it a game identifier, taken from the posted link, to get its result, and fetches the players' avatars from static.codingame.com.
 
-No Discord identifier or message content is sent to rngdle.com, rng.cubityfir.st or codingame.com.
+No Discord identifier or message text is sent to rngdle.com, rng.cubityfir.st or codingame.com: only a game identifier and a roll number can come from a message.
 
 ## Open Source
 
