@@ -21,8 +21,8 @@ vi.mock("discord.js", async (importOriginal) => ({
 const {
   fetchApplicationFlags,
   findMissingIntents,
-  gatewayOptionsFor,
   keepModulesWithGrantedIntents,
+  planGateway,
 } = await import("./intent-guard.js");
 
 function fakeModule(id: string, intents: GatewayIntentBits[]) {
@@ -105,32 +105,55 @@ describe("keepModulesWithGrantedIntents", () => {
   });
 });
 
-describe("gatewayOptionsFor", () => {
-  it("leaves out the intents and partials of skipped modules", () => {
-    const core = {
-      intents: [GatewayIntentBits.Guilds],
-      partials: [],
-    } as never;
-    const quote = {
-      id: "quote",
-      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent],
-      partials: [Partials.Message],
-    } as never;
-    const stats = {
-      id: "stats",
-      intents: [GatewayIntentBits.GuildMembers],
-      partials: [Partials.GuildMember],
-    } as never;
+describe("planGateway", () => {
+  const core = { intents: [GatewayIntentBits.Guilds], partials: [] };
+  const quote = {
+    id: "quote",
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent],
+    partials: [Partials.Message],
+  } as never;
+  const stats = {
+    id: "stats",
+    intents: [GatewayIntentBits.GuildMembers],
+    partials: [Partials.GuildMember],
+  } as never;
 
-    const kept = keepModulesWithGrantedIntents(
-      [quote, stats],
-      ApplicationFlags.GatewayMessageContentLimited
-    );
-
-    expect(gatewayOptionsFor([core, ...kept])).toEqual({
+  it("requests only the intents and partials of the kept modules", () => {
+    expect(
+      planGateway(
+        core,
+        [quote, stats],
+        ApplicationFlags.GatewayMessageContentLimited
+      )
+    ).toEqual({
+      coreMissing: [],
+      modules: [quote],
       intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent],
       partials: [Partials.Message],
     });
+  });
+
+  it("requests every module's intents when the flags are unknown", () => {
+    expect(planGateway(core, [quote, stats], null)).toEqual({
+      coreMissing: [],
+      modules: [quote, stats],
+      intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMembers,
+      ],
+      partials: [Partials.Message, Partials.GuildMember],
+    });
+  });
+
+  it("reports a privileged intent the core lacks", () => {
+    const privilegedCore = {
+      intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+    };
+
+    expect(planGateway(privilegedCore, [], 0).coreMissing).toEqual([
+      GatewayIntentBits.GuildMembers,
+    ]);
   });
 });
 
@@ -162,11 +185,17 @@ describe("fetchApplicationFlags", () => {
     expect(get).not.toHaveBeenCalled();
   });
 
-  it("bounds the request so a slow API cannot stall the boot", async () => {
+  it("bounds the request so a slow or rate-limited API cannot stall the boot", async () => {
     get.mockResolvedValueOnce({});
 
     await fetchApplicationFlags("token");
 
-    expect(restOptions.at(-1)).toEqual({ timeout: 5_000, retries: 0 });
+    const options = restOptions.at(-1) as {
+      timeout: number;
+      retries: number;
+      rejectOnRateLimit: () => boolean;
+    };
+    expect(options).toMatchObject({ timeout: 5_000, retries: 0 });
+    expect(options.rejectOnRateLimit()).toBe(true);
   });
 });

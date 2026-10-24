@@ -43,6 +43,7 @@ export async function fetchApplicationFlags(
     const application = (await new REST({
       timeout: FLAGS_TIMEOUT_MS,
       retries: 0,
+      rejectOnRateLimit: () => true,
     })
       .setToken(token)
       .get(Routes.currentApplication())) as APIApplication;
@@ -88,11 +89,25 @@ export function keepModulesWithGrantedIntents(
   });
 }
 
-export function gatewayOptionsFor(
-  modules: Pick<Module, "intents" | "partials">[]
-): { intents: GatewayIntentBits[]; partials: Partials[] } {
+export function planGateway(
+  core: Pick<Module, "intents" | "partials">,
+  loadedModules: Module[],
+  flags: number | null
+): {
+  coreMissing: GatewayIntentBits[];
+  modules: Module[];
+  intents: GatewayIntentBits[];
+  partials: Partials[];
+} {
+  const coreMissing = flags === null ? [] : findMissingIntents(core, flags);
+  const modules = keepModulesWithGrantedIntents(loadedModules, flags);
+  const declaring = [core, ...modules];
   return {
-    intents: [...new Set(modules.flatMap((module) => module.intents ?? []))],
-    partials: [...new Set(modules.flatMap((module) => module.partials ?? []))],
+    coreMissing,
+    modules,
+    intents: [...new Set(declaring.flatMap((module) => module.intents ?? []))],
+    partials: [
+      ...new Set(declaring.flatMap((module) => module.partials ?? [])),
+    ],
   };
 }

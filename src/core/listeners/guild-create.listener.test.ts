@@ -147,6 +147,15 @@ describe("guildCreate", () => {
     expect(resetVersionsOfUnloadedModulesIn).toHaveBeenCalledWith("guild-1");
   });
 
+  it("marks unloaded modules even when listing module states fails", async () => {
+    getAllModulesStateIn.mockRejectedValueOnce(new Error("db down"));
+    const { guild } = fakeGuild();
+
+    await listener.execute(guild, undefined);
+
+    expect(resetVersionsOfUnloadedModulesIn).toHaveBeenCalledWith("guild-1");
+  });
+
   it("falls back to the owner DM when no system channel exists", async () => {
     const ownerSend = vi.fn(async () => ({}));
     const { guild } = fakeGuild({

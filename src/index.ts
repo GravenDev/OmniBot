@@ -5,10 +5,8 @@ import coreModule from "./core/core.module.js";
 import { syncCommands } from "./core/loaders/command-loader.js";
 import {
   fetchApplicationFlags,
-  findMissingIntents,
-  gatewayOptionsFor,
   intentNames,
-  keepModulesWithGrantedIntents,
+  planGateway,
 } from "./core/loaders/intent-guard.js";
 import {
   loadGlobalEvents,
@@ -50,19 +48,17 @@ const [loadedModules, applicationFlags] = await Promise.all([
   fetchApplicationFlags(token),
 ]);
 
-const coreMissing =
-  applicationFlags === null
-    ? []
-    : findMissingIntents(coreModule, applicationFlags);
+const { coreMissing, modules, intents, partials } = planGateway(
+  coreModule,
+  loadedModules,
+  applicationFlags
+);
 if (coreMissing.length > 0) {
   logger.fatal(
     `Privileged intent required by the core is not granted, exiting | intents = ${intentNames(coreMissing)}`
   );
   process.exit(1);
 }
-
-const modules = keepModulesWithGrantedIntents(loadedModules, applicationFlags);
-const { intents, partials } = gatewayOptionsFor([coreModule, ...modules]);
 
 const client = new Client({
   intents: intents,
