@@ -23,7 +23,12 @@ export type StickyChannel = Pick<
   "id" | "guildId" | "send" | "messages"
 >;
 
-class StickyPoster implements Service {
+export interface Unstuck {
+  removed: boolean;
+  leftover: boolean;
+}
+
+export class StickyPoster implements Service {
   private readonly queue = new KeyedQueue();
   private readonly pending = new Set<string>();
   private readonly pausedUntil = new Map<string, number>();
@@ -47,30 +52,32 @@ class StickyPoster implements Service {
       .catch(() => undefined);
   }
 
-  post(channel: StickyChannel): Promise<void> {
-    this.pausedUntil.delete(channel.id);
-    return this.queue.run(channel.id, () => this.attempt(channel));
-  }
-
-  unstick(channel: StickyChannel): Promise<boolean> {
+  set(channel: StickyChannel, content: string): Promise<boolean> {
     return this.queue.run(channel.id, async () => {
-      const sticky = await store.get(channel.guildId, channel.id);
-      const removed = await store.remove(channel.guildId, channel.id);
-      if (sticky?.messageId) {
-        await this.deleteQuietly(channel, sticky.messageId);
+      await store.set(channel.guildId, channel.id, content);
+      this.pausedUntil.delete(channel.id);
+      try {
+        return await this.attempt(channel);
+      } catch {
+        return false;
       }
-      return removed > 0;
     });
   }
 
-  reset(): void {
-    this.pending.clear();
-    this.pausedUntil.clear();
+  unstick(channel: StickyChannel): Promise<Unstuck> {
+    return this.queue.run(channel.id, async () => {
+      const sticky = await store.get(channel.guildId, channel.id);
+      const removed = (await store.remove(channel.guildId, channel.id)) > 0;
+      const leftover = sticky?.messageId
+        ? !(await this.deleteQuietly(channel, sticky.messageId))
+        : false;
+      return { removed, leftover };
+    });
   }
 
-  private async attempt(channel: StickyChannel): Promise<void> {
+  private async attempt(channel: StickyChannel): Promise<boolean> {
     try {
-      await this.repost(channel);
+      return await this.repost(channel);
     } catch (err) {
       const code = err instanceof DiscordAPIError ? err.code : undefined;
       if (code !== undefined && PAUSING_ERRORS.has(code)) {
@@ -84,10 +91,10 @@ class StickyPoster implements Service {
     }
   }
 
-  private async repost(channel: StickyChannel): Promise<void> {
+  private async repost(channel: StickyChannel): Promise<boolean> {
     const sticky = await store.get(channel.guildId, channel.id);
     if (!sticky) {
-      return;
+      return false;
     }
     const sent = await channel.send({
       content: sticky.content,
@@ -102,25 +109,28 @@ class StickyPoster implements Service {
     if (sticky.messageId) {
       await this.deleteQuietly(channel, sticky.messageId);
     }
+    return true;
   }
 
   private async deleteQuietly(
     channel: StickyChannel,
     messageId: string
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       await channel.messages.delete(messageId);
+      return true;
     } catch (err) {
       if (
         err instanceof DiscordAPIError &&
         err.code === RESTJSONErrorCodes.UnknownMessage
       ) {
-        return;
+        return true;
       }
       logger.warn(
         { err },
-        `Previous sticky not deleted | guildId = ${channel.guildId} | channelId = ${channel.id} | messageId = ${messageId}`
+        `Sticky not deleted | guildId = ${channel.guildId} | channelId = ${channel.id} | messageId = ${messageId}`
       );
+      return false;
     }
   }
 }

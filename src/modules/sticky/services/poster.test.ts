@@ -8,6 +8,11 @@ const state = vi.hoisted(() => ({
 
 const store = vi.hoisted(() => ({
   get: vi.fn(async () => state.sticky && { ...state.sticky }),
+  set: vi.fn(async (_g: string, channelId: string, content: string) => {
+    state.sticky = state.sticky
+      ? { ...state.sticky, content }
+      : { channelId, content, messageId: null };
+  }),
   setMessageId: vi.fn(async (_g: string, _c: string, messageId: string) => {
     if (state.sticky) state.sticky.messageId = messageId;
   }),
@@ -23,7 +28,9 @@ vi.mock("#lib/logger.js", () => ({
   loggerMaker: () => ({ warn: vi.fn(), info: vi.fn() }),
 }));
 
-const { default: poster } = await import("./poster.js");
+const { StickyPoster } = await import("./poster.js");
+
+let poster: InstanceType<typeof StickyPoster>;
 
 function apiError(code: number): DiscordAPIError {
   return new DiscordAPIError(
@@ -52,13 +59,17 @@ function asChannel(channel: Fake) {
   return channel as never;
 }
 
-async function settle() {
-  for (let i = 0; i < 20; i++) await Promise.resolve();
+async function drain(channel: Fake) {
+  await (
+    poster as unknown as {
+      queue: { run: (key: string, task: () => Promise<void>) => Promise<void> };
+    }
+  ).queue.run(channel.id, async () => {});
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  poster.reset();
+  poster = new StickyPoster();
   state.sticky = {
     channelId: "c1",
     content: "Read the rules",
@@ -70,7 +81,7 @@ describe("StickyPoster", () => {
   it("posts the sticky again and deletes the previous one", async () => {
     const channel = fakeChannel();
     poster.bump(asChannel(channel));
-    await settle();
+    await drain(channel);
 
     expect(channel.send).toHaveBeenCalledWith({
       content: "Read the rules",
@@ -84,7 +95,7 @@ describe("StickyPoster", () => {
     const channel = fakeChannel();
     channel.send.mockRejectedValueOnce(new Error("network"));
     poster.bump(asChannel(channel));
-    await settle();
+    await drain(channel);
     expect(channel.messages.delete).not.toHaveBeenCalled();
   });
 
@@ -98,10 +109,10 @@ describe("StickyPoster", () => {
         })
     );
     poster.bump(asChannel(channel));
-    await settle();
+    await vi.waitFor(() => expect(channel.send).toHaveBeenCalledTimes(1));
     for (let i = 0; i < 5; i++) poster.bump(asChannel(channel));
     release();
-    await settle();
+    await drain(channel);
 
     expect(channel.send).toHaveBeenCalledTimes(2);
     expect(channel.messages.delete).toHaveBeenLastCalledWith("m0");
@@ -113,7 +124,7 @@ describe("StickyPoster", () => {
       apiError(RESTJSONErrorCodes.UnknownMessage)
     );
     poster.bump(asChannel(channel));
-    await settle();
+    await drain(channel);
     expect(store.setMessageId).toHaveBeenCalledWith("g1", "c1", "m1");
   });
 
@@ -125,16 +136,16 @@ describe("StickyPoster", () => {
         apiError(RESTJSONErrorCodes.MissingPermissions)
       );
       poster.bump(asChannel(channel));
-      await settle();
+      await drain(channel);
 
       vi.advanceTimersByTime(10 * 60_000 - 1);
       poster.bump(asChannel(channel));
-      await settle();
+      await drain(channel);
       expect(channel.send).toHaveBeenCalledTimes(1);
 
       vi.advanceTimersByTime(1);
       poster.bump(asChannel(channel));
-      await settle();
+      await drain(channel);
       expect(channel.send).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();
@@ -145,40 +156,108 @@ describe("StickyPoster", () => {
     state.sticky = null;
     const channel = fakeChannel();
     poster.bump(asChannel(channel));
-    await settle();
+    await drain(channel);
     expect(channel.send).not.toHaveBeenCalled();
-  });
-
-  it("unsticks by removing the entry and its message", async () => {
-    const channel = fakeChannel();
-    expect(await poster.unstick(asChannel(channel))).toBe(true);
-    expect(store.remove).toHaveBeenCalledWith("g1", "c1");
-    expect(channel.messages.delete).toHaveBeenCalledWith("old");
-    expect(await poster.unstick(asChannel(channel))).toBe(false);
-  });
-
-  it("surfaces a failed post to the caller", async () => {
-    const channel = fakeChannel();
-    channel.send.mockRejectedValueOnce(new Error("network"));
-    await expect(poster.post(asChannel(channel))).rejects.toThrow("network");
-  });
-
-  it("pauses the channel when a direct post lacks permissions", async () => {
-    const channel = fakeChannel();
-    channel.send.mockRejectedValueOnce(
-      apiError(RESTJSONErrorCodes.MissingAccess)
-    );
-    await expect(poster.post(asChannel(channel))).rejects.toThrow();
-    poster.bump(asChannel(channel));
-    await settle();
-    expect(channel.send).toHaveBeenCalledTimes(1);
   });
 
   it("withdraws the new message when it cannot be recorded", async () => {
     const channel = fakeChannel();
     store.setMessageId.mockRejectedValueOnce(new Error("database"));
-    await expect(poster.post(asChannel(channel))).rejects.toThrow("database");
+    poster.bump(asChannel(channel));
+    await drain(channel);
     expect(channel.messages.delete).toHaveBeenCalledWith("m1");
     expect(channel.messages.delete).not.toHaveBeenCalledWith("old");
+  });
+});
+
+describe("StickyPoster.set", () => {
+  it("saves the content and posts it at once", async () => {
+    const channel = fakeChannel();
+    expect(await poster.set(asChannel(channel), "New rules")).toBe(true);
+    expect(store.set).toHaveBeenCalledWith("g1", "c1", "New rules");
+    expect(channel.send).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "New rules" })
+    );
+  });
+
+  it("reports a failed post without throwing", async () => {
+    const channel = fakeChannel();
+    channel.send.mockRejectedValueOnce(new Error("network"));
+    expect(await poster.set(asChannel(channel), "New rules")).toBe(false);
+  });
+
+  it("lets a failed save reach the caller", async () => {
+    store.set.mockRejectedValueOnce(new Error("database"));
+    await expect(
+      poster.set(asChannel(fakeChannel()), "New rules")
+    ).rejects.toThrow("database");
+  });
+
+  it("pauses the channel when the post lacks permissions", async () => {
+    const channel = fakeChannel();
+    channel.send.mockRejectedValueOnce(
+      apiError(RESTJSONErrorCodes.MissingAccess)
+    );
+    expect(await poster.set(asChannel(channel), "New rules")).toBe(false);
+    poster.bump(asChannel(channel));
+    await drain(channel);
+    expect(channel.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("lifts a pause to try again", async () => {
+    const channel = fakeChannel();
+    channel.send.mockRejectedValueOnce(
+      apiError(RESTJSONErrorCodes.MissingAccess)
+    );
+    poster.bump(asChannel(channel));
+    await drain(channel);
+    expect(await poster.set(asChannel(channel), "New rules")).toBe(true);
+    poster.bump(asChannel(channel));
+    await drain(channel);
+    expect(channel.send).toHaveBeenCalledTimes(3);
+  });
+
+  it("cannot be undone halfway by a concurrent removal", async () => {
+    const channel = fakeChannel();
+    const removal = poster.unstick(asChannel(channel));
+    const setting = poster.set(asChannel(channel), "New rules");
+    await removal;
+    expect(await setting).toBe(true);
+    expect(state.sticky?.content).toBe("New rules");
+  });
+});
+
+describe("StickyPoster.unstick", () => {
+  it("removes the entry and its message", async () => {
+    const channel = fakeChannel();
+    expect(await poster.unstick(asChannel(channel))).toEqual({
+      removed: true,
+      leftover: false,
+    });
+    expect(store.remove).toHaveBeenCalledWith("g1", "c1");
+    expect(channel.messages.delete).toHaveBeenCalledWith("old");
+    expect(await poster.unstick(asChannel(channel))).toEqual({
+      removed: false,
+      leftover: false,
+    });
+  });
+
+  it("tells when the last copy stays on screen", async () => {
+    const channel = fakeChannel();
+    channel.messages.delete.mockRejectedValueOnce(
+      apiError(RESTJSONErrorCodes.MissingAccess)
+    );
+    expect(await poster.unstick(asChannel(channel))).toEqual({
+      removed: true,
+      leftover: true,
+    });
+  });
+
+  it("does not count a copy already deleted as left over", async () => {
+    const channel = fakeChannel();
+    channel.messages.delete.mockRejectedValueOnce(
+      apiError(RESTJSONErrorCodes.UnknownMessage)
+    );
+    expect((await poster.unstick(asChannel(channel))).leftover).toBe(false);
   });
 });

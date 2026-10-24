@@ -8,7 +8,7 @@ interface Row {
 }
 
 const db = vi.hoisted(() => {
-  const state = { rows: [] as Row[], reads: 0 };
+  const state = { rows: [] as Row[], reads: 0, failReads: 0 };
   const matches =
     (where: { guildId: string; channelId: string | { in: string[] } }) =>
     (row: Row) =>
@@ -20,6 +20,10 @@ const db = vi.hoisted(() => {
     stickyMessage: {
       findMany: async ({ where }: { where: { guildId: string } }) => {
         state.reads++;
+        if (state.failReads > 0) {
+          state.failReads--;
+          throw new Error("database");
+        }
         return state.rows.filter((row) => row.guildId === where.guildId);
       },
       upsert: async ({
@@ -71,6 +75,7 @@ let guildId: string;
 beforeEach(() => {
   db.state.rows = [];
   db.state.reads = 0;
+  db.state.failReads = 0;
   guildId = `g${++guild}`;
 });
 
@@ -103,6 +108,15 @@ describe("StickyStore", () => {
     await store.setMessageId(guildId, "c1", "m2");
     expect((await store.get(guildId, "c1"))?.messageId).toBe("m2");
     expect(db.state.reads).toBe(1);
+  });
+
+  it("records the message even when the cache cannot be reloaded", async () => {
+    await store.set(guildId, "c1", "hello");
+    db.state.failReads = 1;
+    await expect(store.setMessageId(guildId, "c1", "m1")).resolves.toBe(
+      undefined
+    );
+    expect((await store.get(guildId, "c1"))?.messageId).toBe("m1");
   });
 
   it("hands out copies the caller cannot alter", async () => {

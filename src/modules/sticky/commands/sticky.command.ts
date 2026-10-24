@@ -30,23 +30,39 @@ export const STICKY_MODAL_ID = "sticky-modal";
 export const CONTENT_MAX = 2000;
 const PREVIEW_MAX = 80;
 const PREFILL_WAIT_MS = 1500;
+const MODAL_DEADLINE_MS = 2200;
+
+const ESCAPE_ALL = {
+  maskedLink: true,
+  heading: true,
+  bulletedList: true,
+  numberedList: true,
+} as const;
 
 const ephemeral = { flags: MessageFlags.Ephemeral } as const;
 
 export function preview(content: string): string {
-  const line = content.replace(/\s+/g, " ").trim();
-  return line.length > PREVIEW_MAX
-    ? `${escapeMarkdown(line.slice(0, PREVIEW_MAX - 1))}…`
-    : escapeMarkdown(line);
+  const chars = Array.from(content.replace(/\s+/g, " ").trim());
+  const line =
+    chars.length > PREVIEW_MAX
+      ? `${chars.slice(0, PREVIEW_MAX - 1).join("")}…`
+      : chars.join("");
+  return escapeMarkdown(line, ESCAPE_ALL).replaceAll("<", "\\<");
+}
+
+export function prefillWait(createdTimestamp: number): number {
+  const left = MODAL_DEADLINE_MS - (Date.now() - createdTimestamp);
+  return Math.min(PREFILL_WAIT_MS, Math.max(0, left));
 }
 
 export function currentContent(
   guildId: string,
-  channelId: string
+  channelId: string,
+  waitMs: number
 ): Promise<string | null> {
   let timer: NodeJS.Timeout | undefined;
   const timeout = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), PREFILL_WAIT_MS);
+    timer = setTimeout(() => resolve(null), waitMs);
   });
   const lookup = store
     .get(guildId, channelId)
@@ -57,7 +73,11 @@ export function currentContent(
 
 async function set(interaction: Interaction, config: Config) {
   const channel = interaction.options.getChannel("channel", true);
-  const current = await currentContent(interaction.guildId, channel.id);
+  const current = await currentContent(
+    interaction.guildId,
+    channel.id,
+    prefillWait(interaction.createdTimestamp)
+  );
   const input = new TextInputBuilder()
     .setCustomId("content")
     .setLabel(config.t("modal.content"))
@@ -83,17 +103,18 @@ async function remove(interaction: Interaction, config: Config) {
     ChannelType.GuildAnnouncement,
   ]);
   await interaction.deferReply(ephemeral);
-  const removed = await poster.unstick(channel);
+  const { removed, leftover } = await poster.unstick(channel);
   if (removed) {
     logger.info(
       `Sticky removed | guildId = ${interaction.guildId} | channelId = ${channel.id} | by = ${interaction.user.id}`
     );
   }
-  await interaction.editReply(
-    config.t(removed ? "remove.done" : "remove.none", {
-      channel: `<#${channel.id}>`,
-    })
-  );
+  const key = !removed
+    ? "remove.none"
+    : leftover
+      ? "remove.leftover"
+      : "remove.done";
+  await interaction.editReply(config.t(key, { channel: `<#${channel.id}>` }));
 }
 
 async function list(interaction: Interaction, config: Config) {
