@@ -41,15 +41,18 @@ vi.mock("#lib/database.js", () => {
         async upsert({
           where,
           create,
+          update,
         }: {
           where: { guildId: string };
           create: { guildId: string; data: unknown };
-          update: unknown;
+          update: { data?: unknown };
         }) {
           await settle();
           writes.count++;
           if (!rows.has(where.guildId)) {
             rows.set(where.guildId, create.data);
+          } else if (update.data !== undefined) {
+            rows.set(where.guildId, update.data);
           }
           return { guildId: where.guildId, data: rows.get(where.guildId) };
         },
@@ -162,5 +165,22 @@ describe("concurrent config writes", () => {
     const full = await configService.getFullConfigForGuild("guild-w");
     expect(full["mod-a"]).toEqual({ x: 1 });
     expect(full["mod-b"]).toEqual({ y: 2 });
+  });
+
+  it("keeps the stored config of a module that is not loaded", async () => {
+    rows.set("guild-u", {
+      "mod-a": {},
+      core: {},
+      "not-loaded": { channel: "chan-1" },
+    });
+
+    await configService.updateConfigForModuleIn(moduleA, "guild-u", {
+      x: 1,
+    } as never);
+
+    expect(rows.get("guild-u")).toMatchObject({
+      "mod-a": { x: 1 },
+      "not-loaded": { channel: "chan-1" },
+    });
   });
 });

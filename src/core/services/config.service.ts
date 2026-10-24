@@ -192,7 +192,9 @@ class ConfigService {
       throw new Error("Invalid configuration format");
     }
 
-    const validatedConfig: Record<string, ConfigData<ConfigSchema>> = {};
+    const validatedConfig: Record<string, ConfigData<ConfigSchema>> = {
+      ...(config as Record<string, ConfigData<ConfigSchema>>),
+    };
 
     // Validate each module's configuration
     for (const module of [...modules, coreModule]) {

@@ -83,7 +83,7 @@ export default defineModule({
 });
 ```
 
-Additionally, **privileged intents** (`GuildMembers`, `GuildPresences`, `MessageContent`) must be enabled in the Discord Developer Portal under Bot > Privileged Gateway Intents.
+Additionally, **privileged intents** (`GuildMembers`, `GuildPresences`, `MessageContent`) must be enabled in the Discord Developer Portal under Bot > Privileged Gateway Intents. A module whose privileged intent is not granted is skipped at startup (see [Intent Management](./creating-a-module.md#intent-management)).
 
 ## Localization
 

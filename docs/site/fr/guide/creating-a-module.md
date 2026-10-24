@@ -140,6 +140,8 @@ interface ModuleDeclaration {
 
 Déclarez uniquement les intentions nécessaires à votre module. Les intentions requises doivent également être activées dans le Discord Developer Portal sous Bot > Privileged Gateway Intents.
 
+Au démarrage, le bot lit les intentions privilégiées (`GuildMembers`, `GuildPresences`, `MessageContent`) accordées à l'application, en version complète ou limitée. Un module qui en déclare une absente est écarté avec un avertissement, au lieu que Discord refuse la connexion ; il est rechargé au premier redémarrage qui suit l'octroi de l'intention. Si les flags ne peuvent pas être lus, tous les modules sont chargés, comme avant. Le cœur, lui, ne peut pas être écarté : s'il déclarait un jour une intention privilégiée non accordée, le bot s'arrêterait au démarrage avec une erreur qui la nomme.
+
 ```typescript
 intents: [
   GatewayIntentBits.Guilds,

@@ -22,7 +22,9 @@ When the bot starts (`src/index.ts`), it follows this sequence:
    └─ skips devOnly modules in production
 
 4. Intent aggregation
-   └─ collects GatewayIntentBits from all modules
+   └─ fetchApplicationFlags() — reads the privileged intents granted to the application
+   └─ skips (with a warning) every module needing a privileged intent that is not granted
+   └─ collects GatewayIntentBits from the remaining modules
    └─ creates the Discord Client with the union of all intents and partials
 
 5. ClientReady handler (async)

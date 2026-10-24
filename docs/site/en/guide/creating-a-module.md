@@ -142,6 +142,8 @@ interface ModuleDeclaration {
 
 Only declare the intents your module actually needs. Required intents must also be enabled in the Discord Developer Portal under Bot > Privileged Gateway Intents.
 
+At startup the bot reads which privileged intents (`GuildMembers`, `GuildPresences`, `MessageContent`) the application has been granted, in full or limited form. A module that declares one the application lacks is skipped with a warning instead of making Discord reject the connection; it loads again on the first restart after the intent is granted. If the flags cannot be read, every module is loaded as before. The core cannot be skipped: if it ever declares a privileged intent that is not granted, the bot exits at startup with an error naming the intent.
+
 ```typescript
 intents: [
   GatewayIntentBits.Guilds,

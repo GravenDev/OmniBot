@@ -4,6 +4,13 @@ import { Client, Events } from "discord.js";
 import coreModule from "./core/core.module.js";
 import { syncCommands } from "./core/loaders/command-loader.js";
 import {
+  fetchApplicationFlags,
+  findMissingIntents,
+  gatewayOptionsFor,
+  intentNames,
+  keepModulesWithGrantedIntents,
+} from "./core/loaders/intent-guard.js";
+import {
   loadGlobalEvents,
   loadModuleEvents,
 } from "./core/loaders/listener-loader.js";
@@ -38,17 +45,24 @@ await initI18n();
 const corePath = path.resolve(fileURLToPath(import.meta.url), "..", "core");
 await loadModuleI18n("core", corePath);
 
-const modules = await loadModules("./modules");
-const intents = [
-  ...new Set(
-    [coreModule, ...modules].flatMap((module) => module.intents ?? [])
-  ),
-];
-const partials = [
-  ...new Set(
-    [coreModule, ...modules].flatMap((module) => module.partials ?? [])
-  ),
-];
+const [loadedModules, applicationFlags] = await Promise.all([
+  loadModules("./modules"),
+  fetchApplicationFlags(token),
+]);
+
+const coreMissing =
+  applicationFlags === null
+    ? []
+    : findMissingIntents(coreModule, applicationFlags);
+if (coreMissing.length > 0) {
+  logger.fatal(
+    `Privileged intent required by the core is not granted, exiting | intents = ${intentNames(coreMissing)}`
+  );
+  process.exit(1);
+}
+
+const modules = keepModulesWithGrantedIntents(loadedModules, applicationFlags);
+const { intents, partials } = gatewayOptionsFor([coreModule, ...modules]);
 
 const client = new Client({
   intents: intents,
