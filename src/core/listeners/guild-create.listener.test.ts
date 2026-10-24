@@ -131,7 +131,11 @@ describe("guildCreate", () => {
 
     await listener.execute(guild, undefined);
 
-    expect(updateModuleActivation).toHaveBeenCalledTimes(1);
+    expect(updateModuleActivation).not.toHaveBeenCalledWith(
+      "a",
+      "guild-1",
+      "2.0.0"
+    );
     expect(updateModuleActivation).toHaveBeenCalledWith(
       "b",
       "guild-1",
@@ -154,6 +158,35 @@ describe("guildCreate", () => {
     await listener.execute(guild, undefined);
 
     expect(resetVersionsOfUnloadedModulesIn).toHaveBeenCalledWith("guild-1");
+  });
+
+  it("blanks the version of a module whose reinstall fails so the next boot retries", async () => {
+    const modA = { id: "a", version: "2.0.0", registry: { commands: [{}] } };
+    mockModules.push(modA);
+    getAllModulesStateIn.mockResolvedValue([
+      { module: { id: "a" }, enabled: true },
+    ]);
+    installModuleCommandsIn.mockRejectedValueOnce(new Error("boom"));
+    const { guild } = fakeGuild();
+
+    await listener.execute(guild, undefined);
+
+    expect(updateModuleActivation).toHaveBeenCalledOnce();
+    expect(updateModuleActivation).toHaveBeenCalledWith("a", "guild-1", "");
+  });
+
+  it("still welcomes the guild when blanking the version fails", async () => {
+    const modA = { id: "a", version: "2.0.0", registry: { commands: [{}] } };
+    mockModules.push(modA);
+    getAllModulesStateIn.mockResolvedValue([
+      { module: { id: "a" }, enabled: true },
+    ]);
+    installModuleCommandsIn.mockRejectedValueOnce(new Error("boom"));
+    updateModuleActivation.mockRejectedValueOnce(new Error("db down"));
+    const { guild, channel } = fakeGuild();
+
+    await expect(listener.execute(guild, undefined)).resolves.toBeUndefined();
+    expect(channel.send).toHaveBeenCalledOnce();
   });
 
   it("falls back to the owner DM when no system channel exists", async () => {

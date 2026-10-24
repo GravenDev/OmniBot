@@ -107,6 +107,14 @@ async function reinstallModuleCommands(guild: Guild): Promise<void> {
         { err },
         `Failed to reinstall commands | module = ${mod.id} | guild = ${guild.id}`
       );
+      try {
+        await moduleService.updateModuleActivation(mod.id, guild.id, "");
+      } catch (resetErr) {
+        logger.error(
+          { err: resetErr },
+          `Failed to reset module version | module = ${mod.id} | guild = ${guild.id}`
+        );
+      }
     }
   }
 }
