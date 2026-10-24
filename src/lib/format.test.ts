@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { decimalSeparator, formatInteger, formatPercentage } from "./format.js";
+import {
+  decimalSeparator,
+  describeLines,
+  formatInteger,
+  formatPercentage,
+} from "./format.js";
 
 describe("formatInteger", () => {
   it.each([
@@ -31,5 +36,28 @@ describe("decimalSeparator", () => {
   it("is a comma in French and a point in English", () => {
     expect(decimalSeparator("fr")).toBe(",");
     expect(decimalSeparator("en")).toBe(".");
+  });
+});
+
+describe("describeLines", () => {
+  const more = (count: number) => `+${count}`;
+
+  it("joins the lines when they fit", () => {
+    expect(describeLines(["a", "b"], more)).toBe("a\nb");
+  });
+
+  it("stops on a whole line and counts the hidden ones", () => {
+    const lines = Array.from({ length: 100 }, () => "x".repeat(99));
+    const description = describeLines(lines, more);
+    expect(description.length).toBeLessThanOrEqual(4096);
+    const shown = description.split("\n");
+    const footer = shown.pop()!;
+    expect(shown.every((line) => line === "x".repeat(99))).toBe(true);
+    expect(footer).toBe(`+${100 - shown.length}`);
+  });
+
+  it("counts a single hidden line", () => {
+    const lines = Array.from({ length: 41 }, () => "x".repeat(99));
+    expect(describeLines(lines, more).split("\n").at(-1)).toBe("+1");
   });
 });

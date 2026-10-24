@@ -12,11 +12,7 @@ const store = vi.hoisted(() => ({
 
 vi.mock("#modules/autoreact/services/store.js", () => ({ default: store }));
 
-const {
-  default: command,
-  describeLines,
-  parseEmoji,
-} = await import("./autoreact.command.js");
+const { default: command, parseEmoji } = await import("./autoreact.command.js");
 
 const hype = { id: "111111111111111111", name: "hype", animated: false };
 const ALL_PERMISSIONS: PermissionsString[] = [
@@ -136,29 +132,6 @@ describe("parseEmoji", () => {
     expect(
       await parseEmoji(asInteraction(fakeInteraction()), "hello world")
     ).toBeNull();
-  });
-});
-
-describe("describeLines", () => {
-  const more = (count: number) => `+${count}`;
-
-  it("joins the lines when they fit", () => {
-    expect(describeLines(["a", "b"], more)).toBe("a\nb");
-  });
-
-  it("stops on a whole line and counts the hidden ones", () => {
-    const lines = Array.from({ length: 100 }, () => "x".repeat(99));
-    const description = describeLines(lines, more);
-    expect(description.length).toBeLessThanOrEqual(4096);
-    const shown = description.split("\n");
-    const footer = shown.pop()!;
-    expect(shown.every((line) => line === "x".repeat(99))).toBe(true);
-    expect(footer).toBe(`+${100 - shown.length}`);
-  });
-
-  it("counts a single hidden line", () => {
-    const lines = Array.from({ length: 41 }, () => "x".repeat(99));
-    expect(describeLines(lines, more).split("\n").at(-1)).toBe("+1");
   });
 });
 
