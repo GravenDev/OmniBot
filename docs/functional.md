@@ -205,6 +205,8 @@ Chaque jour à 18:00 UTC, juste après la synchronisation, le bot poste dans le 
 | `leaderboardChannel` | Salon   | Salon RNGdle : classement et rappel quotidiens, résultats collés par les membres. Tant qu'il n'est pas défini, rien n'est publié. |
 | `shareCards`         | Booléen | Répond par une carte aux résultats collés dans le salon RNGdle (activé par défaut).                                               |
 
+Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
+
 ---
 
 ## Module Clash of Code
@@ -306,6 +308,8 @@ Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la dur
 | `emoji`         | Emoji | Emoji de signalement, standard ou personnalisé (🚩 par défaut).                 |
 | `moderatorRole` | Rôle  | Rôle mentionné à chaque nouvelle alerte. Sans rôle, personne n'est mentionné.   |
 | `retention`     | Durée | Durée de conservation d'un signalement clos (90 jours par défaut).              |
+
+Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
 
 ---
 
@@ -426,6 +430,8 @@ plus de commande dédiée : la configuration se fait via `/config thread-creator
 
 Il n'y a plus de flag `actif` : désactiver le module via `/modules` arrête la
 surveillance sans effacer la configuration.
+
+Le module déclare l'intent privilégié _Message Content_, qui doit être activé sur le bot : le contenu ne sert que si le modèle de nom contient `{messageContent}`.
 
 ---
 

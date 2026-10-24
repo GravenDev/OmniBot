@@ -40,7 +40,7 @@ Quand un membre désactive ses mentions avec `/pings`, le bot enregistre l'ID du
 
 Quand un membre signale un message avec le module Signalements, le bot enregistre :
 
-- une copie du message signalé : son texte, sa version modifiée si l'auteur le modifie ensuite, et les liens de ses pièces jointes ;
+- une copie du message signalé : son texte, sa version modifiée si l'auteur le modifie ensuite, et le nom et le lien de ses pièces jointes et de ses stickers ;
 - l'ID de l'auteur, du salon et du message, et la date d'envoi du message ;
 - l'ID de chaque membre qui l'a signalé, avec le motif qu'il a éventuellement donné ;
 - les décisions des modérateurs : ID du modérateur, sanction, motif et durée.
@@ -57,9 +57,13 @@ Cette copie permet aux modérateurs de juger le message même si son auteur le m
 
 Le module Auto React enregistre, pour chaque salon configuré, l'emoji à ajouter. Il n'enregistre rien sur les membres.
 
+### Messages collants
+
+Le module Messages collants enregistre, pour chaque salon configuré, le texte du message collant écrit par un administrateur et l'ID de sa dernière publication. Il n'enregistre rien sur les membres et ne lit pas leurs messages : un nouveau message déclenche seulement la republication.
+
 ### Statistiques d'activité
 
-Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, jamais le contenu des messages. Ces compteurs sont supprimés au bout de 90 jours. Le bilan quotidien publié sur le serveur peut citer les membres les plus actifs ; les administrateurs peuvent le désactiver.
+Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, avec la date à laquelle le suivi a commencé sur le serveur, jamais le contenu des messages ni l'identité des membres qui arrivent ou partent. Ces compteurs sont supprimés au bout de 90 jours. Le bilan quotidien publié sur le serveur peut citer les membres les plus actifs ; les administrateurs peuvent le désactiver.
 
 ## Contenu des messages lu sans être stocké
 
@@ -72,7 +76,7 @@ Certains modules lisent le contenu des messages pour fonctionner, sans l'enregis
 - **RNGdle** lit les messages du seul salon RNGdle, pour reconnaître un résultat collé et y répondre avec une carte ;
 - **Clash of Code** lit les messages des salons choisis par les administrateurs (tous les salons si aucun n'est choisi), pour repérer les liens de partie : seul l'identifiant de la partie est conservé.
 
-Ce que ces modules publient reste sur le serveur Discord, sous le contrôle de ses administrateurs. Le bot ignore les messages des autres bots, sauf Auto React, qui leur ajoute aussi sa réaction sans les lire.
+Ce que ces modules publient reste sur le serveur Discord, sous le contrôle de ses administrateurs. Le bot ignore les messages des autres bots, à trois exceptions : Auto React leur ajoute aussi sa réaction, Messages collants republie aussi son message après eux, tous deux sans les lire, et Message Quote cite le message d'un bot quand un membre en poste le lien.
 
 ## Stockage des données
 
@@ -82,11 +86,12 @@ Les données sont stockées dans une base de données PostgreSQL gérée par l'o
 
 - **Configuration et activation des modules** : conservées tant que le bot est sur le serveur. Quand le bot quitte un serveur (kick ou retrait), elles sont volontairement conservées afin que tout soit restauré automatiquement si le bot est réinvité. Désactiver un module ne supprime ni sa configuration ni ses données : elles restent soumises aux durées ci-dessous.
 - **Signalements** : un signalement en cours est conservé jusqu'à sa clôture. Un signalement clos est supprimé, copie du message comprise, au bout de 90 jours ; les administrateurs de chaque serveur peuvent changer ce délai.
-- **Statistiques d'activité** : supprimées au bout de 90 jours.
-- **RNGdle** : les tirages, le pseudo et l'inscription au rappel sont conservés jusqu'à ce que le membre se délie avec `/rngdle unlink`, ou qu'un administrateur le délie. L'indication de carte obtenue est supprimée le lendemain.
+- **Statistiques d'activité** : les compteurs sont supprimés au bout de 90 jours, un délai qui ne se change pas. La date de début du suivi est conservée sans limite de durée.
+- **RNGdle** : les tirages, le pseudo et l'inscription au rappel sont conservés jusqu'à ce que le membre se délie avec `/rngdle unlink`, ou qu'un administrateur le délie. L'indication de carte obtenue est supprimée le surlendemain.
 - **Jeu des 4h** : les scores et l'historique des points sont conservés jusqu'à ce qu'un administrateur supprime le score du joueur.
 - **Clash of Code** : les parties, les joueurs et leurs résultats sont conservés sans limite de durée, pour l'historique du classement. La liaison à un compte Discord est retirée quand le membre se délie avec `/coc unlink`, ou qu'un administrateur le délie.
 - **Préférence de mention et réactions automatiques** : conservées jusqu'à ce que le membre, ou un administrateur, les retire.
+- **Messages collants** : conservés jusqu'à ce qu'un administrateur les retire avec `/sticky remove`, ou que le salon soit supprimé.
 
 Pour demander la suppression de vos données, contactez l'opérateur de l'instance.
 
@@ -98,10 +103,10 @@ Le bot contacte quatre services externes :
 
 - **l'API Discord**, qui reçoit des données dans le cadre du fonctionnement normal du bot (envoi de messages, réponse aux interactions, enregistrement des commandes) ;
 - **rngdle.com**, pour le module RNGdle : le bot y envoie les pseudos RNGdle liés, pour télécharger les tirages, et récupère la table des scores du site ;
-- **rng.cubityfir.st**, pour le module RNGdle : le bot y envoie le numéro d'un tirage, pour obtenir la liste de ses badges ;
+- **rng.cubityfir.st**, pour le module RNGdle : le bot y envoie le numéro d'un tirage, pour obtenir la liste de ses badges ; pour un membre non lié, ce numéro est celui du résultat qu'il a collé ;
 - **codingame.com**, pour le module Clash of Code : le bot y envoie l'identifiant d'une partie, tiré du lien posté, pour en obtenir le résultat, et récupère les avatars des joueurs sur static.codingame.com.
 
-Aucun identifiant Discord ni contenu de message n'est envoyé à rngdle.com, à rng.cubityfir.st ni à codingame.com.
+Aucun identifiant Discord ni texte de message n'est envoyé à rngdle.com, à rng.cubityfir.st ni à codingame.com : seuls l'identifiant d'une partie et le numéro d'un tirage peuvent provenir d'un message.
 
 ## Open Source
 
