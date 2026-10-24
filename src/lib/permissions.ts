@@ -1,4 +1,10 @@
-import { PermissionFlagsBits, type Message } from "discord.js";
+import {
+  PermissionFlagsBits,
+  type Guild,
+  type GuildBasedChannel,
+  type Message,
+  type PermissionsString,
+} from "discord.js";
 
 // Whether the bot can reply to a message with a file: see the channel, post
 // in it (or in the thread), attach the file and read the message it replies
@@ -15,4 +21,13 @@ export function canReplyWithFile(message: Message<true>): boolean {
       PermissionFlagsBits.ReadMessageHistory,
     ]) ?? false
   );
+}
+
+export async function missingBotPermissions(
+  guild: Guild,
+  channel: GuildBasedChannel,
+  required: PermissionsString[]
+): Promise<PermissionsString[]> {
+  const me = guild.members.me ?? (await guild.members.fetchMe());
+  return channel.permissionsFor(me)?.missing(required) ?? required;
 }

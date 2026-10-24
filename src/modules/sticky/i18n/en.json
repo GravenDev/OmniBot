@@ -1,0 +1,22 @@
+{
+  "modal.title": "Sticky message",
+  "modal.content": "Message kept at the bottom of the channel",
+
+  "set.done": "The message now stays at the bottom of {{channel}}.",
+  "set.notPosted": "The message is saved but could not be posted in {{channel}}: it will be posted after the next message.",
+  "set.empty": "The message cannot be empty.",
+  "set.unknownChannel": "This channel no longer exists.",
+  "set.missingPermissions": "The bot cannot post in {{channel}}: it lacks {{permissions}}.",
+
+  "permission.ViewChannel": "View Channel",
+  "permission.SendMessages": "Send Messages",
+
+  "remove.done": "No more sticky message in {{channel}}.",
+  "remove.none": "No sticky message is set in {{channel}}.",
+  "remove.leftover": "No more sticky message in {{channel}}, but its last copy could not be deleted: delete it by hand.",
+
+  "list.empty": "No sticky message is set.",
+  "list.title": "Sticky messages ({{count}})",
+  "list.more_one": "… and {{count}} more channel",
+  "list.more_other": "… and {{count}} more channels"
+}

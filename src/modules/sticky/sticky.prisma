@@ -1,0 +1,8 @@
+model StickyMessage {
+  guildId   String
+  channelId String
+  content   String
+  messageId String?
+
+  @@id([guildId, channelId])
+}

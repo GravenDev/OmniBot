@@ -113,6 +113,9 @@
   "modules.server-stats.name": "Server Stats",
   "modules.server-stats.description": "Counts the server's daily activity and posts a report every night.",
 
+  "modules.sticky.name": "Sticky Messages",
+  "modules.sticky.description": "Keeps a message at the bottom of the channels set with /sticky by reposting it after every new message.",
+
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Development module declaring all configuration types, used to test the configuration UI.",
 

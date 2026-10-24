@@ -290,6 +290,36 @@ Ces trois commandes sont réservées aux administrateurs, et les réglages sont 
 
 ---
 
+## Module Messages collants
+
+Garde un message en bas des salons configurés : après chaque nouveau message, le bot republie le message collant puis supprime l'ancien. Un seul message collant par salon.
+
+### Comportement automatique
+
+- Tous les nouveaux messages du salon déclenchent la republication : ceux des membres, des autres bots, des webhooks, les messages système et les autres messages du bot lui-même (réponses de commandes, publications d'autres modules). Seul le message collant que le bot vient de publier est ignoré. Un autre bot de messages collants actif dans le même salon (PinPal, par exemple) doit donc être retiré avant, sinon les deux se republient l'un après l'autre sans fin.
+- Lors d'une rafale de messages, les republications sont regroupées : au plus une republication en cours et une en attente par salon (plus celle d'un `/sticky set`), et le message collant finit toujours en dernier.
+- Le nouveau message collant est publié avant la suppression de l'ancien : si la publication échoue, l'ancien reste en place. Si le nouveau message ne peut pas être enregistré en base, le bot le supprime aussitôt et garde l'ancien, pour ne jamais laisser deux messages collants à l'écran. Si l'ancien a déjà été supprimé à la main, le bot passe outre.
+- Le message collant ne mentionne personne, même s'il contient `@everyone` ou une mention de rôle.
+- Si le bot n'a pas accès au salon ou pas la permission d'y écrire, il cesse d'essayer dans ce salon pendant 10 minutes, puis réessaie. Un `/sticky set` sur ce salon relance une tentative tout de suite.
+- Le dernier message collant publié est mémorisé en base : après un redémarrage du bot, il est bien supprimé à la republication suivante.
+- Les fils de discussion ne sont pas concernés. La suppression d'un salon retire son message collant ; si le module était désactivé à ce moment-là, l'entrée est retirée au prochain `/sticky list`.
+
+### `/sticky set <channel>`
+
+Ouvre un formulaire pour saisir le message (2000 caractères au plus, mise en forme Markdown et sauts de ligne compris), prérempli avec le message actuel s'il y en a un (si la base tarde à répondre, le formulaire s'ouvre vide plutôt que d'expirer). À la validation, le message est enregistré puis publié tout de suite en bas du salon, à la place du précédent ; un `/sticky remove` lancé au même moment ne peut pas s'intercaler entre les deux. Le bot refuse un salon où il ne peut pas voir ou écrire ; si la publication échoue malgré tout, le message reste enregistré et sera publié après le prochain message du salon (au plus tôt 10 minutes plus tard si l'échec vient d'une permission manquante).
+
+### `/sticky remove <channel>`
+
+Retire le message collant d'un salon et supprime sa dernière publication. Si cette publication ne peut pas être supprimée (le bot n'a plus accès au salon, par exemple), la réponse le signale pour qu'on la supprime à la main.
+
+### `/sticky list`
+
+Liste les salons et le début de leur message, affiché en texte brut : ni mise en forme Markdown, ni liens masqués, ni mentions, emojis personnalisés ou horodatages interprétés. Les entrées de salons supprimés sont retirées au passage ; au-delà de la taille d'un embed, la liste indique le nombre de salons non affichés.
+
+Ces trois commandes sont réservées aux administrateurs, et les réglages sont conservés quand le module est désactivé via `/modules`.
+
+---
+
 ## Module Thread Creator
 
 Crée automatiquement un fil de discussion sous chaque nouveau message dans un salon configuré.
