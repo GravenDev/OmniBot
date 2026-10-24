@@ -20,6 +20,8 @@ Toujours actif, non désinstallable. Fournit la gestion des modules pour les adm
 
 Affiche la liste de tous les modules disponibles avec leur statut sur le serveur (activé/désactivé), leur version activée, et leur description. Chaque module dispose d'un bouton **Activer** (vert) ou **Désactiver** (rouge) qui prend effet immédiatement.
 
+Un module qui a besoin d'un intent privilégié (Server Members, Presence ou Message Content) que Discord n'a pas accordé au bot n'est pas chargé : il n'apparaît pas dans la liste et ne fait rien, sur aucun serveur. Ses commandes encore présentes sur un serveur répondent, en message visible de soi seul, qu'elles sont indisponibles. Son activation et sa configuration sont conservées, même quand on modifie la configuration d'un autre module ; il reprend au premier redémarrage qui suit l'octroi de l'intent, et ses commandes sont réinstallées sur les serveurs qui ont réinvité le bot entre-temps.
+
 ### `/config` — Réinitialiser des champs
 
 En bas du panneau `/config` d'un module, un bouton **Réinitialiser…** ouvre un sélecteur (éphémère, visible de l'administrateur seul) listant les champs actuellement personnalisés, plus une entrée **Tous les champs**. Les champs choisis sont remis à leur valeur par défaut.

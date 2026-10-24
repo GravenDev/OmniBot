@@ -100,6 +100,15 @@ async function reinstallModuleCommands(guild: Guild): Promise<void> {
       );
     }
   }
+
+  try {
+    await moduleService.resetVersionsOfUnloadedModulesIn(guild.id);
+  } catch (err) {
+    logger.error(
+      { err },
+      `Failed to reset unloaded module versions | guild = ${guild.id}`
+    );
+  }
 }
 
 async function sendWelcome(guild: Guild, t: TFunction): Promise<void> {

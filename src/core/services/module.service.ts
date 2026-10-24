@@ -76,6 +76,17 @@ class ModuleService implements Service {
     return activations.map((activation) => activation.guildId);
   }
 
+  async resetVersionsOfUnloadedModulesIn(guildId: string) {
+    await prisma.moduleActivation.updateMany({
+      where: {
+        guildId,
+        activated: true,
+        moduleId: { notIn: modules.map((module) => module.id) },
+      },
+      data: { activatedVersion: "" },
+    });
+  }
+
   async getGuildsWhereVersionDoesNotMatch(module: Module, version: string) {
     const activations = await prisma.moduleActivation.findMany({
       select: {

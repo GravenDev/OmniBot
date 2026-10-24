@@ -33,6 +33,7 @@
   "setConfig.label": "Enter a value ({{type}}):",
 
   "command.notEnabled": "The command `{{commandName}}` is not enabled in this guild.",
+  "command.unavailable": "The command `/{{commandName}}` is currently unavailable.",
   "command.failed": "Something went wrong while running `/{{commandName}}`. Run the command again; if it keeps failing, let a server administrator know.",
 
   "interaction.moduleNotEnabled": "This feature's module is not enabled in this server.",

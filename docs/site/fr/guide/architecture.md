@@ -22,7 +22,9 @@ Au démarrage du bot (`src/index.ts`), la séquence suivante est exécutée :
    └─ ignore les modules devOnly en production
 
 4. Agrégation des intentions
-   └─ collecte les GatewayIntentBits de tous les modules
+   └─ fetchApplicationFlags() — lit les intentions privilégiées accordées à l'application
+   └─ écarte (avec un avertissement) les modules qui exigent une intention privilégiée non accordée
+   └─ collecte les GatewayIntentBits des modules restants
    └─ crée le client Discord avec l'union de toutes les intentions
 
 5. Gestionnaire ClientReady (asynchrone)

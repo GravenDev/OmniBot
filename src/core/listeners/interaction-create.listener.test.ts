@@ -166,6 +166,15 @@ describe("handleCommand", () => {
     );
   });
 
+  it("tells the user a command of an unloaded module is unavailable", async () => {
+    const interaction = fakeCommand("ghost");
+    await listener.execute(interaction, undefined);
+
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "command.unavailable" })
+    );
+  });
+
   it("uses followUp when the interaction was already answered", async () => {
     pushCommand({
       data: { name: "boom" },

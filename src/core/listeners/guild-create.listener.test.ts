@@ -15,19 +15,25 @@ const {
   getFullConfigForGuild,
   getAllModulesStateIn,
   updateModuleActivation,
+  resetVersionsOfUnloadedModulesIn,
   installModuleCommandsIn,
 } = vi.hoisted(() => ({
   clearCacheForGuild: vi.fn(),
   getFullConfigForGuild: vi.fn(),
   getAllModulesStateIn: vi.fn(),
   updateModuleActivation: vi.fn(),
+  resetVersionsOfUnloadedModulesIn: vi.fn(),
   installModuleCommandsIn: vi.fn(),
 }));
 vi.mock("#core/services/config.service.js", () => ({
   default: { clearCacheForGuild, getFullConfigForGuild },
 }));
 vi.mock("#core/services/module.service.js", () => ({
-  default: { getAllModulesStateIn, updateModuleActivation },
+  default: {
+    getAllModulesStateIn,
+    updateModuleActivation,
+    resetVersionsOfUnloadedModulesIn,
+  },
 }));
 vi.mock("#core/loaders/command-loader.js", () => ({
   installModuleCommandsIn,
@@ -131,6 +137,14 @@ describe("guildCreate", () => {
       "guild-1",
       "3.0.0"
     );
+  });
+
+  it("marks unloaded modules for a command resync once they load again", async () => {
+    const { guild } = fakeGuild();
+
+    await listener.execute(guild, undefined);
+
+    expect(resetVersionsOfUnloadedModulesIn).toHaveBeenCalledWith("guild-1");
   });
 
   it("falls back to the owner DM when no system channel exists", async () => {

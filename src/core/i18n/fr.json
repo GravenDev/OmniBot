@@ -33,6 +33,7 @@
   "setConfig.label": "Entrez une valeur ({{type}}) :",
 
   "command.notEnabled": "La commande `{{commandName}}` n'est pas activée sur ce serveur.",
+  "command.unavailable": "La commande `/{{commandName}}` est indisponible pour le moment.",
   "command.failed": "Quelque chose s'est mal passé pendant l'exécution de `/{{commandName}}`. Relancez la commande ; si le problème persiste, prévenez un administrateur du serveur.",
 
   "interaction.moduleNotEnabled": "Le module de cette fonctionnalité n'est pas activé sur ce serveur.",

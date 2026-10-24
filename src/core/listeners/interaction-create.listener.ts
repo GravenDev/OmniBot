@@ -56,6 +56,18 @@ async function handleCommand(
 
   if (!command) {
     logger.warn(`Command not found | name = ${interaction.commandName}`);
+    if (interaction.guildId) {
+      const coreConfig = await configService.getConfigForModuleIn(
+        coreModule,
+        interaction.guildId
+      );
+      await interaction.reply({
+        content: coreConfig.t("command.unavailable", {
+          commandName: interaction.commandName,
+        }),
+        flags: MessageFlags.Ephemeral,
+      });
+    }
     return;
   }
   logger.debug(
