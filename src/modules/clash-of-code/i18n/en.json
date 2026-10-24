@@ -1,0 +1,61 @@
+{
+  "config.channels.name": "Watched channels",
+  "config.channels.description": "Channels where posted Clash of Code links are followed. Leave empty to follow every channel.",
+
+  "mode.FASTEST": "Fastest",
+  "mode.SHORTEST": "Shortest",
+  "mode.REVERSE": "Reverse",
+  "mode.unknown": "Unknown mode",
+  "mode.all": "All modes",
+
+  "table.rank": "Rank",
+  "table.player": "Player",
+  "table.score": "Score",
+  "table.time": "Time",
+  "table.characters": "Length",
+  "table.wins": "Wins",
+  "table.games": "Games",
+
+  "card.title": "Clash of Code",
+  "result.subtitle_one": "{{mode}} · {{count}} player",
+  "result.subtitle_other": "{{mode}} · {{count}} players",
+  "result.message_one": "⚔️ Clash of Code over · {{mode}} · {{count}} player — 🏆 {{winners}}",
+  "result.message_other": "⚔️ Clash of Code over · {{mode}} · {{count}} players — 🏆 {{winners}}",
+
+  "leaderboard.subtitle": "Wins leaderboard · {{mode}}",
+  "leaderboard.empty": "No Clash of Code game has been recorded on this server yet.",
+  "leaderboard.page": "Page {{current}}/{{total}}",
+
+  "profile.bothOptions": "Pick either a member or a CodinGame nickname, not both.",
+  "profile.unknownPlayer": "No game of **{{player}}** has been recorded on this server.",
+  "profile.notLinkedSelf": "You have not linked your CodinGame account. Use `/coc link` first, or look a player up by nickname.",
+  "profile.notLinked": "{{user}} has not linked a CodinGame account.",
+  "profile.noGames": "This player has no recorded game.",
+  "profile.subtitle": "Clash of Code",
+  "profile.subtitleLinked": "Clash of Code · linked account",
+  "profile.games": "Games",
+  "profile.wins": "Wins",
+  "profile.winRate": "Win rate",
+  "profile.averageRank": "Average rank",
+  "profile.averageScore": "Average score",
+  "profile.averageTime": "Average time",
+
+  "link.unknownPlayer": "No game of **{{player}}** has been recorded on this server. Play one and post its link first.",
+  "link.conflict": "**{{player}}** is already linked to {{user}}. Ask an admin if it is your account.",
+  "link.linked": "Your account is now linked to **{{player}}**.",
+  "link.unchanged": "Your account is already linked to **{{player}}**.",
+
+  "unlink.done": "Your account is no longer linked to **{{player}}**. Your games stay recorded.",
+  "unlink.none": "You have no linked CodinGame account.",
+
+  "import.invalid": "This is neither a Clash of Code link nor a game id.",
+  "import.notFound": "CodinGame does not know this game.",
+  "import.unreachable": "CodinGame could not be reached. Try again later.",
+  "import.notFinished": "This game is not over yet, or never started.",
+  "import.already": "This game is already recorded on this server.",
+  "import.done_one": "Game imported · {{mode}} · {{count}} player",
+  "import.done_other": "Game imported · {{mode}} · {{count}} players",
+
+  "adminUnlink.done": "{{user}} is no longer linked to **{{player}}**.",
+  "adminUnlink.none": "{{user}} has no linked CodinGame account."
+}

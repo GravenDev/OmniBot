@@ -119,6 +119,9 @@
   "modules.sticky.name": "Sticky Messages",
   "modules.sticky.description": "Keeps a message at the bottom of the channels set with /sticky by reposting it after every new message.",
 
+  "modules.clash-of-code.name": "Clash of Code",
+  "modules.clash-of-code.description": "Follows the Clash of Code games whose link is posted, posts their results and keeps a wins leaderboard.",
+
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Development module declaring all configuration types, used to test the configuration UI.",
 

@@ -119,6 +119,9 @@
   "modules.sticky.name": "Messages collants",
   "modules.sticky.description": "Garde un message en bas des salons configurés avec /sticky en le republiant après chaque nouveau message.",
 
+  "modules.clash-of-code.name": "Clash of Code",
+  "modules.clash-of-code.description": "Suit les parties de Clash of Code dont le lien est posté, publie leur résultat et tient un classement des victoires.",
+
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Module de développement déclarant tous les types de configuration, pour tester l'UI de configuration.",
 
