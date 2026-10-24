@@ -1,10 +1,9 @@
 import { MessageFlags } from "discord.js";
 import { installModule } from "#core/loaders/module-installer.js";
 import { modules } from "#core/runtime.js";
-import moduleService from "#core/services/module.service.js";
 import { getCoreT } from "#core/utils/core-config.js";
-import { modulesMessage } from "#core/utils/core-messages.js";
 import { errorMessageKey } from "#core/utils/error-message.js";
+import { modulesPanel } from "#core/utils/modules-panel.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 
 export default declareInteractionHandler({
@@ -44,13 +43,8 @@ export default declareInteractionHandler({
       return;
     }
 
-    const [modulesState, unavailable] = await Promise.all([
-      moduleService.getAllModulesStateIn(interaction.guildId!),
-      moduleService.getUnavailableModulesStateIn(interaction.guildId!),
-    ]);
-
     await defer.edit({
-      components: [modulesMessage(modulesState, coreT, unavailable)],
+      components: [await modulesPanel(interaction.guildId!, coreT, module.id)],
       flags: MessageFlags.IsComponentsV2,
     });
   },

@@ -6,8 +6,7 @@ import {
 } from "discord.js";
 import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
-import moduleService from "#core/services/module.service.js";
-import { modulesMessage } from "#core/utils/core-messages.js";
+import { modulesPanel } from "#core/utils/modules-panel.js";
 import { declareCommand } from "#lib/command.js";
 
 export default declareCommand({
@@ -33,13 +32,8 @@ export default declareCommand({
       flags: MessageFlags.Ephemeral,
     });
 
-    const [modulesState, unavailable] = await Promise.all([
-      moduleService.getAllModulesStateIn(interaction.guildId!),
-      moduleService.getUnavailableModulesStateIn(interaction.guildId!),
-    ]);
-
     await defer.edit({
-      components: [modulesMessage(modulesState, coreConfig.t, unavailable)],
+      components: [await modulesPanel(interaction.guildId!, coreConfig.t)],
       flags: MessageFlags.IsComponentsV2,
     });
   },
