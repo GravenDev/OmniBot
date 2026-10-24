@@ -1,0 +1,12 @@
+{
+  "set.done": "Les nouveaux messages de {{channel}} recevront la réaction {{emoji}}.",
+  "set.invalidEmoji": "« {{emoji}} » n'est pas un emoji utilisable : choisissez un emoji Unicode ou un emoji d'un serveur où se trouve le bot.",
+
+  "remove.done": "Plus de réaction automatique dans {{channel}}.",
+  "remove.none": "Aucune réaction automatique n'est configurée dans {{channel}}.",
+
+  "list.empty": "Aucune réaction automatique n'est configurée.",
+  "list.title": "Réactions automatiques ({{count}})",
+  "list.more_one": "… et {{count}} autre salon",
+  "list.more_other": "… et {{count}} autres salons"
+}

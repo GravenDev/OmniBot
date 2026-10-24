@@ -261,6 +261,34 @@ Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la dur
 
 ---
 
+## Module Réactions automatiques
+
+Ajoute automatiquement une réaction à chaque nouveau message des salons configurés, avec une seule réaction par salon.
+
+### Comportement automatique
+
+- Le bot réagit à tous les nouveaux messages du salon, y compris ceux des autres bots et des webhooks ; il ignore ses propres messages et les messages système (épinglage, arrivée d'un membre…).
+- Les fils de discussion ne sont pas concernés : un message posté dans un fil n'est pas dans le salon parent.
+- Si l'emoji n'existe plus (emoji personnalisé supprimé), la réaction automatique du salon est retirée.
+- Si le bot n'a pas accès au salon ou pas la permission d'ajouter des réactions, il cesse d'essayer dans ce salon pendant 10 minutes, puis réessaie.
+- La suppression d'un salon retire sa réaction automatique.
+
+### `/autoreact set <channel> <emoji>`
+
+Définit la réaction ajoutée dans un salon textuel ou d'annonces, et remplace la précédente s'il y en avait une. L'emoji peut être un emoji Unicode, un emoji personnalisé (`<:nom:id>`) ou le simple nom d'un emoji du serveur. Un emoji personnalisé est refusé si le bot n'est sur aucun serveur qui le possède.
+
+### `/autoreact remove <channel>`
+
+Retire la réaction automatique d'un salon.
+
+### `/autoreact list`
+
+Liste les salons et leur réaction. Les entrées de salons supprimés sont retirées au passage ; au-delà de la taille d'un embed, la liste indique le nombre de salons non affichés.
+
+Ces trois commandes sont réservées aux administrateurs, et les réglages sont conservés quand le module est désactivé via `/modules`.
+
+---
+
 ## Module Thread Creator
 
 Crée automatiquement un fil de discussion sous chaque nouveau message dans un salon configuré.

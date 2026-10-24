@@ -1,4 +1,11 @@
-import { CategoryChannel, type Channel, Role, type User } from "discord.js";
+import {
+  CategoryChannel,
+  type Channel,
+  type Guild,
+  type GuildEmoji,
+  Role,
+  type User,
+} from "discord.js";
 import { formatDuration, parseDuration } from "./duration.js";
 import { createT, type TFunction } from "./i18n.js";
 import type { Module } from "./module.js";
@@ -76,6 +83,24 @@ export function resolveEmoji(
     (emoji) => emoji.name?.toLowerCase() === name.toLowerCase()
   );
   return loose.length === 1 ? formatGuildEmoji(loose[0]!) : null;
+}
+
+/**
+ * The guild's emojis, fetched so that one added since startup is found: the
+ * bot does not request the expressions intent, so its cache only reflects the
+ * guild as the gateway delivered it.
+ */
+export async function fetchGuildEmojis(
+  guild: Guild | null
+): Promise<GuildEmoji[]> {
+  if (!guild) {
+    return [];
+  }
+  try {
+    return [...(await guild.emojis.fetch()).values()];
+  } catch {
+    return [...guild.emojis.cache.values()];
+  }
 }
 
 export const ConfigValidator: Record<ConfigType, (value: string) => boolean> = {

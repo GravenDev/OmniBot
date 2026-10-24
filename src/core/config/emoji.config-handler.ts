@@ -5,13 +5,12 @@ import {
   TextInputBuilder,
   TextInputStyle,
   type ButtonInteraction,
-  type Guild,
-  type GuildEmoji,
 } from "discord.js";
 import configService from "#core/services/config.service.js";
 import { replyWithCoreT } from "#core/utils/core-config.js";
 import {
   ConfigType,
+  fetchGuildEmojis,
   resolveEmoji,
   type ConfigProvider,
   type ConfigSchema,
@@ -21,22 +20,6 @@ import type { Module } from "#lib/module.js";
 import type { Registry } from "#lib/registry.js";
 import { resolveConfigurableModule, saveConfigValue } from "./config-edit.js";
 import { ConfigTypeHandler } from "./config-handler.js";
-
-/**
- * The guild's emojis, fetched so that one added since startup is found: the
- * bot does not request the expressions intent, so its cache only reflects the
- * guild as the gateway delivered it.
- */
-async function fetchGuildEmojis(guild: Guild | null): Promise<GuildEmoji[]> {
-  if (!guild) {
-    return [];
-  }
-  try {
-    return [...(await guild.emojis.fetch()).values()];
-  } catch {
-    return [...guild.emojis.cache.values()];
-  }
-}
 
 export default class EmojiConfigHandler extends ConfigTypeHandler<ConfigType.EMOJI> {
   constructor() {
