@@ -1,0 +1,21 @@
+{
+  "modal.title": "Message collant",
+  "modal.content": "Message gardé en bas du salon",
+
+  "set.done": "Le message reste désormais en bas de {{channel}}.",
+  "set.notPosted": "Le message est enregistré mais n'a pas pu être publié dans {{channel}} : il le sera après le prochain message.",
+  "set.empty": "Le message ne peut pas être vide.",
+  "set.unknownChannel": "Ce salon n'existe plus.",
+  "set.missingPermissions": "Le bot ne peut pas publier dans {{channel}} : il lui manque {{permissions}}.",
+
+  "permission.ViewChannel": "Voir le salon",
+  "permission.SendMessages": "Envoyer des messages",
+
+  "remove.done": "Plus de message collant dans {{channel}}.",
+  "remove.none": "Aucun message collant n'est configuré dans {{channel}}.",
+
+  "list.empty": "Aucun message collant n'est configuré.",
+  "list.title": "Messages collants ({{count}})",
+  "list.more_one": "… et {{count}} autre salon",
+  "list.more_other": "… et {{count}} autres salons"
+}

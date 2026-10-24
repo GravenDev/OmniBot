@@ -116,6 +116,9 @@
   "modules.server-stats.name": "Statistiques du serveur",
   "modules.server-stats.description": "Compte l'activité quotidienne du serveur et publie un bilan chaque nuit.",
 
+  "modules.sticky.name": "Messages collants",
+  "modules.sticky.description": "Garde un message en bas des salons configurés avec /sticky en le republiant après chaque nouveau message.",
+
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Module de développement déclarant tous les types de configuration, pour tester l'UI de configuration.",
 

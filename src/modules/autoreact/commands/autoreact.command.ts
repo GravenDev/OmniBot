@@ -6,7 +6,6 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
-  type GuildBasedChannel,
   type PermissionsString,
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
@@ -15,7 +14,9 @@ import {
   resolveEmoji,
   type ConfigProvider,
 } from "#lib/config.js";
+import { describeLines } from "#lib/format.js";
 import { loggerMaker } from "#lib/logger.js";
+import { missingBotPermissions } from "#lib/permissions.js";
 import store from "#modules/autoreact/services/store.js";
 import { Colors } from "#utils/colors.js";
 
@@ -27,8 +28,6 @@ type Config = ConfigProvider<{}>;
 const ephemeral = { flags: MessageFlags.Ephemeral } as const;
 
 const CUSTOM_EMOJI_ID = /:(\d{17,20})>$/;
-const DESCRIPTION_LIMIT = 4096;
-const MORE_LINE_RESERVE = 64;
 
 const REQUIRED_PERMISSIONS: PermissionsString[] = [
   "ViewChannel",
@@ -53,36 +52,6 @@ export async function parseEmoji(
   return emoji;
 }
 
-export async function missingPermissions(
-  interaction: Interaction,
-  channel: GuildBasedChannel
-): Promise<PermissionsString[]> {
-  const me =
-    interaction.guild.members.me ?? (await interaction.guild.members.fetchMe());
-  const permissions = channel.permissionsFor(me);
-  return permissions
-    ? permissions.missing(REQUIRED_PERMISSIONS)
-    : REQUIRED_PERMISSIONS;
-}
-
-export function describeLines(
-  lines: string[],
-  more: (count: number) => string
-): string {
-  const budget = DESCRIPTION_LIMIT - MORE_LINE_RESERVE;
-  const shown: string[] = [];
-  let length = 0;
-  for (const line of lines) {
-    if (length + line.length + 1 > budget) {
-      break;
-    }
-    shown.push(line);
-    length += line.length + 1;
-  }
-  const hidden = lines.length - shown.length;
-  return [...shown, ...(hidden > 0 ? [more(hidden)] : [])].join("\n");
-}
-
 async function set(interaction: Interaction, config: Config) {
   const channel = interaction.options.getChannel("channel", true);
   const value = interaction.options.getString("emoji", true);
@@ -93,7 +62,11 @@ async function set(interaction: Interaction, config: Config) {
     return;
   }
 
-  const missing = await missingPermissions(interaction, channel);
+  const missing = await missingBotPermissions(
+    interaction.guild,
+    channel,
+    REQUIRED_PERMISSIONS
+  );
   if (missing.length > 0) {
     await interaction.editReply(
       config.t("set.missingPermissions", {

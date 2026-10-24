@@ -25,6 +25,27 @@ export function formatPercentage(
     .replace(NON_BREAKING_SPACES, " ");
 }
 
+const DESCRIPTION_LIMIT = 4096;
+const MORE_LINE_RESERVE = 64;
+
+export function describeLines(
+  lines: string[],
+  more: (count: number) => string
+): string {
+  const budget = DESCRIPTION_LIMIT - MORE_LINE_RESERVE;
+  const shown: string[] = [];
+  let length = 0;
+  for (const line of lines) {
+    if (length + line.length + 1 > budget) {
+      break;
+    }
+    shown.push(line);
+    length += line.length + 1;
+  }
+  const hidden = lines.length - shown.length;
+  return [...shown, ...(hidden > 0 ? [more(hidden)] : [])].join("\n");
+}
+
 // The decimal separator of the locale: "," in French, "." in English.
 export function decimalSeparator(locale: string): string {
   return (
