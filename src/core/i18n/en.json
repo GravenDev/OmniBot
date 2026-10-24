@@ -107,6 +107,9 @@
   "modules.latex.name": "LaTeX",
   "modules.latex.description": "Renders LaTeX formulas as images with the /latex command, and the messages containing LaTeX.",
 
+  "modules.server-stats.name": "Server Stats",
+  "modules.server-stats.description": "Counts the server's daily activity and posts a report every night.",
+
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Development module declaring all configuration types, used to test the configuration UI.",
 
