@@ -1,0 +1,7 @@
+model AutoReaction {
+  guildId   String
+  channelId String
+  emoji     String
+
+  @@id([guildId, channelId])
+}

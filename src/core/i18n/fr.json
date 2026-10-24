@@ -89,6 +89,9 @@
   "modules.thread-creator.name": "Création de fils",
   "modules.thread-creator.description": "Crée automatiquement des fils de discussion sous chaque nouveau message dans les canaux configurés.",
 
+  "modules.autoreact.name": "Réactions automatiques",
+  "modules.autoreact.description": "Ajoute automatiquement une réaction à chaque nouveau message dans les salons configurés avec /autoreact.",
+
   "modules.four-hour-game.name": "Jeu des 4h",
   "modules.four-hour-game.description": "Marquez un point quand votre message reste le dernier du salon de jeu pendant le délai configuré, et un point du jour pour la plus longue tenue de la journée.",
 
