@@ -1,4 +1,5 @@
-import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   type Image,
   type SKRSContext2D,
@@ -43,8 +44,33 @@ export function rgb([r, g, b]: Rgb): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
+// The system's colour emoji font, if any: the bundled fonts have no emoji, and
+// member names often do. The Docker image installs font-noto-emoji.
+const EMOJI_FONT = "Emoji";
+const EMOJI_FONT_FILES = [
+  "/usr/share/fonts/noto/NotoColorEmoji.ttf",
+  "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf",
+  "/usr/share/fonts/noto-emoji/NotoColorEmoji.ttf",
+  "C:/Windows/Fonts/seguiemj.ttf",
+  "/System/Library/Fonts/Apple Color Emoji.ttc",
+];
+
+let emojiFallback: string | undefined;
+
+/** `, Emoji` when an emoji font is found, so that glyphs missing from the font fall back to it. */
+function emojiFamily(): string {
+  if (emojiFallback === undefined) {
+    const file = EMOJI_FONT_FILES.find((path) => existsSync(path));
+    if (file) {
+      registerFont(pathToFileURL(file), EMOJI_FONT);
+    }
+    emojiFallback = file ? `, ${EMOJI_FONT}` : "";
+  }
+  return emojiFallback;
+}
+
 export function font(size: number, family: string = FONT): string {
-  return `${size}px ${family}`;
+  return `${size}px ${family}${emojiFamily()}`;
 }
 
 const registeredFonts = new Set<string>();

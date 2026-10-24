@@ -8,7 +8,7 @@ Les classements et les fiches de statistiques sont rendus en images PNG avec [`@
 | `#lib/stat-card` | `renderStatCard` : fiche avec portrait, titre, rang optionnel, grille de cases de statistiques et panneau latéral                                                                                          |
 | `#lib/imaging`   | Palette et police communes, accent par défaut (`DEFAULT_ACCENT`), téléchargement d'avatars, images rondes et portraits cerclés (`drawPortrait`), mise en avant (`drawHighlight`), texte ajusté, ressources |
 
-La police Outfit et les médailles or, argent et bronze sont fournies dans `src/lib/assets/` et chargées pour vous.
+La police Outfit et les médailles or, argent et bronze sont fournies dans `src/lib/assets/` et chargées pour vous. Outfit n'a pas d'emojis : `font()` ajoute la police emoji du système quand elle existe (Noto Color Emoji, installée par l'image Docker), pour que les pseudos qui en contiennent s'affichent. Passez toujours par `font()` plutôt que d'écrire `ctx.font` à la main.
 
 Chaque module déclare sa couleur d'accent dans `rendering/theme.ts` (`export const ACCENT: Rgb = [77, 163, 255];`) et la passe en `accent` à chaque générateur, pour que toutes ses images se ressemblent. Sans `accent`, c'est `DEFAULT_ACCENT` qui s'applique.
 
