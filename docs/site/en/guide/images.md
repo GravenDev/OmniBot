@@ -10,7 +10,7 @@ Leaderboards and stat cards are rendered as PNG images with [`@napi-rs/canvas`](
 
 The Outfit font and the gold, silver and bronze medals ship in `src/lib/assets/` and are loaded for you. Outfit has no emojis: `font()` adds the system's emoji font when there is one (Noto Color Emoji, installed by the Docker image), so that names containing emojis render. Always go through `font()` rather than setting `ctx.font` by hand.
 
-Each module declares its accent color in `rendering/theme.ts` (`export const ACCENT: Rgb = [77, 163, 255];`) and passes it as `accent` to every renderer, so all its images look alike. Without `accent`, `DEFAULT_ACCENT` applies.
+Each module declares its accent color in `rendering/theme.ts` (`export const ACCENT: Rgb = [141, 196, 255];`) and passes it as `accent` to every renderer, so all its images look alike. Without `accent`, `DEFAULT_ACCENT` applies.
 
 ## A Leaderboard
 
