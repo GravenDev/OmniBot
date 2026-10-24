@@ -7,9 +7,12 @@ const logger = loggerMaker("autoreact");
 
 const PAUSE_MS = 10 * 60_000;
 
+const CUSTOM_EMOJI = /^<a?:\w+:\d+>$/;
+
 const PAUSING_ERRORS = new Set<number | string>([
   RESTJSONErrorCodes.MissingAccess,
   RESTJSONErrorCodes.MissingPermissions,
+  RESTJSONErrorCodes.UnknownEmoji,
 ]);
 
 const pausedUntil = new Map<string, number>();
@@ -46,7 +49,16 @@ export default declareEventListener<"messageCreate">({
       await message.react(emoji);
     } catch (err) {
       const code = err instanceof DiscordAPIError ? err.code : undefined;
-      if (code === RESTJSONErrorCodes.UnknownEmoji) {
+      if (code === RESTJSONErrorCodes.ReactionWasBlocked) {
+        logger.debug(
+          `Reaction blocked by the author | guildId = ${guildId} | channelId = ${channelId}`
+        );
+        return;
+      }
+      if (
+        code === RESTJSONErrorCodes.UnknownEmoji &&
+        CUSTOM_EMOJI.test(emoji)
+      ) {
         await store.remove(guildId, channelId);
         logger.warn(
           `Unknown emoji, auto-reaction removed | guildId = ${guildId} | channelId = ${channelId} | emoji = ${emoji}`

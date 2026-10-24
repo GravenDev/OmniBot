@@ -6,6 +6,8 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
+  type GuildBasedChannel,
+  type PermissionsString,
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
 import {
@@ -19,7 +21,7 @@ import { Colors } from "#utils/colors.js";
 
 const logger = loggerMaker("autoreact");
 
-type Interaction = ChatInputCommandInteraction<"cached" | "raw">;
+type Interaction = ChatInputCommandInteraction<"cached">;
 type Config = ConfigProvider<{}>;
 
 const ephemeral = { flags: MessageFlags.Ephemeral } as const;
@@ -27,6 +29,12 @@ const ephemeral = { flags: MessageFlags.Ephemeral } as const;
 const CUSTOM_EMOJI_ID = /:(\d{17,20})>$/;
 const DESCRIPTION_LIMIT = 4096;
 const MORE_LINE_RESERVE = 64;
+
+const REQUIRED_PERMISSIONS: PermissionsString[] = [
+  "ViewChannel",
+  "ReadMessageHistory",
+  "AddReactions",
+];
 
 export async function parseEmoji(
   interaction: Interaction,
@@ -43,6 +51,18 @@ export async function parseEmoji(
     return null;
   }
   return emoji;
+}
+
+export async function missingPermissions(
+  interaction: Interaction,
+  channel: GuildBasedChannel
+): Promise<PermissionsString[]> {
+  const me =
+    interaction.guild.members.me ?? (await interaction.guild.members.fetchMe());
+  const permissions = channel.permissionsFor(me);
+  return permissions
+    ? permissions.missing(REQUIRED_PERMISSIONS)
+    : REQUIRED_PERMISSIONS;
 }
 
 export function describeLines(
@@ -73,6 +93,19 @@ async function set(interaction: Interaction, config: Config) {
     return;
   }
 
+  const missing = await missingPermissions(interaction, channel);
+  if (missing.length > 0) {
+    await interaction.editReply(
+      config.t("set.missingPermissions", {
+        channel: `<#${channel.id}>`,
+        permissions: missing
+          .map((permission) => config.t(`permission.${permission}`))
+          .join(", "),
+      })
+    );
+    return;
+  }
+
   await store.set(interaction.guildId, channel.id, emoji);
   logger.info(
     `Auto-reaction set | guildId = ${interaction.guildId} | channelId = ${channel.id} | emoji = ${emoji} | by = ${interaction.user.id}`
@@ -84,46 +117,45 @@ async function set(interaction: Interaction, config: Config) {
 
 async function remove(interaction: Interaction, config: Config) {
   const channel = interaction.options.getChannel("channel", true);
+  await interaction.deferReply(ephemeral);
   const removed = await store.remove(interaction.guildId, channel.id);
   if (removed) {
     logger.info(
       `Auto-reaction removed | guildId = ${interaction.guildId} | channelId = ${channel.id} | by = ${interaction.user.id}`
     );
   }
-  await interaction.reply({
-    content: config.t(removed ? "remove.done" : "remove.none", {
+  await interaction.editReply(
+    config.t(removed ? "remove.done" : "remove.none", {
       channel: `<#${channel.id}>`,
-    }),
-    ...ephemeral,
-  });
+    })
+  );
 }
 
 async function list(interaction: Interaction, config: Config) {
-  let reactions = await store.list(interaction.guildId);
-  const channels = interaction.guild?.channels.cache;
-  if (channels) {
-    const deleted = reactions
-      .map(({ channelId }) => channelId)
-      .filter((channelId) => !channels.has(channelId));
-    if (deleted.length > 0) {
-      await store.remove(interaction.guildId, ...deleted);
-      logger.info(
-        `Auto-reactions of deleted channels removed | guildId = ${interaction.guildId} | channelIds = ${deleted.join(",")}`
-      );
-      reactions = reactions.filter(({ channelId }) => channels.has(channelId));
-    }
+  await interaction.deferReply(ephemeral);
+  const channels = interaction.guild.channels.cache;
+  const reactions = await store.list(interaction.guildId);
+  const deleted = reactions
+    .map(({ channelId }) => channelId)
+    .filter((channelId) => !channels.has(channelId));
+  if (deleted.length > 0) {
+    await store.remove(interaction.guildId, ...deleted);
+    logger.info(
+      `Auto-reactions of deleted channels removed | guildId = ${interaction.guildId} | channelIds = ${deleted.join(",")}`
+    );
   }
+  const existing = reactions.filter(({ channelId }) => channels.has(channelId));
 
-  await interaction.reply(
-    reactions.length === 0
-      ? { content: config.t("list.empty"), ...ephemeral }
+  await interaction.editReply(
+    existing.length === 0
+      ? config.t("list.empty")
       : {
           embeds: [
             new EmbedBuilder()
-              .setTitle(config.t("list.title", { count: reactions.length }))
+              .setTitle(config.t("list.title", { count: existing.length }))
               .setDescription(
                 describeLines(
-                  reactions.map(
+                  existing.map(
                     ({ channelId, emoji }) => `<#${channelId}> → ${emoji}`
                   ),
                   (count) => config.t("list.more", { count })
@@ -131,7 +163,6 @@ async function list(interaction: Interaction, config: Config) {
               )
               .setColor(Colors.SkyBlue),
           ],
-          ...ephemeral,
         }
   );
 }
@@ -205,7 +236,7 @@ export default declareCommand({
     ),
 
   async execute(interaction, config) {
-    if (interaction.inGuild()) {
+    if (interaction.inCachedGuild()) {
       await subcommands[interaction.options.getSubcommand()]?.(
         interaction,
         config

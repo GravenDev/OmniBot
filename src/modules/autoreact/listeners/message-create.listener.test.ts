@@ -6,7 +6,10 @@ const store = vi.hoisted(() => ({
   remove: vi.fn(),
 }));
 
+const logger = vi.hoisted(() => ({ debug: vi.fn(), warn: vi.fn() }));
+
 vi.mock("#modules/autoreact/services/store.js", () => ({ default: store }));
+vi.mock("#lib/logger.js", () => ({ loggerMaker: () => logger }));
 
 const { default: listener, resetPauses } =
   await import("./message-create.listener.js");
@@ -86,11 +89,41 @@ describe("autoreact messageCreate listener", () => {
     expect(message.react).not.toHaveBeenCalled();
   });
 
-  it("removes the reaction when its emoji no longer exists", async () => {
-    const message = fakeMessage();
-    message.react.mockRejectedValue(apiError(RESTJSONErrorCodes.UnknownEmoji));
-    await run(message);
+  it("removes the reaction when its custom emoji no longer exists", async () => {
+    store.emojiFor.mockResolvedValue("<:hype:111111111111111111>");
+    const first = fakeMessage();
+    first.react.mockRejectedValue(apiError(RESTJSONErrorCodes.UnknownEmoji));
+    await run(first);
     expect(store.remove).toHaveBeenCalledWith("g1", "c1");
+
+    const second = fakeMessage();
+    await run(second);
+    expect(second.react).toHaveBeenCalled();
+  });
+
+  it("pauses without removing a Unicode emoji Discord refuses", async () => {
+    const first = fakeMessage();
+    first.react.mockRejectedValue(apiError(RESTJSONErrorCodes.UnknownEmoji));
+    await run(first);
+    expect(store.remove).not.toHaveBeenCalled();
+
+    const second = fakeMessage();
+    await run(second);
+    expect(second.react).not.toHaveBeenCalled();
+  });
+
+  it("neither removes nor pauses when the author blocked the bot", async () => {
+    const first = fakeMessage();
+    first.react.mockRejectedValue(
+      apiError(RESTJSONErrorCodes.ReactionWasBlocked)
+    );
+    await run(first);
+    expect(store.remove).not.toHaveBeenCalled();
+    expect(logger.warn).not.toHaveBeenCalled();
+
+    const second = fakeMessage();
+    await run(second);
+    expect(second.react).toHaveBeenCalled();
   });
 
   it("pauses a channel where the bot lacks permissions", async () => {
@@ -104,6 +137,29 @@ describe("autoreact messageCreate listener", () => {
     await run(second);
     expect(second.react).not.toHaveBeenCalled();
     expect(store.remove).not.toHaveBeenCalled();
+  });
+
+  it("reacts again once the pause is over", async () => {
+    vi.useFakeTimers();
+    try {
+      const first = fakeMessage();
+      first.react.mockRejectedValue(
+        apiError(RESTJSONErrorCodes.MissingPermissions)
+      );
+      await run(first);
+
+      vi.advanceTimersByTime(10 * 60_000 - 1);
+      const during = fakeMessage();
+      await run(during);
+      expect(during.react).not.toHaveBeenCalled();
+
+      vi.advanceTimersByTime(1);
+      const after = fakeMessage();
+      await run(after);
+      expect(after.react).toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("keeps reacting after another failure", async () => {
