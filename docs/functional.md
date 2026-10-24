@@ -207,6 +207,51 @@ Chaque jour à 18:00 UTC, juste après la synchronisation, le bot poste dans le 
 
 ---
 
+## Module Clash of Code
+
+Repris du bot CoC (jamais déployé). Suit les parties de [Clash of Code](https://www.codingame.com/multiplayer/clashofcode) dont un membre poste le lien, publie leur résultat et tient un classement des victoires. Toutes les données sont propres à chaque serveur : une même partie ou un même joueur peut exister sur plusieurs serveurs sans que leurs résultats se mélangent.
+
+Les données viennent d'une API publique mais non documentée de CodinGame : si CodinGame la change, le suivi s'arrête.
+
+### Comportement automatique
+
+Quand un membre poste un lien de partie (`https://www.codingame.com/clashofcode/clash/<id>`, y compris la page de résultat `…/clash/report/<id>`), le bot ajoute la réaction ⏳ au message et interroge CodinGame jusqu'à la fin de la partie : toutes les minutes tant qu'elle n'a pas commencé, toutes les 15 secondes ensuite. À la fin, il retire la réaction et répond au message avec l'image du résultat (rang, joueur, score, temps, et nombre de caractères en mode Shortest) et le nom du ou des gagnants, sans mentionner personne.
+
+- Au plus 3 parties sont suivies par message ; les liens dans du code ou sous spoiler sont ignorés, de même que les messages des bots.
+- Une partie déjà enregistrée ou déjà suivie sur le serveur n'est pas suivie une deuxième fois.
+- Une partie terminée sans avoir commencé, inconnue de CodinGame, encore en cours après 2 heures ou injoignable 10 fois de suite est abandonnée : la réaction est retirée et rien n'est publié. Reposter son lien relance le suivi.
+- Une partie en cours de suivi est reprise après un redémarrage du bot.
+- Si le module est désactivé pendant une partie, son résultat n'est pas publié.
+
+### `/coc leaderboard [mode] [page]`
+
+Classement des joueurs par nombre de victoires (1re place d'une partie), puis par nombre de parties (moins il y en a, mieux c'est) ; deux joueurs à égalité sur les deux partagent le rang. `mode` ne compte que les parties d'un mode (Fastest, Shortest, Reverse). Dix joueurs par page ; les boutons de page ouvrent une copie visible de vous seul. Un membre lié qui n'apparaît pas sur la page voit sa propre ligne en bas de l'image.
+
+### `/coc profile [member] [player]`
+
+Carte de profil : parties, victoires, taux de victoire, rang moyen, score moyen, temps moyen et rang au classement des victoires. Sans option, affiche votre compte lié. `player` cherche un joueur par son pseudo CodinGame parmi ceux déjà vus sur le serveur (autocomplétion) ; on ne peut pas donner `member` et `player` à la fois.
+
+### `/coc link <player>` et `/coc unlink`
+
+Lie votre compte Discord à un joueur CodinGame déjà vu dans une partie du serveur, pour que `/coc profile` vous trouve sans option et que le classement vous montre votre ligne. Un joueur ne peut être lié qu'à un seul membre, et un membre à un seul joueur : lier un autre joueur remplace le précédent. CodinGame ne permet pas de vérifier qu'un compte vous appartient : un administrateur peut délier un compte réclamé à tort. Délier ne supprime aucune partie. Réponses visibles de vous seul.
+
+### `/coc-admin`
+
+**Permission requise :** Administrateur.
+
+| Sous-commande     | Effet                                                                                                                                                    |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `import <game>`   | Importe une partie terminée, à partir de son lien ou de son identifiant, et publie son résultat. Une partie déjà enregistrée sur le serveur est refusée. |
+| `unlink <member>` | Délie le compte CodinGame d'un membre. Réponse visible de l'administrateur seul.                                                                         |
+
+### Configuration — `/config clash-of-code`
+
+| Champ      | Type            | Description                                                                                               |
+| ---------- | --------------- | --------------------------------------------------------------------------------------------------------- |
+| `channels` | Liste de salons | Salons (et leurs fils) où les liens de partie sont suivis. Vide par défaut : tous les salons sont suivis. |
+
+---
+
 ## Module Signalements
 
 Permet aux membres de signaler un message aux modérateurs, qui reçoivent une alerte avec les actions possibles. Rien n'est signalé tant que le salon des alertes n'est pas configuré.

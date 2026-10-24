@@ -1,0 +1,61 @@
+{
+  "config.channels.name": "Salons suivis",
+  "config.channels.description": "Salons où les liens de Clash of Code postés sont suivis. Laisser vide pour suivre tous les salons.",
+
+  "mode.FASTEST": "Fastest",
+  "mode.SHORTEST": "Shortest",
+  "mode.REVERSE": "Reverse",
+  "mode.unknown": "Mode inconnu",
+  "mode.all": "Tous les modes",
+
+  "table.rank": "Rang",
+  "table.player": "Joueur",
+  "table.score": "Score",
+  "table.time": "Temps",
+  "table.characters": "Longueur",
+  "table.wins": "Victoires",
+  "table.games": "Parties",
+
+  "card.title": "Clash of Code",
+  "result.subtitle_one": "{{mode}} · {{count}} joueur",
+  "result.subtitle_other": "{{mode}} · {{count}} joueurs",
+  "result.message_one": "⚔️ Clash of Code terminé · {{mode}} · {{count}} joueur — 🏆 {{winners}}",
+  "result.message_other": "⚔️ Clash of Code terminé · {{mode}} · {{count}} joueurs — 🏆 {{winners}}",
+
+  "leaderboard.subtitle": "Classement des victoires · {{mode}}",
+  "leaderboard.empty": "Aucune partie de Clash of Code n'a encore été enregistrée sur ce serveur.",
+  "leaderboard.page": "Page {{current}}/{{total}}",
+
+  "profile.bothOptions": "Choisissez un membre ou un pseudo CodinGame, pas les deux.",
+  "profile.unknownPlayer": "Aucune partie de **{{player}}** n'a été enregistrée sur ce serveur.",
+  "profile.notLinkedSelf": "Vous n'avez pas lié votre compte CodinGame. Utilisez d'abord `/coc link`, ou cherchez un joueur par son pseudo.",
+  "profile.notLinked": "{{user}} n'a pas lié de compte CodinGame.",
+  "profile.noGames": "Ce joueur n'a aucune partie enregistrée.",
+  "profile.subtitle": "Clash of Code",
+  "profile.subtitleLinked": "Clash of Code · compte lié",
+  "profile.games": "Parties",
+  "profile.wins": "Victoires",
+  "profile.winRate": "Taux de victoire",
+  "profile.averageRank": "Rang moyen",
+  "profile.averageScore": "Score moyen",
+  "profile.averageTime": "Temps moyen",
+
+  "link.unknownPlayer": "Aucune partie de **{{player}}** n'a été enregistrée sur ce serveur. Jouez-en une et postez d'abord son lien.",
+  "link.conflict": "**{{player}}** est déjà lié à {{user}}. Demandez à un admin s'il s'agit de votre compte.",
+  "link.linked": "Votre compte est maintenant lié à **{{player}}**.",
+  "link.unchanged": "Votre compte est déjà lié à **{{player}}**.",
+
+  "unlink.done": "Votre compte n'est plus lié à **{{player}}**. Vos parties restent enregistrées.",
+  "unlink.none": "Vous n'avez aucun compte CodinGame lié.",
+
+  "import.invalid": "Ce n'est ni un lien de Clash of Code ni un identifiant de partie.",
+  "import.notFound": "CodinGame ne connaît pas cette partie.",
+  "import.unreachable": "Impossible de joindre CodinGame. Réessayez plus tard.",
+  "import.notFinished": "Cette partie n'est pas terminée, ou n'a jamais commencé.",
+  "import.already": "Cette partie est déjà enregistrée sur ce serveur.",
+  "import.done_one": "Partie importée · {{mode}} · {{count}} joueur",
+  "import.done_other": "Partie importée · {{mode}} · {{count}} joueurs",
+
+  "adminUnlink.done": "{{user}} n'est plus lié à **{{player}}**.",
+  "adminUnlink.none": "{{user}} n'a aucun compte CodinGame lié."
+}

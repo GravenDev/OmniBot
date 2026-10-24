@@ -1,0 +1,47 @@
+model CocGame {
+  guildId    String
+  handle     String
+  mode       String?
+  status     String
+  channelId  String?
+  messageId  String?
+  startedAt  DateTime?
+  watchUntil DateTime
+  createdAt  DateTime  @default(now())
+
+  participations CocParticipation[]
+
+  @@id([guildId, handle])
+  @@index([guildId, status])
+}
+
+model CocPlayer {
+  guildId      String
+  codingamerId Int
+  nickname     String
+  avatarId     BigInt?
+  userId       String?
+
+  participations CocParticipation[]
+
+  @@id([guildId, codingamerId])
+  @@unique([guildId, userId])
+  @@index([guildId, nickname])
+}
+
+model CocParticipation {
+  guildId      String
+  handle       String
+  codingamerId Int
+  rank         Int
+  score        Int
+  durationMs   Int
+  criterion    Int?
+  language     String?
+
+  game   CocGame   @relation(fields: [guildId, handle], references: [guildId, handle], onDelete: Cascade)
+  player CocPlayer @relation(fields: [guildId, codingamerId], references: [guildId, codingamerId], onDelete: Cascade)
+
+  @@id([guildId, handle, codingamerId])
+  @@index([guildId, codingamerId])
+}

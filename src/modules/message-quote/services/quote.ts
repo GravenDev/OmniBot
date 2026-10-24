@@ -17,6 +17,7 @@ import {
   widensAudience,
 } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { stripHiddenText } from "#lib/hidden-text.js";
 import type { TFunction } from "#lib/i18n.js";
 import { NO_MENTIONS_REPLY } from "#lib/mentions.js";
 import {
@@ -36,9 +37,6 @@ const EMBED_OVERHEAD = 300;
 const LINK_PATTERN =
   /(<)?https?:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)(>)?/g;
 
-const HIDDEN_PATTERN =
-  /```[\s\S]*?```|``[\s\S]*?``|`[^`\n]*`|\|\|[\s\S]*?\|\|/g;
-
 export interface MessageLink {
   channelId: string;
   messageId: string;
@@ -50,9 +48,7 @@ export function parseMessageLinks(
 ): MessageLink[] {
   const links: MessageLink[] = [];
   const seen = new Set<string>();
-  for (const match of content
-    .replace(HIDDEN_PATTERN, "")
-    .matchAll(LINK_PATTERN)) {
+  for (const match of stripHiddenText(content).matchAll(LINK_PATTERN)) {
     const [, open, linkGuildId, channelId, messageId, close] = match;
     if (
       !channelId ||
