@@ -9,7 +9,6 @@ import { loggerMaker } from "#lib/logger.js";
 import { missingBotPermissions } from "#lib/permissions.js";
 import { STICKY_MODAL_ID } from "#modules/sticky/commands/sticky.command.js";
 import poster from "#modules/sticky/services/poster.js";
-import store from "#modules/sticky/services/store.js";
 
 const logger = loggerMaker("sticky");
 
@@ -62,20 +61,14 @@ export default declareInteractionHandler<ModalSubmitInteraction>({
       return;
     }
 
-    await store.set(interaction.guildId, channel.id, content);
+    const posted = await poster.set(channel, content);
     logger.info(
-      `Sticky set | guildId = ${interaction.guildId} | channelId = ${channel.id} | by = ${interaction.user.id}`
+      `Sticky set | guildId = ${interaction.guildId} | channelId = ${channel.id} | posted = ${posted} | by = ${interaction.user.id}`
     );
-    try {
-      await poster.post(channel);
-    } catch {
-      await interaction.editReply(
-        config.t("set.notPosted", { channel: `<#${channel.id}>` })
-      );
-      return;
-    }
     await interaction.editReply(
-      config.t("set.done", { channel: `<#${channel.id}>` })
+      config.t(posted ? "set.done" : "set.notPosted", {
+        channel: `<#${channel.id}>`,
+      })
     );
   },
 });

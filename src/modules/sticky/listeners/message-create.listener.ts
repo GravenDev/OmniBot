@@ -7,15 +7,19 @@ export default declareEventListener<"messageCreate">({
   eventType: "messageCreate",
 
   async execute(message: Message, config) {
-    if (
-      !config ||
-      !message.inGuild() ||
-      message.author.id === message.client.user.id
-    ) {
+    if (!config || !message.inGuild()) {
       return;
     }
 
-    if (await store.get(message.guildId, message.channelId)) {
+    const sticky = await store.get(message.guildId, message.channelId);
+    if (!sticky) {
+      return;
+    }
+    const isSticky =
+      message.author.id === message.client.user.id &&
+      !message.interactionMetadata &&
+      message.content === sticky.content;
+    if (!isSticky) {
       poster.bump(message.channel);
     }
   },

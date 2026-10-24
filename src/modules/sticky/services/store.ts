@@ -59,9 +59,13 @@ class StickyStore implements Service {
       where: { guildId, channelId },
       data: { messageId },
     });
-    const cached = (await this.stickies(guildId)).get(channelId);
-    if (cached) {
-      cached.messageId = messageId;
+    try {
+      const cached = (await this.stickies(guildId)).get(channelId);
+      if (cached) {
+        cached.messageId = messageId;
+      }
+    } catch {
+      this.revisions.bump(guildId);
     }
   }
 

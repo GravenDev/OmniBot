@@ -13,6 +13,7 @@
 
   "remove.done": "Plus de message collant dans {{channel}}.",
   "remove.none": "Aucun message collant n'est configuré dans {{channel}}.",
+  "remove.leftover": "Plus de message collant dans {{channel}}, mais sa dernière copie n'a pas pu être supprimée : supprimez-la à la main.",
 
   "list.empty": "Aucun message collant n'est configuré.",
   "list.title": "Messages collants ({{count}})",

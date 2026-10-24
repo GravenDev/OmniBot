@@ -11,11 +11,20 @@ const { default: listener } = await import("./message-create.listener.js");
 
 const config = {} as never;
 
-function fakeMessage(overrides: { authorId?: string; inGuild?: boolean } = {}) {
+interface Overrides {
+  authorId?: string;
+  inGuild?: boolean;
+  content?: string;
+  fromInteraction?: boolean;
+}
+
+function fakeMessage(overrides: Overrides = {}) {
   return {
     guildId: "g1",
     channelId: "c1",
     channel: { id: "c1" },
+    content: overrides.content ?? "hello",
+    interactionMetadata: overrides.fromInteraction ? { id: "i1" } : null,
     author: { id: overrides.authorId ?? "member" },
     client: { user: { id: "bot" } },
     inGuild: () => overrides.inGuild ?? true,
@@ -30,7 +39,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   store.get.mockResolvedValue({
     channelId: "c1",
-    content: "x",
+    content: "Read the rules",
     messageId: null,
   });
 });
@@ -54,11 +63,25 @@ describe("sticky messageCreate listener", () => {
     expect(poster.bump).not.toHaveBeenCalled();
   });
 
+  it("ignores the sticky it just posted", async () => {
+    await run(fakeMessage({ authorId: "bot", content: "Read the rules" }));
+    expect(poster.bump).not.toHaveBeenCalled();
+  });
+
   it.each([
-    ["its own messages", { authorId: "bot" }],
-    ["messages outside a guild", { inGuild: false }],
-  ])("ignores %s", async (_, overrides) => {
+    ["other messages of the bot", { authorId: "bot" }],
+    [
+      "a command reply that repeats the sticky",
+      { authorId: "bot", content: "Read the rules", fromInteraction: true },
+    ],
+    ["a member repeating the sticky", { content: "Read the rules" }],
+  ])("bumps after %s", async (_, overrides) => {
     await run(fakeMessage(overrides));
+    expect(poster.bump).toHaveBeenCalled();
+  });
+
+  it("ignores messages outside a guild", async () => {
+    await run(fakeMessage({ inGuild: false }));
     expect(store.get).not.toHaveBeenCalled();
     expect(poster.bump).not.toHaveBeenCalled();
   });
