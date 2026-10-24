@@ -1,8 +1,11 @@
 {
   "modules.title": "# Modules",
-  "modules.description": "The modules marked with ✅ are enabled, while those marked with ❌ are disabled.",
+  "modules.description": "The modules marked with ✅ are enabled, while those marked with ❌ are disabled. Those marked with 🚫 cannot be enabled for now.",
   "modules.enable": "Enable",
   "modules.disable": "Disable",
+  "modules.unavailable": "Unavailable",
+  "modules.unavailableReason": "> Privileged intent not granted to the bot: {{intents}}.",
+  "modules.unavailableKept": "> Privileged intent not granted to the bot: {{intents}}. The module stays enabled and keeps its configuration: it resumes on the first restart after the intent is granted.",
   "modules.item": "{{emoji}} `{{moduleName}}`{{version}}\n> {{description}}",
   "config.noConfig": "This module has no configuration available.",
   "config.reset.button": "Reset…",

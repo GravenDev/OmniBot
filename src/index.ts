@@ -48,7 +48,7 @@ const [loadedModules, applicationFlags] = await Promise.all([
   fetchApplicationFlags(token),
 ]);
 
-const { coreMissing, modules, intents, partials } = planGateway(
+const { coreMissing, modules, unavailable, intents, partials } = planGateway(
   coreModule,
   loadedModules,
   applicationFlags
@@ -64,7 +64,7 @@ const client = new Client({
   intents: intents,
   partials: partials,
 });
-setRuntime(modules, client);
+setRuntime(modules, client, unavailable);
 
 client.once(Events.ClientReady, async (readyClient) => {
   const failed = new Set<string>();

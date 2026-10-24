@@ -7,6 +7,7 @@ import {
   REST,
   Routes,
 } from "discord.js";
+import type { UnavailableModule } from "#core/runtime.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 
@@ -33,6 +34,13 @@ const GRANTING_FLAGS = new Map<GatewayIntentBits, ApplicationFlags[]>([
       ApplicationFlags.GatewayMessageContentLimited,
     ],
   ],
+]);
+
+// The names the Developer Portal shows, for messages meant for admins.
+const PORTAL_NAMES = new Map<GatewayIntentBits, string>([
+  [GatewayIntentBits.GuildMembers, "Server Members"],
+  [GatewayIntentBits.GuildPresences, "Presence"],
+  [GatewayIntentBits.MessageContent, "Message Content"],
 ]);
 
 export async function fetchApplicationFlags(
@@ -72,6 +80,12 @@ export function intentNames(intents: GatewayIntentBits[]): string {
   return intents.map((intent) => GatewayIntentBits[intent]).join(",");
 }
 
+export function portalNames(intents: GatewayIntentBits[]): string {
+  return intents
+    .map((intent) => PORTAL_NAMES.get(intent) ?? GatewayIntentBits[intent])
+    .join(", ");
+}
+
 export function keepModulesWithGrantedIntents(
   modules: Module[],
   flags: number | null
@@ -96,15 +110,23 @@ export function planGateway(
 ): {
   coreMissing: GatewayIntentBits[];
   modules: Module[];
+  unavailable: UnavailableModule[];
   intents: GatewayIntentBits[];
   partials: Partials[];
 } {
   const coreMissing = flags === null ? [] : findMissingIntents(core, flags);
   const modules = keepModulesWithGrantedIntents(loadedModules, flags);
+  const unavailable = loadedModules
+    .filter((module) => !modules.includes(module))
+    .map((module) => ({
+      module,
+      missingIntents: findMissingIntents(module, flags!),
+    }));
   const declaring = [core, ...modules];
   return {
     coreMissing,
     modules,
+    unavailable,
     intents: [...new Set(declaring.flatMap((module) => module.intents ?? []))],
     partials: [
       ...new Set(declaring.flatMap((module) => module.partials ?? [])),

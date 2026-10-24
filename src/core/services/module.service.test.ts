@@ -1,9 +1,14 @@
+import { GatewayIntentBits } from "discord.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
 
 // The service pulls `client`/`modules` from the bot entrypoint and the Prisma
 // client; stub both so importing it never boots the bot or hits a database.
-vi.mock("#core/runtime.js", () => ({ modules: [], client: {} }));
+vi.mock("#core/runtime.js", () => ({
+  modules: [],
+  unavailableModules: [],
+  client: {},
+}));
 
 const { findMany, findFirst, upsert, updateMany } = vi.hoisted(() => ({
   findMany: vi.fn(),
@@ -17,7 +22,7 @@ vi.mock("#lib/database.js", () => ({
 }));
 
 const { default: moduleService } = await import("./module.service.js");
-const { modules } = await import("#core/runtime.js");
+const { modules, unavailableModules } = await import("#core/runtime.js");
 
 const module = { id: "thread-creator", version: "2.0.0" } as unknown as Module;
 
@@ -84,6 +89,73 @@ describe("reconcileActivatedVersions", () => {
     await moduleService.reconcileActivatedVersions(module);
 
     expect(upsert).not.toHaveBeenCalled();
+  });
+});
+
+describe("getUnavailableModulesStateIn", () => {
+  const stats = {
+    id: "server-stats",
+    name: "Server Stats",
+    description: "Counts activity.",
+  } as unknown as Module;
+  const quote = {
+    id: "message-quote",
+    name: "Message Quote",
+    description: "Quotes links.",
+  } as unknown as Module;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    unavailableModules.length = 0;
+  });
+
+  it("skips the database when every module is loaded", async () => {
+    await expect(
+      moduleService.getUnavailableModulesStateIn("guild-1")
+    ).resolves.toEqual([]);
+    expect(findMany).not.toHaveBeenCalled();
+  });
+
+  it("lists each unavailable module with its missing intents and kept activation", async () => {
+    unavailableModules.push(
+      { module: stats, missingIntents: [GatewayIntentBits.GuildMembers] },
+      { module: quote, missingIntents: [GatewayIntentBits.MessageContent] }
+    );
+    findMany.mockResolvedValue([
+      { moduleId: "server-stats", guildId: "guild-1", activated: true },
+    ]);
+
+    const states = await moduleService.getUnavailableModulesStateIn("guild-1");
+
+    expect(findMany).toHaveBeenCalledWith({
+      where: {
+        guildId: "guild-1",
+        moduleId: { in: ["server-stats", "message-quote"] },
+      },
+    });
+    expect(states).toEqual([
+      {
+        module: {
+          id: "server-stats",
+          name: "Server Stats",
+          description: "Counts activity.",
+        },
+        enabled: true,
+        missingIntents: [GatewayIntentBits.GuildMembers],
+      },
+      {
+        module: {
+          id: "message-quote",
+          name: "Message Quote",
+          description: "Quotes links.",
+        },
+        enabled: false,
+        missingIntents: [GatewayIntentBits.MessageContent],
+      },
+    ]);
   });
 });
 

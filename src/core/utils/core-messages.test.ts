@@ -1,3 +1,4 @@
+import { GatewayIntentBits } from "discord.js";
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   ConfigProvider,
@@ -5,12 +6,13 @@ import {
   type ConfigData,
   type ConfigSchema,
 } from "#lib/config.js";
-import { addTranslations, initI18n } from "#lib/i18n.js";
+import { addTranslations, createT, initI18n } from "#lib/i18n.js";
 import type { Module } from "#lib/module.js";
 import {
   CONFIG_FIELDS_PER_PAGE,
   configPageOfKey,
   configurationMessage,
+  modulesMessage,
 } from "./core-messages.js";
 
 beforeAll(async () => {
@@ -20,6 +22,11 @@ beforeAll(async () => {
     "config.next": "Next ▶",
     "config.noConfig": "This module has no configuration available.",
     "config.currentValue": "Current: {{value}}",
+    "modules.item": "{{emoji}} `{{moduleName}}`{{version}}\n> {{description}}",
+    "modules.enable": "Enable",
+    "modules.unavailable": "Unavailable",
+    "modules.unavailableReason": "> Not granted: {{intents}}.",
+    "modules.unavailableKept": "> Not granted: {{intents}}. Kept.",
   });
 });
 
@@ -169,5 +176,51 @@ describe("configPageOfKey", () => {
 
   it("falls back to page 0 for an unknown key", () => {
     expect(configPageOfKey(module, "missing")).toBe(0);
+  });
+});
+
+describe("modulesMessage unavailable modules", () => {
+  const t = createT("en", "core");
+  const loaded = {
+    module: { id: "latex", name: "LaTeX", description: "Formulas." },
+    enabled: false,
+    enabledVersion: undefined,
+  };
+  const stats = (enabled: boolean) => ({
+    module: { id: "server-stats", name: "Server Stats", description: "Stats." },
+    enabled,
+    missingIntents: [GatewayIntentBits.GuildMembers],
+  });
+
+  function sections(json: { components: unknown[] }) {
+    return json.components.filter(
+      (component) => (component as { type: number }).type === SECTION
+    ) as {
+      components: { content: string }[];
+      accessory: { custom_id: string; label: string; disabled?: boolean };
+    }[];
+  }
+
+  it("lists an unavailable module after the others, with a disabled button", () => {
+    const json = modulesMessage([loaded], t, [stats(false)]).toJSON();
+    const [first, last] = sections(json);
+
+    expect(first!.accessory.custom_id).toBe("enable-module:latex");
+    expect(last!.components[0]!.content).toBe(
+      "🚫 `Server Stats`\n> Stats.\n> Not granted: Server Members."
+    );
+    expect(last!.accessory).toMatchObject({
+      custom_id: "unavailable-module:server-stats",
+      label: "Unavailable",
+      disabled: true,
+    });
+  });
+
+  it("says that an enabled module keeps its activation", () => {
+    const json = modulesMessage([], t, [stats(true)]).toJSON();
+
+    expect(sections(json)[0]!.components[0]!.content).toBe(
+      "🚫 `Server Stats`\n> Stats.\n> Not granted: Server Members. Kept."
+    );
   });
 });

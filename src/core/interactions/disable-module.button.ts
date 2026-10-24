@@ -44,12 +44,13 @@ export default declareInteractionHandler({
       return;
     }
 
-    const modulesState = await moduleService.getAllModulesStateIn(
-      interaction.guildId!
-    );
+    const [modulesState, unavailable] = await Promise.all([
+      moduleService.getAllModulesStateIn(interaction.guildId!),
+      moduleService.getUnavailableModulesStateIn(interaction.guildId!),
+    ]);
 
     await defer.edit({
-      components: [modulesMessage(modulesState, coreT)],
+      components: [modulesMessage(modulesState, coreT, unavailable)],
       flags: MessageFlags.IsComponentsV2,
     });
   },

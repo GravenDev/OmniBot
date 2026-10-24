@@ -5,6 +5,7 @@ import {
   ContainerBuilder,
   SectionBuilder,
 } from "discord.js";
+import { portalNames } from "#core/loaders/intent-guard.js";
 import type moduleService from "#core/services/module.service.js";
 import {
   ConfigType,
@@ -20,7 +21,10 @@ import { Colors } from "#utils/colors.js";
 
 export const modulesMessage = (
   modulesState: Awaited<ReturnType<typeof moduleService.getAllModulesStateIn>>,
-  t: TFunction
+  t: TFunction,
+  unavailable: Awaited<
+    ReturnType<typeof moduleService.getUnavailableModulesStateIn>
+  > = []
 ) => {
   const container = new ContainerBuilder().setAccentColor(Colors.Turquoise);
   container.addTextDisplayComponents(
@@ -62,6 +66,43 @@ export const modulesMessage = (
               state.enabled ? t("modules.disable") : t("modules.enable")
             )
             .setStyle(state.enabled ? ButtonStyle.Danger : ButtonStyle.Success)
+        )
+    );
+  }
+
+  // Listed so admins know why a module is missing, with a button that cannot
+  // be pressed: the module is not loaded, so it cannot be enabled.
+  for (const state of unavailable) {
+    const modName = t("modules." + state.module.id + ".name", {
+      defaultValue: state.module.name,
+    });
+    const modDesc = t("modules." + state.module.id + ".description", {
+      defaultValue: state.module.description,
+    });
+    const reason = t(
+      state.enabled ? "modules.unavailableKept" : "modules.unavailableReason",
+      { intents: portalNames(state.missingIntents) }
+    );
+    container.addSectionComponents((section) =>
+      section
+        .addTextDisplayComponents((text) =>
+          text.setContent(
+            t("modules.item", {
+              emoji: "🚫",
+              moduleName: modName,
+              version: "",
+              description: modDesc,
+            }) +
+              "\n" +
+              reason
+          )
+        )
+        .setButtonAccessory((button) =>
+          button
+            .setCustomId("unavailable-module:" + state.module.id)
+            .setLabel(t("modules.unavailable"))
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(true)
         )
     );
   }
