@@ -171,7 +171,10 @@ export async function uninstallModuleCommandsIn(
   try {
     const commands = await guild.commands.fetch();
 
-    const moduleCommands = module.registry.commands.map((cmd) => cmd.data.name);
+    const moduleCommands = [
+      ...module.registry.commands.map((cmd) => cmd.data.name),
+      ...(module.retiredCommands ?? []),
+    ];
     const commandsToDelete = commands.filter((cmd) =>
       moduleCommands.includes(cmd.name)
     );

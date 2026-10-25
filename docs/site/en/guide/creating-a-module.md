@@ -221,6 +221,7 @@ The guild's locale is configured via the core module's settings (`/config core >
 Before your module reaches production guilds:
 
 - **Bump `version`** when you add, rename, or change a command — production re-registers guild commands only on a version change (dev re-syncs every boot, so this is easy to miss locally)
+- **List removed or renamed commands in `retiredCommands`** (old names) along with the version bump — the production update only deletes the guild commands the module still names, so without it the old command stays on every server
 - **Set `DEV_GUILD_ID`** in `.env` — without it, dev mode registers no commands at all
 - **Prefix command names and `customId`s** with your module id — both are matched first-come-first-served across all modules, and a `:` inside an argument shifts `customId` parsing
 - **Guard listeners with `if (!config) return`** — listeners run with `undefined` config outside guilds (DMs)

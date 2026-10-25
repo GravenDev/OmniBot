@@ -16,6 +16,8 @@ export default defineModule({
 
   config: autoreactConfigSchema,
 
+  retiredCommands: ["autoreact"],
+
   onLoad(_client, registry) {
     registry.register(messageCreateListener);
     registry.register(channelDeleteListener);

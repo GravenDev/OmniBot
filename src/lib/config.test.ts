@@ -176,6 +176,15 @@ describe("resolveEmoji", () => {
     );
   });
 
+  it("prefers a guild emoji matching a shortcode up to case", () => {
+    const fire = { id: "666666666666666666", name: "Fire", animated: false };
+    expect(resolveEmoji("fire", [fire])).toBe("<:Fire:666666666666666666>");
+  });
+
+  it("falls back to the shortcode when guild emojis are ambiguous", () => {
+    expect(resolveEmoji(":flag_fr:", guildEmojis)).toBe("🇫🇷");
+  });
+
   it.each([":flag:", ":unknown:", "not an emoji", "", "::"])(
     "rejects %j",
     (value) => {

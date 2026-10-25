@@ -16,6 +16,8 @@ export default defineModule({
 
   config: stickyConfigSchema,
 
+  retiredCommands: ["sticky"],
+
   onLoad(_client, registry) {
     registry.register(messageCreateListener);
     registry.register(channelDeleteListener);

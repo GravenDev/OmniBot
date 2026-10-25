@@ -1,6 +1,41 @@
-import { ConfigType } from "#lib/config.js";
+import { ChannelType } from "discord.js";
+import {
+  ConfigType,
+  type ChannelRecord,
+  type ChannelRecordSource,
+} from "#lib/config.js";
 import logger from "#lib/logger.js";
 import { defineModule } from "#lib/module.js";
+
+const records = new Map<string, Map<string, ChannelRecord>>();
+
+function recordsOf(guildId: string): Map<string, ChannelRecord> {
+  let guildRecords = records.get(guildId);
+  if (!guildRecords) {
+    guildRecords = new Map();
+    records.set(guildId, guildRecords);
+  }
+  return guildRecords;
+}
+
+const memoryRecords: ChannelRecordSource = {
+  async list(guildId) {
+    return [...recordsOf(guildId).values()];
+  },
+  async save(guild, record) {
+    recordsOf(guild.id).set(record.channelId, record);
+    return { ok: true, message: `Saved for <#${record.channelId}>.` };
+  },
+  async remove(guild, channelId) {
+    const removed = recordsOf(guild.id).delete(channelId);
+    return {
+      ok: removed,
+      message: removed
+        ? `Removed for <#${channelId}>.`
+        : `Nothing set for <#${channelId}>.`,
+    };
+  },
+};
 
 /**
  * Development-only module exercising every configuration field type.
@@ -110,6 +145,20 @@ export default defineModule({
       description: "Multiple values from a fixed set (multi-select).",
       type: [ConfigType.ENUM],
       options: ["nord", "sud", "est", "ouest"] as const,
+    },
+    perChannel: {
+      name: "Per-channel settings",
+      description: "An emoji and a text per channel (per-channel editor).",
+      type: ConfigType.CHANNEL_RECORDS,
+      channel: {
+        name: "Channel",
+        channelTypes: [ChannelType.GuildText, ChannelType.GuildAnnouncement],
+      },
+      fields: {
+        emoji: { name: "Emoji", type: ConfigType.EMOJI },
+        note: { name: "Note", type: ConfigType.STRING, maxLength: 100 },
+      },
+      source: memoryRecords,
     },
   },
 
