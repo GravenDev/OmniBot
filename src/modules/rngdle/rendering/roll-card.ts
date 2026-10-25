@@ -302,11 +302,20 @@ function drawBadge(
   const color = badge.tier ? TIER_COLORS[badge.tier] : PALETTE.subtext;
   ctx.globalAlpha = badge.ep === 0 ? DIMMED_ALPHA : 1;
   drawHighlight(ctx, x, y, width, CELL_HEIGHT, color, { radius: 10 });
-  drawLine(ctx, badge.emoji, x + 22, y + CELL_HEIGHT / 2, 24, PALETTE.text);
+  const emojiX = x + 22;
+  const emojiWidth = drawLine(
+    ctx,
+    badge.emoji,
+    emojiX,
+    y + CELL_HEIGHT / 2,
+    24,
+    PALETTE.text
+  );
 
   const right = x + width - 16;
   const valueWidth = 110;
-  const textX = x + 64;
+  // Some badges have several emojis: the label then starts after the last one.
+  const textX = Math.max(x + 64, emojiX + emojiWidth + 18);
   const hasDetails = badge.tier !== null || badge.probability !== null;
   const label = fitText(ctx, badge.label, 21, right - valueWidth - textX, 15);
   drawLine(
