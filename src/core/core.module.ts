@@ -3,6 +3,7 @@ import { defineModule } from "#lib/module.js";
 import configCommand from "./commands/config.command.js";
 import moduleCommand from "./commands/module.command.js";
 import pingsCommand from "./commands/pings.command.js";
+import privacyCommand from "./commands/privacy.command.js";
 import configTypeHandlers from "./config/config-handler-registry.js";
 import { registerScalarListEditorHandlers } from "./config/scalar-list-editor.js";
 import type { CoreConfig } from "./core.config.js";
@@ -12,6 +13,7 @@ import configureModuleButton from "./interactions/configure-module.button.js";
 import disableModuleButton from "./interactions/disable-module.button.js";
 import enableModuleButton from "./interactions/enable-module.button.js";
 import modulesPageButton from "./interactions/modules-page.button.js";
+import privacyDeleteButton from "./interactions/privacy-delete.button.js";
 import {
   resetConfigButton,
   resetConfigSelect,
@@ -19,7 +21,6 @@ import {
 import toggleOptionButton from "./interactions/toggle-option.button.js";
 import guildCreateListener from "./listeners/guild-create.listener.js";
 import commandListener from "./listeners/interaction-create.listener.js";
-
 export default defineModule({
   id: "core",
   name: "Global Configuration",
@@ -36,6 +37,8 @@ export default defineModule({
     registry.register(moduleCommand);
     registry.register(configCommand);
     registry.register(pingsCommand);
+    registry.register(privacyCommand);
+    registry.register(privacyDeleteButton);
 
     registry.register(commandListener);
     registry.register(guildCreateListener);

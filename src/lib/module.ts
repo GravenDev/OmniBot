@@ -75,6 +75,8 @@ export interface ModuleDeclaration<ConfigType extends ConfigSchema = {}> {
    * @param guild The guild from which the module is being uninstalled.
    */
   onUninstall?: (client: Client, guild: Guild, registry: Registry) => void;
+
+  deleteMemberData?: (guildId: string, userId: string) => Promise<void>;
 }
 
 /**

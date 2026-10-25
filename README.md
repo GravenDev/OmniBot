@@ -81,6 +81,9 @@ Copy `.env.example` to `.env`:
 - `DATABASE_URL` — PostgreSQL connection string (default matches `compose.yaml`).
 - `DEV_GUILD_ID` — **dev only**: guild where slash commands are registered
   instantly (global commands take ~1h to propagate). Required by `pnpm dev`.
+- `DATA_ENCRYPTION_KEY` — optional in development: 32 random bytes in base64
+  (`openssl rand -base64 32`) that encrypt the copies of reported messages in
+  the database. Without it, development stores them in clear.
 
 ## Deployment
 
@@ -118,6 +121,10 @@ Variables to provide (all required, none has a default) — in the Portainer
 stack configuration, or in `.env.prod` when running the stack by hand:
 
 - `DISCORD_TOKEN` — bot token from the Discord Developer Portal.
+- `DATA_ENCRYPTION_KEY` — 32 random bytes in base64 (`openssl rand -base64 32`)
+  that encrypt the copies of reported messages in the database. The bot refuses
+  to start without it. Keep it safe: losing or changing it makes the stored
+  copies unreadable.
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` — database credentials.
   `DATABASE_URL` is assembled from them by the compose file; PostgreSQL sits on
   an internal network and publishes no port.

@@ -1,3 +1,10 @@
+import {
+  decrypt,
+  encrypt,
+  ENCRYPTED_PREFIX,
+  encryptionKey,
+  isEncrypted,
+} from "#lib/crypto.js";
 import prisma, { Prisma } from "#lib/database.js";
 import { declareService, type Service } from "#lib/service.js";
 
@@ -80,10 +87,25 @@ const include = {
 
 type Row = Prisma.MessageReportGetPayload<{ include: typeof include }>;
 
+function sealAttachments(
+  attachments: ReportedAttachment[]
+): Prisma.InputJsonValue {
+  return encrypt(JSON.stringify(attachments));
+}
+
+function openAttachments(value: Prisma.JsonValue): ReportedAttachment[] {
+  return typeof value === "string"
+    ? (JSON.parse(decrypt(value)) as ReportedAttachment[])
+    : (value as unknown as ReportedAttachment[]);
+}
+
 function toReport(row: Row): Report {
   return {
     ...row,
-    attachments: row.attachments as unknown as ReportedAttachment[],
+    content: decrypt(row.content),
+    editedContent:
+      row.editedContent === null ? null : decrypt(row.editedContent),
+    attachments: openAttachments(row.attachments),
     messageState: row.messageState as MessageState,
     status: row.status as ReportStatus,
     reporters: row.reporters.map((reporter) => ({
@@ -131,8 +153,8 @@ class ReportStore implements Service {
         channelId: snapshot.channelId,
         messageId: snapshot.messageId,
         authorId: snapshot.authorId,
-        content: snapshot.content,
-        attachments: snapshot.attachments as unknown as Prisma.InputJsonValue,
+        content: encrypt(snapshot.content),
+        attachments: sealAttachments(snapshot.attachments),
         messageCreatedAt: snapshot.createdAt,
         reactionKept,
         reporters: { create: reporter },
@@ -180,7 +202,9 @@ class ReportStore implements Service {
       where: { id: reportId },
       data: {
         messageState,
-        ...(editedContent === undefined ? {} : { editedContent }),
+        ...(editedContent === undefined
+          ? {}
+          : { editedContent: encrypt(editedContent) }),
       },
     });
   }
@@ -228,14 +252,64 @@ class ReportStore implements Service {
     return { total, sanctioned };
   }
 
-  async closedBefore(
-    guildId: string,
-    before: Date
-  ): Promise<Pick<Report, "id" | "alertChannelId" | "alertMessageId">[]> {
-    return prisma.messageReport.findMany({
-      where: { guildId, status: { not: "open" }, handledAt: { lt: before } },
-      select: { id: true, alertChannelId: true, alertMessageId: true },
+  async guildIds(): Promise<string[]> {
+    const rows = await prisma.messageReport.findMany({
+      distinct: ["guildId"],
+      select: { guildId: true },
     });
+    return rows.map((row) => row.guildId);
+  }
+
+  async expired(
+    guildId: string,
+    closedBefore: Date,
+    createdBefore: Date
+  ): Promise<Pick<Report, "id">[]> {
+    return prisma.messageReport.findMany({
+      where: {
+        guildId,
+        OR: [
+          { createdAt: { lt: createdBefore } },
+          { status: { not: "open" }, handledAt: { lt: closedBefore } },
+        ],
+      },
+      select: { id: true },
+    });
+  }
+
+  async encryptPlaintext(): Promise<number> {
+    if (!encryptionKey()) {
+      return 0;
+    }
+    const rows = await prisma.messageReport.findMany({
+      where: { NOT: { content: { startsWith: ENCRYPTED_PREFIX } } },
+      select: {
+        id: true,
+        content: true,
+        editedContent: true,
+        attachments: true,
+      },
+    });
+    let encrypted = 0;
+    for (const row of rows) {
+      const { count } = await prisma.messageReport.updateMany({
+        where: {
+          id: row.id,
+          content: row.content,
+          editedContent: row.editedContent,
+        },
+        data: {
+          content: encrypt(row.content),
+          editedContent:
+            row.editedContent === null || isEncrypted(row.editedContent)
+              ? row.editedContent
+              : encrypt(row.editedContent),
+          attachments: sealAttachments(openAttachments(row.attachments)),
+        },
+      });
+      encrypted += count;
+    }
+    return encrypted;
   }
 
   async delete(reportId: number): Promise<void> {

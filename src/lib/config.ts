@@ -222,15 +222,24 @@ export interface EnumListConfigEntry<Values extends string = string> {
   display?: EnumDisplay;
 }
 
+export interface DurationConfigEntry {
+  name: string;
+  description: string;
+  type: ConfigType.DURATION;
+  defaultValue?: number;
+  max?: number;
+}
+
 export type ConfigEntry<T extends ConfigType> =
   // ENUM is excluded from the scalar/entity variants so a `type: ConfigType.ENUM`
   // entry can only satisfy the enum shapes below — which require `options`.
   // Without this, `{ type: ENUM }` would match SimpleConfigEntry and compile
   // without options, then fail at runtime building an empty select menu.
-  | SimpleConfigEntry<Exclude<T, ConfigType.ENUM>>
+  | SimpleConfigEntry<Exclude<T, ConfigType.ENUM | ConfigType.DURATION>>
   | ListConfigEntry<
       Exclude<T, ConfigType.ENUM | ConfigType.DURATION | ConfigType.EMOJI>
     >
+  | DurationConfigEntry
   | EnumConfigEntry
   | EnumListConfigEntry;
 

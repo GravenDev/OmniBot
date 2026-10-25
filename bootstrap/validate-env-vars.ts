@@ -7,6 +7,7 @@
 // (see the `dev`/`start` scripts and the Dockerfile), so the single dev-mode
 // definition in `#lib/env.js` can be imported instead of duplicating the
 // "development" literal here.
+import { encryptionKey } from "#lib/crypto.js";
 import { isDevMode } from "#lib/env.js";
 
 const REQUIRED_ENV_VARS: Record<string, { sensitive: boolean }> = {
@@ -19,6 +20,7 @@ const REQUIRED_ENV_VARS: Record<string, { sensitive: boolean }> = {
   // Required only in development: the guild where core commands are registered
   // instantly instead of globally (see command-loader).
   ...(isDevMode() ? { DEV_GUILD_ID: { sensitive: false } } : {}),
+  ...(isDevMode() ? {} : { DATA_ENCRYPTION_KEY: { sensitive: true } }),
 };
 
 // --- Functions ---
@@ -46,6 +48,13 @@ function displayEnvironmentVariables(): void {
 
 // Exit if any required environment variable is missing
 Object.keys(REQUIRED_ENV_VARS).forEach(exitIfMissing);
+
+try {
+  encryptionKey();
+} catch (err) {
+  console.error((err as Error).message);
+  process.exit(1);
+}
 
 // Display the environment variables being used
 displayEnvironmentVariables();

@@ -68,7 +68,17 @@ const save = vi.mocked(saveConfigValue);
 const isList = vi.mocked(isListEntry);
 const configEntry = vi.mocked(getConfigEntry);
 
-const fakeModule = { id: "mod" } as unknown as Module;
+const fakeModule = {
+  id: "mod",
+  config: {
+    capped: {
+      name: "Capped",
+      description: "",
+      type: ConfigType.DURATION,
+      max: 7200,
+    },
+  },
+} as unknown as Module;
 
 function mockConfigProvider(
   t?: (key: string, opts?: Record<string, unknown>) => string
@@ -215,6 +225,29 @@ describe("DurationConfigHandler modal submit", () => {
     expect(save).toHaveBeenCalledWith(fakeModule, "guild-1", "delay", 5400);
     expect(interaction.update).toHaveBeenCalled();
     expect(interaction.reply).not.toHaveBeenCalled();
+  });
+
+  it("rejects a duration longer than the entry's maximum", async () => {
+    const submit = await captureRegisteredHandler(new DurationConfigHandler());
+    const interaction = fakeModalInteraction("3h");
+
+    await submit.execute(interaction, ["mod", "capped"], undefined as never);
+
+    expect(save).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: expect.stringContaining("config.duration.tooLong"),
+      })
+    );
+  });
+
+  it("accepts a duration equal to the entry's maximum", async () => {
+    const submit = await captureRegisteredHandler(new DurationConfigHandler());
+    const interaction = fakeModalInteraction("2h");
+
+    await submit.execute(interaction, ["mod", "capped"], undefined as never);
+
+    expect(save).toHaveBeenCalledWith(fakeModule, "guild-1", "capped", 7200);
   });
 
   it("reports when the module/key cannot be resolved", async () => {

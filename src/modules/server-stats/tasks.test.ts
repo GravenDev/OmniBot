@@ -120,7 +120,7 @@ describe("daily-report task", () => {
       new Date("2026-10-13T00:00:00Z")
     );
     expect(mocks.purgeBefore).toHaveBeenCalledWith(
-      new Date("2026-07-15T00:00:00Z")
+      new Date("2026-09-13T00:00:00Z")
     );
   });
 

@@ -127,16 +127,20 @@ interface ModuleDeclaration {
   onLoad: (client: Client, registry: Registry) => void;
   onInstall: (client: Client, guild: Guild, registry: Registry) => void;
   onUninstall: (client: Client, guild: Guild, registry: Registry) => void;
+  deleteMemberData?: (guildId: string, userId: string) => Promise<void>;
 }
 ```
 
 ### Lifecycle Hooks
 
-| Hook          | When                       | Typical Use                                                          |
-| ------------- | -------------------------- | -------------------------------------------------------------------- |
-| `onLoad`      | Bot startup                | Register commands, listeners, interactions via `registry.register()` |
-| `onInstall`   | Module enabled on a guild  | Create roles, send welcome messages, initialize data                 |
-| `onUninstall` | Module disabled on a guild | Clean up data, remove roles, delete configurations                   |
+| Hook               | When                                       | Typical Use                                                          |
+| ------------------ | ------------------------------------------ | -------------------------------------------------------------------- |
+| `onLoad`           | Bot startup                                | Register commands, listeners, interactions via `registry.register()` |
+| `onInstall`        | Module enabled on a guild                  | Create roles, send welcome messages, initialize data                 |
+| `onUninstall`      | Module disabled on a guild                 | Clean up data, remove roles, delete configurations                   |
+| `deleteMemberData` | A member runs `/privacy delete` on a guild | Delete every row the module keeps about that member on that guild    |
+
+A module that stores anything tied to a member's ID must implement `deleteMemberData`, and say what it stores in the privacy policy (`docs/site/*/legal/privacy.md`). It runs whether or not the module is enabled on the guild.
 
 ### Intent Management
 

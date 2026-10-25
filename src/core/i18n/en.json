@@ -23,6 +23,7 @@
   "config.number.invalid": "❌ `{{value}}` is not a valid number.",
   "config.duration.invalid": "❌ `{{value}}` is not a valid duration. Use a number followed by `s`, `m`, `h` or `d`, e.g. `30s`, `4h`, `1h30m`.",
   "config.duration.placeholder": "e.g. 30s, 5m, 4h, 1h30m, 3d",
+  "config.duration.tooLong": "❌ `{{value}}` is longer than this option's maximum: {{max}}.",
   "config.emoji.invalid": "❌ `{{value}}` is not an emoji. Enter a single emoji such as 🚩, or the name of a server emoji such as `:name:`.",
   "config.emoji.placeholder": "e.g. 🚩 or :name:",
 
@@ -130,6 +131,11 @@
 
   "pings.enabled": "The bot will ping you again in its announcements on this server.",
   "pings.disabled": "The bot will no longer ping you in its announcements on this server. Your name still appears in them.",
+
+  "privacy.confirm": "This deletes the data the bot keeps about you on this server: your activity statistics, your 4-hour game score, your RNGdle account and rolls, the link to your Clash of Code player, and your mention preference. It cannot be undone.\n-# Reports stay with the moderators, and are deleted 30 days after the report at the latest.",
+  "privacy.confirmButton": "Delete my data",
+  "privacy.deleted": "Your data on this server has been deleted.",
+  "privacy.failed": "Some of your data could not be deleted. Try again in a moment.",
 
   "guild.welcome.title": "# Thanks for inviting me!",
   "guild.welcome.body": "Admins, start with `/modules` to enable modules and `/config` to configure them.",

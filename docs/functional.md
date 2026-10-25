@@ -34,6 +34,12 @@ Le bouton est désactivé tant qu'aucun champ n'a été personnalisé (rien à r
 
 `/pings enabled:False` inscrit le membre sur la liste des personnes que le bot ne mentionne plus dans ses annonces sur ce serveur ; `/pings enabled:True` l'en retire. La liste est propre à chaque serveur et commune à tous les modules. Le nom du membre reste affiché dans les annonces, mais il n'en reçoit plus de notification. La réponse n'est visible que de lui.
 
+### `/privacy delete` — Supprimer ses données
+
+**Permission requise :** aucune
+
+Le bot répond, en message visible du membre seul, par la liste de ce qui sera supprimé et un bouton **Supprimer mes données**. Le bouton efface, sur ce serveur seulement et que les modules y soient activés ou non : ses compteurs de Server Stats, son score, son historique de points et ses points du jour au jeu des 4h, son compte, ses tirages, son rappel et ses cartes du jour RNGdle, le lien vers son joueur Clash of Code (le joueur et ses résultats, venus de CodinGame, restent au classement), et sa préférence `/pings`. Les signalements ne sont pas touchés : ils restent aux modérateurs jusqu'à leur purge. Si une suppression échoue, les autres ont quand même lieu et le message invite à réessayer.
+
 ### Erreurs
 
 Quand une commande ou un bouton échoue, la réponse d'erreur n'est visible que du membre concerné et lui indique quoi faire : relancer la commande, et prévenir un administrateur si le problème persiste. Un bouton devenu invalide (module ou option de configuration disparus depuis l'affichage du message) invite à relancer la commande pour obtenir un message à jour. Si l'échec vient d'une permission ou d'un accès manquant au bot sur Discord, le message le dit explicitement : un administrateur doit vérifier les permissions du bot sur le serveur et dans le salon.
@@ -298,7 +304,9 @@ Le bot a besoin des permissions Gérer les messages (dans les salons surveillés
 
 ### Conservation
 
-Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la durée de conservation sont supprimés, et leur alerte est remplacée par une mention « purgé ».
+Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la durée de conservation sont supprimés, et leur alerte est remplacée par une mention « purgé ». Un signalement fait il y a plus de 30 jours est supprimé de la même façon, qu'il soit clos ou encore ouvert. La purge passe sur tous les serveurs qui ont des signalements, y compris ceux où le module est désactivé ou que le bot a quittés.
+
+La copie du message signalé (texte, version modifiée, pièces jointes) est chiffrée en base avec la clé `DATA_ENCRYPTION_KEY`. Les signalements enregistrés avant le chiffrement sont chiffrés lors de la purge suivante.
 
 ### Configuration — `/config reports`
 
@@ -307,7 +315,7 @@ Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la dur
 | `alertChannel`  | Salon | Salon où arrivent les alertes. Tant qu'il n'est pas défini, rien n'est signalé. |
 | `emoji`         | Emoji | Emoji de signalement, standard ou personnalisé (🚩 par défaut).                 |
 | `moderatorRole` | Rôle  | Rôle mentionné à chaque nouvelle alerte. Sans rôle, personne n'est mentionné.   |
-| `retention`     | Durée | Durée de conservation d'un signalement clos (90 jours par défaut).              |
+| `retention`     | Durée | Durée de conservation d'un signalement clos (30 jours, le maximum, par défaut). |
 
 Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
 
@@ -558,7 +566,7 @@ Dès que le module est activé, le bot compte, par jour (heure de Paris) :
 - les réactions ajoutées, par emoji ;
 - les arrivées et les départs de membres.
 
-Les bots, les messages système, les salons et catégories exclus et, par défaut, les salons que `@everyone` ne voit pas (dont les fils privés) ne sont pas comptés. Seuls des compteurs sont enregistrés, jamais le contenu des messages ; ils sont supprimés au bout de 90 jours. Les événements survenus pendant que le bot est arrêté ne sont pas comptés.
+Les bots, les messages système, les salons et catégories exclus et, par défaut, les salons que `@everyone` ne voit pas (dont les fils privés) ne sont pas comptés. Seuls des compteurs sont enregistrés, jamais le contenu des messages ; ils sont supprimés au bout de 30 jours. Les événements survenus pendant que le bot est arrêté ne sont pas comptés.
 
 ### Bilan quotidien
 

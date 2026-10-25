@@ -45,7 +45,7 @@ When a member reports a message with the Reports module, the bot stores:
 - the ID of each member who reported it, with the reason they gave, if any;
 - the moderators' decisions: moderator ID, sanction, reason and duration.
 
-This copy lets moderators review the message even if its author edits or deletes it. The identity of the reporting members is only shown to moderators.
+This copy lets moderators review the message even if its author edits or deletes it. It is encrypted in the database (AES-256-GCM), with a key only the operator holds. The identity of the reporting members is only shown to moderators.
 
 ### Community Games
 
@@ -63,7 +63,7 @@ The Sticky Messages module stores, for each configured channel, the text of the 
 
 ### Activity Statistics
 
-When the Server Stats module is enabled on a guild, the bot counts every day, per guild, the messages per channel and per member, the reactions per emoji, and the members joining and leaving. Only counters are stored, along with the date tracking started on the guild, never message content nor who joined or left. These counters are deleted after 90 days. The daily report posted on the guild may list the most active members; administrators can turn this off.
+When the Server Stats module is enabled on a guild, the bot counts every day, per guild, the messages per channel and per member, the reactions per emoji, and the members joining and leaving. Only counters are stored, along with the date tracking started on the guild, never message content nor who joined or left. These counters are deleted after 30 days. The daily report posted on the guild may list the most active members; administrators can turn this off.
 
 ## Message Content Read Without Being Stored
 
@@ -80,20 +80,20 @@ What these modules post stays on the Discord server, under the control of its ad
 
 ## Data Storage
 
-Data is stored in a PostgreSQL database managed by the bot instance operator. The database is not shared with any third party. The operator is responsible for securing their database instance.
+Data is stored in a PostgreSQL database managed by the bot instance operator. The database is not shared with any third party. The operator is responsible for securing their database instance. The only message content it keeps, the copy of reported messages, is encrypted there.
 
 ## Data Retention
 
 - **Module configuration and activation**: kept as long as the bot is on the guild. When the bot leaves a guild (kick or removal), they are deliberately kept so everything is restored automatically if the bot is re-invited. Disabling a module deletes neither its configuration nor its data: they remain subject to the periods below.
-- **Reports**: an open report is kept until it is closed. A closed report is deleted, message copy included, after 90 days; each guild's administrators can change this period.
-- **Activity statistics**: counters are deleted after 90 days, a period that cannot be changed. The date tracking started is kept with no time limit.
+- **Reports**: a report is deleted, message copy included, 30 days after it was made at the latest, whether it is closed or not. Each guild's administrators can shorten this period for closed reports. The deletion happens even when the module is disabled or the bot has left the guild.
+- **Activity statistics**: counters are deleted after 30 days, a period that cannot be changed. The date tracking started is kept with no time limit.
 - **RNGdle**: rolls, username and reminder subscription are kept until the member unlinks with `/rngdle unlink`, or an administrator unlinks them. The record of a claimed card is deleted two days later.
 - **4-hour game**: scores and point history are kept until an administrator deletes the player's score.
 - **Clash of Code**: games, players and their results are kept with no time limit, for the leaderboard's history. The link to a Discord account is removed when the member unlinks with `/coc unlink`, or an administrator unlinks them.
 - **Mention preference and automatic reactions**: kept until the member, or an administrator, removes them.
 - **Sticky messages**: kept until an administrator removes them with `/sticky remove`, or the channel is deleted.
 
-To request deletion of your data, contact the instance operator.
+Any member can delete the data the bot keeps about them on a guild themselves, at any time, with the `/privacy delete` command: their activity statistics, their game data (4-hour game, RNGdle, Clash of Code link) and their mention preference. Reports are not part of it: they stay with the moderators until they are deleted automatically. For any other deletion request, contact the instance operator.
 
 ## Data Sharing
 
@@ -124,7 +124,7 @@ Depending on your jurisdiction, you may have the right to:
 - Request deletion of your personal data
 - Restrict or object to processing
 
-To exercise these rights, contact the operator of the bot instance you interact with; for the official instance, the Graven - Développement team.
+To delete your data from a guild, use `/privacy delete`. To exercise the other rights, contact the operator of the bot instance you interact with; for the official instance, the Graven - Développement team.
 
 ## Changes to This Policy
 

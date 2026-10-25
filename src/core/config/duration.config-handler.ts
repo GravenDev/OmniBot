@@ -77,14 +77,22 @@ const handleModalSubmit = declareInteractionHandler({
 
     const raw = interaction.fields.getTextInputValue("value");
     const seconds = parseDuration(raw);
+    const entry = (module.config as ConfigSchema)[configKey];
+    const max = entry?.type === ConfigType.DURATION ? entry.max : undefined;
 
-    if (seconds === null) {
+    if (seconds === null || (max !== undefined && seconds > max)) {
       const config = await configService.getConfigForModuleIn(
         module,
         interaction.guildId!
       );
       await interaction.reply({
-        content: config.t("config.duration.invalid", { value: raw }),
+        content:
+          seconds === null
+            ? config.t("config.duration.invalid", { value: raw })
+            : config.t("config.duration.tooLong", {
+                value: raw,
+                max: formatDuration(max!),
+              }),
         flags: MessageFlags.Ephemeral,
       });
       return;

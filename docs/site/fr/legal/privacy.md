@@ -45,7 +45,7 @@ Quand un membre signale un message avec le module Signalements, le bot enregistr
 - l'ID de chaque membre qui l'a signalé, avec le motif qu'il a éventuellement donné ;
 - les décisions des modérateurs : ID du modérateur, sanction, motif et durée.
 
-Cette copie permet aux modérateurs de juger le message même si son auteur le modifie ou le supprime. L'identité des membres qui signalent n'est montrée qu'aux modérateurs.
+Cette copie permet aux modérateurs de juger le message même si son auteur le modifie ou le supprime. Elle est chiffrée en base de données (AES-256-GCM), avec une clé que seul l'opérateur détient. L'identité des membres qui signalent n'est montrée qu'aux modérateurs.
 
 ### Jeux communautaires
 
@@ -63,7 +63,7 @@ Le module Messages collants enregistre, pour chaque salon configuré, le texte d
 
 ### Statistiques d'activité
 
-Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, avec la date à laquelle le suivi a commencé sur le serveur, jamais le contenu des messages ni l'identité des membres qui arrivent ou partent. Ces compteurs sont supprimés au bout de 90 jours. Le bilan quotidien publié sur le serveur peut citer les membres les plus actifs ; les administrateurs peuvent le désactiver.
+Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, avec la date à laquelle le suivi a commencé sur le serveur, jamais le contenu des messages ni l'identité des membres qui arrivent ou partent. Ces compteurs sont supprimés au bout de 30 jours. Le bilan quotidien publié sur le serveur peut citer les membres les plus actifs ; les administrateurs peuvent le désactiver.
 
 ## Contenu des messages lu sans être stocké
 
@@ -80,20 +80,20 @@ Ce que ces modules publient reste sur le serveur Discord, sous le contrôle de s
 
 ## Stockage des données
 
-Les données sont stockées dans une base de données PostgreSQL gérée par l'opérateur de l'instance du bot. La base de données n'est partagée avec aucun tiers. L'opérateur est responsable de la sécurisation de son instance de base de données.
+Les données sont stockées dans une base de données PostgreSQL gérée par l'opérateur de l'instance du bot. La base de données n'est partagée avec aucun tiers. L'opérateur est responsable de la sécurisation de son instance de base de données. Le seul contenu de message qu'elle conserve, la copie des messages signalés, y est chiffré.
 
 ## Conservation des données
 
 - **Configuration et activation des modules** : conservées tant que le bot est sur le serveur. Quand le bot quitte un serveur (kick ou retrait), elles sont volontairement conservées afin que tout soit restauré automatiquement si le bot est réinvité. Désactiver un module ne supprime ni sa configuration ni ses données : elles restent soumises aux durées ci-dessous.
-- **Signalements** : un signalement en cours est conservé jusqu'à sa clôture. Un signalement clos est supprimé, copie du message comprise, au bout de 90 jours ; les administrateurs de chaque serveur peuvent changer ce délai.
-- **Statistiques d'activité** : les compteurs sont supprimés au bout de 90 jours, un délai qui ne se change pas. La date de début du suivi est conservée sans limite de durée.
+- **Signalements** : un signalement est supprimé, copie du message comprise, au plus tard 30 jours après avoir été fait, qu'il soit clos ou non. Les administrateurs de chaque serveur peuvent raccourcir ce délai pour les signalements clos. La suppression a lieu même si le module est désactivé ou que le bot a quitté le serveur.
+- **Statistiques d'activité** : les compteurs sont supprimés au bout de 30 jours, un délai qui ne se change pas. La date de début du suivi est conservée sans limite de durée.
 - **RNGdle** : les tirages, le pseudo et l'inscription au rappel sont conservés jusqu'à ce que le membre se délie avec `/rngdle unlink`, ou qu'un administrateur le délie. L'indication de carte obtenue est supprimée le surlendemain.
 - **Jeu des 4h** : les scores et l'historique des points sont conservés jusqu'à ce qu'un administrateur supprime le score du joueur.
 - **Clash of Code** : les parties, les joueurs et leurs résultats sont conservés sans limite de durée, pour l'historique du classement. La liaison à un compte Discord est retirée quand le membre se délie avec `/coc unlink`, ou qu'un administrateur le délie.
 - **Préférence de mention et réactions automatiques** : conservées jusqu'à ce que le membre, ou un administrateur, les retire.
 - **Messages collants** : conservés jusqu'à ce qu'un administrateur les retire avec `/sticky remove`, ou que le salon soit supprimé.
 
-Pour demander la suppression de vos données, contactez l'opérateur de l'instance.
+Chaque membre peut supprimer lui-même, à tout moment, les données que le bot garde sur lui sur un serveur, avec la commande `/privacy delete` : ses statistiques d'activité, ses données de jeu (jeu des 4h, RNGdle, liaison Clash of Code) et sa préférence de mention. Les signalements n'en font pas partie : ils restent aux modérateurs jusqu'à leur suppression automatique. Pour toute autre demande de suppression, contactez l'opérateur de l'instance.
 
 ## Partage des données
 
@@ -124,7 +124,7 @@ Selon votre juridiction, vous pouvez avoir le droit de :
 - Demander la suppression de vos données personnelles
 - Restreindre ou vous opposer au traitement
 
-Pour exercer ces droits, contactez l'opérateur de l'instance du bot avec laquelle vous interagissez ; pour l'instance officielle, l'équipe de Graven - Développement.
+Pour supprimer vos données d'un serveur, utilisez `/privacy delete`. Pour exercer les autres droits, contactez l'opérateur de l'instance du bot avec laquelle vous interagissez ; pour l'instance officielle, l'équipe de Graven - Développement.
 
 ## Modifications de cette politique
 

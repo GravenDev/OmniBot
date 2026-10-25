@@ -61,4 +61,5 @@ Copy `.env.example` to `.env`:
 
 - `DISCORD_TOKEN` — bot token from Discord Developer Portal
 - `DATABASE_URL` — PostgreSQL connection string (default matches `compose.yaml`)
+- `DATA_ENCRYPTION_KEY` — 32 bytes in base64 (`openssl rand -base64 32`) encrypting the copies of reported messages; required in production, optional in development (copies are then stored in clear)
 - `LOG_LEVEL` — optional log level (`fatal`/`error`/`warn`/`info`/`debug`/`trace`/`silent`, default `debug` in development, `info` otherwise); invalid values fall back to that default. Logs are pretty-printed in development and JSON otherwise

@@ -77,6 +77,7 @@ services:
     restart: unless-stopped
     environment:
       DISCORD_TOKEN: ${DISCORD_TOKEN:?DISCORD_TOKEN is required}
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:?DATA_ENCRYPTION_KEY is required}
       DATABASE_URL: *database_url
       LOG_LEVEL: ${LOG_LEVEL:-info}
     depends_on:
