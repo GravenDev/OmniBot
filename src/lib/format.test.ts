@@ -4,7 +4,34 @@ import {
   describeLines,
   formatInteger,
   formatPercentage,
+  preview,
 } from "./format.js";
+
+describe("preview", () => {
+  it("keeps a short message on one line", () => {
+    expect(preview("Read\n\nthe   rules")).toBe("Read the rules");
+  });
+
+  it("cuts a long message with an ellipsis", () => {
+    expect(preview("x".repeat(200))).toBe(`${"x".repeat(79)}…`);
+  });
+
+  it("cuts between characters, not inside an emoji", () => {
+    const shown = preview("😀".repeat(100));
+    expect(shown).toBe(`${"😀".repeat(79)}…`);
+  });
+
+  it("escapes Markdown so a cut cannot leak into the next lines", () => {
+    expect(preview("```js\nconsole.log(1)")).not.toContain("```");
+    expect(preview(`**${"x".repeat(200)}**`).startsWith("\\*\\*")).toBe(true);
+  });
+
+  it("shows links, mentions and timestamps as text", () => {
+    expect(preview("[Click](https://x.y)")).toContain("\\[");
+    expect(preview("# Title")).toBe("\\# Title");
+    expect(preview("<@&123> <t:1:R>")).toBe("\\<@&123> \\<t:1:R>");
+  });
+});
 
 describe("formatInteger", () => {
   it.each([

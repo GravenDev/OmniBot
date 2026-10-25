@@ -1,4 +1,5 @@
 {
+  "set.unknownChannel": "This channel no longer exists.",
   "set.done": "New messages in {{channel}} will get the {{emoji}} reaction.",
   "set.invalidEmoji": "\"{{emoji}}\" is not a usable emoji: pick a Unicode emoji or an emoji from a server the bot is in.",
   "set.missingPermissions": "The bot cannot react in {{channel}}: it lacks {{permissions}}.",
@@ -8,10 +9,5 @@
   "permission.AddReactions": "Add Reactions",
 
   "remove.done": "No more automatic reaction in {{channel}}.",
-  "remove.none": "No automatic reaction is set in {{channel}}.",
-
-  "list.empty": "No automatic reaction is set.",
-  "list.title": "Automatic reactions ({{count}})",
-  "list.more_one": "… and {{count}} more channel",
-  "list.more_other": "… and {{count}} more channels"
+  "remove.none": "No automatic reaction is set in {{channel}}."
 }

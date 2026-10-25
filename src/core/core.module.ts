@@ -3,6 +3,7 @@ import { defineModule } from "#lib/module.js";
 import configCommand from "./commands/config.command.js";
 import moduleCommand from "./commands/module.command.js";
 import pingsCommand from "./commands/pings.command.js";
+import { registerChannelRecordsEditorHandlers } from "./config/channel-records-editor.js";
 import configTypeHandlers from "./config/config-handler-registry.js";
 import { registerScalarListEditorHandlers } from "./config/scalar-list-editor.js";
 import type { CoreConfig } from "./core.config.js";
@@ -56,6 +57,7 @@ export default defineModule({
     }
 
     registerScalarListEditorHandlers(registry);
+    registerChannelRecordsEditorHandlers(registry);
   },
   onInstall() {
     throw new Error("Core module cannot be installed or uninstalled.");

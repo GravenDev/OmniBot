@@ -168,6 +168,57 @@ describe("configurationMessage current value", () => {
   });
 });
 
+describe("configurationMessage channel records", () => {
+  beforeAll(() => {
+    addTranslations("en", "core", {
+      "config.option": "{{currentValue}}",
+      "config.defaultSuffix": " (default)",
+    });
+  });
+
+  const module = {
+    id: "mod",
+    name: "Mod",
+    config: {
+      reactions: {
+        name: "Reactions",
+        description: "desc",
+        type: ConfigType.CHANNEL_RECORDS,
+      },
+    },
+  } as unknown as Module<ConfigSchema>;
+
+  function render(channelIds: string[]) {
+    const config = new ConfigProvider(
+      module,
+      {
+        reactions: channelIds.map((channelId) => ({ channelId, values: {} })),
+      } as ConfigData<ConfigSchema>,
+      "en"
+    );
+    return JSON.stringify(configurationMessage(module, config)[0]!.toJSON());
+  }
+
+  it("lists the configured channels, then how many more", () => {
+    const json = render(["1", "2", "3", "4", "5", "6", "7"]);
+    expect(json).toContain("Current: <#1>, <#2>, <#3>, <#4>, <#5> +2");
+  });
+
+  it("never flags the records as a default", () => {
+    expect(render([])).toContain("Current: —");
+    expect(render([])).not.toContain("(default)");
+  });
+
+  it("leaves the reset button disabled: records are not a stored value", () => {
+    const reset = JSON.parse(render(["1"]))
+      .components.flatMap((c: { components?: unknown[] }) => c.components ?? [])
+      .find((c: { custom_id?: string }) =>
+        c.custom_id?.startsWith("reset-config:")
+      );
+    expect(reset.disabled).toBe(true);
+  });
+});
+
 describe("configPageOfKey", () => {
   const module = moduleWithFields(14);
 

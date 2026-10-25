@@ -26,7 +26,17 @@ Un module qui a besoin d'un intent privilégié (Server Members, Presence ou Mes
 
 En bas du panneau `/config` d'un module, un bouton **Réinitialiser…** ouvre un sélecteur (éphémère, visible de l'administrateur seul) listant les champs actuellement personnalisés, plus une entrée **Tous les champs**. Les champs choisis sont remis à leur valeur par défaut.
 
-Le bouton est désactivé tant qu'aucun champ n'a été personnalisé (rien à réinitialiser). Réinitialiser un champ retire simplement la valeur enregistrée : il repasse sur le défaut (qui suit alors de nouveau la langue du serveur, cf. plus bas) et son marqueur _(par défaut)_ réapparaît.
+Le bouton est désactivé tant qu'aucun champ n'a été personnalisé (rien à réinitialiser). Réinitialiser un champ retire simplement la valeur enregistrée : il repasse sur le défaut (qui suit alors de nouveau la langue du serveur, cf. plus bas) et son marqueur _(par défaut)_ réapparaît. Les réglages par salon (ci-dessous) n'ont pas de valeur par défaut : ils ne figurent pas dans le sélecteur et ne sont jamais réinitialisés, même par **Tous les champs**.
+
+### `/config` — Réglages par salon
+
+Certains modules portent un réglage par salon (Réactions automatiques, Messages collants). Le panneau `/config` affiche alors les salons configurés (les cinq premiers, puis le nombre restant), et le bouton d'édition ouvre un éditeur éphémère qui liste chaque salon avec sa valeur, sept salons par page, avec trois actions :
+
+- **Ajouter** ouvre un formulaire avec un sélecteur de salon (limité aux types de salons acceptés par le module) et les champs du réglage. Choisir un salon déjà configuré remplace son réglage.
+- **Modifier** ouvre le même formulaire, prérempli, sans le sélecteur de salon.
+- **Supprimer** retire le réglage du salon.
+
+Le résultat de chaque action (succès ou raison du refus) s'affiche en tête de l'éditeur, et le panneau public est rafraîchi. Chaque module applique ses propres vérifications (voir sa section). L'éditeur est refusé pour un module désactivé. À l'ouverture, les réglages de salons supprimés depuis sont retirés.
 
 ### `/pings` — Ne plus être mentionné
 
@@ -302,12 +312,12 @@ Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la dur
 
 ### Configuration — `/config reports`
 
-| Champ           | Type  | Description                                                                     |
-| --------------- | ----- | ------------------------------------------------------------------------------- |
-| `alertChannel`  | Salon | Salon où arrivent les alertes. Tant qu'il n'est pas défini, rien n'est signalé. |
-| `emoji`         | Emoji | Emoji de signalement, standard ou personnalisé (🚩 par défaut).                 |
-| `moderatorRole` | Rôle  | Rôle mentionné à chaque nouvelle alerte. Sans rôle, personne n'est mentionné.   |
-| `retention`     | Durée | Durée de conservation d'un signalement clos (90 jours par défaut).              |
+| Champ           | Type  | Description                                                                                                                                                            |
+| --------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `alertChannel`  | Salon | Salon où arrivent les alertes. Tant qu'il n'est pas défini, rien n'est signalé.                                                                                        |
+| `emoji`         | Emoji | Emoji de signalement, standard ou personnalisé (🚩 par défaut). Saisi tel quel, par son nom Discord (`:triangular_flag_on_post:`) ou par le nom d'un emoji du serveur. |
+| `moderatorRole` | Rôle  | Rôle mentionné à chaque nouvelle alerte. Sans rôle, personne n'est mentionné.                                                                                          |
+| `retention`     | Durée | Durée de conservation d'un signalement clos (90 jours par défaut).                                                                                                     |
 
 Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
 
@@ -324,21 +334,15 @@ Ajoute automatiquement une réaction à chaque nouveau message des salons config
 - Si un emoji personnalisé n'existe plus, la réaction automatique du salon est retirée. Un emoji Unicode refusé par Discord n'est pas retiré : le salon est mis en pause.
 - Si le bot n'a pas accès au salon, ou s'il lui manque la permission de voir les anciens messages ou d'ajouter des réactions, il cesse d'essayer dans ce salon pendant 10 minutes, puis réessaie.
 - Un membre qui a bloqué le bot ne reçoit simplement pas la réaction.
-- Quand le module est actif, la suppression d'un salon retire sa réaction automatique ; sinon l'entrée est retirée au prochain `/autoreact list`.
+- Quand le module est actif, la suppression d'un salon retire sa réaction automatique ; sinon l'entrée est retirée à la prochaine ouverture de l'éditeur `/config autoreact`.
 
-### `/autoreact set <channel> <emoji>`
+### Configuration — `/config autoreact`
 
-Définit la réaction ajoutée dans un salon textuel ou d'annonces, et remplace la précédente s'il y en avait une. L'emoji peut être un emoji Unicode, un emoji personnalisé (`<:nom:id>`) ou le simple nom d'un emoji du serveur. Un emoji personnalisé doit appartenir au serveur, ou à un autre serveur du bot tel que connu à son démarrage : un emoji ajouté depuis sur un autre serveur est refusé jusqu'au prochain redémarrage. La commande est aussi refusée si le bot ne peut pas réagir dans le salon (voir le salon, voir les anciens messages, ajouter des réactions).
+| Champ       | Type               | Description                                              |
+| ----------- | ------------------ | -------------------------------------------------------- |
+| `reactions` | Réglages par salon | Pour chaque salon textuel ou d'annonces, l'emoji ajouté. |
 
-### `/autoreact remove <channel>`
-
-Retire la réaction automatique d'un salon.
-
-### `/autoreact list`
-
-Liste les salons et leur réaction. Les entrées de salons supprimés sont retirées au passage ; au-delà de la taille d'un embed, la liste indique le nombre de salons non affichés.
-
-Ces trois commandes sont réservées aux administrateurs, et les réglages sont conservés quand le module est désactivé via `/modules`.
+Ajouter un salon déjà configuré remplace sa réaction. L'emoji peut être un emoji Unicode, son nom Discord (`smile`, `:thumbsup:`, `:flag_fr:`, avec les variantes de teinte comme `:thumbsup_tone2:`), un emoji personnalisé (`<:nom:id>`) ou le simple nom d'un emoji du serveur ; un emoji du serveur qui porte le même nom qu'un emoji Unicode l'emporte. Un emoji personnalisé doit appartenir au serveur, ou à un autre serveur du bot tel que connu à son démarrage : un emoji ajouté depuis sur un autre serveur est refusé jusqu'au prochain redémarrage. Le réglage est aussi refusé si le bot ne peut pas réagir dans le salon (voir le salon, voir les anciens messages, ajouter des réactions). Les réglages sont conservés quand le module est désactivé via `/modules`.
 
 ---
 
@@ -349,26 +353,24 @@ Garde un message en bas des salons configurés : après chaque nouveau message, 
 ### Comportement automatique
 
 - Tous les nouveaux messages du salon déclenchent la republication : ceux des membres, des autres bots, des webhooks, les messages système et les autres messages du bot lui-même (réponses de commandes, publications d'autres modules). Seul le message collant que le bot vient de publier est ignoré. Un autre bot de messages collants actif dans le même salon (PinPal, par exemple) doit donc être retiré avant, sinon les deux se republient l'un après l'autre sans fin.
-- Lors d'une rafale de messages, les republications sont regroupées : au plus une republication en cours et une en attente par salon (plus celle d'un `/sticky set`), et le message collant finit toujours en dernier.
+- Lors d'une rafale de messages, les republications sont regroupées : au plus une republication en cours et une en attente par salon (plus celle d'un enregistrement depuis `/config`), et le message collant finit toujours en dernier.
 - Le nouveau message collant est publié avant la suppression de l'ancien : si la publication échoue, l'ancien reste en place. Si le nouveau message ne peut pas être enregistré en base, le bot le supprime aussitôt et garde l'ancien, pour ne jamais laisser deux messages collants à l'écran. Si l'ancien a déjà été supprimé à la main, le bot passe outre.
 - Le message collant ne mentionne personne, même s'il contient `@everyone` ou une mention de rôle, et il est publié en @silent : republié après chaque message, il ne déclenche aucune notification, même pour les membres qui suivent tous les messages du salon.
-- Si le bot n'a pas accès au salon ou pas la permission d'y écrire, il cesse d'essayer dans ce salon pendant 10 minutes, puis réessaie. Un `/sticky set` sur ce salon relance une tentative tout de suite.
+- Si le bot n'a pas accès au salon ou pas la permission d'y écrire, il cesse d'essayer dans ce salon pendant 10 minutes, puis réessaie. Enregistrer de nouveau le message de ce salon depuis `/config` relance une tentative tout de suite.
 - Le dernier message collant publié est mémorisé en base : après un redémarrage du bot, il est bien supprimé à la republication suivante.
-- Les fils de discussion ne sont pas concernés. La suppression d'un salon retire son message collant ; si le module était désactivé à ce moment-là, l'entrée est retirée au prochain `/sticky list`.
+- Les fils de discussion ne sont pas concernés. La suppression d'un salon retire son message collant ; si le module était désactivé à ce moment-là, l'entrée est retirée à la prochaine ouverture de l'éditeur `/config sticky`.
 
-### `/sticky set <channel>`
+### Configuration — `/config sticky`
 
-Ouvre un formulaire pour saisir le message (2000 caractères au plus, mise en forme Markdown et sauts de ligne compris), prérempli avec le message actuel s'il y en a un (si la base tarde à répondre, le formulaire s'ouvre vide plutôt que d'expirer). À la validation, le message est enregistré puis publié tout de suite en bas du salon, à la place du précédent ; un `/sticky remove` lancé au même moment ne peut pas s'intercaler entre les deux. Le bot refuse un salon où il ne peut pas voir ou écrire ; si la publication échoue malgré tout, le message reste enregistré et sera publié après le prochain message du salon (au plus tôt 10 minutes plus tard si l'échec vient d'une permission manquante).
+| Champ      | Type               | Description                                                                                 |
+| ---------- | ------------------ | ------------------------------------------------------------------------------------------- |
+| `stickies` | Réglages par salon | Pour chaque salon textuel ou d'annonces, le message gardé en bas (2000 caractères au plus). |
 
-### `/sticky remove <channel>`
+L'éditeur affiche le début de chaque message en texte brut : ni mise en forme Markdown, ni liens masqués, ni mentions, emojis personnalisés ou horodatages interprétés. Le formulaire accepte la mise en forme Markdown et les sauts de ligne ; **Modifier** le préremplit avec le message actuel.
 
-Retire le message collant d'un salon et supprime sa dernière publication. Si cette publication ne peut pas être supprimée (le bot n'a plus accès au salon, par exemple), la réponse le signale pour qu'on la supprime à la main.
+À l'enregistrement, le message est enregistré puis publié tout de suite en bas du salon, à la place du précédent ; une suppression lancée au même moment ne peut pas s'intercaler entre les deux. Le bot refuse un salon où il ne peut pas voir ou écrire ; si la publication échoue malgré tout, le message reste enregistré et sera publié après le prochain message du salon (au plus tôt 10 minutes plus tard si l'échec vient d'une permission manquante).
 
-### `/sticky list`
-
-Liste les salons et le début de leur message, affiché en texte brut : ni mise en forme Markdown, ni liens masqués, ni mentions, emojis personnalisés ou horodatages interprétés. Les entrées de salons supprimés sont retirées au passage ; au-delà de la taille d'un embed, la liste indique le nombre de salons non affichés.
-
-Ces trois commandes sont réservées aux administrateurs, et les réglages sont conservés quand le module est désactivé via `/modules`.
+**Supprimer** retire le message collant du salon et supprime sa dernière publication. Si cette publication ne peut pas être supprimée (le bot n'a plus accès au salon, par exemple), l'éditeur le signale pour qu'on la supprime à la main. Les réglages sont conservés quand le module est désactivé via `/modules`.
 
 ---
 

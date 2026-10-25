@@ -1,3 +1,24 @@
+import { escapeMarkdown } from "discord.js";
+
+const PREVIEW_MAX = 80;
+
+const ESCAPE_ALL = {
+  maskedLink: true,
+  heading: true,
+  bulletedList: true,
+  numberedList: true,
+} as const;
+
+export function truncate(text: string, max: number): string {
+  const chars = Array.from(text);
+  return chars.length > max ? `${chars.slice(0, max - 1).join("")}…` : text;
+}
+
+export function preview(content: string): string {
+  const line = truncate(content.replace(/\s+/g, " ").trim(), PREVIEW_MAX);
+  return escapeMarkdown(line, ESCAPE_ALL).replaceAll("<", "\\<");
+}
+
 // Intl separates digits with non-breaking spaces in French; plain ones draw
 // with every font.
 const NON_BREAKING_SPACES = /[\u00a0\u202f]/g;

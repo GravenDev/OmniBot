@@ -153,7 +153,30 @@ describe("resolveEmoji", () => {
     );
   });
 
-  it.each([":flag:", ":unknown:", "not an emoji", ""])(
+  it.each([
+    ["smile", "😄"],
+    [":smile:", "😄"],
+    [":thumbsup:", "👍"],
+    [":+1:", "👍"],
+    [":-1:", "👎"],
+    [":thumbsup_tone2:", "👍🏼"],
+    [":flag_fr:", "🇫🇷"],
+    [":slight_smile:", "🙂"],
+    [":heart:", "❤️"],
+    [":100:", "💯"],
+    [":Smile:", "😄"],
+  ])("resolves the shortcode %j to %s", (value, emoji) => {
+    expect(resolveEmoji(value, guildEmojis)).toBe(emoji);
+  });
+
+  it("prefers a guild emoji named like a shortcode", () => {
+    const smile = { id: "555555555555555555", name: "smile", animated: false };
+    expect(resolveEmoji(":smile:", [smile])).toBe(
+      "<:smile:555555555555555555>"
+    );
+  });
+
+  it.each([":flag:", ":unknown:", "not an emoji", "", "::"])(
     "rejects %j",
     (value) => {
       expect(resolveEmoji(value, guildEmojis)).toBeNull();

@@ -13,6 +13,7 @@ import {
 } from "#core/config/config-edit.js";
 import configService from "#core/services/config.service.js";
 import { getCoreT, replyWithCoreT } from "#core/utils/core-config.js";
+import { isStoredConfigKey } from "#core/utils/core-messages.js";
 import type { ConfigProvider, ConfigSchema } from "#lib/config.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 
@@ -44,7 +45,9 @@ export const resetConfigButton = declareInteractionHandler({
     const t = config.t;
 
     const schema = module.config as ConfigSchema;
-    const overridden = Object.keys(schema).filter((key) => config.isSet(key));
+    const overridden = Object.keys(schema).filter(
+      (key) => isStoredConfigKey(module, key) && config.isSet(key)
+    );
     if (overridden.length === 0) {
       await interaction.reply({
         content: t("config.reset.nothing"),

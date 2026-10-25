@@ -4,6 +4,7 @@ import { client, modules } from "#core/runtime.js";
 import {
   ConfigProvider,
   ConfigType,
+  isChannelRecordsEntry,
   type ConfigData,
   type ConfigSchema,
 } from "#lib/config.js";
@@ -265,6 +266,19 @@ class ConfigService {
     const guild = await client.guilds.fetch(guildId);
 
     for (const [key, configEntry] of Object.entries(module.config)) {
+      if (isChannelRecordsEntry(configEntry)) {
+        try {
+          deserializedConfig[key] = await configEntry.source.list(guildId);
+        } catch (error) {
+          logger.warn(
+            { err: error },
+            `Failed to load channel records | module = ${module.id} | key = ${key}`
+          );
+          delete deserializedConfig[key];
+        }
+        continue;
+      }
+
       const value = configData[key as keyof ConfigData<ConfigType>];
 
       if (value === null || value === undefined) {

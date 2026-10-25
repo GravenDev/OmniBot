@@ -53,18 +53,19 @@ export default defineModule({
 
 ### Types supportés
 
-| Type       | Saisie                          | Stockage (JSON)     | Lecture (désérialisé) |
-| ---------- | ------------------------------- | ------------------- | --------------------- |
-| `STRING`   | Modale (saisie texte)           | `string`            | `string`              |
-| `NUMBER`   | Modale (texte → nombre)         | `number`            | `number`              |
-| `BOOLEAN`  | Bouton toggle                   | `boolean`           | `boolean`             |
-| `USER`     | Menu de sélection utilisateur   | `string` (id)       | `User`                |
-| `ROLE`     | Menu de sélection rôle          | `string` (id)       | `Role`                |
-| `CHANNEL`  | Menu de sélection salon         | `string` (id)       | `Channel`             |
-| `CATEGORY` | Menu de sélection catégorie     | `string` (id)       | `CategoryChannel`     |
-| `ENUM`     | Menu de sélection (choix fixes) | `string` (choix)    | Union littérale       |
-| `DURATION` | Modale (`30s`, `4h`, `1h30m`)   | `number` (secondes) | `number` (secondes)   |
-| `EMOJI`    | Modale (`🚩`, `:nom:`)          | `string`            | `string`              |
+| Type              | Saisie                            | Stockage (JSON)     | Lecture (désérialisé) |
+| ----------------- | --------------------------------- | ------------------- | --------------------- |
+| `STRING`          | Modale (saisie texte)             | `string`            | `string`              |
+| `NUMBER`          | Modale (texte → nombre)           | `number`            | `number`              |
+| `BOOLEAN`         | Bouton toggle                     | `boolean`           | `boolean`             |
+| `USER`            | Menu de sélection utilisateur     | `string` (id)       | `User`                |
+| `ROLE`            | Menu de sélection rôle            | `string` (id)       | `Role`                |
+| `CHANNEL`         | Menu de sélection salon           | `string` (id)       | `Channel`             |
+| `CATEGORY`        | Menu de sélection catégorie       | `string` (id)       | `CategoryChannel`     |
+| `ENUM`            | Menu de sélection (choix fixes)   | `string` (choix)    | Union littérale       |
+| `DURATION`        | Modale (`30s`, `4h`, `1h30m`)     | `number` (secondes) | `number` (secondes)   |
+| `EMOJI`           | Modale (`🚩`, `:smile:`, `:nom:`) | `string`            | `string`              |
+| `CHANNEL_RECORDS` | Éditeur par salon                 | Table du module     | `ChannelRecord[]`     |
 
 Une entrée `DURATION` peut déclarer un `max` en secondes. La modale refuse alors une valeur plus longue, et `config.get()` ne renvoie jamais plus que `max`, même pour une valeur enregistrée avant la limite :
 
@@ -130,6 +131,58 @@ config: {
 - `as const` permet un typage précis : `config.get("theme")` retourne `"clair" | "sombre" | "auto"`
 - Sans `as const`, le type retourné est `string`
 
+### Type CHANNEL_RECORDS (réglages par salon)
+
+Certains modules portent un réglage **par salon** plutôt qu'une valeur pour tout le serveur : un emoji par salon (Auto React), un message par salon (Sticky Messages). Une liste ne sait pas exprimer cette association : `CHANNEL_RECORDS` décrit un ensemble d'entrées indexées par un salon, chacune portant un ou plusieurs champs :
+
+```typescript
+import { ChannelType } from "discord.js";
+
+config: {
+  reactions: {
+    name: "Automatic reactions",
+    description: "Channels whose new messages get a reaction.",
+    type: ConfigType.CHANNEL_RECORDS,
+    channel: {
+      name: "Channel",
+      channelTypes: [ChannelType.GuildText, ChannelType.GuildAnnouncement],
+    },
+    fields: {
+      emoji: { name: "Emoji", type: ConfigType.EMOJI },
+    },
+    source: reactionRecords,
+  },
+}
+```
+
+- `fields` accepte des champs `STRING` (avec `multiline` et `maxLength` en option) et `EMOJI`
+- Les entrées ne sont **pas** stockées dans le blob `GuildConfiguration` : le module les garde dans sa propre table et les expose par une `source` qui implémente `ChannelRecordSource` :
+
+```typescript
+export const reactionRecords: ChannelRecordSource = {
+  async list(guildId) {
+    return (await store.list(guildId)).map(({ channelId, emoji }) => ({
+      channelId,
+      values: { emoji },
+    }));
+  },
+  save(guild, { channelId, values }, { t, userId }) {
+    // valider, enregistrer, effets de bord… puis rendre compte
+    return { ok: true, message: t("set.done") };
+  },
+  remove(guild, channelId, { t, userId }) {
+    // …
+  },
+};
+```
+
+- `save` et `remove` renvoient `{ ok, message }` : le message (traduit avec le `t` du module) s'affiche en tête de l'éditeur. Y placer les vérifications propres au module (permissions du bot dans le salon, emoji utilisable…)
+- À l'ouverture de l'éditeur, les entrées dont le salon n'existe plus sont retirées via `remove`, et l'éditeur refuse de fonctionner pour un module désactivé
+- Le cœur vérifie seulement que chaque champ est rempli et qu'un champ `EMOJI` contient un emoji avant d'appeler `save`
+- `config.get("reactions")` renvoie les entrées (`{ channelId, values }[]`) lues depuis la source ; `undefined` si la source a échoué
+- Le bouton **Réinitialiser** du panneau ne touche pas ces entrées : ce ne sont pas des valeurs stockées avec un défaut
+- Traduire les libellés avec `config.<clé>.name`, `config.<clé>.description`, `config.<clé>.channel` et `config.<clé>.fields.<champ>`
+
 ## Valeurs par défaut
 
 - Un champ **avec** `defaultValue` est toujours présent — le type est `T` (jamais `undefined`)
@@ -179,6 +232,7 @@ Le panneau affiche :
 | `DURATION`                            | Modale (saisie durée)                | À la soumission | Message public mis à jour sur place |
 | `EMOJI`                               | Modale (un seul emoji)               | À la soumission | Message public mis à jour sur place |
 | Liste de scalaires                    | Éditeur ajouter/supprimer (éphémère) | À l'action      | Message public rafraîchi            |
+| `CHANNEL_RECORDS`                     | Éditeur par salon (éphémère)         | À la soumission | Message public rafraîchi            |
 
 **Éditeurs éphémères** (menus de sélection, éditeurs de listes) : ils rafraîchissent le message de configuration public après chaque modification en utilisant `refreshSourceConfigMessage()`. L'ID du message source est transmis via le `customId` des composants éphémères.
 

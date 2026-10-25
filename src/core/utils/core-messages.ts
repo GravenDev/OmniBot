@@ -11,6 +11,8 @@ import {
   ConfigType,
   formatConfigValue,
   getConfigTypeName,
+  isChannelRecordsEntry,
+  type ChannelRecord,
   type ConfigEntry,
   type ConfigProvider,
   type ConfigSchema,
@@ -184,6 +186,10 @@ function renderCurrentValue(
   value: unknown,
   locale: string
 ): string {
+  if (isChannelRecordsEntry(option)) {
+    return renderChannelRecords(value as ChannelRecord[] | undefined);
+  }
+
   const items = (Array.isArray(value) ? value : [value]).filter(
     (item) => item !== null && item !== undefined
   );
@@ -209,6 +215,24 @@ function renderCurrentValue(
         : `\`${formatConfigValue(option, item, locale)}\``
     )
     .join(", ");
+}
+
+const CHANNEL_RECORDS_SHOWN = 5;
+
+function renderChannelRecords(records: ChannelRecord[] | undefined): string {
+  if (!records || records.length === 0) {
+    return "—";
+  }
+  const shown = records
+    .slice(0, CHANNEL_RECORDS_SHOWN)
+    .map(({ channelId }) => `<#${channelId}>`)
+    .join(", ");
+  const hidden = records.length - CHANNEL_RECORDS_SHOWN;
+  return hidden > 0 ? `${shown} +${hidden}` : shown;
+}
+
+export function isStoredConfigKey(module: Module, key: string): boolean {
+  return !isChannelRecordsEntry((module.config as ConfigSchema)[key]);
 }
 
 /**
@@ -290,7 +314,9 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
     // a field without one), so they can tell at a glance what they've changed.
     const renderedValue =
       renderCurrentValue(option, value, config.locale) +
-      (config.isSet(key) ? "" : config.t("config.defaultSuffix"));
+      (config.isSet(key) || !isStoredConfigKey(module, key)
+        ? ""
+        : config.t("config.defaultSuffix"));
     section.addTextDisplayComponents((text) =>
       text.setContent(
         config.t("config.option", {
@@ -356,7 +382,9 @@ export const configurationMessage = <TSchema extends ConfigSchema>(
 
     // Reset opens an ephemeral field picker; disabled when nothing is
     // overridden (every field already on its default), so it is never a no-op.
-    const hasOverrides = keys.some((key) => config.isSet(key));
+    const hasOverrides = keys.some(
+      (key) => isStoredConfigKey(module, key) && config.isSet(key)
+    );
     row.addComponents(
       new ButtonBuilder()
         .setCustomId(`reset-config:${module.id}:${currentPage}`)

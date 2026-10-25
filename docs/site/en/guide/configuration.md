@@ -53,18 +53,19 @@ export default defineModule({
 
 ### Supported Types
 
-| Type       | Input                        | Storage (JSON)     | Read (deserialized) |
-| ---------- | ---------------------------- | ------------------ | ------------------- |
-| `STRING`   | Modal (text input)           | `string`           | `string`            |
-| `NUMBER`   | Modal (text → number)        | `number`           | `number`            |
-| `BOOLEAN`  | Toggle button                | `boolean`          | `boolean`           |
-| `USER`     | User select menu             | `string` (id)      | `User`              |
-| `ROLE`     | Role select menu             | `string` (id)      | `Role`              |
-| `CHANNEL`  | Channel select menu          | `string` (id)      | `Channel`           |
-| `CATEGORY` | Category select menu         | `string` (id)      | `CategoryChannel`   |
-| `ENUM`     | Select menu (fixed choices)  | `string` (choice)  | Literal union       |
-| `DURATION` | Modal (`30s`, `4h`, `1h30m`) | `number` (seconds) | `number` (seconds)  |
-| `EMOJI`    | Modal (`🚩`, `:name:`)       | `string`           | `string`            |
+| Type              | Input                             | Storage (JSON)     | Read (deserialized) |
+| ----------------- | --------------------------------- | ------------------ | ------------------- |
+| `STRING`          | Modal (text input)                | `string`           | `string`            |
+| `NUMBER`          | Modal (text → number)             | `number`           | `number`            |
+| `BOOLEAN`         | Toggle button                     | `boolean`          | `boolean`           |
+| `USER`            | User select menu                  | `string` (id)      | `User`              |
+| `ROLE`            | Role select menu                  | `string` (id)      | `Role`              |
+| `CHANNEL`         | Channel select menu               | `string` (id)      | `Channel`           |
+| `CATEGORY`        | Category select menu              | `string` (id)      | `CategoryChannel`   |
+| `ENUM`            | Select menu (fixed choices)       | `string` (choice)  | Literal union       |
+| `DURATION`        | Modal (`30s`, `4h`, `1h30m`)      | `number` (seconds) | `number` (seconds)  |
+| `EMOJI`           | Modal (`🚩`, `:smile:`, `:name:`) | `string`           | `string`            |
+| `CHANNEL_RECORDS` | Per-channel editor                | Module's own table | `ChannelRecord[]`   |
 
 A `DURATION` entry can declare a `max` in seconds. The modal then refuses a longer value, and `config.get()` never returns more than `max`, even for a value saved before the limit existed:
 
@@ -130,6 +131,58 @@ config: {
 - Using `as const` gives precise typing: `config.get("theme")` returns `"light" | "dark" | "auto"`
 - Without `as const`, the returned type is `string`
 
+### CHANNEL_RECORDS Type (Per-Channel Settings)
+
+Some modules hold one setting **per channel** rather than one value for the whole server: an emoji for each channel (Auto React), a message for each channel (Sticky Messages). A list cannot express that pairing, so `CHANNEL_RECORDS` describes a set of records keyed by a channel, each carrying one or more fields:
+
+```typescript
+import { ChannelType } from "discord.js";
+
+config: {
+  reactions: {
+    name: "Automatic reactions",
+    description: "Channels whose new messages get a reaction.",
+    type: ConfigType.CHANNEL_RECORDS,
+    channel: {
+      name: "Channel",
+      channelTypes: [ChannelType.GuildText, ChannelType.GuildAnnouncement],
+    },
+    fields: {
+      emoji: { name: "Emoji", type: ConfigType.EMOJI },
+    },
+    source: reactionRecords,
+  },
+}
+```
+
+- `fields` accepts `STRING` (with optional `multiline` and `maxLength`) and `EMOJI` fields
+- The records are **not** stored in the `GuildConfiguration` blob: the module keeps them in its own table and exposes them through a `source` implementing `ChannelRecordSource`:
+
+```typescript
+export const reactionRecords: ChannelRecordSource = {
+  async list(guildId) {
+    return (await store.list(guildId)).map(({ channelId, emoji }) => ({
+      channelId,
+      values: { emoji },
+    }));
+  },
+  save(guild, { channelId, values }, { t, userId }) {
+    // validate, persist, side effects… then report
+    return { ok: true, message: t("set.done") };
+  },
+  remove(guild, channelId, { t, userId }) {
+    // …
+  },
+};
+```
+
+- `save` and `remove` return `{ ok, message }`: the message (translated with the module's `t`) is shown at the top of the editor. Put the module's own checks there (bot permissions in the channel, usable emoji, …)
+- When the editor opens, records whose channel no longer exists are removed through `remove`, and the editor refuses to work for a disabled module
+- The core only checks that each field is filled in and that `EMOJI` fields hold an emoji before calling `save`
+- `config.get("reactions")` returns the records (`{ channelId, values }[]`) read from the source; it is `undefined` if the source failed
+- Records are not affected by the panel's **Reset** button: they are not a stored value with a default
+- Localize the labels with `config.<key>.name`, `config.<key>.description`, `config.<key>.channel` and `config.<key>.fields.<field>`
+
 ## Default Values
 
 - A field **with** `defaultValue` is always present — the type is `T` (never `undefined`)
@@ -179,6 +232,7 @@ The panel displays:
 | `DURATION`                            | Modal (duration input)         | On submit   | Public message updated in place |
 | `EMOJI`                               | Modal (single emoji)           | On submit   | Public message updated in place |
 | List of scalars                       | Add/remove editor (ephemeral)  | On action   | Public message refreshed        |
+| `CHANNEL_RECORDS`                     | Per-channel editor (ephemeral) | On submit   | Public message refreshed        |
 
 **Ephemeral editors** (select menus, list editors) refresh the public config message after each change using `refreshSourceConfigMessage()`. The source message ID is threaded through the `customId` of the ephemeral components.
 

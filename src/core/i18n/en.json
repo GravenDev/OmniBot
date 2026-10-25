@@ -24,8 +24,8 @@
   "config.duration.invalid": "❌ `{{value}}` is not a valid duration. Use a number followed by `s`, `m`, `h` or `d`, e.g. `30s`, `4h`, `1h30m`.",
   "config.duration.placeholder": "e.g. 30s, 5m, 4h, 1h30m, 3d",
   "config.duration.tooLong": "❌ `{{value}}` is longer than this option's maximum: {{max}}.",
-  "config.emoji.invalid": "❌ `{{value}}` is not an emoji. Enter a single emoji such as 🚩, or the name of a server emoji such as `:name:`.",
-  "config.emoji.placeholder": "e.g. 🚩 or :name:",
+  "config.emoji.invalid": "❌ `{{value}}` is not an emoji. Enter a single emoji such as 🚩, its Discord name such as `:smile:`, or the name of a server emoji such as `:name:`.",
+  "config.emoji.placeholder": "e.g. 🚩, :smile: or :name:",
 
   "config.enum.noOptions": "This field declares no options.",
   "config.enum.selectMultiple": "Select one or more values",
@@ -62,6 +62,19 @@
   "scalarList.addTitle": "Add — {{name}}",
   "scalarList.invalidValue": "❌ `{{value}}` is not a valid value.",
 
+  "channelRecords.header": "# `{{moduleName}}` — {{entryName}}\n> {{entryDesc}}",
+  "channelRecords.headerSingle": "# `{{moduleName}}`\n> {{entryDesc}}",
+  "channelRecords.empty": "-# No channel configured yet.",
+  "channelRecords.add": "Add",
+  "channelRecords.edit": "Edit",
+  "channelRecords.remove": "Remove",
+  "channelRecords.addTitle": "Add — {{name}}",
+  "channelRecords.editTitle": "{{channel}} — {{name}}",
+  "channelRecords.noChannel": "Pick a channel.",
+  "channelRecords.emptyField": "\"{{field}}\" cannot be empty.",
+  "channelRecords.invalidEmoji": "`{{value}}` is not an emoji. Enter a single emoji such as 🚩, its Discord name such as :smile:, or the name of a server emoji such as :name:.",
+  "channelRecords.gone": "This channel is no longer configured.",
+
   "select.user.selectMultiple": "Select users",
   "select.user.selectSingle": "Select a user",
   "select.role.selectMultiple": "Select roles",
@@ -85,6 +98,7 @@
   "type.choice": "Choice",
   "type.duration": "Duration",
   "type.emoji": "Emoji",
+  "type.channelSettings": "Per-channel settings",
   "type.listOf": "List of {{type}}",
 
   "modules.core.name": "Global Configuration",
@@ -94,7 +108,7 @@
   "modules.thread-creator.description": "Automatically creates discussion threads under each new message in configured channels.",
 
   "modules.autoreact.name": "Auto React",
-  "modules.autoreact.description": "Automatically adds a reaction to every new message in the channels set with /autoreact.",
+  "modules.autoreact.description": "Automatically adds a reaction to every new message in the channels set with /config autoreact.",
 
   "modules.four-hour-game.name": "4h Game",
   "modules.four-hour-game.description": "Score a point when your message stays the last one in the game channel for the configured delay, and a daily point for the longest hold of the day.",
@@ -121,7 +135,7 @@
   "modules.server-stats.description": "Counts the server's daily activity and posts a report every night.",
 
   "modules.sticky.name": "Sticky Messages",
-  "modules.sticky.description": "Keeps a message at the bottom of the channels set with /sticky by reposting it after every new message.",
+  "modules.sticky.description": "Keeps a message at the bottom of the channels set with /config sticky by reposting it after every new message.",
 
   "modules.clash-of-code.name": "Clash of Code",
   "modules.clash-of-code.description": "Follows the Clash of Code games whose link is posted, posts their results and keeps a wins leaderboard.",

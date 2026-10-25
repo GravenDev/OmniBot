@@ -24,8 +24,8 @@
   "config.duration.invalid": "❌ `{{value}}` n'est pas une durée valide. Utilisez un nombre suivi de `s`, `m`, `h` ou `d`, par ex. `30s`, `4h`, `1h30m`.",
   "config.duration.placeholder": "ex. 30s, 5m, 4h, 1h30m, 3d",
   "config.duration.tooLong": "❌ `{{value}}` dépasse la durée maximale de cette option : {{max}}.",
-  "config.emoji.invalid": "❌ `{{value}}` n'est pas un emoji. Saisissez un seul emoji, comme 🚩, ou le nom d'un emoji du serveur, comme `:nom:`.",
-  "config.emoji.placeholder": "ex. 🚩 ou :nom:",
+  "config.emoji.invalid": "❌ `{{value}}` n'est pas un emoji. Saisissez un seul emoji, comme 🚩, son nom Discord, comme `:smile:`, ou le nom d'un emoji du serveur, comme `:nom:`.",
+  "config.emoji.placeholder": "ex. 🚩, :smile: ou :nom:",
 
   "config.enum.noOptions": "Ce champ ne déclare aucune option.",
   "config.enum.selectMultiple": "Sélectionnez une ou plusieurs valeurs",
@@ -62,6 +62,19 @@
   "scalarList.addTitle": "Ajouter — {{name}}",
   "scalarList.invalidValue": "❌ `{{value}}` n'est pas une valeur valide.",
 
+  "channelRecords.header": "# `{{moduleName}}` — {{entryName}}\n> {{entryDesc}}",
+  "channelRecords.headerSingle": "# `{{moduleName}}`\n> {{entryDesc}}",
+  "channelRecords.empty": "-# Aucun salon configuré pour l'instant.",
+  "channelRecords.add": "Ajouter",
+  "channelRecords.edit": "Modifier",
+  "channelRecords.remove": "Supprimer",
+  "channelRecords.addTitle": "Ajouter — {{name}}",
+  "channelRecords.editTitle": "{{channel}} — {{name}}",
+  "channelRecords.noChannel": "Choisissez un salon.",
+  "channelRecords.emptyField": "« {{field}} » ne peut pas être vide.",
+  "channelRecords.invalidEmoji": "`{{value}}` n'est pas un emoji. Saisissez un seul emoji comme 🚩, son nom Discord comme :smile:, ou le nom d'un emoji du serveur comme :nom:.",
+  "channelRecords.gone": "Ce salon n'est plus configuré.",
+
   "select.user.selectMultiple": "Sélectionnez des utilisateurs",
   "select.user.selectSingle": "Sélectionnez un utilisateur",
   "select.role.selectMultiple": "Sélectionnez des rôles",
@@ -85,6 +98,7 @@
   "type.choice": "Choix",
   "type.duration": "Durée",
   "type.emoji": "Emoji",
+  "type.channelSettings": "Réglages par salon",
   "type.listOf": "Liste de {{type}}",
 
   "modules.core.name": "Configuration Globale",
@@ -94,7 +108,7 @@
   "modules.thread-creator.description": "Crée automatiquement des fils de discussion sous chaque nouveau message dans les canaux configurés.",
 
   "modules.autoreact.name": "Réactions automatiques",
-  "modules.autoreact.description": "Ajoute automatiquement une réaction à chaque nouveau message dans les salons configurés avec /autoreact.",
+  "modules.autoreact.description": "Ajoute automatiquement une réaction à chaque nouveau message dans les salons configurés avec /config autoreact.",
 
   "modules.four-hour-game.name": "Jeu des 4h",
   "modules.four-hour-game.description": "Marquez un point quand votre message reste le dernier du salon de jeu pendant le délai configuré, et un point du jour pour la plus longue tenue de la journée.",
@@ -121,7 +135,7 @@
   "modules.server-stats.description": "Compte l'activité quotidienne du serveur et publie un bilan chaque nuit.",
 
   "modules.sticky.name": "Messages collants",
-  "modules.sticky.description": "Garde un message en bas des salons configurés avec /sticky en le republiant après chaque nouveau message.",
+  "modules.sticky.description": "Garde un message en bas des salons configurés avec /config sticky en le republiant après chaque nouveau message.",
 
   "modules.clash-of-code.name": "Clash of Code",
   "modules.clash-of-code.description": "Suit les parties de Clash of Code dont le lien est posté, publie leur résultat et tient un classement des victoires.",

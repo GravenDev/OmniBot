@@ -22,6 +22,7 @@ const handlers: Record<ConfigType, ConfigTypeHandler<ConfigType> | null> = {
   [ConfigType.ENUM]: new EnumConfigHandler(),
   [ConfigType.DURATION]: new DurationConfigHandler(),
   [ConfigType.EMOJI]: new EmojiConfigHandler(),
+  [ConfigType.CHANNEL_RECORDS]: null,
 };
 
 export default handlers;
