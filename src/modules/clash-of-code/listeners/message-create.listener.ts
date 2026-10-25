@@ -33,9 +33,10 @@ export default declareEventListener<"messageCreate", ClashOfCodeConfigSchema>({
 
     for (const handle of handles) {
       try {
-        if (await watcher.watch(message, handle)) {
+        const result = await watcher.watch(message, handle);
+        if (result === "watching" || result === "finished") {
           logger.info(
-            `Clash watched | guildId = ${message.guildId} | handle = ${handle}`
+            `${result === "watching" ? "Clash watched" : "Clash ignored, already over"} | guildId = ${message.guildId} | handle = ${handle}`
           );
         }
       } catch (err) {

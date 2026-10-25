@@ -32,6 +32,8 @@ const WATCHING_REACTION = "⏳";
 
 type ClashModule = Module<ClashOfCodeConfigSchema>;
 
+export type WatchResult = "watching" | "known" | "finished" | "unknown";
+
 function keyOf(game: Pick<WatchedGame, "guildId" | "handle">): string {
   return `${game.guildId}:${game.handle}`;
 }
@@ -53,8 +55,29 @@ class ClashWatcher {
     return this.timers.has(keyOf(game));
   }
 
-  /** Starts following the clash linked in `message`; false when the guild already knows it. */
-  async watch(message: Message<true>, handle: string): Promise<boolean> {
+  /**
+   * Starts following the clash linked in `message`. Only a game followed
+   * before its end counts: a link to a game already over would let anyone
+   * add any public game to the leaderboard, so it is ignored, and past games
+   * go through /coc-admin import. When CodinGame cannot be reached, the game
+   * is followed anyway and the polls retry.
+   */
+  async watch(message: Message<true>, handle: string): Promise<WatchResult> {
+    if (await store.isKnown(message.guildId, handle)) {
+      return "known";
+    }
+    let report: ClashReport | null = null;
+    try {
+      report = await this.limited(() => fetchClashReport(handle));
+    } catch (err) {
+      if (err instanceof ClashNotFoundError) {
+        return "unknown";
+      }
+    }
+    if (report?.finished) {
+      return "finished";
+    }
+
     const game: WatchedGame = {
       guildId: message.guildId,
       handle,
@@ -63,11 +86,14 @@ class ClashWatcher {
       watchUntil: new Date(Date.now() + WATCH_DURATION_MS),
     };
     if ((await store.watch(game)) === "known") {
-      return false;
+      return "known";
     }
     await message.react(WATCHING_REACTION).catch(() => undefined);
-    this.schedule(game, 0);
-    return true;
+    this.schedule(
+      game,
+      report && !report.started ? LOBBY_INTERVAL_MS : POLL_INTERVAL_MS
+    );
+    return "watching";
   }
 
   /** Picks up the games still watched, after a restart or a missed timer. */

@@ -218,8 +218,9 @@ Les données viennent d'une API publique mais non documentée de CodinGame : si 
 Quand un membre poste un lien de partie (`https://www.codingame.com/clashofcode/clash/<id>`, y compris la page de résultat `…/clash/report/<id>`), le bot ajoute la réaction ⏳ au message et interroge CodinGame jusqu'à la fin de la partie : toutes les minutes tant qu'elle n'a pas commencé, toutes les 15 secondes ensuite. À la fin, il retire la réaction et répond au message avec l'image du résultat (rang, joueur, score, temps, et nombre de caractères en mode Shortest) et le nom du ou des gagnants. La réponse part en @silent : l'auteur du lien est mentionné, sans notification, et personne d'autre.
 
 - Au plus 3 parties sont suivies par message ; les liens dans du code ou sous spoiler sont ignorés, de même que les messages des bots.
+- Seule une partie suivie avant sa fin compte : un lien vers une partie déjà terminée au moment où il est posté est ignoré, sans réaction, pour que personne ne puisse ajouter au classement n'importe quelle partie publique. Une partie passée s'ajoute avec `/coc-admin import`. Si CodinGame est injoignable au moment du lien, la partie est suivie quand même.
 - Une partie déjà enregistrée ou déjà suivie sur le serveur n'est pas suivie une deuxième fois.
-- Une partie terminée sans avoir commencé, inconnue de CodinGame, encore en cours après 2 heures ou injoignable 10 fois de suite est abandonnée : la réaction est retirée et rien n'est publié. Reposter son lien relance le suivi.
+- Une partie terminée sans avoir commencé, inconnue de CodinGame, encore en cours après 2 heures ou injoignable 10 fois de suite est abandonnée : la réaction est retirée et rien n'est publié. Reposter son lien relance le suivi si la partie n'est pas encore terminée.
 - Une partie en cours de suivi est reprise après un redémarrage du bot.
 - Si le module est désactivé pendant une partie, son résultat n'est pas publié.
 
@@ -239,10 +240,10 @@ Lie votre compte Discord à un joueur CodinGame déjà vu dans une partie du ser
 
 **Permission requise :** Administrateur.
 
-| Sous-commande     | Effet                                                                                                                                                    |
-| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `import <game>`   | Importe une partie terminée, à partir de son lien ou de son identifiant, et publie son résultat. Une partie déjà enregistrée sur le serveur est refusée. |
-| `unlink <member>` | Délie le compte CodinGame d'un membre. Réponse visible de l'administrateur seul.                                                                         |
+| Sous-commande     | Effet                                                                                                                                                                                                                                           |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `import <game>`   | Importe une partie terminée, à partir de son lien ou de son identifiant, et publie son résultat : c'est le seul moyen d'ajouter une partie dont le lien n'a pas été posté avant sa fin. Une partie déjà enregistrée sur le serveur est refusée. |
+| `unlink <member>` | Délie le compte CodinGame d'un membre. Réponse visible de l'administrateur seul.                                                                                                                                                                |
 
 ### Configuration — `/config clash-of-code`
 
