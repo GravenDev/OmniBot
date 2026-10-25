@@ -90,8 +90,9 @@ jobs:
           until docker exec pg pg_isready -U postgres; do sleep 1; done
           url=postgresql://postgres:ci@pg:5432/postgres
           docker run --rm --network smoke -e DATABASE_URL=$url omnibot-migrator:ci
+          key=$(openssl rand -base64 32)
           set +e
-          out=$(timeout 60 docker run --rm --network smoke -e DISCORD_TOKEN=ci -e DATABASE_URL=$url omnibot:ci 2>&1)
+          out=$(timeout 60 docker run --rm --network smoke -e DISCORD_TOKEN=ci -e DATA_ENCRYPTION_KEY=$key -e DATABASE_URL=$url omnibot:ci 2>&1)
           set -e
           echo "$out"
           echo "$out" | grep -q TokenInvalid
