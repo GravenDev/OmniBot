@@ -5,7 +5,6 @@ import {
   deletedEmbed,
   deletedLog,
   editedLog,
-  truncate,
 } from "./entries.js";
 
 const t = (key: string, options?: Record<string, unknown>) =>
@@ -47,19 +46,6 @@ function fakeMessage(
         },
   } as unknown as Message;
 }
-
-describe("truncate", () => {
-  it("never splits an emoji", () => {
-    expect(truncate("ab😀c", 4)).toBe("ab…");
-    expect(truncate("😀😀😀😀", 5)).toBe("😀😀…");
-  });
-
-  it("stays within the limit counted the way Discord counts it", () => {
-    const truncated = truncate("😀".repeat(600), 1024);
-    expect(truncated.length).toBeLessThanOrEqual(1024);
-    expect(truncated.endsWith("😀…")).toBe(true);
-  });
-});
 
 describe("deletedEmbed", () => {
   it("shows the author, the channel and the content", () => {

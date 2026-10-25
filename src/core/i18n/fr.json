@@ -108,6 +108,9 @@
   "modules.message-log.name": "Journal des messages",
   "modules.message-log.description": "Consigne les messages supprimés et modifiés dans un salon du staff.",
 
+  "modules.honeypot.name": "Honeypot",
+  "modules.honeypot.description": "Softban quiconque écrit dans un salon piège, pour attraper les bots de spam et les comptes piratés.",
+
   "modules.message-quote.name": "Citation de messages",
   "modules.message-quote.description": "Cite les messages Discord dont le lien est posté, pour les membres autorisés à les lire.",
 

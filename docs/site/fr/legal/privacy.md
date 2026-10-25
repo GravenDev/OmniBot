@@ -70,6 +70,7 @@ Quand le module Server Stats est activé sur un serveur, le bot compte chaque jo
 Certains modules lisent le contenu des messages pour fonctionner, sans l'enregistrer en base de données :
 
 - **Message Log** garde en mémoire les messages récents, pour publier dans le salon de logs du staff le texte d'un message supprimé ou l'ancienne et la nouvelle version d'un message modifié ;
+- **Honeypot** lit les messages des seuls salons pièges, pour en publier le texte dans le salon de logs du staff quand il sanctionne leur auteur ;
 - **Message Quote** lit le message dont un membre poste le lien, pour en publier une citation ;
 - **LaTeX** lit les messages pour repérer les formules et les rendre en image ;
 - **Thread Creator** peut reprendre les 50 premiers caractères d'un message dans le nom du fil qu'il crée ;

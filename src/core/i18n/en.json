@@ -108,6 +108,9 @@
   "modules.message-log.name": "Message Log",
   "modules.message-log.description": "Logs deleted and edited messages in a staff channel.",
 
+  "modules.honeypot.name": "Honeypot",
+  "modules.honeypot.description": "Softbans whoever posts in a trap channel, to catch spam bots and hacked accounts.",
+
   "modules.message-quote.name": "Message Quote",
   "modules.message-quote.description": "Quotes the Discord messages whose link is posted, for members allowed to read them.",
 

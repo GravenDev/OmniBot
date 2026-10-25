@@ -1,0 +1,23 @@
+{
+  "config.trapChannels.name": "Trap channels",
+  "config.trapChannels.description": "Channels nobody should write in. A member who posts there is softbanned. Nothing happens until one is set.",
+  "config.logChannel.name": "Log channel",
+  "config.logChannel.description": "Channel where each triggered trap is logged.",
+  "config.exemptRoles.name": "Exempt roles",
+  "config.exemptRoles.description": "Members with one of these roles are never sanctioned. Members who can manage messages always are.",
+  "config.purgeWindow.name": "Purge window",
+  "config.purgeWindow.description": "How far back the softban deletes the member's messages across the server (7 days at most).",
+
+  "auditReason": "Honeypot: message in #{{channel}}",
+
+  "log.title": "🍯 Trap triggered by {{author}} in {{channel}}",
+  "log.empty": "*No text*",
+  "log.hidden": "🔒 *Content hidden: the log channel is visible to more people than the trap channel.*",
+  "log.messageKept": "⚠️ The trap message could not be deleted: delete it by hand.",
+  "log.footer": "Author ID: {{authorId}}",
+
+  "outcome.softbanned": "✅ Softbanned: their messages from the last {{window}} were deleted.",
+  "outcome.notBannable": "⚠️ No sanction: the bot cannot ban this member (role too high or missing _Ban Members_ permission).",
+  "outcome.failed": "⚠️ The softban failed: check that the bot has the _Ban Members_ permission.",
+  "outcome.stillBanned": "⚠️ The member was banned but could not be unbanned: unban them by hand."
+}
