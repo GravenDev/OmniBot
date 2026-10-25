@@ -1,5 +1,5 @@
-import { DiscordAPIError, RESTJSONErrorCodes } from "discord.js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DiscordAPIError, MessageFlags, RESTJSONErrorCodes } from "discord.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Sticky } from "./store.js";
 
 const state = vi.hoisted(() => ({
@@ -43,14 +43,19 @@ function apiError(code: number): DiscordAPIError {
   );
 }
 
+// Every channel a test creates, so that each message it sent can be checked.
+const channels: ReturnType<typeof fakeChannel>[] = [];
+
 function fakeChannel() {
   let next = 0;
-  return {
+  const channel = {
     id: "c1",
     guildId: "g1",
-    send: vi.fn(async () => ({ id: `m${++next}` })),
+    send: vi.fn(async (_options: unknown) => ({ id: `m${++next}` })),
     messages: { delete: vi.fn(async () => undefined) },
   };
+  channels.push(channel);
+  return channel;
 }
 
 type Fake = ReturnType<typeof fakeChannel>;
@@ -66,6 +71,18 @@ async function drain(channel: Fake) {
     }
   ).queue.run(channel.id, async () => {});
 }
+
+// A sticky is reposted after every message: whatever the path (first post,
+// repost, retry), it must never send a push notification.
+afterEach(() => {
+  for (const channel of channels.splice(0)) {
+    for (const [options] of channel.send.mock.calls) {
+      expect(options).toMatchObject({
+        flags: MessageFlags.SuppressNotifications,
+      });
+    }
+  }
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -86,6 +103,7 @@ describe("StickyPoster", () => {
     expect(channel.send).toHaveBeenCalledWith({
       content: "Read the rules",
       allowedMentions: { parse: [] },
+      flags: MessageFlags.SuppressNotifications,
     });
     expect(store.setMessageId).toHaveBeenCalledWith("g1", "c1", "m1");
     expect(channel.messages.delete).toHaveBeenCalledWith("old");

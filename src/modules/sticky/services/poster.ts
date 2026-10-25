@@ -1,5 +1,6 @@
 import {
   DiscordAPIError,
+  MessageFlags,
   RESTJSONErrorCodes,
   type GuildTextBasedChannel,
 } from "discord.js";
@@ -99,6 +100,9 @@ export class StickyPoster implements Service {
     const sent = await channel.send({
       content: sticky.content,
       allowedMentions: NO_MENTIONS,
+      // Reposted after every message, it never says anything new: @silent, so
+      // members following the channel get no push for each repost.
+      flags: MessageFlags.SuppressNotifications,
     });
     try {
       await store.setMessageId(channel.guildId, channel.id, sent.id);
