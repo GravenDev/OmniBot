@@ -471,6 +471,38 @@ Un forum ou un fil précis ne se sélectionne pas dans les salons exclus : exclu
 
 ---
 
+## Module Honeypot
+
+Piège les bots de spam et les comptes piratés, qui postent dans tous les salons sans les lire.
+
+### Comportement automatique
+
+Quand un membre écrit dans un salon piège, le bot le softban : il le bannit en supprimant ses messages de toute la durée de purge, sur tout le serveur, puis lève aussitôt le bannissement. Le membre peut revenir avec une invitation. La raison inscrite au journal d'audit est « Honeypot : message dans #salon ».
+
+- **Membres épargnés** : le propriétaire du serveur, les membres qui ont la permission _Gérer les messages_ dans le salon piège (y compris par une permission de catégorie ou de salon, et les administrateurs) et ceux qui ont l'un des rôles exemptés. Les messages des bots, des webhooks et les messages système sont ignorés.
+- **Une seule sanction par rafale** : les messages suivants du même membre dans les 60 secondes ne déclenchent rien de plus. Si le bot n'a pas pu vérifier le membre (erreur de l'API Discord), rien n'est appliqué et le message suivant relance le piège.
+- **Bannissement impossible** (rôle du membre au-dessus de celui du bot, ou permission _Bannir des membres_ manquante) : le bot supprime seulement le message piège et le signale dans le log. Si même la suppression échoue, le log demande de supprimer le message à la main.
+- **Débannissement impossible** : le membre reste banni et le log demande de le débannir à la main.
+
+Les fils d'un salon piège sont piégés eux aussi ; un forum choisi comme salon piège piège donc tous ses posts.
+
+### Log
+
+Si un salon des logs est défini, chaque déclenchement y est consigné : l'auteur, le salon piège, le message en citation (texte et nom des pièces jointes) et le résultat de la sanction, avec l'ID de l'auteur en pied. Un message trop long est coupé pour tenir dans le log. Les mentions ne notifient personne. Quand un rôle voit le salon des logs sans pouvoir lire le salon piège (ou que le message vient d'un fil privé), le log est publié sans le contenu, avec la mention « Contenu masqué ». Le bot y a besoin de _Voir le salon_, d'_Envoyer des messages_ et d'_Intégrer des liens_ ; sans elles, la sanction s'applique sans log.
+
+### Configuration — `/config honeypot`
+
+| Champ          | Type           | Description                                                                            |
+| -------------- | -------------- | -------------------------------------------------------------------------------------- |
+| `trapChannels` | Salons (liste) | Salons pièges. Tant qu'aucun n'est défini, le module ne fait rien.                     |
+| `logChannel`   | Salon          | Salon où chaque déclenchement est consigné.                                            |
+| `exemptRoles`  | Rôles (liste)  | Rôles jamais sanctionnés.                                                              |
+| `purgeWindow`  | Durée          | Ancienneté des messages supprimés par le softban. 1 h par défaut, plafonnée à 7 jours. |
+
+Le bot a besoin de la permission _Bannir des membres_, et de _Gérer les messages_ dans les salons pièges pour supprimer le message quand il ne peut pas bannir. Signalez clairement le salon piège (nom, sujet, message épinglé) pour que les vrais membres n'y écrivent pas. Le module lit le contenu des messages des salons pièges pour le log : l'intent privilégié _Message Content_ doit être activé sur le bot.
+
+---
+
 ## Module Message Quote
 
 Cite les messages Discord dont le lien est posté sur le serveur.

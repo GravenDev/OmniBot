@@ -9,6 +9,7 @@ import {
   type ReadonlyCollection,
 } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
+import { truncate } from "#lib/text.js";
 
 const DELETED_COLOR = 0xed4245;
 const EDITED_COLOR = 0xfaa61a;
@@ -16,20 +17,6 @@ const DESCRIPTION_LIMIT = 4096;
 const FIELD_LIMIT = 1024;
 
 type AnyMessage = Message | PartialMessage;
-
-export function truncate(text: string, limit: number): string {
-  if (text.length <= limit) {
-    return text;
-  }
-  let kept = "";
-  for (const character of text) {
-    if (kept.length + character.length > limit - 1) {
-      break;
-    }
-    kept += character;
-  }
-  return `${kept}…`;
-}
 
 export function isAuthoredByMember(message: Message): boolean {
   return !message.author.bot && !message.webhookId && !message.system;

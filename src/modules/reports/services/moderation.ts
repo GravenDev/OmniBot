@@ -4,6 +4,7 @@ import {
   type Guild,
   type GuildMember,
 } from "discord.js";
+import { MAX_BAN_PURGE_SECONDS } from "#lib/moderation.js";
 
 export type Sanction = "warn" | "timeout" | "kick" | "ban" | "softban";
 
@@ -16,7 +17,6 @@ export type SanctionBlock =
   | "alreadyBanned";
 
 export const MAX_TIMEOUT_SECONDS = 28 * 24 * 60 * 60;
-export const MAX_BAN_PURGE_SECONDS = 7 * 24 * 60 * 60;
 export const AUDIT_REASON_LIMIT = 512;
 
 export interface Rank {
@@ -70,23 +70,6 @@ export function targetRankOf(member: GuildMember): TargetRank {
       ban: member.bannable,
     },
   };
-}
-
-export async function fetchMember(
-  guild: Guild,
-  userId: string
-): Promise<GuildMember | null> {
-  try {
-    return await guild.members.fetch(userId);
-  } catch (error) {
-    if (
-      error instanceof DiscordAPIError &&
-      error.code === RESTJSONErrorCodes.UnknownMember
-    ) {
-      return null;
-    }
-    throw error;
-  }
 }
 
 export async function isBanned(guild: Guild, userId: string): Promise<boolean> {

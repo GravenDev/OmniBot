@@ -70,6 +70,7 @@ When the Server Stats module is enabled on a guild, the bot counts every day, pe
 Some modules read message content to work, without saving it to the database:
 
 - **Message Log** keeps recent messages in memory, to post in the staff log channel the text of a deleted message, or the old and new versions of an edited message;
+- **Honeypot** reads messages in the trap channels only, to post their text in the staff log channel when it sanctions their author;
 - **Message Quote** reads the message whose link a member posts, to post a quote of it;
 - **LaTeX** reads messages to find formulas and render them as images;
 - **Thread Creator** can use the first 50 characters of a message in the name of the thread it creates;
