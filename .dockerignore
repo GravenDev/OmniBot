@@ -26,6 +26,7 @@ docs
 
 # Docker & local orchestration
 Dockerfile
+docker-bake.hcl
 .dockerignore
 compose.yaml
 compose.*.yaml
