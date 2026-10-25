@@ -132,7 +132,7 @@
   "pings.enabled": "The bot will ping you again in its announcements on this server.",
   "pings.disabled": "The bot will no longer ping you in its announcements on this server. Your name still appears in them.",
 
-  "privacy.confirm": "This deletes the data the bot keeps about you on this server: your activity statistics, your 4-hour game score, your RNGdle account and rolls, the link to your Clash of Code player, and your mention preference. It cannot be undone.\n-# Reports stay with the moderators, and are deleted 30 days after the report at the latest.",
+  "privacy.confirm": "This deletes the data the bot keeps about you on this server: your activity statistics, your 4-hour game score, your RNGdle account and rolls, the link to your Clash of Code player, and your mention preference. It cannot be undone.\n-# Reports stay with the moderators, and are deleted 30 days after the last report at the latest.",
   "privacy.confirmButton": "Delete my data",
   "privacy.deleted": "Your data on this server has been deleted.",
   "privacy.failed": "Some of your data could not be deleted. Try again in a moment.",

@@ -21,7 +21,8 @@ vi.mock("./services/store.js", () => ({
   default: { dailyStats: mocks.dailyStats, purgeBefore: mocks.purgeBefore },
 }));
 
-const { postReport, serverStatsTasks } = await import("./tasks.js");
+const { postReport, serverStatsMaintenanceTasks, serverStatsTasks } =
+  await import("./tasks.js");
 
 const module = { id: "server-stats" } as Module<ServerStatsConfigSchema>;
 const client = {
@@ -100,7 +101,7 @@ describe("postReport", () => {
 });
 
 describe("daily-report task", () => {
-  it("runs at Paris midnight, reports the previous day and purges old counters", async () => {
+  it("runs at Paris midnight and reports the previous day", async () => {
     vi.useFakeTimers({ now: new Date("2026-10-13T22:00:05Z") });
     mocks.getConfigForModuleIn.mockResolvedValue(
       fakeConfig({ isSendable: () => true, send: vi.fn(async () => ({})) })
@@ -119,9 +120,7 @@ describe("daily-report task", () => {
       "guild-1",
       new Date("2026-10-13T00:00:00Z")
     );
-    expect(mocks.purgeBefore).toHaveBeenCalledWith(
-      new Date("2026-09-13T00:00:00Z")
-    );
+    expect(mocks.purgeBefore).not.toHaveBeenCalled();
   });
 
   it("skips the servers the bot has left", async () => {
@@ -131,7 +130,6 @@ describe("daily-report task", () => {
     await task!.run(client);
 
     expect(mocks.getConfigForModuleIn).not.toHaveBeenCalled();
-    expect(mocks.purgeBefore).toHaveBeenCalledOnce();
   });
 
   it("keeps going when a guild fails", async () => {
@@ -144,6 +142,24 @@ describe("daily-report task", () => {
     await task!.run(client);
 
     expect(mocks.getConfigForModuleIn).toHaveBeenCalledTimes(2);
-    expect(mocks.purgeBefore).toHaveBeenCalledOnce();
+  });
+});
+
+describe("purge maintenance task", () => {
+  it("deletes the counters older than 30 days at Paris midnight", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-13T22:00:05Z") });
+    const [task] = serverStatsMaintenanceTasks();
+
+    expect(task).toMatchObject({
+      schedule: "0 0 * * *",
+      timezone: "Europe/Paris",
+    });
+    await task!.run(client);
+    vi.useRealTimers();
+
+    expect(mocks.purgeBefore).toHaveBeenCalledWith(
+      new Date("2026-09-13T00:00:00Z")
+    );
+    expect(mocks.getActivatedGuildIds).not.toHaveBeenCalled();
   });
 });

@@ -132,7 +132,7 @@
   "pings.enabled": "Le bot vous mentionnera de nouveau dans ses annonces sur ce serveur.",
   "pings.disabled": "Le bot ne vous mentionnera plus dans ses annonces sur ce serveur. Votre nom y reste affiché.",
 
-  "privacy.confirm": "Cela supprime les données que le bot garde sur vous sur ce serveur : vos statistiques d'activité, votre score au jeu des 4h, votre compte et vos tirages RNGdle, le lien vers votre joueur Clash of Code et votre préférence de mention. C'est irréversible.\n-# Les signalements restent aux modérateurs, et sont supprimés au plus tard 30 jours après le signalement.",
+  "privacy.confirm": "Cela supprime les données que le bot garde sur vous sur ce serveur : vos statistiques d'activité, votre score au jeu des 4h, votre compte et vos tirages RNGdle, le lien vers votre joueur Clash of Code et votre préférence de mention. C'est irréversible.\n-# Les signalements restent aux modérateurs, et sont supprimés au plus tard 30 jours après le dernier signalement.",
   "privacy.confirmButton": "Supprimer mes données",
   "privacy.deleted": "Vos données sur ce serveur ont été supprimées.",
   "privacy.failed": "Une partie de vos données n'a pas pu être supprimée. Réessayez dans un instant.",

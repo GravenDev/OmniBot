@@ -125,6 +125,44 @@ function toReport(row: Row): Report {
   };
 }
 
+export interface ReportExpiry {
+  id: number;
+  guildId: string;
+  messageId: string;
+  status: ReportStatus;
+  handledAt: Date | null;
+  lastReportedAt: Date;
+  alertChannelId: string | null;
+  alertMessageId: string | null;
+}
+
+const expirySelect = {
+  id: true,
+  guildId: true,
+  messageId: true,
+  status: true,
+  handledAt: true,
+  createdAt: true,
+  alertChannelId: true,
+  alertMessageId: true,
+  reporters: {
+    select: { reportedAt: true },
+    orderBy: { reportedAt: "desc" },
+    take: 1,
+  },
+} satisfies Prisma.MessageReportSelect;
+
+function toExpiry(
+  row: Prisma.MessageReportGetPayload<{ select: typeof expirySelect }>
+): ReportExpiry {
+  const { reporters, createdAt, ...rest } = row;
+  return {
+    ...rest,
+    status: row.status as ReportStatus,
+    lastReportedAt: reporters[0]?.reportedAt ?? createdAt,
+  };
+}
+
 class ReportStore implements Service {
   async byMessage(guildId: string, messageId: string): Promise<Report | null> {
     const row = await prisma.messageReport.findUnique({
@@ -263,18 +301,27 @@ class ReportStore implements Service {
   async expired(
     guildId: string,
     closedBefore: Date,
-    createdBefore: Date
-  ): Promise<Pick<Report, "id">[]> {
-    return prisma.messageReport.findMany({
+    reportedBefore: Date
+  ): Promise<ReportExpiry[]> {
+    const rows = await prisma.messageReport.findMany({
       where: {
         guildId,
         OR: [
-          { createdAt: { lt: createdBefore } },
+          { reporters: { none: { reportedAt: { gte: reportedBefore } } } },
           { status: { not: "open" }, handledAt: { lt: closedBefore } },
         ],
       },
-      select: { id: true },
+      select: expirySelect,
     });
+    return rows.map(toExpiry);
+  }
+
+  async expiryOf(guildId: string, id: number): Promise<ReportExpiry | null> {
+    const row = await prisma.messageReport.findFirst({
+      where: { id, guildId },
+      select: expirySelect,
+    });
+    return row ? toExpiry(row) : null;
   }
 
   async encryptPlaintext(): Promise<number> {

@@ -304,9 +304,9 @@ Le bot a besoin des permissions Gérer les messages (dans les salons surveillés
 
 ### Conservation
 
-Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la durée de conservation sont supprimés, et leur alerte est remplacée par une mention « purgé ». Un signalement fait il y a plus de 30 jours est supprimé de la même façon, qu'il soit clos ou encore ouvert. La purge passe sur tous les serveurs qui ont des signalements, y compris ceux où le module est désactivé ou que le bot a quittés.
+Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la durée de conservation sont supprimés, et leur alerte est remplacée par une mention « purgé ». Un signalement dont le dernier signalement date de plus de 30 jours est supprimé de la même façon, qu'il soit clos ou encore ouvert : un message signalé de nouveau repart pour 30 jours. La purge passe sur tous les serveurs qui ont des signalements, y compris ceux où le module est désactivé, écarté faute d'intent, ou que le bot a quittés ; elle ne déchiffre pas les signalements pour décider de leur suppression. Les statistiques de Server Stats sont purgées de même, que le module soit chargé ou écarté.
 
-La copie du message signalé (texte, version modifiée, pièces jointes) est chiffrée en base avec la clé `DATA_ENCRYPTION_KEY`. Les signalements enregistrés avant le chiffrement sont chiffrés lors de la purge suivante.
+La copie du message signalé (texte, version modifiée, pièces jointes) est chiffrée en base avec la clé `DATA_ENCRYPTION_KEY`. Les signalements enregistrés avant le chiffrement sont chiffrés au démarrage du module, puis à chaque purge.
 
 ### Configuration — `/config reports`
 

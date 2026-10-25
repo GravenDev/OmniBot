@@ -36,7 +36,10 @@ vi.mock("./services/store.js", () => ({
 }));
 vi.mock("./services/report.service.js", () => ({
   default: {
-    withReport: async (
+    withReport: async () => {
+      throw new Error("the purge must not decrypt the reports");
+    },
+    withExpiry: async (
       _guildId: string,
       id: number,
       task: (report: unknown) => Promise<unknown>
@@ -54,13 +57,13 @@ const client = {
 
 function report(
   id: number,
-  createdDaysAgo: number,
+  reportedDaysAgo: number,
   handledDaysAgo: number | null
 ) {
   return {
     id,
     status: handledDaysAgo === null ? "open" : "resolved",
-    createdAt: new Date(NOW.getTime() - createdDaysAgo * DAY),
+    lastReportedAt: new Date(NOW.getTime() - reportedDaysAgo * DAY),
     handledAt:
       handledDaysAgo === null
         ? null
@@ -83,13 +86,19 @@ describe("isExpired", () => {
   const closedBefore = new Date(NOW.getTime() - 7 * DAY);
   const createdBefore = new Date(NOW.getTime() - 30 * DAY);
 
-  it("expires an open report made more than 30 days ago", () => {
+  it("keeps a report reopened by a recent report, however old it is", () => {
+    const reopened = { ...report(1, 1, null), createdAt: new Date(0) };
+
+    expect(isExpired(reopened, closedBefore, createdBefore)).toBe(false);
+  });
+
+  it("expires an open report last reported more than 30 days ago", () => {
     expect(isExpired(report(1, 31, null), closedBefore, createdBefore)).toBe(
       true
     );
   });
 
-  it("keeps an open report made less than 30 days ago", () => {
+  it("keeps an open report last reported less than 30 days ago", () => {
     expect(isExpired(report(1, 29, null), closedBefore, createdBefore)).toBe(
       false
     );

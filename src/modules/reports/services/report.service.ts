@@ -18,6 +18,7 @@ import store, {
   type MessageSnapshot,
   type Report,
   type Reporter,
+  type ReportExpiry,
 } from "./store.js";
 
 const logger = loggerMaker("reports");
@@ -169,6 +170,21 @@ class ReportService implements Service {
         reopened
       );
       return reopened ? "reopened" : "added";
+    });
+  }
+
+  async withExpiry<T>(
+    guildId: string,
+    reportId: number,
+    task: (expiry: ReportExpiry) => Promise<T>
+  ): Promise<T | null> {
+    const first = await store.expiryOf(guildId, reportId);
+    if (!first) {
+      return null;
+    }
+    return this.queue.run(this.key(first), async () => {
+      const expiry = await store.expiryOf(guildId, reportId);
+      return expiry ? task(expiry) : null;
     });
   }
 

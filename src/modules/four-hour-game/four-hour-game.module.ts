@@ -57,9 +57,8 @@ const fourHourGameModule = defineModule({
     logger.info(`Module uninstalled | guildId = ${guild.id}`);
   },
 
-  async deleteMemberData(guildId, userId) {
-    await fourHourGameService.deleteScore(guildId, userId);
-  },
+  deleteMemberData: (guildId, userId) =>
+    fourHourGameService.forgetMember(guildId, userId),
 });
 
 export default fourHourGameModule;

@@ -6,7 +6,7 @@
   "config.moderatorRole.name": "Rôle modérateur",
   "config.moderatorRole.description": "Rôle mentionné à l'arrivée d'un nouveau signalement.",
   "config.retention.name": "Conservation",
-  "config.retention.description": "Durée pendant laquelle un signalement clos garde sa copie du message avant d'être purgé. Un signalement est purgé au plus tard 30 jours après avoir été fait.",
+  "config.retention.description": "Durée pendant laquelle un signalement clos garde sa copie du message avant d'être purgé. Un signalement est purgé au plus tard 30 jours après le dernier signalement du message.",
 
   "alert.title": "## 🚩 Signalement #{{id}}",
   "alert.status.open": "🔴 **À traiter**",

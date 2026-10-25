@@ -371,6 +371,15 @@ export class ConfigProvider<TSchema extends ConfigSchema> {
     // Defaults are not persisted (see ConfigService), so an unconfigured entry
     // reaches this branch and is resolved fresh against the current locale.
     if (stored !== undefined) {
+      const entry = this.module.config[key];
+      if (
+        entry?.type === ConfigType.DURATION &&
+        entry.max !== undefined &&
+        typeof stored === "number" &&
+        stored > entry.max
+      ) {
+        return entry.max as ConfigEntryValue<TSchema[TKey]>;
+      }
       return stored;
     }
     return this.resolveDefault(key);

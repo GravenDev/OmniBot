@@ -1,6 +1,7 @@
 import { GatewayIntentBits, Partials } from "discord.js";
 import { loggerMaker } from "#lib/logger.js";
 import { defineModule } from "#lib/module.js";
+import type { ScheduledTask } from "#lib/task.js";
 import reportMessageCommand from "./commands/report-message.command.js";
 import {
   alertButtonHandlers,
@@ -14,7 +15,7 @@ import {
 } from "./listeners/message-changes.listener.js";
 import reactionAddListener from "./listeners/reaction-add.listener.js";
 import { reportsConfigSchema } from "./reports.config.js";
-import { reportsTasks } from "./tasks.js";
+import { encryptStoredReports, reportsTasks } from "./tasks.js";
 
 const logger = loggerMaker("reports");
 
@@ -55,10 +56,10 @@ const reportsModule = defineModule({
     for (const handler of alertModalHandlers) {
       registry.register(handler);
     }
-    for (const task of reportsTasks(reportsModule)) {
-      registry.register(task);
-    }
+    encryptStoredReports();
   },
+
+  maintenanceTasks: (): ScheduledTask[] => reportsTasks(reportsModule),
 
   onInstall(_client, guild) {
     logger.info(`Module installed | guildId = ${guild.id}`);

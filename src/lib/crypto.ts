@@ -7,10 +7,15 @@ const KEY_BYTES = 32;
 const IV_BYTES = 12;
 const TAG_BYTES = 16;
 
+let parsed: { raw: string; key: Buffer } | null = null;
+
 export function encryptionKey(): Buffer | null {
   const raw = process.env["DATA_ENCRYPTION_KEY"];
   if (!raw) {
     return null;
+  }
+  if (parsed?.raw === raw) {
+    return parsed.key;
   }
   const key = Buffer.from(raw, "base64");
   if (key.length !== KEY_BYTES) {
@@ -18,6 +23,7 @@ export function encryptionKey(): Buffer | null {
       `DATA_ENCRYPTION_KEY must be ${KEY_BYTES} bytes encoded in base64`
     );
   }
+  parsed = { raw, key };
   return key;
 }
 

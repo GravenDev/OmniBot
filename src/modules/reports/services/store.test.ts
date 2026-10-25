@@ -143,3 +143,53 @@ describe("report store encryption", () => {
     expect(findMany).not.toHaveBeenCalled();
   });
 });
+
+describe("report store expiry", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("finds expired reports from their latest report, without their content", async () => {
+    const closedBefore = new Date("2026-10-18T00:00:00Z");
+    const reportedBefore = new Date("2026-09-25T00:00:00Z");
+    findMany.mockResolvedValue([
+      {
+        id: 1,
+        guildId: "g1",
+        messageId: "m1",
+        status: "open",
+        handledAt: null,
+        createdAt: new Date("2026-08-01T00:00:00Z"),
+        alertChannelId: "a1",
+        alertMessageId: "am1",
+        reporters: [{ reportedAt: new Date("2026-09-20T00:00:00Z") }],
+      },
+    ]);
+
+    const expired = await store.expired("g1", closedBefore, reportedBefore);
+
+    const { where, select } = findMany.mock.calls[0]![0];
+    expect(where).toEqual({
+      guildId: "g1",
+      OR: [
+        { reporters: { none: { reportedAt: { gte: reportedBefore } } } },
+        { status: { not: "open" }, handledAt: { lt: closedBefore } },
+      ],
+    });
+    expect(select).not.toHaveProperty("content");
+    expect(select).not.toHaveProperty("editedContent");
+    expect(select).not.toHaveProperty("attachments");
+    expect(expired).toEqual([
+      {
+        id: 1,
+        guildId: "g1",
+        messageId: "m1",
+        status: "open",
+        handledAt: null,
+        alertChannelId: "a1",
+        alertMessageId: "am1",
+        lastReportedAt: new Date("2026-09-20T00:00:00Z"),
+      },
+    ]);
+  });
+});

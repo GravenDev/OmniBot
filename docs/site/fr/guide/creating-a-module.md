@@ -126,6 +126,7 @@ interface ModuleDeclaration {
   onInstall: (client: Client, guild: Guild, registry: Registry) => void;
   onUninstall: (client: Client, guild: Guild, registry: Registry) => void;
   deleteMemberData?: (guildId: string, userId: string) => Promise<void>;
+  maintenanceTasks?: () => ScheduledTask[];
 }
 ```
 
@@ -139,6 +140,8 @@ interface ModuleDeclaration {
 | `deleteMemberData` | Un membre lance `/privacy delete` sur un serveur | Supprimer tout ce que le module garde sur ce membre sur ce serveur          |
 
 Un module qui enregistre quoi que ce soit lié à l'ID d'un membre doit implémenter `deleteMemberData`, et décrire ce qu'il enregistre dans la politique de confidentialité (`docs/site/*/legal/privacy.md`). Il est appelé que le module soit activé ou non sur le serveur.
+
+Les purges de données stockées vont dans `maintenanceTasks`, pas dans des tâches enregistrées depuis `onLoad` : elles sont planifiées pour chaque module découvert, y compris un module écarté parce que Discord n'a pas accordé son intention privilégiée, pour que les durées de conservation de la politique de confidentialité tiennent dans tous les cas.
 
 ### Gestion des intentions
 

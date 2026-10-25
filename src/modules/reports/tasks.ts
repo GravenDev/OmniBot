@@ -10,16 +10,16 @@ import {
 } from "./reports.config.js";
 import { purgedMessage } from "./services/alert-view.js";
 import reportService from "./services/report.service.js";
-import store, { type Report } from "./services/store.js";
+import store, { type ReportExpiry } from "./services/store.js";
 
 const logger = loggerMaker("reports");
 
 export function isExpired(
-  report: Pick<Report, "status" | "handledAt" | "createdAt">,
+  report: Pick<ReportExpiry, "status" | "handledAt" | "lastReportedAt">,
   closedBefore: Date,
-  createdBefore: Date
+  reportedBefore: Date
 ): boolean {
-  if (report.createdAt < createdBefore) {
+  if (report.lastReportedAt < reportedBefore) {
     return true;
   }
   return (
@@ -48,16 +48,16 @@ async function purgeGuild(
         : MAX_RETENTION_SECONDS) *
         1000
   );
-  const createdBefore = new Date(now - MAX_RETENTION_SECONDS * 1000);
+  const reportedBefore = new Date(now - MAX_RETENTION_SECONDS * 1000);
 
   let purged = 0;
   for (const { id } of await store.expired(
     guildId,
     closedBefore,
-    createdBefore
+    reportedBefore
   )) {
-    const done = await reportService.withReport(guildId, id, async (report) => {
-      if (!isExpired(report, closedBefore, createdBefore)) {
+    const done = await reportService.withExpiry(guildId, id, async (report) => {
+      if (!isExpired(report, closedBefore, reportedBefore)) {
         return false;
       }
       if (report.alertChannelId && report.alertMessageId) {
@@ -86,6 +86,17 @@ async function purgeGuild(
   return purged;
 }
 
+export async function encryptStoredReports(): Promise<void> {
+  await store
+    .encryptPlaintext()
+    .then((count) => {
+      if (count > 0) {
+        logger.info(`Reports encrypted | count = ${count}`);
+      }
+    })
+    .catch((err: unknown) => logger.error({ err }, "Report encryption failed"));
+}
+
 export function reportsTasks(module: Module<ReportsConfigSchema>) {
   return [
     declareTask({
@@ -108,16 +119,7 @@ export function reportsTasks(module: Module<ReportsConfigSchema>) {
               )
             );
         }
-        await store
-          .encryptPlaintext()
-          .then((count) => {
-            if (count > 0) {
-              logger.info(`Reports encrypted | count = ${count}`);
-            }
-          })
-          .catch((err: unknown) =>
-            logger.error({ err }, "Report encryption failed")
-          );
+        await encryptStoredReports();
       },
     }),
   ];

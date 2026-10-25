@@ -24,7 +24,7 @@ export const reportsConfigSchema = {
   retention: {
     name: "Retention",
     description:
-      "How long a closed report keeps its copy of the message before it is purged. A report is purged 30 days after it was made at the latest.",
+      "How long a closed report keeps its copy of the message before it is purged. A report is purged 30 days after the message was last reported at the latest.",
     type: ConfigType.DURATION,
     defaultValue: MAX_RETENTION_SECONDS,
     max: MAX_RETENTION_SECONDS,

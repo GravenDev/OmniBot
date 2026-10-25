@@ -7,6 +7,7 @@ import {
 import type { ConfigSchema } from "./config.js";
 import { DeclarationType, type Declared } from "./declared.js";
 import { Registry } from "./registry.js";
+import type { ScheduledTask } from "./task.js";
 import type { Version } from "./version.js";
 
 export interface ModuleDeclaration<ConfigType extends ConfigSchema = {}> {
@@ -77,6 +78,8 @@ export interface ModuleDeclaration<ConfigType extends ConfigSchema = {}> {
   onUninstall?: (client: Client, guild: Guild, registry: Registry) => void;
 
   deleteMemberData?: (guildId: string, userId: string) => Promise<void>;
+
+  maintenanceTasks?: () => ScheduledTask[];
 }
 
 /**

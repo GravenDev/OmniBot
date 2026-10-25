@@ -8,6 +8,7 @@ const db = vi.hoisted(() => {
     accounts: [] as Row[],
     rolls: [] as Row[],
     reminders: [] as Row[],
+    claims: [] as Row[],
     table: null as Row | null,
   };
 
@@ -37,7 +38,7 @@ const db = vi.hoisted(() => {
       return 0;
     });
 
-  const collection = (name: "accounts" | "rolls" | "reminders") => {
+  const collection = (name: "accounts" | "rolls" | "reminders" | "claims") => {
     const find = ({ where, orderBy }: Row) =>
       sorted(
         state[name].filter((row) => matches(row, where)),
@@ -98,6 +99,13 @@ const db = vi.hoisted(() => {
           state.reminders.push({ ...create });
       },
     },
+    rngdleCardClaim: {
+      ...collection("claims"),
+      createMany: async ({ data }: Row) => {
+        state.claims.push(...data);
+        return { count: data.length };
+      },
+    },
     rngdleScoreTable: {
       findUnique: async () => state.table,
       upsert: async ({ create }: Row) => void (state.table = { ...create }),
@@ -140,6 +148,7 @@ beforeEach(async () => {
   db.state.accounts = [];
   db.state.rolls = [];
   db.state.reminders = [];
+  db.state.claims = [];
   db.state.table = null;
   vi.resetModules();
   store = (await import("./store.js")).default;
@@ -172,6 +181,26 @@ describe("accounts", () => {
     expect(await scores()).toEqual([]);
     expect(await store.account("g1", "alice")).toBeNull();
     expect(await store.unregister("g1", "alice")).toBe(false);
+    expect(store.revision("g1")).toBe(revision + 1);
+  });
+
+  it("deletes everything kept about a member on one guild only", async () => {
+    await seed(alice, remote("r1", 10));
+    await seed(bob, remote("r2", 20));
+    await seed(account("g2", "alice"), remote("r3", 30));
+    await store.setReminder("g1", "alice", true);
+    await store.claimCard("g1", "alice", new Date(Date.UTC(2026, 0, 1)));
+    await store.claimCard("g2", "alice", new Date(Date.UTC(2026, 0, 1)));
+    const revision = store.revision("g1");
+
+    await store.deleteMember("g1", "alice");
+
+    expect(await store.account("g1", "alice")).toBeNull();
+    expect(await scores()).toEqual([20]);
+    expect(db.state.reminders).toEqual([]);
+    expect(db.state.claims.map((row) => row["guildId"])).toEqual(["g2"]);
+    expect(await store.account("g2", "alice")).not.toBeNull();
+    expect(await scores("g2")).toEqual([30]);
     expect(store.revision("g1")).toBe(revision + 1);
   });
 
