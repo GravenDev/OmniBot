@@ -55,37 +55,30 @@ jobs:
       - &setup-buildx
         name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          cleanup: false
       # amd64 only, like the release: the Portainer host is amd64, and nothing
       # consumes an arm64 image.
       #
-      # One cache scope for both images, exported by the runtime build alone:
+      # One cache scope for both images, exported by the runtime target alone:
       # with `mode=max` it holds every stage the migrator is built from too, and
       # a second export to the same scope would overwrite the first, since there
       # is one manifest per scope.
-      - name: Build the runtime image
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      #
+      # The migrator image is what catches a break in the migration image, which
+      # the compose stack needs before the bot may start.
+      - name: Build the runtime and migrator images
+        uses: docker/bake-action@59cb1203cd42bcefd40a1b6d73b589e48c86040e # v7.5.0
         with:
-          context: .
-          target: runtime
-          platforms: &platform linux/amd64
-          push: false
+          source: .
+          files: docker-bake.hcl
           load: true
-          tags: omnibot:ci
-          cache-from: &ci-cache type=gha,scope=ci
-          cache-to: type=gha,mode=max,scope=ci
-      # Shares every layer up to `deps` with the step above, so this is cheap —
-      # but it is what catches a break in the migration image, which the compose
-      # stack needs before the bot may start.
-      - name: Build the migrator image
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
-        with:
-          context: .
-          target: migrator
-          platforms: *platform
-          push: false
-          load: true
-          tags: omnibot-migrator:ci
-          cache-from: *ci-cache
+          set: |
+            *.platform=linux/amd64
+            *.cache-from=type=gha,scope=ci
+            runtime.tags=omnibot:ci
+            migrator.tags=omnibot-migrator:ci
+            ${{ github.event_name == 'push' && 'runtime.cache-to=type=gha,mode=max,scope=ci' || '' }}
       # Building is not enough: a CMD pointing at a missing file builds fine and
       # only fails at start. Apply the migrations, then start the bot with a
       # dummy token — reaching Discord's token check proves the whole import
@@ -160,11 +153,11 @@ jobs:
         with:
           context: .
           target: runtime
-          platforms: *platform
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: *ci-cache
+          cache-from: type=gha,scope=ci
 
       # The migrator ships as its own package, under the same tags as the bot:
       # a deployment pulls the pair for one version, and the migration history
@@ -183,11 +176,11 @@ jobs:
         with:
           context: .
           target: migrator
-          platforms: *platform
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta-migrator.outputs.tags }}
           labels: ${{ steps.meta-migrator.outputs.labels }}
-          cache-from: *ci-cache
+          cache-from: type=gha,scope=ci
 
   # The stack is defined in Portainer against this repository; the webhook only
   # asks it to redeploy, which re-pulls `latest`. Unlike an SSH deploy key, the
