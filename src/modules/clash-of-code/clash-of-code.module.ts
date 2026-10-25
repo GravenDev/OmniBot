@@ -16,7 +16,7 @@ const clashOfCodeModule = defineModule({
   name: "Clash of Code",
   description:
     "Follows the Clash of Code games whose link is posted, posts their results and keeps a wins leaderboard.",
-  version: "1.0.0",
+  version: "1.1.0",
   // Port of Alessevan's CoC bot (github.com/GravenDev/CoC), never deployed.
   author: "AntoineJT",
 

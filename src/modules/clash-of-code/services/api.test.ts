@@ -7,6 +7,7 @@ import {
   avatarUrl,
   ClashApiError,
   ClashNotFoundError,
+  ClashRateLimitedError,
   fetchClashReport,
   parseReport,
 } from "./api.js";
@@ -154,6 +155,32 @@ describe("fetchClashReport", () => {
     );
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(sleep).toHaveBeenCalledTimes(2);
+  });
+
+  it("tells a lasting rate limit apart, with the wait CodinGame asks", async () => {
+    fetchMock.mockResolvedValue(
+      reply({}, { status: 429, headers: { "retry-after": "12" } })
+    );
+    const error = await fetchClashReport(HANDLE).catch((err: unknown) => err);
+    expect(error).toBeInstanceOf(ClashRateLimitedError);
+    expect(error).toMatchObject({ handle: HANDLE, retryAfterMs: 12_000 });
+    expect(sleep).toHaveBeenCalledWith(12_000);
+  });
+
+  it("reads Retry-After given as an HTTP date", async () => {
+    vi.useFakeTimers({ now: new Date("2026-10-25T10:00:00Z") });
+    fetchMock.mockResolvedValue(
+      reply(
+        {},
+        {
+          status: 429,
+          headers: { "retry-after": "Sun, 25 Oct 2026 10:00:20 GMT" },
+        }
+      )
+    );
+    const error = await fetchClashReport(HANDLE).catch((err: unknown) => err);
+    vi.useRealTimers();
+    expect(error).toMatchObject({ retryAfterMs: 20_000 });
   });
 
   it("recovers when a retry succeeds", async () => {
