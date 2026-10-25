@@ -162,6 +162,12 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+catalogs:
+  default:
+    prisma:
+      specifier: ~7.9.1
+      version: 7.9.1
+
 importers:
 
   .:
@@ -213,7 +219,7 @@ importers:
         specifier: ^13.2.0
         version: 13.2.0
       prisma:
-        specifier: ~7.9.1
+        specifier: 'catalog:'
         version: 7.9.1(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
       tsx:
         specifier: ^4.20.5
@@ -224,6 +230,12 @@ importers:
       vitest:
         specifier: ^5.0.0
         version: 5.0.3(@types/node@24.19.2)(vite@8.0.16(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.0))
+
+  docker/migrator:
+    dependencies:
+      prisma:
+        specifier: 'catalog:'
+        version: 7.9.1(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(typescript@7.0.2)
 
   docs/site:
     dependencies:
