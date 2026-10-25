@@ -28,8 +28,10 @@ WORKDIR /app
 # Manifests first: dependency layers stay cached as long as they do not change.
 # docs/site/package.json is only needed so that pnpm can validate the workspace
 # against the lockfile — the docs site itself is never installed nor shipped.
+# docker/migrator/package.json lists the migrator's dependencies.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY docs/site/package.json ./docs/site/package.json
+COPY docker/migrator/package.json ./docker/migrator/package.json
 
 RUN corepack install
 
@@ -75,21 +77,36 @@ ARG TARGETPLATFORM
 RUN --mount=type=cache,id=pnpm-store-${TARGETPLATFORM},target=/pnpm/store,sharing=locked \
     pnpm install --frozen-lockfile --prod --filter omni-bot
 
-# --- migrator: short-lived image that applies the Prisma migrations -------
-# It carries the pnpm-pinned Prisma CLI, prisma.config.ts (schema location and
-# connection URL from DATABASE_URL), dbinfo.prisma and the migration history.
-# Applying migrations needs the datasource, not the models: src/prisma alone
-# is a valid schema.
-FROM deps AS migrator
+# --- migrator-deps: the Prisma CLI and nothing else -----------------------
+# `pnpm deploy` extracts, from the frozen lockfile, the dependency tree of the
+# docker/migrator workspace package: the Prisma CLI alone. Building on `deps`
+# instead would ship the bot's whole dev tooling (TypeScript, lefthook, vite…)
+# in an image that only applies migrations.
+FROM base AS migrator-deps
 
+ARG TARGETPLATFORM
+RUN --mount=type=cache,id=pnpm-store-${TARGETPLATFORM},target=/pnpm/store,sharing=locked \
+    pnpm --filter omnibot-migrator deploy --prod /migrator
+
+# --- migrator: short-lived image that applies the Prisma migrations -------
+# It carries the Prisma CLI, prisma.config.ts (schema location and connection
+# URL from DATABASE_URL), dbinfo.prisma and the migration history. Applying
+# migrations needs the datasource, not the models: src/prisma alone is a valid
+# schema. npm, corepack and yarn are removed, as in the runtime image.
+FROM ${NODE_IMAGE} AS migrator
+
+RUN rm -r /usr/local/lib/node_modules /opt/yarn-v* \
+ && rm /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+       /usr/local/bin/yarn /usr/local/bin/yarnpkg
+
+WORKDIR /app
+COPY --from=migrator-deps /migrator ./
 COPY prisma.config.ts ./
 COPY src/prisma ./src/prisma
 
 USER node
 
-# The Prisma binary is invoked directly rather than through `pnpm exec`: this
-# container runs on an egress-less network, and corepack would try to re-fetch
-# pnpm for the unprivileged user.
+# The Prisma binary is invoked directly: the image has no package manager.
 CMD ["/app/node_modules/.bin/prisma", "migrate", "deploy"]
 
 # --- runtime: minimal production image ------------------------------------

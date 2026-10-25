@@ -10,21 +10,23 @@ import {
   type Trend,
 } from "#lib/stat-card.js";
 import {
+  drawCellText,
+  drawTable,
+  playerColumn,
+  tableHeight,
+  type RankedPlayer,
+} from "#lib/table.js";
+import {
   TIER_COLORS,
   type TierOrError,
 } from "#modules/rngdle/services/scoring.js";
 import { formatCompact, formatEp, formatIndex } from "./format.js";
 import {
-  drawCellText,
   drawDelta,
   drawPlacement,
   drawRollNumber,
-  drawTable,
   formatDelta,
   loadPlacementIcons,
-  playerColumn,
-  tableHeight,
-  type RankedPlayer,
 } from "./table.js";
 import { ACCENT } from "./theme.js";
 

@@ -1,5 +1,5 @@
 import type { Guild } from "discord.js";
-import { modules } from "#core/runtime.js";
+import { modules, unavailableModules } from "#core/runtime.js";
 import prisma from "#lib/database.js";
 import type { Module } from "#lib/module.js";
 import { declareService, type Service } from "#lib/service.js";
@@ -37,6 +37,32 @@ class ModuleService implements Service {
         enabledVersion: activation?.activatedVersion,
       };
     });
+  }
+
+  /** Modules left out at startup, with the activation they keep in the guild. */
+  async getUnavailableModulesStateIn(guildId: string) {
+    if (unavailableModules.length === 0) {
+      return [];
+    }
+    const moduleActivations = await prisma.moduleActivation.findMany({
+      where: {
+        guildId,
+        moduleId: { in: unavailableModules.map(({ module }) => module.id) },
+      },
+    });
+
+    return unavailableModules.map(({ module, missingIntents }) => ({
+      module: {
+        id: module.id,
+        name: module.name,
+        description: module.description,
+      },
+      enabled:
+        moduleActivations.find(
+          (activation) => activation.moduleId === module.id
+        )?.activated ?? false,
+      missingIntents,
+    }));
   }
 
   async getModuleStateIn(moduleId: string, guild: Guild) {

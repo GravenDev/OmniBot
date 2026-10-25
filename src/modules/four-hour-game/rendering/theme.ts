@@ -1,3 +1,3 @@
 import type { Rgb } from "#lib/imaging.js";
 
-export const ACCENT: Rgb = [77, 163, 255];
+export const ACCENT: Rgb = [141, 196, 255];

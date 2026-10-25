@@ -181,6 +181,17 @@ describe("renderStatCard", () => {
     expect(pngSize(png)).toEqual({ width: 1000, height: 420 + 200 + 30 });
   });
 
+  it("puts the footer right below the header when there are no boxes", async () => {
+    const draw = vi.fn();
+
+    const png = await renderStatCard(
+      card({ rows: [], footer: { height: 200, draw } })
+    );
+
+    expect(draw).toHaveBeenCalledWith(expect.anything(), 40, 160, 920);
+    expect(pngSize(png)).toEqual({ width: 1000, height: 160 + 200 + 30 });
+  });
+
   it("draws a trend before the subtext, in the color of its direction", async () => {
     const subtext: [number, number, number, number] = [60, 240, 60, 30];
     const plain = await renderStatCard(

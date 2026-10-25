@@ -1,8 +1,11 @@
 {
   "modules.title": "# Modules",
-  "modules.description": "Les modules marqués avec ✅ sont activés, ceux marqués avec ❌ sont désactivés.",
+  "modules.description": "Les modules marqués avec ✅ sont activés, ceux marqués avec ❌ sont désactivés. Ceux marqués avec 🚫 ne peuvent pas être activés pour l'instant.",
   "modules.enable": "Activer",
   "modules.disable": "Désactiver",
+  "modules.unavailable": "Indisponible",
+  "modules.unavailableReason": "> Intent privilégié non accordé au bot : {{intents}}.",
+  "modules.unavailableKept": "> Intent privilégié non accordé au bot : {{intents}}. Le module reste activé et garde sa configuration : il reprendra au redémarrage qui suit l'octroi de l'intent.",
   "modules.item": "{{emoji}} `{{moduleName}}`{{version}}\n> {{description}}",
   "config.noConfig": "Ce module n'a aucune configuration disponible.",
   "config.reset.button": "Réinitialiser…",

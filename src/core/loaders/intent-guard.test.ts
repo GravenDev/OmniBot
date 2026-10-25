@@ -23,6 +23,7 @@ const {
   findMissingIntents,
   keepModulesWithGrantedIntents,
   planGateway,
+  portalNames,
 } = await import("./intent-guard.js");
 
 function fakeModule(id: string, intents: GatewayIntentBits[]) {
@@ -128,6 +129,9 @@ describe("planGateway", () => {
     ).toEqual({
       coreMissing: [],
       modules: [quote],
+      unavailable: [
+        { module: stats, missingIntents: [GatewayIntentBits.GuildMembers] },
+      ],
       intents: [GatewayIntentBits.Guilds, GatewayIntentBits.MessageContent],
       partials: [Partials.Message],
     });
@@ -137,6 +141,7 @@ describe("planGateway", () => {
     expect(planGateway(core, [quote, stats], null)).toEqual({
       coreMissing: [],
       modules: [quote, stats],
+      unavailable: [],
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.MessageContent,
@@ -154,6 +159,17 @@ describe("planGateway", () => {
     expect(planGateway(privilegedCore, [], 0).coreMissing).toEqual([
       GatewayIntentBits.GuildMembers,
     ]);
+  });
+});
+
+describe("portalNames", () => {
+  it("names privileged intents as the Developer Portal does", () => {
+    expect(
+      portalNames([
+        GatewayIntentBits.GuildMembers,
+        GatewayIntentBits.MessageContent,
+      ])
+    ).toBe("Server Members, Message Content");
   });
 });
 

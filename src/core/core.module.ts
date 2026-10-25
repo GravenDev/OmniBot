@@ -11,6 +11,7 @@ import configPageButton from "./interactions/config-page.button.js";
 import configureModuleButton from "./interactions/configure-module.button.js";
 import disableModuleButton from "./interactions/disable-module.button.js";
 import enableModuleButton from "./interactions/enable-module.button.js";
+import modulesPageButton from "./interactions/modules-page.button.js";
 import {
   resetConfigButton,
   resetConfigSelect,
@@ -41,6 +42,7 @@ export default defineModule({
 
     registry.register(enableModuleButton);
     registry.register(disableModuleButton);
+    registry.register(modulesPageButton);
 
     registry.register(configureModuleButton);
     registry.register(toggleOptionButton);

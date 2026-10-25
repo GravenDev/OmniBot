@@ -1,0 +1,8 @@
+{
+  "name": "omnibot-migrator",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "prisma": "catalog:"
+  }
+}

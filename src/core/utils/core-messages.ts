@@ -5,6 +5,7 @@ import {
   ContainerBuilder,
   SectionBuilder,
 } from "discord.js";
+import { portalNames } from "#core/loaders/intent-guard.js";
 import type moduleService from "#core/services/module.service.js";
 import {
   ConfigType,
@@ -18,18 +19,61 @@ import type { TFunction } from "#lib/i18n.js";
 import type { Module } from "#lib/module.js";
 import { Colors } from "#utils/colors.js";
 
+type ModulesState = Awaited<
+  ReturnType<typeof moduleService.getAllModulesStateIn>
+>;
+type UnavailableModulesState = Awaited<
+  ReturnType<typeof moduleService.getUnavailableModulesStateIn>
+>;
+
+/**
+ * Modules rendered per page. Each costs 3 components (section + text +
+ * button), so a page stays far below Discord's 40-component cap whatever the
+ * number of modules.
+ */
+export const MODULES_PER_PAGE = 5;
+
+/**
+ * The page of the `/modules` panel that lists `moduleId`, so that enabling or
+ * disabling a module re-renders the page it is on. Unavailable modules come
+ * after the loaded ones, as in the panel.
+ */
+export function modulesPageOf(
+  moduleId: string,
+  modulesState: ModulesState,
+  unavailable: UnavailableModulesState = []
+): number {
+  const index = [...modulesState, ...unavailable].findIndex(
+    (state) => state.module.id === moduleId
+  );
+  return index < 0 ? 0 : Math.floor(index / MODULES_PER_PAGE);
+}
+
 export const modulesMessage = (
-  modulesState: Awaited<ReturnType<typeof moduleService.getAllModulesStateIn>>,
-  t: TFunction
+  modulesState: ModulesState,
+  t: TFunction,
+  unavailable: UnavailableModulesState = [],
+  page = 0
 ) => {
+  const total = modulesState.length + unavailable.length;
+  const pageCount = Math.max(1, Math.ceil(total / MODULES_PER_PAGE));
+  const currentPage = Math.min(Math.max(page, 0), pageCount - 1);
+  const first = currentPage * MODULES_PER_PAGE;
+  const last = first + MODULES_PER_PAGE;
+
   const container = new ContainerBuilder().setAccentColor(Colors.Turquoise);
+  let description = t("modules.description");
+  if (pageCount > 1) {
+    description +=
+      "\n" + t("config.page", { current: currentPage + 1, total: pageCount });
+  }
   container.addTextDisplayComponents(
     (text) => text.setContent(t("modules.title")),
-    (text) => text.setContent(t("modules.description"))
+    (text) => text.setContent(description)
   );
   container.addSeparatorComponents((separator) => separator.setDivider(true));
 
-  for (let state of modulesState) {
+  for (const state of modulesState.slice(first, last)) {
     const emoji = state.enabled ? "✅" : "❌";
 
     const modName = t("modules." + state.module.id + ".name", {
@@ -63,6 +107,64 @@ export const modulesMessage = (
             )
             .setStyle(state.enabled ? ButtonStyle.Danger : ButtonStyle.Success)
         )
+    );
+  }
+
+  // Listed so admins know why a module is missing, with a button that cannot
+  // be pressed: the module is not loaded, so it cannot be enabled.
+  const unavailableFirst = Math.max(0, first - modulesState.length);
+  const unavailableLast = Math.max(0, last - modulesState.length);
+  for (const state of unavailable.slice(unavailableFirst, unavailableLast)) {
+    const modName = t("modules." + state.module.id + ".name", {
+      defaultValue: state.module.name,
+    });
+    const modDesc = t("modules." + state.module.id + ".description", {
+      defaultValue: state.module.description,
+    });
+    const reason = t(
+      state.enabled ? "modules.unavailableKept" : "modules.unavailableReason",
+      { intents: portalNames(state.missingIntents) }
+    );
+    container.addSectionComponents((section) =>
+      section
+        .addTextDisplayComponents((text) =>
+          text.setContent(
+            t("modules.item", {
+              emoji: "🚫",
+              moduleName: modName,
+              version: "",
+              description: modDesc,
+            }) +
+              "\n" +
+              reason
+          )
+        )
+        .setButtonAccessory((button) =>
+          button
+            .setCustomId("unavailable-module:" + state.module.id)
+            .setLabel(t("modules.unavailable"))
+            .setStyle(ButtonStyle.Secondary)
+            .setDisabled(true)
+        )
+    );
+  }
+
+  // The target page is encoded in each customId so the handler can re-render
+  // in place, as in the /config panel.
+  if (pageCount > 1) {
+    container.addActionRowComponents(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId(`modules-page:${currentPage - 1}`)
+          .setLabel(t("config.previous"))
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(currentPage === 0),
+        new ButtonBuilder()
+          .setCustomId(`modules-page:${currentPage + 1}`)
+          .setLabel(t("config.next"))
+          .setStyle(ButtonStyle.Secondary)
+          .setDisabled(currentPage === pageCount - 1)
+      )
     );
   }
 
