@@ -1,3 +1,4 @@
+import { openChannelRecordsEditor } from "#core/config/channel-records-editor.js";
 import {
   getConfigEntry,
   isScalarType,
@@ -7,7 +8,7 @@ import configHandlers from "#core/config/config-handler-registry.js";
 import { openScalarListEditor } from "#core/config/scalar-list-editor.js";
 import configService from "#core/services/config.service.js";
 import { replyWithCoreT } from "#core/utils/core-config.js";
-import { ConfigType } from "#lib/config.js";
+import { ConfigType, isChannelRecordsEntry } from "#lib/config.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 
 export default declareInteractionHandler({
@@ -22,12 +23,22 @@ export default declareInteractionHandler({
       return;
     }
 
+    const entry = getConfigEntry(module, configKey)!;
+    if (isChannelRecordsEntry(entry)) {
+      await openChannelRecordsEditor(
+        interaction,
+        module,
+        configKey,
+        interaction.message.id
+      );
+      return;
+    }
+
     const config = await configService.getConfigForModuleIn(
       module,
       interaction.guildId!
     );
 
-    const entry = getConfigEntry(module, configKey)!;
     const type = entry.type;
     const isList = Array.isArray(type);
     const baseType: ConfigType = Array.isArray(type) ? type[0] : type;

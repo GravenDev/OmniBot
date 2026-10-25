@@ -1,12 +1,14 @@
 import {
   CategoryChannel,
   type Channel,
+  type ChannelType,
   type Guild,
   type GuildEmoji,
   Role,
   type User,
 } from "discord.js";
 import { formatDuration, parseDuration } from "./duration.js";
+import { emojiFromShortcode } from "./emoji-shortcodes.js";
 import { createT, type TFunction } from "./i18n.js";
 import type { Module } from "./module.js";
 
@@ -25,6 +27,7 @@ export enum ConfigType {
   ENUM = "ENUM",
   DURATION = "DURATION",
   EMOJI = "EMOJI",
+  CHANNEL_RECORDS = "CHANNEL_RECORDS",
 }
 
 const CUSTOM_EMOJI = /^<a?:\w{2,32}:\d{17,20}>$/;
@@ -55,13 +58,15 @@ function formatGuildEmoji(emoji: GuildEmojiLike): string {
 }
 
 const EMOJI_NAME = /^:?(\w{2,32}):?$/;
+const SHORTCODE = /^:?([\w+-]+):?$/;
 
 /**
  * Turns what an admin typed into a stored emoji value, or `null` when it is not
  * one. A modal text input has no emoji picker and Discord does not rewrite
- * `:name:` into `<:name:id>` there, so a bare or colon-wrapped name is looked up
- * among the guild's emojis: an exact match first, then a case-insensitive one
- * as long as it is unambiguous.
+ * `:name:` there, so a bare or colon-wrapped name is looked up: an exact match
+ * among the guild's emojis first, then a Discord-style shortcode of a Unicode
+ * emoji (`smile`, `:thumbsup:`), then a case-insensitive guild emoji as long as
+ * it is unambiguous.
  */
 export function resolveEmoji(
   value: string,
@@ -70,14 +75,22 @@ export function resolveEmoji(
   if (isEmoji(value)) {
     return value;
   }
-  const name = value.match(EMOJI_NAME)?.[1];
-  if (!name) {
+  const shortcode = value.match(SHORTCODE)?.[1];
+  if (!shortcode) {
     return null;
   }
+  const name = value.match(EMOJI_NAME)?.[1];
   const emojis = [...guildEmojis];
-  const exact = emojis.find((emoji) => emoji.name === name);
+  const exact = name && emojis.find((emoji) => emoji.name === name);
   if (exact) {
     return formatGuildEmoji(exact);
+  }
+  const unicode = emojiFromShortcode(shortcode);
+  if (unicode) {
+    return unicode;
+  }
+  if (!name) {
+    return null;
   }
   const loose = emojis.filter(
     (emoji) => emoji.name?.toLowerCase() === name.toLowerCase()
@@ -120,6 +133,7 @@ export const ConfigValidator: Record<ConfigType, (value: string) => boolean> = {
   ENUM: () => true,
   DURATION: (value: string) => parseDuration(value) !== null,
   EMOJI: isEmoji,
+  CHANNEL_RECORDS: () => false,
 };
 
 export function getConfigTypeName(
@@ -150,6 +164,7 @@ export const configTypeNames: Record<ConfigType, string> = {
   ENUM: "choice",
   DURATION: "duration",
   EMOJI: "emoji",
+  CHANNEL_RECORDS: "channelSettings",
 };
 
 export type ListOf<T extends ConfigType> = [T];
@@ -167,6 +182,59 @@ export interface TypeMap {
   [ConfigType.ENUM]: string;
   [ConfigType.DURATION]: number;
   [ConfigType.EMOJI]: string;
+  [ConfigType.CHANNEL_RECORDS]: ChannelRecord[];
+}
+
+export type ChannelRecord = {
+  channelId: string;
+  values: Record<string, string>;
+};
+
+export interface ChannelRecordField {
+  name: string;
+  type: ConfigType.STRING | ConfigType.EMOJI;
+  multiline?: boolean;
+  maxLength?: number;
+}
+
+export interface ChannelRecordOutcome {
+  ok: boolean;
+  message: string;
+}
+
+export interface ChannelRecordContext {
+  t: TFunction;
+  userId: string;
+}
+
+export interface ChannelRecordSource {
+  list(guildId: string): Promise<ChannelRecord[]>;
+  save(
+    guild: Guild,
+    record: ChannelRecord,
+    context: ChannelRecordContext
+  ): Promise<ChannelRecordOutcome>;
+  remove(
+    guild: Guild,
+    channelId: string,
+    context: ChannelRecordContext
+  ): Promise<ChannelRecordOutcome>;
+}
+
+export interface ChannelRecordsConfigEntry {
+  name: string;
+  description: string;
+  type: ConfigType.CHANNEL_RECORDS;
+  channel: { name: string; channelTypes: readonly ChannelType[] };
+  fields: Record<string, ChannelRecordField>;
+  source: ChannelRecordSource;
+  defaultValue?: never;
+}
+
+export function isChannelRecordsEntry(
+  entry: ConfigEntry<ConfigType> | undefined
+): entry is ChannelRecordsConfigEntry {
+  return entry?.type === ConfigType.CHANNEL_RECORDS;
 }
 
 export type ResolveType<T extends ConfigType | ListOf<ConfigType>> =
@@ -235,13 +303,25 @@ export type ConfigEntry<T extends ConfigType> =
   // entry can only satisfy the enum shapes below — which require `options`.
   // Without this, `{ type: ENUM }` would match SimpleConfigEntry and compile
   // without options, then fail at runtime building an empty select menu.
-  | SimpleConfigEntry<Exclude<T, ConfigType.ENUM | ConfigType.DURATION>>
+  | SimpleConfigEntry<
+      Exclude<
+        T,
+        ConfigType.ENUM | ConfigType.DURATION | ConfigType.CHANNEL_RECORDS
+      >
+    >
   | ListConfigEntry<
-      Exclude<T, ConfigType.ENUM | ConfigType.DURATION | ConfigType.EMOJI>
+      Exclude<
+        T,
+        | ConfigType.ENUM
+        | ConfigType.DURATION
+        | ConfigType.EMOJI
+        | ConfigType.CHANNEL_RECORDS
+      >
     >
   | DurationConfigEntry
   | EnumConfigEntry
-  | EnumListConfigEntry;
+  | EnumListConfigEntry
+  | ChannelRecordsConfigEntry;
 
 export type ConfigSchema = Record<string, ConfigEntry<ConfigType>>;
 

@@ -136,6 +136,53 @@ describe("getConfigForModuleIn", () => {
   });
 });
 
+describe("getConfigForModuleIn with channel records", () => {
+  const list = vi.fn();
+  const recordsModule = {
+    id: "mod-r",
+    config: {
+      reactions: {
+        name: "Reactions",
+        description: "",
+        type: ConfigType.CHANNEL_RECORDS,
+        source: { list },
+      },
+    },
+  } as unknown as Module;
+
+  beforeEach(() => {
+    (modules as unknown as Module[]).push(recordsModule);
+    rows.set("guild-r", { "mod-r": {}, core: {} });
+    guildsFetch.mockResolvedValue({ channels: { fetch: channelsFetch } });
+  });
+
+  afterEach(() => {
+    modules.length = 0;
+    list.mockReset();
+  });
+
+  it("reads the records from the module's source, not the stored blob", async () => {
+    list.mockResolvedValue([{ channelId: "c1", values: { emoji: "👍" } }]);
+    const config = await configService.getConfigForModuleIn(
+      recordsModule,
+      "guild-r"
+    );
+    expect(list).toHaveBeenCalledWith("guild-r");
+    expect(config.get("reactions")).toEqual([
+      { channelId: "c1", values: { emoji: "👍" } },
+    ]);
+  });
+
+  it("still serves the rest of the config when the source fails", async () => {
+    list.mockRejectedValue(new Error("database"));
+    const config = await configService.getConfigForModuleIn(
+      recordsModule,
+      "guild-r"
+    );
+    expect(config.get("reactions")).toBeUndefined();
+  });
+});
+
 describe("concurrent config writes", () => {
   const moduleA = { id: "mod-a", config: {} } as unknown as Module;
   const moduleB = { id: "mod-b", config: {} } as unknown as Module;

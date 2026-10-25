@@ -1,6 +1,8 @@
 {
-  "modal.title": "Message collant",
-  "modal.content": "Message gardé en bas du salon",
+  "config.stickies.name": "Messages collants",
+  "config.stickies.description": "Salons dont un message reste en bas, republié après chaque nouveau message.",
+  "config.stickies.channel": "Salon",
+  "config.stickies.fields.content": "Message",
 
   "set.done": "Le message reste désormais en bas de {{channel}}.",
   "set.notPosted": "Le message est enregistré mais n'a pas pu être publié dans {{channel}} : il le sera après le prochain message.",
@@ -13,10 +15,5 @@
 
   "remove.done": "Plus de message collant dans {{channel}}.",
   "remove.none": "Aucun message collant n'est configuré dans {{channel}}.",
-  "remove.leftover": "Plus de message collant dans {{channel}}, mais sa dernière copie n'a pas pu être supprimée : supprimez-la à la main.",
-
-  "list.empty": "Aucun message collant n'est configuré.",
-  "list.title": "Messages collants ({{count}})",
-  "list.more_one": "… et {{count}} autre salon",
-  "list.more_other": "… et {{count}} autres salons"
+  "remove.leftover": "Plus de message collant dans {{channel}}, mais sa dernière copie n'a pas pu être supprimée : supprimez-la à la main."
 }
