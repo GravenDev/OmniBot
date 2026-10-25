@@ -36,6 +36,7 @@ src/modules/clash-of-code/
 - Les commandes sont regroupées sous `/coc` et `/coc-admin` au lieu de `/leaderboard`, `/profile`, `/import` et `/bulk`, qui entreraient en collision avec d'autres modules.
 - `/bulk` n'est pas porté : il importait une liste d'identifiants codée en dur pour une migration ponctuelle.
 - `/import` devient `/coc-admin import`, réservé aux administrateurs : le bot original l'ouvrait à tous.
+- Un lien n'est suivi que si la partie n'est pas terminée quand il est posté : sinon, n'importe qui pourrait ajouter au classement n'importe quelle partie publique en postant son lien. Les parties passées passent par `/coc-admin import`.
 - Ajout de `/coc link` : la colonne `discord_id` du bot original n'était jamais remplie.
 - Le classement compte les victoires comme l'original, avec le nombre de parties en départage et une pagination.
 

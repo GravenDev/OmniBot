@@ -45,6 +45,15 @@ class ClashOfCodeStore implements Service {
     return this.queue.run(guildId, task);
   }
 
+  /** Whether the guild already follows or recorded this game. */
+  async isKnown(guildId: string, handle: string): Promise<boolean> {
+    const game = await prisma.cocGame.findUnique({
+      where: { guildId_handle: { guildId, handle } },
+      select: { status: true },
+    });
+    return game !== null && game.status !== GameStatus.Abandoned;
+  }
+
   watch(game: WatchedGame): Promise<WatchOutcome> {
     return this.exclusive(game.guildId, async () => {
       const key = {

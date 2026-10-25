@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { makeTestConfig, silenceLogs } from "#lib/testing.js";
 import { clashOfCodeConfigSchema } from "#modules/clash-of-code/clash-of-code.config.js";
 
-const watch = vi.hoisted(() => vi.fn(async () => true));
+const watch = vi.hoisted(() => vi.fn(async () => "watching"));
 vi.mock("#modules/clash-of-code/services/watcher.js", () => ({
   default: { watch },
 }));

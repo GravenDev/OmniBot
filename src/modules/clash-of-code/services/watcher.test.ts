@@ -6,6 +6,7 @@ import type { ClashReport } from "./api.js";
 const mocks = vi.hoisted(() => ({
   fetchClashReport: vi.fn(),
   store: {
+    isKnown: vi.fn(),
     watch: vi.fn(),
     watchedGames: vi.fn(),
     abandon: vi.fn(),
@@ -108,6 +109,7 @@ beforeEach(() => {
   silenceLogs();
   vi.useFakeTimers();
   vi.clearAllMocks();
+  mocks.store.isKnown.mockResolvedValue(false);
   mocks.store.watch.mockResolvedValue("watching");
   mocks.store.abandon.mockResolvedValue(true);
   mocks.store.importReport.mockResolvedValue(true);
@@ -123,13 +125,26 @@ afterEach(() => {
 });
 
 describe("watch", () => {
-  it("posts the result of a game that is already over", async () => {
+  it("ignores a game already over when its link is posted", async () => {
     mocks.fetchClashReport.mockResolvedValue(report());
     const message = linkMessage();
-    await expect(watch(message)).resolves.toBe(true);
+    await expect(watch(message)).resolves.toBe("finished");
+    await vi.advanceTimersByTimeAsync(LOBBY_INTERVAL_MS);
+    expect(mocks.store.watch).not.toHaveBeenCalled();
+    expect(message.react).not.toHaveBeenCalled();
+    expect(mocks.store.importReport).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("follows a game in progress and posts its result at the end", async () => {
+    mocks.fetchClashReport
+      .mockResolvedValueOnce(report({ finished: false }))
+      .mockResolvedValueOnce(report());
+    const message = linkMessage();
+    await expect(watch(message)).resolves.toBe("watching");
     expect(message.react).toHaveBeenCalledWith("⏳");
 
-    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
     expect(mocks.store.importReport).toHaveBeenCalledWith(
       "guild-1",
       expect.objectContaining({ handle: HANDLE }),
@@ -147,9 +162,9 @@ describe("watch", () => {
   });
 
   it("does nothing for a game the guild already knows", async () => {
-    mocks.store.watch.mockResolvedValue("known");
+    mocks.store.isKnown.mockResolvedValue(true);
     const message = linkMessage();
-    await expect(watch(message)).resolves.toBe(false);
+    await expect(watch(message)).resolves.toBe("known");
     await vi.advanceTimersByTimeAsync(LOBBY_INTERVAL_MS);
     expect(message.react).not.toHaveBeenCalled();
     expect(mocks.fetchClashReport).not.toHaveBeenCalled();
@@ -161,9 +176,8 @@ describe("watch", () => {
       .mockResolvedValueOnce(report({ finished: false }))
       .mockResolvedValueOnce(report());
     await watch();
-
-    await vi.advanceTimersByTimeAsync(0);
     expect(mocks.fetchClashReport).toHaveBeenCalledTimes(1);
+
     await vi.advanceTimersByTimeAsync(LOBBY_INTERVAL_MS - 1);
     expect(mocks.fetchClashReport).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(1);
@@ -174,30 +188,33 @@ describe("watch", () => {
   });
 
   it("drops a game that ended without starting", async () => {
-    mocks.fetchClashReport.mockResolvedValue(report({ started: false }));
+    mocks.fetchClashReport
+      .mockResolvedValueOnce(report({ started: false, finished: false }))
+      .mockResolvedValueOnce(report({ started: false }));
     await watch();
-    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(LOBBY_INTERVAL_MS);
     expect(mocks.store.abandon).toHaveBeenCalledWith("guild-1", HANDLE);
     expect(mocks.store.importReport).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
     expect(removeReaction).toHaveBeenCalled();
   });
 
-  it("drops a game CodinGame does not know", async () => {
+  it("ignores a game CodinGame does not know", async () => {
     mocks.fetchClashReport.mockRejectedValue(new ClashNotFoundError(HANDLE));
-    await watch();
-    await vi.advanceTimersByTimeAsync(0);
-    expect(mocks.store.abandon).toHaveBeenCalledOnce();
+    const message = linkMessage();
+    await expect(watch(message)).resolves.toBe("unknown");
+    expect(mocks.store.watch).not.toHaveBeenCalled();
+    expect(message.react).not.toHaveBeenCalled();
   });
 
-  it("gives up after too many failures in a row", async () => {
+  it("follows the game when CodinGame is down, and gives up after too many failures", async () => {
     mocks.fetchClashReport.mockRejectedValue(new Error("down"));
-    await watch();
+    await expect(watch()).resolves.toBe("watching");
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * MAX_FAILURES);
-    expect(mocks.fetchClashReport).toHaveBeenCalledTimes(MAX_FAILURES);
+    expect(mocks.fetchClashReport).toHaveBeenCalledTimes(1 + MAX_FAILURES);
     expect(mocks.store.abandon).toHaveBeenCalledOnce();
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 2);
-    expect(mocks.fetchClashReport).toHaveBeenCalledTimes(MAX_FAILURES);
+    expect(mocks.fetchClashReport).toHaveBeenCalledTimes(1 + MAX_FAILURES);
   });
 
   it("stops watching a game that outlasts the watch", async () => {
@@ -209,19 +226,23 @@ describe("watch", () => {
   });
 
   it("posts nothing when the game was imported meanwhile", async () => {
-    mocks.fetchClashReport.mockResolvedValue(report());
+    mocks.fetchClashReport
+      .mockResolvedValueOnce(report({ finished: false }))
+      .mockResolvedValue(report());
     mocks.store.importReport.mockResolvedValue(false);
     await watch();
-    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
     expect(send).not.toHaveBeenCalled();
     expect(removeReaction).toHaveBeenCalled();
   });
 
   it("drops the game when the module was disabled meanwhile", async () => {
-    mocks.fetchClashReport.mockResolvedValue(report());
+    mocks.fetchClashReport
+      .mockResolvedValueOnce(report({ finished: false }))
+      .mockResolvedValue(report());
     mocks.activated.mockReturnValue(false);
     await watch();
-    await vi.advanceTimersByTimeAsync(0);
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
     expect(mocks.store.importReport).not.toHaveBeenCalled();
     expect(mocks.store.abandon).toHaveBeenCalledOnce();
   });
