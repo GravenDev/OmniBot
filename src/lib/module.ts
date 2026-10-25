@@ -48,6 +48,8 @@ export interface ModuleDeclaration<ConfigType extends ConfigSchema = {}> {
    */
   config?: ConfigType;
 
+  retiredCommands?: string[];
+
   /**
    * When true, the module is only loaded in development mode (see {@link isDevMode}).
    */

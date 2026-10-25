@@ -71,6 +71,7 @@
   "channelRecords.addTitle": "Add — {{name}}",
   "channelRecords.editTitle": "{{channel}} — {{name}}",
   "channelRecords.noChannel": "Pick a channel.",
+  "channelRecords.exists": "{{channel}} is already configured: use Edit to change it.",
   "channelRecords.emptyField": "\"{{field}}\" cannot be empty.",
   "channelRecords.invalidEmoji": "`{{value}}` is not an emoji. Enter a single emoji such as 🚩, its Discord name such as :smile:, or the name of a server emoji such as :name:.",
   "channelRecords.gone": "This channel is no longer configured.",

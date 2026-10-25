@@ -63,10 +63,10 @@ const SHORTCODE = /^:?([\w+-]+):?$/;
 /**
  * Turns what an admin typed into a stored emoji value, or `null` when it is not
  * one. A modal text input has no emoji picker and Discord does not rewrite
- * `:name:` there, so a bare or colon-wrapped name is looked up: an exact match
- * among the guild's emojis first, then a Discord-style shortcode of a Unicode
- * emoji (`smile`, `:thumbsup:`), then a case-insensitive guild emoji as long as
- * it is unambiguous.
+ * `:name:` there, so a bare or colon-wrapped name is looked up among the
+ * guild's emojis (an exact match first, then a case-insensitive one as long as
+ * it is unambiguous), then as the Discord-style shortcode of a Unicode emoji
+ * (`smile`, `:thumbsup:`).
  */
 export function resolveEmoji(
   value: string,
@@ -80,22 +80,20 @@ export function resolveEmoji(
     return null;
   }
   const name = value.match(EMOJI_NAME)?.[1];
-  const emojis = [...guildEmojis];
-  const exact = name && emojis.find((emoji) => emoji.name === name);
-  if (exact) {
-    return formatGuildEmoji(exact);
+  if (name) {
+    const emojis = [...guildEmojis];
+    const exact = emojis.find((emoji) => emoji.name === name);
+    if (exact) {
+      return formatGuildEmoji(exact);
+    }
+    const loose = emojis.filter(
+      (emoji) => emoji.name?.toLowerCase() === name.toLowerCase()
+    );
+    if (loose.length === 1) {
+      return formatGuildEmoji(loose[0]!);
+    }
   }
-  const unicode = emojiFromShortcode(shortcode);
-  if (unicode) {
-    return unicode;
-  }
-  if (!name) {
-    return null;
-  }
-  const loose = emojis.filter(
-    (emoji) => emoji.name?.toLowerCase() === name.toLowerCase()
-  );
-  return loose.length === 1 ? formatGuildEmoji(loose[0]!) : null;
+  return emojiFromShortcode(shortcode);
 }
 
 /**

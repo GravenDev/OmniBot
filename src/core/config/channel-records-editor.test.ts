@@ -300,7 +300,7 @@ describe("openChannelRecordsEditor", () => {
 
 describe("channel records handlers", () => {
   it("saves the record picked in the modal and refreshes the panel", async () => {
-    source.list.mockResolvedValue([record("111")]);
+    source.list.mockResolvedValueOnce([]).mockResolvedValue([record("111")]);
     const interaction = modalSubmit({ emoji: " 👍 " }, "111");
     await run("channel-records-modal", interaction, [
       "mod",
@@ -318,6 +318,23 @@ describe("channel records handlers", () => {
     };
     expect(texts(rendered(reply.components))).toContain("✅ saved");
     expect(configEdit.refreshSourceConfigMessage).toHaveBeenCalled();
+  });
+
+  it("refuses to add a channel that is already configured", async () => {
+    source.list.mockResolvedValue([record("111", "🎉")]);
+    const interaction = modalSubmit({ emoji: "👍" }, "111");
+    await run("channel-records-modal", interaction, [
+      "mod",
+      "reactions",
+      "src",
+    ]);
+    expect(source.save).not.toHaveBeenCalled();
+    const reply = interaction.editReply.mock.calls[0]![0] as {
+      components: { toJSON(): unknown }[];
+    };
+    const content = texts(rendered(reply.components));
+    expect(content).toContain("❌ channelRecords.exists");
+    expect(content).toContain("<#111> → 🎉");
   });
 
   it("keeps the edited channel from the custom id", async () => {

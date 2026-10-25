@@ -32,7 +32,7 @@ Le bouton est désactivé tant qu'aucun champ n'a été personnalisé (rien à r
 
 Certains modules portent un réglage par salon (Réactions automatiques, Messages collants). Le panneau `/config` affiche alors les salons configurés (les cinq premiers, puis le nombre restant), et le bouton d'édition ouvre un éditeur éphémère qui liste chaque salon avec sa valeur, sept salons par page, avec trois actions :
 
-- **Ajouter** ouvre un formulaire avec un sélecteur de salon (limité aux types de salons acceptés par le module) et les champs du réglage. Choisir un salon déjà configuré remplace son réglage.
+- **Ajouter** ouvre un formulaire avec un sélecteur de salon (limité aux types de salons acceptés par le module) et les champs du réglage. Un salon déjà configuré est refusé, pour ne pas écraser son réglage sans le voir : il se change avec **Modifier**.
 - **Modifier** ouvre le même formulaire, prérempli, sans le sélecteur de salon.
 - **Supprimer** retire le réglage du salon.
 
@@ -342,7 +342,7 @@ Ajoute automatiquement une réaction à chaque nouveau message des salons config
 | ----------- | ------------------ | -------------------------------------------------------- |
 | `reactions` | Réglages par salon | Pour chaque salon textuel ou d'annonces, l'emoji ajouté. |
 
-Ajouter un salon déjà configuré remplace sa réaction. L'emoji peut être un emoji Unicode, son nom Discord (`smile`, `:thumbsup:`, `:flag_fr:`, avec les variantes de teinte comme `:thumbsup_tone2:`), un emoji personnalisé (`<:nom:id>`) ou le simple nom d'un emoji du serveur ; un emoji du serveur qui porte le même nom qu'un emoji Unicode l'emporte. Un emoji personnalisé doit appartenir au serveur, ou à un autre serveur du bot tel que connu à son démarrage : un emoji ajouté depuis sur un autre serveur est refusé jusqu'au prochain redémarrage. Le réglage est aussi refusé si le bot ne peut pas réagir dans le salon (voir le salon, voir les anciens messages, ajouter des réactions). Les réglages sont conservés quand le module est désactivé via `/modules`.
+L'emoji peut être un emoji Unicode, son nom Discord (`smile`, `:thumbsup:`, `:flag_fr:`, avec les variantes de teinte comme `:thumbsup_tone2:`), un emoji personnalisé (`<:nom:id>`) ou le simple nom d'un emoji du serveur ; un emoji du serveur qui porte le même nom qu'un emoji Unicode l'emporte, y compris à la casse près (`fire` désigne l'emoji du serveur `Fire` s'il est le seul de ce nom). Un emoji personnalisé doit appartenir au serveur, ou à un autre serveur du bot tel que connu à son démarrage : un emoji ajouté depuis sur un autre serveur est refusé jusqu'au prochain redémarrage. Le réglage est aussi refusé si le bot ne peut pas réagir dans le salon (voir le salon, voir les anciens messages, ajouter des réactions). Les réglages sont conservés quand le module est désactivé via `/modules`.
 
 ---
 

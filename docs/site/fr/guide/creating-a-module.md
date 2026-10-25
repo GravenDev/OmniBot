@@ -219,6 +219,7 @@ La locale du serveur est configurée via les paramètres du module Cœur (`/conf
 Avant que votre module n'atteigne des serveurs de production :
 
 - **Incrémentez `version`** quand vous ajoutez, renommez ou modifiez une commande — la production ne ré-enregistre les commandes que lors d'un changement de version (le dev resynchronise à chaque démarrage, facile à rater en local)
+- **Listez les commandes supprimées ou renommées dans `retiredCommands`** (anciens noms) en plus d'incrémenter la version — la mise à jour en production ne supprime que les commandes que le module nomme encore, sinon l'ancienne commande reste sur tous les serveurs
 - **Renseignez `DEV_GUILD_ID`** dans `.env` — sans lui, le mode dev n'enregistre aucune commande
 - **Préfixez noms de commandes et `customId`** avec votre id de module — les deux sont résolus premier-arrivé-premier-servi entre tous les modules, et un `:` dans un argument décale le parsing des `customId`
 - **Gardez `if (!config) return`** dans les listeners — hors serveurs (MP), ils tournent avec une config `undefined`

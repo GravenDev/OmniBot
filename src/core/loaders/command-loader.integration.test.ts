@@ -286,6 +286,43 @@ describe("checkCommandsForVersionChange", () => {
     );
   });
 
+  it("deletes the commands a module retired, and only those", async () => {
+    const remove = vi.fn();
+    const guild = {
+      id: "guild-1",
+      commands: {
+        fetch: async () => [
+          { id: "1", name: "old" },
+          { id: "2", name: "other-module" },
+        ],
+        delete: remove,
+      },
+    };
+    vi.mocked(
+      moduleService.getGuildsWhereVersionDoesNotMatch
+    ).mockResolvedValue([
+      { guildId: "guild-1", currentVersion: "1.0.0" },
+    ] as never);
+    const module = {
+      ...fakeModule("mod-a", []),
+      version: "2.0.0",
+      retiredCommands: ["old"],
+    } as unknown as Module;
+
+    await checkCommandsForVersionChange(
+      { ...client, guilds: { fetch: async () => guild } } as unknown as Client,
+      module
+    );
+
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(remove).toHaveBeenCalledWith("1");
+    expect(moduleService.updateModuleActivation).toHaveBeenCalledWith(
+      "mod-a",
+      "guild-1",
+      "2.0.0"
+    );
+  });
+
   it("skips guilds the bot can no longer reach and updates the others", async () => {
     const fetchingClient = {
       ...client,

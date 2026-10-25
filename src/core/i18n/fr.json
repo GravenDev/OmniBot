@@ -71,6 +71,7 @@
   "channelRecords.addTitle": "Ajouter — {{name}}",
   "channelRecords.editTitle": "{{channel}} — {{name}}",
   "channelRecords.noChannel": "Choisissez un salon.",
+  "channelRecords.exists": "{{channel}} est déjà configuré : utilisez Modifier pour le changer.",
   "channelRecords.emptyField": "« {{field}} » ne peut pas être vide.",
   "channelRecords.invalidEmoji": "`{{value}}` n'est pas un emoji. Saisissez un seul emoji comme 🚩, son nom Discord comme :smile:, ou le nom d'un emoji du serveur comme :nom:.",
   "channelRecords.gone": "Ce salon n'est plus configuré.",

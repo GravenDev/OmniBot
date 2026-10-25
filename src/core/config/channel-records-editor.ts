@@ -432,10 +432,22 @@ async function saveFromModal(
   guild: Guild,
   resolved: Resolved,
   channelId: string | undefined,
+  adding: boolean,
   t: TFunction
 ): Promise<ChannelRecordOutcome> {
   if (!channelId) {
     return { ok: false, message: t("channelRecords.noChannel") };
+  }
+  if (
+    adding &&
+    (await resolved.entry.source.list(guild.id)).some(
+      (record) => record.channelId === channelId
+    )
+  ) {
+    return {
+      ok: false,
+      message: t("channelRecords.exists", { channel: `<#${channelId}>` }),
+    };
   }
   const read = await readValues(interaction, resolved, t);
   if ("error" in read) {
@@ -607,6 +619,7 @@ const recordModal = declareInteractionHandler<ModalSubmitInteraction>({
       guild,
       resolved,
       channelId,
+      editedId === undefined,
       t
     );
     await interaction.editReply({
