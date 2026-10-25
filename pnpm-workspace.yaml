@@ -1,6 +1,13 @@
 packages:
   - "."
   - "docs/site"
+  # The migrator image's dependencies: the Prisma CLI alone, extracted with
+  # `pnpm deploy` so that the image carries none of the bot's dev tooling.
+  - "docker/migrator"
+
+# One Prisma CLI version for the bot (generate, migrate dev) and the migrator.
+catalog:
+  prisma: ~7.9.1
 
 shellEmulator: true
 
