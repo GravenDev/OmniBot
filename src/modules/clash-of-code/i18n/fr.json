@@ -56,6 +56,15 @@
   "import.done_one": "Partie importée · {{mode}} · {{count}} joueur",
   "import.done_other": "Partie importée · {{mode}} · {{count}} joueurs",
 
+  "importChannel.running": "Un import de salon est déjà en cours sur ce serveur.",
+  "importChannel.searching": "Recherche des liens de Clash of Code dans {{channel}}…",
+  "importChannel.indexing": "Discord indexe encore les messages du serveur pour la recherche. Réessayez dans quelques minutes.",
+  "importChannel.noAccess": "Le bot ne peut pas lire l'historique de {{channel}}.",
+  "importChannel.searchFailed": "La recherche des messages a échoué. Réessayez plus tard.",
+  "importChannel.none": "Aucun lien de Clash of Code dans {{channel}}.",
+  "importChannel.progress": "{{channel}} : {{done}}/{{found}} parties vérifiées…",
+  "importChannel.done": "Import de {{channel}} terminé. Parties trouvées : {{found}} · importées : {{imported}} · déjà enregistrées : {{known}} · pas terminées : {{unfinished}} · inconnues de CodinGame : {{unknown}} · en échec : {{failed}}",
+
   "adminUnlink.done": "{{user}} n'est plus lié à **{{player}}**.",
   "adminUnlink.none": "{{user}} n'a aucun compte CodinGame lié."
 }

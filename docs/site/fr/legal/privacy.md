@@ -79,7 +79,7 @@ Certains modules lisent le contenu des messages pour fonctionner, sans l'enregis
 - **LaTeX** lit les messages pour repérer les formules et les rendre en image ;
 - **Thread Creator** peut reprendre les 50 premiers caractères d'un message dans le nom du fil qu'il crée ;
 - **RNGdle** lit les messages du seul salon RNGdle, pour reconnaître un résultat collé et y répondre avec une carte ;
-- **Clash of Code** lit les messages des salons choisis par les administrateurs (tous les salons si aucun n'est choisi), pour repérer les liens de partie : seul l'identifiant de la partie est conservé ;
+- **Clash of Code** lit les messages des salons choisis par les administrateurs (tous les salons si aucun n'est choisi), pour repérer les liens de partie ; sur demande d'un administrateur (`/coc-admin import-channel`), il parcourt aussi l'historique d'un salon, à travers la recherche de messages de Discord. Seuls l'identifiant de la partie et l'ID du message qui la contenait sont conservés ;
 - **Starboard** lit un message qui reçoit des réactions, pour en reposter l'auteur, le texte, les images, les embeds et le message auquel il répond dans le salon starboard, jamais dans un salon visible par des personnes qui ne peuvent pas lire le salon d'origine.
 
 Ce que ces modules publient reste sur le serveur Discord, sous le contrôle de ses administrateurs. Le bot ignore les messages des autres bots, à quatre exceptions : Auto React leur ajoute aussi sa réaction, Messages collants republie aussi son message après eux, tous deux sans les lire, Message Quote cite le message d'un bot quand un membre en poste le lien, et Starboard reposte le message d'un bot quand les administrateurs l'autorisent.
