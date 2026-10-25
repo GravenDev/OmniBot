@@ -1,9 +1,4 @@
-import {
-  DiscordAPIError,
-  RESTJSONErrorCodes,
-  type Guild,
-  type GuildMember,
-} from "discord.js";
+import type { Guild, GuildMember } from "discord.js";
 import { MAX_BAN_PURGE_SECONDS } from "#lib/moderation.js";
 
 export type Sanction = "warn" | "timeout" | "kick" | "ban" | "softban";
@@ -70,21 +65,6 @@ export function targetRankOf(member: GuildMember): TargetRank {
       ban: member.bannable,
     },
   };
-}
-
-export async function isBanned(guild: Guild, userId: string): Promise<boolean> {
-  try {
-    await guild.bans.fetch({ user: userId, force: true });
-    return true;
-  } catch (error) {
-    if (
-      error instanceof DiscordAPIError &&
-      error.code === RESTJSONErrorCodes.UnknownBan
-    ) {
-      return false;
-    }
-    throw error;
-  }
 }
 
 export interface SanctionInput {

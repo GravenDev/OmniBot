@@ -63,6 +63,19 @@ describe("trapLog", () => {
     expect(embed.data.footer?.text).toBe("Author ID: u1");
   });
 
+  it("keeps the spam's markdown and links inert", () => {
+    const embed = trapLog(
+      fakeMessage("[free nitro](https://phish.example) ||**hi**||"),
+      t,
+      softbanned,
+      3600,
+      true
+    );
+    expect(embed.data.description).toContain(
+      "> \\[free nitro](https://phish.example) \\|\\|\\*\\*hi\\*\\*\\|\\|"
+    );
+  });
+
   it("marks an empty message", () => {
     const embed = trapLog(
       fakeMessage(""),

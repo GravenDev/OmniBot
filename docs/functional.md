@@ -480,11 +480,12 @@ Piège les bots de spam et les comptes piratés, qui postent dans tous les salon
 Quand un membre écrit dans un salon piège, le bot le softban : il le bannit en supprimant ses messages de toute la durée de purge, sur tout le serveur, puis lève aussitôt le bannissement. Le membre peut revenir avec une invitation. La raison inscrite au journal d'audit est « Honeypot : message dans #salon ».
 
 - **Membres épargnés** : le propriétaire du serveur, les membres qui ont la permission _Gérer les messages_ dans le salon piège (y compris par une permission de catégorie ou de salon, et les administrateurs) et ceux qui ont l'un des rôles exemptés. Les messages des bots, des webhooks et les messages système sont ignorés.
-- **Une seule sanction par rafale** : les messages suivants du même membre dans les 60 secondes ne déclenchent rien de plus. Si le bot n'a pas pu vérifier le membre (erreur de l'API Discord), rien n'est appliqué et le message suivant relance le piège.
-- **Bannissement impossible** (rôle du membre au-dessus de celui du bot, ou permission _Bannir des membres_ manquante) : le bot supprime seulement le message piège et le signale dans le log. Si même la suppression échoue, le log demande de supprimer le message à la main.
+- **Une seule sanction par rafale** : les messages suivants du même membre dans les 60 secondes ne déclenchent pas de nouvelle sanction ni de nouveau log. Si le bot n'a pas pu vérifier le membre (erreur de l'API Discord), rien n'est appliqué et le message suivant relance le piège.
+- **Bannissement impossible** (rôle du membre au-dessus de celui du bot, ou permission _Bannir des membres_ manquante) : le bot supprime seulement le message piège et le signale dans le log, puis supprime aussi les messages suivants de la rafale. Si même la suppression échoue, le log demande de supprimer le message à la main.
 - **Débannissement impossible** : le membre reste banni et le log demande de le débannir à la main.
+- **Auteur déjà banni** (il a quitté le serveur et un modérateur l'a banni entre-temps) : le bot ne fait rien, pour ne pas lever ce bannissement.
 
-Les fils d'un salon piège sont piégés eux aussi ; un forum choisi comme salon piège piège donc tous ses posts.
+Les fils d'un salon piège sont piégés eux aussi ; la raison du journal d'audit nomme alors le salon piège, pas le fil. Seuls les salons textuels, d'annonces et vocaux se choisissent comme salons pièges.
 
 ### Log
 

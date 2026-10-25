@@ -23,3 +23,18 @@ export async function fetchMember(
     throw error;
   }
 }
+
+export async function isBanned(guild: Guild, userId: string): Promise<boolean> {
+  try {
+    await guild.bans.fetch({ user: userId, force: true });
+    return true;
+  } catch (error) {
+    if (
+      error instanceof DiscordAPIError &&
+      error.code === RESTJSONErrorCodes.UnknownBan
+    ) {
+      return false;
+    }
+    throw error;
+  }
+}

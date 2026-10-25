@@ -1,4 +1,9 @@
-import { EmbedBuilder, PermissionFlagsBits, type Message } from "discord.js";
+import {
+  EmbedBuilder,
+  escapeMarkdown,
+  PermissionFlagsBits,
+  type Message,
+} from "discord.js";
 import { widensAudience } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { formatDuration } from "#lib/duration.js";
@@ -21,11 +26,20 @@ const REQUIRED_PERMISSIONS = [
 
 const logger = loggerMaker("honeypot");
 
+function inert(text: string): string {
+  return escapeMarkdown(text, {
+    heading: true,
+    bulletedList: true,
+    numberedList: true,
+    maskedLink: true,
+  });
+}
+
 function quoted(message: Message<true>, t: TFunction): string {
   const lines = [
-    ...(message.content ? message.content.split("\n") : []),
+    ...(message.content ? inert(message.content).split("\n") : []),
     ...[...message.attachments.values()].map(
-      (attachment) => `📎 ${attachment.name}`
+      (attachment) => `📎 ${inert(attachment.name)}`
     ),
   ];
   return lines.length
