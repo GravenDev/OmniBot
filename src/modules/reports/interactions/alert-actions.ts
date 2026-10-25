@@ -14,12 +14,15 @@ import type { ConfigProvider } from "#lib/config.js";
 import { parseDuration } from "#lib/duration.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { loggerMaker } from "#lib/logger.js";
-import { fetchMember, MAX_BAN_PURGE_SECONDS } from "#lib/moderation.js";
+import {
+  fetchMember,
+  isBanned,
+  MAX_BAN_PURGE_SECONDS,
+} from "#lib/moderation.js";
 import type { ReportsConfigSchema } from "../reports.config.js";
 import { messageUrl } from "../services/alert-view.js";
 import {
   applySanction,
-  isBanned,
   MAX_TIMEOUT_SECONDS,
   rankOf,
   sanctionBlock,

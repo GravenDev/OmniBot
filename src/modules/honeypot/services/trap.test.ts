@@ -53,6 +53,7 @@ function fakeMessage(
     banError?: Error;
     unbanError?: Error;
     deleteError?: Error;
+    alreadyBanned?: boolean;
   } = {}
 ) {
   const userId = `user-${++nextUser}`;
@@ -69,6 +70,12 @@ function fakeMessage(
       }),
       remove: vi.fn(async () => {
         if (options.unbanError) throw options.unbanError;
+      }),
+      fetch: vi.fn(async () => {
+        if (!options.alreadyBanned) {
+          throw apiError(RESTJSONErrorCodes.UnknownBan, 404);
+        }
+        return {};
       }),
     },
   };
@@ -99,6 +106,7 @@ function fakeMessage(
     name: "piege",
     parentId: options.threadOf ?? null,
     isThread: () => options.threadOf !== undefined,
+    parent: options.threadOf ? { name: "trap-parent" } : null,
     permissionsFor: () => ({
       has: () => memberOptions.manageMessages ?? false,
     }),
@@ -165,9 +173,13 @@ describe("springTrap", () => {
     expect(log.logTrap).not.toHaveBeenCalled();
   });
 
-  it("catches a post in a thread or forum of a trap channel", async () => {
+  it("catches a post in a thread of a trap channel", async () => {
     const message = fakeMessage({ channelId: "thread", threadOf: "trap" });
     await run(message);
+    expect(message.guild.bans.create).toHaveBeenCalledWith(message.author.id, {
+      reason: "Honeypot: message in #trap-parent",
+      deleteMessageSeconds: 3600,
+    });
     expectLogged(message, "softbanned");
   });
 
@@ -207,10 +219,16 @@ describe("springTrap", () => {
     expectLogged(message, "softbanned");
   });
 
+  it("leaves alone an author who left and is already banned", async () => {
+    const message = fakeMessage({ member: "left", alreadyBanned: true });
+    await run(message);
+    expect(message.guild.bans.create).not.toHaveBeenCalled();
+    expect(message.guild.bans.remove).not.toHaveBeenCalled();
+    expect(log.logTrap).not.toHaveBeenCalled();
+  });
+
   it("retries on the next message when the member cannot be fetched", async () => {
-    const failing = fakeMessage({
-      member: apiError(RESTJSONErrorCodes.MaximumActiveThreads, 500),
-    });
+    const failing = fakeMessage({ member: apiError(0, 503) });
     await expect(run(failing)).rejects.toBeInstanceOf(DiscordAPIError);
     expect(failing.guild.bans.create).not.toHaveBeenCalled();
 
@@ -234,6 +252,24 @@ describe("springTrap", () => {
     });
     await run(message);
     expectLogged(message, "notBannable", true);
+  });
+
+  it("keeps deleting the burst of a member the bot cannot ban", async () => {
+    const first = fakeMessage({ member: { bannable: false } });
+    const second = { ...fakeMessage(), author: first.author };
+    await run(first);
+    await run(second);
+    expect(second.delete).toHaveBeenCalled();
+    expect(log.logTrap).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not delete the burst again after a softban", async () => {
+    const first = fakeMessage();
+    const second = { ...fakeMessage(), author: first.author };
+    await run(first);
+    await run(second);
+    expect(second.delete).not.toHaveBeenCalled();
+    expect(second.guild.bans.create).not.toHaveBeenCalled();
   });
 
   it("reports a failed ban", async () => {

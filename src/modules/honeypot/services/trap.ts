@@ -6,8 +6,15 @@ import {
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
-import { fetchMember, MAX_BAN_PURGE_SECONDS } from "#lib/moderation.js";
-import type { HoneypotConfigSchema } from "#modules/honeypot/honeypot.config.js";
+import {
+  fetchMember,
+  isBanned,
+  MAX_BAN_PURGE_SECONDS,
+} from "#lib/moderation.js";
+import {
+  honeypotConfigSchema,
+  type HoneypotConfigSchema,
+} from "#modules/honeypot/honeypot.config.js";
 import { logTrap } from "./log.js";
 
 type Config = ConfigProvider<HoneypotConfigSchema>;
@@ -23,7 +30,12 @@ const AUDIT_REASON_LIMIT = 512;
 const COOLDOWN_MS = 60_000;
 
 const logger = loggerMaker("honeypot");
-const recent = new Map<string, NodeJS.Timeout>();
+interface Cooldown {
+  timer: NodeJS.Timeout;
+  deleteFollowUps: boolean;
+}
+
+const recent = new Map<string, Cooldown>();
 
 export function isTrap(
   channel: GuildTextBasedChannel,
@@ -52,23 +64,28 @@ export function isExempt(
 }
 
 export function purgeSecondsOf(config: Config): number {
-  const window = config.get("purgeWindow") ?? 0;
+  const window =
+    config.get("purgeWindow") ?? honeypotConfigSchema.purgeWindow.defaultValue;
   return Math.min(Math.max(Math.floor(window), 0), MAX_BAN_PURGE_SECONDS);
 }
 
-function startCooldown(key: string): boolean {
-  if (recent.has(key)) {
-    return false;
-  }
+function startCooldown(key: string): Cooldown {
   const timer = setTimeout(() => recent.delete(key), COOLDOWN_MS);
   timer.unref();
-  recent.set(key, timer);
-  return true;
+  const cooldown = { timer, deleteFollowUps: false };
+  recent.set(key, cooldown);
+  return cooldown;
 }
 
 function endCooldown(key: string): void {
-  clearTimeout(recent.get(key));
+  clearTimeout(recent.get(key)?.timer);
   recent.delete(key);
+}
+
+function trapNameOf(channel: GuildTextBasedChannel): string {
+  return channel.isThread()
+    ? (channel.parent?.name ?? channel.name)
+    : channel.name;
 }
 
 async function removeMessage(message: Message<true>): Promise<boolean> {
@@ -121,17 +138,23 @@ async function softban(
   return { outcome: "softbanned", messageKept: false };
 }
 
-async function sanction(message: Message<true>, config: Config): Promise<void> {
+async function sanction(
+  message: Message<true>,
+  config: Config
+): Promise<TrapResult | null> {
   const member = await fetchMember(message.guild, message.author.id);
   const exemptRoleIds = new Set(
     (config.get("exemptRoles") ?? []).map((role) => role.id)
   );
   if (member && isExempt(member, message.channel, exemptRoleIds)) {
-    return;
+    return null;
+  }
+  if (!member && (await isBanned(message.guild, message.author.id))) {
+    return null;
   }
   const purgeSeconds = purgeSecondsOf(config);
   const reason = config
-    .t("auditReason", { channel: message.channel.name })
+    .t("auditReason", { channel: trapNameOf(message.channel) })
     .slice(0, AUDIT_REASON_LIMIT);
   const result = await softban(message, member, purgeSeconds, reason);
   logger.info(
@@ -143,6 +166,7 @@ async function sanction(message: Message<true>, config: Config): Promise<void> {
     "Honeypot triggered"
   );
   await logTrap(message, config, result, purgeSeconds);
+  return result;
 }
 
 export async function springTrap(
@@ -164,11 +188,18 @@ export async function springTrap(
     return;
   }
   const key = `${message.guildId}:${message.author.id}`;
-  if (!startCooldown(key)) {
+  const current = recent.get(key);
+  if (current) {
+    if (current.deleteFollowUps) {
+      await removeMessage(message);
+    }
     return;
   }
+  const cooldown = startCooldown(key);
   try {
-    await sanction(message, config);
+    const result = await sanction(message, config);
+    cooldown.deleteFollowUps =
+      result?.outcome === "notBannable" || result?.outcome === "failed";
   } catch (error) {
     endCooldown(key);
     throw error;
