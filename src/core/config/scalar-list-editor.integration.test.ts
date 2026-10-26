@@ -129,6 +129,73 @@ describe("add-list-item-modal", () => {
   });
 });
 
+describe("emoji lists", () => {
+  function fakeModal(value: string) {
+    return {
+      guildId: "guild-1",
+      guild: {
+        emojis: {
+          fetch: async () =>
+            new Map([
+              [
+                "123456789012345678",
+                {
+                  id: "123456789012345678",
+                  name: "star",
+                  animated: false,
+                },
+              ],
+            ]),
+        },
+      },
+      fields: { getTextInputValue: () => value },
+      isFromMessage: () => true,
+      update: vi.fn(),
+      reply: vi.fn(),
+    } as never;
+  }
+
+  beforeEach(() => {
+    entry.mockReturnValue({
+      name: "Emojis",
+      description: "",
+      type: [ConfigType.EMOJI],
+    });
+  });
+
+  it("stores a server emoji typed by name as its full form", async () => {
+    currentValues(["⭐"]);
+    const submit = handlers()["add-list-item-modal"]!;
+
+    await submit.execute(
+      fakeModal(":star:"),
+      ["mod", "emojis", "src"],
+      undefined as never
+    );
+
+    expect(updateConfig).toHaveBeenCalledWith(fakeModule, "guild-1", {
+      emojis: ["⭐", "<:star:123456789012345678>"],
+    });
+  });
+
+  it("rejects a value that is not an emoji", async () => {
+    currentValues([]);
+    const submit = handlers()["add-list-item-modal"]!;
+    const interaction = fakeModal("nope nope");
+
+    await submit.execute(
+      interaction,
+      ["mod", "emojis", "src"],
+      undefined as never
+    );
+
+    expect(updateConfig).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "config.emoji.invalid" })
+    );
+  });
+});
+
 describe("remove-list-item", () => {
   function fakeButton() {
     return {

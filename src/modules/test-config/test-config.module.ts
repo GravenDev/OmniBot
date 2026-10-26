@@ -123,6 +123,12 @@ export default defineModule({
       type: [ConfigType.BOOLEAN],
       defaultValue: [true, false],
     },
+    emojiList: {
+      name: "Emoji list",
+      description: "A list of emojis, standard or custom (add/remove editor).",
+      type: [ConfigType.EMOJI],
+      defaultValue: ["⭐"],
+    },
     roleList: {
       name: "Role list",
       description: "Multiple Discord roles (multi-select).",

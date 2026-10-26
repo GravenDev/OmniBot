@@ -15,7 +15,9 @@ import { replyWithCoreT } from "#core/utils/core-config.js";
 import {
   ConfigType,
   ConfigValidator,
+  fetchGuildEmojis,
   getConfigTypeName,
+  resolveEmoji,
   type ListOf,
 } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
@@ -30,12 +32,13 @@ import {
 } from "./config-edit.js";
 
 /**
- * Editor for scalar list config values (STRING / NUMBER / BOOLEAN lists).
+ * Editor for scalar list config values (STRING / NUMBER / BOOLEAN / EMOJI
+ * lists).
  *
  * Discord has no native widget for editing an arbitrary list of scalars, so we
  * render a dedicated ephemeral message: one row per item with a remove button,
- * plus an "add" button. STRING/NUMBER add via a validated modal; BOOLEAN items
- * are toggled in place and "add" inserts a `false` directly.
+ * plus an "add" button. STRING/NUMBER/EMOJI add via a validated modal; BOOLEAN
+ * items are toggled in place and "add" inserts a `false` directly.
  */
 
 function baseType(entry: {
@@ -50,6 +53,8 @@ function inputLabel(type: ConfigType, t: TFunction): string {
       return t("scalarList.valueNumber");
     case ConfigType.BOOLEAN:
       return t("scalarList.valueBoolean");
+    case ConfigType.EMOJI:
+      return t("scalarList.valueEmoji");
     default:
       return t("scalarList.valueText");
   }
@@ -136,7 +141,9 @@ export function scalarListEditorMessage(
     values.forEach((value, index) => {
       const section = new SectionBuilder()
         .addTextDisplayComponents((text) =>
-          text.setContent(`\`${String(value)}\``)
+          text.setContent(
+            type === ConfigType.EMOJI ? String(value) : `\`${String(value)}\``
+          )
         )
         .setButtonAccessory((button) =>
           button
@@ -239,17 +246,20 @@ const addListItem = declareInteractionHandler({
       interaction.guildId!
     );
 
+    const input = new TextInputBuilder()
+      .setCustomId("value")
+      .setLabel(inputLabel(type, config.t))
+      .setStyle(TextInputStyle.Short)
+      .setRequired(true);
+    if (type === ConfigType.EMOJI) {
+      input.setPlaceholder(config.t("config.emoji.placeholder"));
+    }
+
     const modal = new ModalBuilder()
       .setCustomId(`add-list-item-modal:${module.id}:${key}:${sourceMessageId}`)
       .setTitle(config.t("scalarList.addTitle", { name: entry.name }))
       .addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(
-          new TextInputBuilder()
-            .setCustomId("value")
-            .setLabel(inputLabel(type, config.t))
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-        )
+        new ActionRowBuilder<TextInputBuilder>().addComponents(input)
       );
 
     await interaction.showModal(modal);
@@ -309,25 +319,33 @@ const addListItemModal = declareInteractionHandler({
 
     const type = baseType(getConfigEntry(module, key)!);
     const raw = interaction.fields.getTextInputValue("value").trim();
-    if (!ConfigValidator[type](raw)) {
-      const config = await configService.getConfigForModuleIn(
-        module,
-        interaction.guildId!
-      );
+    const provider = await configService.getConfigForModuleIn(
+      module,
+      interaction.guildId!
+    );
+
+    let item: string | number | boolean | null;
+    if (type === ConfigType.EMOJI) {
+      item = resolveEmoji(raw, await fetchGuildEmojis(interaction.guild));
+    } else {
+      item = ConfigValidator[type](raw) ? parseScalar(raw, type) : null;
+    }
+    if (item === null) {
       await interaction.reply({
-        content: config.t("scalarList.invalidValue", { value: raw }),
+        content: provider.t(
+          type === ConfigType.EMOJI
+            ? "config.emoji.invalid"
+            : "scalarList.invalidValue",
+          { value: raw }
+        ),
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
 
-    const provider = await configService.getConfigForModuleIn(
-      module,
-      interaction.guildId!
-    );
     const values = [
       ...((provider.get(key) as unknown[] | undefined) ?? []),
-      parseScalar(raw, type),
+      item,
     ];
     await configService.updateConfigForModuleIn(module, interaction.guildId!, {
       [key]: values,

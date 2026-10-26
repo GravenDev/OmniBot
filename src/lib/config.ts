@@ -114,6 +114,24 @@ export async function fetchGuildEmojis(
   }
 }
 
+const VARIATION_SELECTOR = /️/g;
+
+export function matchesEmoji(
+  configured: string,
+  emoji: { id: string | null; name: string | null }
+): boolean {
+  const custom = configured.match(/^<a?:\w+:(\d+)>$/);
+  if (custom) {
+    return emoji.id === custom[1];
+  }
+  return (
+    emoji.id === null &&
+    emoji.name !== null &&
+    emoji.name.replace(VARIATION_SELECTOR, "") ===
+      configured.replace(VARIATION_SELECTOR, "")
+  );
+}
+
 export const ConfigValidator: Record<ConfigType, (value: string) => boolean> = {
   STRING: () => true,
   NUMBER: (value: string) =>
@@ -310,10 +328,7 @@ export type ConfigEntry<T extends ConfigType> =
   | ListConfigEntry<
       Exclude<
         T,
-        | ConfigType.ENUM
-        | ConfigType.DURATION
-        | ConfigType.EMOJI
-        | ConfigType.CHANNEL_RECORDS
+        ConfigType.ENUM | ConfigType.DURATION | ConfigType.CHANNEL_RECORDS
       >
     >
   | DurationConfigEntry

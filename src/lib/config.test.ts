@@ -7,6 +7,7 @@ import {
   formatConfigValue,
   getConfigTypeName,
   isEnumEntry,
+  matchesEmoji,
   resolveEmoji,
   type ConfigData,
   type ConfigEntry,
@@ -191,6 +192,23 @@ describe("resolveEmoji", () => {
       expect(resolveEmoji(value, guildEmojis)).toBeNull();
     }
   );
+});
+
+describe("matchesEmoji", () => {
+  it("matches a unicode emoji with or without its variation selector", () => {
+    expect(matchesEmoji("🚩", { id: null, name: "🚩" })).toBe(true);
+    expect(matchesEmoji("⚠️", { id: null, name: "⚠" })).toBe(true);
+    expect(matchesEmoji("🚩", { id: null, name: "👍" })).toBe(false);
+  });
+
+  it("matches a custom emoji by id only", () => {
+    const custom = "<:report:123456789012345678>";
+    expect(
+      matchesEmoji(custom, { id: "123456789012345678", name: "renamed" })
+    ).toBe(true);
+    expect(matchesEmoji(custom, { id: "999", name: "report" })).toBe(false);
+    expect(matchesEmoji("🚩", { id: "1", name: "🚩" })).toBe(false);
+  });
 });
 
 describe("getConfigTypeName", () => {
