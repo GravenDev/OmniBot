@@ -333,6 +333,9 @@ class FourHourGameService implements Service {
           history[0] ??
           null);
       if (!start) {
+        // No player message is left: none holds the channel, as after a live
+        // deletion of the last one.
+        await this.storeLastMessage(guildId, channelId, null);
         return;
       }
       const holds: { authorId: string; from: Date; to: Date }[] = [];

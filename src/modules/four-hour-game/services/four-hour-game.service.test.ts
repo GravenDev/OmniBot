@@ -1087,6 +1087,16 @@ describe("FourHourGameService deletions and resync", () => {
     });
   });
 
+  it("forgets the stored message when no player message is left after a restart", async () => {
+    await service.handleMessage(message("alice", start), DELAY);
+
+    // Every player message was deleted while down: none can hold the
+    // channel, as after a live deletion of the last one.
+    await service.resyncLastMessage("guild", "game", history());
+
+    expect(lastMessages.has("guild")).toBe(false);
+  });
+
   it("replays the replies that followed a message deleted while down", async () => {
     await service.handleMessage(message("zed", start), DELAY);
     await service.handleMessage(message("alice", at(60)), DELAY);
