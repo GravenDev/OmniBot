@@ -100,7 +100,7 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 - **Sticky messages**: kept until an administrator removes them in `/config`, or the channel is deleted.
 - **Starboard**: an entry is deleted with the original message, with its repost when it falls below the threshold and the administrators chose to remove it, when the original channel or thread is deleted (the repost is deleted too), or when the starboard channel is deleted. When a moderator deletes a repost, the entry is kept so that the message is never reposted. The bot only sees these deletions while the module is enabled and the bot is online: a message or channel deleted while the module is disabled, or while the bot is offline, leaves its entry and its repost in place. The guild's administrators can then delete the repost by hand.
 
-To request deletion of your data, contact the instance operator.
+Any member can delete the data the bot keeps about them on a guild themselves, at any time, with the `/privacy delete` command: their activity statistics, their game data (4-hour game, RNGdle, Clash of Code link) and their mention preference. Reports are not part of it: they stay with the moderators until they are deleted automatically. For any other deletion request, contact the instance operator.
 
 ## Data Sharing
 
@@ -131,7 +131,7 @@ Depending on your jurisdiction, you may have the right to:
 - Request deletion of your personal data
 - Restrict or object to processing
 
-To exercise these rights, contact the operator of the bot instance you interact with; for the official instance, the Graven - Développement team.
+To delete your data from a guild, use `/privacy delete`. To exercise the other rights, contact the operator of the bot instance you interact with; for the official instance, the Graven - Développement team.
 
 ## Changes to This Policy
 

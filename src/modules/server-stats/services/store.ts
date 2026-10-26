@@ -159,10 +159,15 @@ async function purgeBefore(day: Date): Promise<void> {
   ]);
 }
 
+async function deleteMember(guildId: string, userId: string): Promise<void> {
+  await prisma.serverStatsMember.deleteMany({ where: { guildId, userId } });
+}
+
 export default {
   recordMessage,
   recordReaction,
   recordMemberChange,
   dailyStats,
   purgeBefore,
+  deleteMember,
 };

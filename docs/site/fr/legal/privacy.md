@@ -100,7 +100,7 @@ Les données sont stockées dans une base de données PostgreSQL gérée par l'o
 - **Messages collants** : conservés jusqu'à ce qu'un administrateur les retire dans `/config`, ou que le salon soit supprimé.
 - **Starboard** : une entrée est supprimée avec le message d'origine, avec son repost quand il repasse sous le seuil et que les administrateurs ont choisi de le retirer, quand le salon ou le fil d'origine est supprimé (le repost l'est aussi), ou quand le salon starboard est supprimé. Quand un modérateur supprime un repost, l'entrée est conservée pour que le message ne soit plus jamais reposté. Le bot ne voit ces suppressions que quand le module est activé et qu'il est en ligne : un message ou un salon supprimé pendant que le module est désactivé, ou que le bot est hors ligne, laisse son entrée et son repost en place. Le repost peut alors être supprimé à la main par les administrateurs du serveur.
 
-Pour demander la suppression de vos données, contactez l'opérateur de l'instance.
+Chaque membre peut supprimer lui-même, à tout moment, les données que le bot garde sur lui sur un serveur, avec la commande `/privacy delete` : ses statistiques d'activité, ses données de jeu (jeu des 4h, RNGdle, liaison Clash of Code) et sa préférence de mention. Les signalements n'en font pas partie : ils restent aux modérateurs jusqu'à leur suppression automatique. Pour toute autre demande de suppression, contactez l'opérateur de l'instance.
 
 ## Partage des données
 
@@ -131,7 +131,7 @@ Selon votre juridiction, vous pouvez avoir le droit de :
 - Demander la suppression de vos données personnelles
 - Restreindre ou vous opposer au traitement
 
-Pour exercer ces droits, contactez l'opérateur de l'instance du bot avec laquelle vous interagissez ; pour l'instance officielle, l'équipe de Graven - Développement.
+Pour supprimer vos données d'un serveur, utilisez `/privacy delete`. Pour exercer les autres droits, contactez l'opérateur de l'instance du bot avec laquelle vous interagissez ; pour l'instance officielle, l'équipe de Graven - Développement.
 
 ## Modifications de cette politique
 

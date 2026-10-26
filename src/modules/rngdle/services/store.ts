@@ -107,6 +107,17 @@ class RngdleStore implements Service {
     return deleted.count > 0;
   }
 
+  async deleteMember(guildId: string, userId: string): Promise<void> {
+    const where = { guildId, userId };
+    await prisma.$transaction([
+      prisma.rngdleRoll.deleteMany({ where }),
+      prisma.rngdleAccount.deleteMany({ where }),
+      prisma.rngdleReminder.deleteMany({ where }),
+      prisma.rngdleCardClaim.deleteMany({ where }),
+    ]);
+    this.touch(guildId);
+  }
+
   async setReminder(
     guildId: string,
     userId: string,

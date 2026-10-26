@@ -48,9 +48,17 @@ vi.mock("#lib/database.js", () => ({
         lastMessages.set(create.guildId, create);
         return create;
       },
-      async deleteMany({ where }: { where: { guildId: string } }) {
-        const count = lastMessages.delete(where.guildId) ? 1 : 0;
-        return { count };
+      async deleteMany({
+        where,
+      }: {
+        where: { guildId: string; authorId?: string };
+      }) {
+        const row = lastMessages.get(where.guildId);
+        if (!row || (where.authorId && row.authorId !== where.authorId)) {
+          return { count: 0 };
+        }
+        lastMessages.delete(where.guildId);
+        return { count: 1 };
       },
     },
     fourHourGameScore: {
@@ -578,6 +586,29 @@ describe("FourHourGameService history removal", () => {
     expect(await service.setScore("guild", "alice", 10)).toBe("updated");
 
     expect(points).toHaveLength(3);
+  });
+
+  it("forgets the member's score, history and standing message", async () => {
+    lastMessages.set("guild", message("alice", start));
+    lastMessages.set("other", message("alice", start, { guildId: "other" }));
+
+    await service.forgetMember("guild", "alice");
+
+    expect(scores.has(key("guild", "alice"))).toBe(false);
+    expect(points.map((row) => `${row.guildId}:${row.userId}`)).toEqual([
+      "guild:bob",
+      "other:alice",
+    ]);
+    expect(lastMessages.has("guild")).toBe(false);
+    expect(lastMessages.get("other")?.authorId).toBe("alice");
+  });
+
+  it("keeps the standing message of another member when forgetting one", async () => {
+    lastMessages.set("guild", message("bob", start));
+
+    await service.forgetMember("guild", "alice");
+
+    expect(lastMessages.get("guild")?.authorId).toBe("bob");
   });
 });
 

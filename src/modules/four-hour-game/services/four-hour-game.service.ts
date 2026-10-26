@@ -437,6 +437,15 @@ class FourHourGameService implements Service {
     });
   }
 
+  async forgetMember(guildId: string, userId: string): Promise<void> {
+    await this.deleteScore(guildId, userId);
+    await this.queue.run(guildId, async () => {
+      await prisma.fourHourGameLastMessage.deleteMany({
+        where: { guildId, authorId: userId },
+      });
+    });
+  }
+
   async getRank(guildId: string, userId: string): Promise<PlayerRank | null> {
     const score = await this.getScore(guildId, userId);
     if (score === null || score <= 0) {
