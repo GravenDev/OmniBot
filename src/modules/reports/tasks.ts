@@ -1,6 +1,6 @@
 import type { Client } from "discord.js";
 import configService from "#core/services/config.service.js";
-import moduleService from "#core/services/module.service.js";
+import { createT } from "#lib/i18n.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
@@ -16,8 +16,19 @@ async function purgeGuild(
   module: Module<ReportsConfigSchema>,
   guildId: string
 ): Promise<number> {
-  const config = await configService.getConfigForModuleIn(module, guildId);
-  const before = new Date(Date.now() - config.get("retention") * 1000);
+  const [stored, locale] = await Promise.all([
+    configService.getFullConfigForGuild(guildId),
+    configService.getLocaleForGuild(guildId),
+  ]);
+  const retention = stored[module.id]?.["retention"];
+  const t = createT(locale, module.id);
+  const before = new Date(
+    Date.now() -
+      (typeof retention === "number"
+        ? retention
+        : module.config.retention.defaultValue) *
+        1000
+  );
 
   let purged = 0;
   for (const { id } of await store.closedBefore(guildId, before)) {
@@ -35,7 +46,7 @@ async function purgeGuild(
           if (channel?.isTextBased()) {
             await channel.messages.edit(
               report.alertMessageId,
-              purgedMessage(report.id, config.t)
+              purgedMessage(report.id, t)
             );
           }
         } catch (err) {
@@ -61,9 +72,7 @@ export function reportsTasks(module: Module<ReportsConfigSchema>) {
       id: "purge",
       schedule: "0 4 * * *",
       async run(client) {
-        for (const guildId of await moduleService.getActivatedGuildIds(
-          module.id
-        )) {
+        for (const guildId of await store.guildIds()) {
           await purgeGuild(client, module, guildId)
             .then((count) => {
               if (count > 0) {

@@ -18,6 +18,7 @@ import {
   loadModules,
 } from "./core/loaders/module-loader.js";
 import {
+  startMaintenanceTasks,
   startModuleTasks,
   stopAllTasks,
 } from "./core/loaders/task-scheduler.js";
@@ -83,6 +84,13 @@ client.once(Events.ClientReady, async (readyClient) => {
     }
     loadModuleEvents(readyClient, module);
     startModuleTasks(readyClient, module);
+  }
+
+  for (const module of [
+    ...modules,
+    ...unavailable.map((entry) => entry.module),
+  ]) {
+    startMaintenanceTasks(readyClient, module);
   }
 
   // Dropped from the shared list so that nothing it registered before

@@ -1,6 +1,7 @@
 import { GatewayIntentBits, Partials } from "discord.js";
 import { loggerMaker } from "#lib/logger.js";
 import { defineModule } from "#lib/module.js";
+import type { ScheduledTask } from "#lib/task.js";
 import reportMessageCommand from "./commands/report-message.command.js";
 import {
   alertButtonHandlers,
@@ -55,10 +56,9 @@ const reportsModule = defineModule({
     for (const handler of alertModalHandlers) {
       registry.register(handler);
     }
-    for (const task of reportsTasks(reportsModule)) {
-      registry.register(task);
-    }
   },
+
+  maintenanceTasks: (): ScheduledTask[] => reportsTasks(reportsModule),
 
   onInstall(_client, guild) {
     logger.info(`Module installed | guildId = ${guild.id}`);

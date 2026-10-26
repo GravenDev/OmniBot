@@ -85,7 +85,7 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 ## Data Retention
 
 - **Module configuration and activation**: kept as long as the bot is on the guild. When the bot leaves a guild (kick or removal), they are deliberately kept so everything is restored automatically if the bot is re-invited. Disabling a module deletes neither its configuration nor its data: they remain subject to the periods below.
-- **Reports**: an open report is kept until it is closed. A closed report is deleted, message copy included, after 90 days; each guild's administrators can change this period.
+- **Reports**: an open report is kept until it is closed. A closed report is deleted, message copy included, after 90 days; each guild's administrators can change this period. The deletion happens even when the module is disabled or the bot has left the guild.
 - **Activity statistics**: counters are deleted after 90 days, a period that cannot be changed. The date tracking started is kept with no time limit.
 - **RNGdle**: rolls, username and reminder subscription are kept until the member unlinks with `/rngdle unlink`, or an administrator unlinks them. The record of a claimed card is deleted two days later.
 - **4-hour game**: scores and point history are kept until an administrator deletes the player's score.

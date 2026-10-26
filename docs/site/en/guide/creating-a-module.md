@@ -127,6 +127,7 @@ interface ModuleDeclaration {
   onLoad: (client: Client, registry: Registry) => void;
   onInstall: (client: Client, guild: Guild, registry: Registry) => void;
   onUninstall: (client: Client, guild: Guild, registry: Registry) => void;
+  maintenanceTasks?: () => ScheduledTask[];
 }
 ```
 
@@ -137,6 +138,8 @@ interface ModuleDeclaration {
 | `onLoad`      | Bot startup                | Register commands, listeners, interactions via `registry.register()` |
 | `onInstall`   | Module enabled on a guild  | Create roles, send welcome messages, initialize data                 |
 | `onUninstall` | Module disabled on a guild | Clean up data, remove roles, delete configurations                   |
+
+Purges of stored data belong in `maintenanceTasks`, not in tasks registered from `onLoad`: they are scheduled for every discovered module, including one skipped because Discord has not granted its privileged intent, so the retention periods of the privacy policy hold in every case.
 
 ### Intent Management
 
