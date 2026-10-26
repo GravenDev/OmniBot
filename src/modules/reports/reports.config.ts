@@ -1,5 +1,7 @@
 import { ConfigType, type ConfigSchema } from "#lib/config.js";
 
+export const MAX_RETENTION_SECONDS = 30 * 24 * 60 * 60;
+
 export const reportsConfigSchema = {
   alertChannel: {
     name: "Alert channel",
@@ -22,9 +24,10 @@ export const reportsConfigSchema = {
   retention: {
     name: "Retention",
     description:
-      "How long a closed report keeps its copy of the message before it is purged.",
+      "How long a closed report keeps its copy of the message before it is purged. A report is purged 30 days after the message was last reported at the latest.",
     type: ConfigType.DURATION,
-    defaultValue: 90 * 24 * 60 * 60,
+    defaultValue: MAX_RETENTION_SECONDS,
+    max: MAX_RETENTION_SECONDS,
   },
 } satisfies ConfigSchema;
 

@@ -4,12 +4,34 @@ import { createT } from "#lib/i18n.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
-import type { ReportsConfigSchema } from "./reports.config.js";
+import {
+  MAX_RETENTION_SECONDS,
+  type ReportsConfigSchema,
+} from "./reports.config.js";
 import { purgedMessage } from "./services/alert-view.js";
 import reportService from "./services/report.service.js";
-import store from "./services/store.js";
+import store, { type Report } from "./services/store.js";
 
 const logger = loggerMaker("reports");
+
+export function isExpired(
+  report: Pick<Report, "status" | "handledAt" | "createdAt" | "reporters">,
+  closedBefore: Date,
+  reportedBefore: Date
+): boolean {
+  const lastReportedAt = report.reporters.reduce(
+    (latest, { reportedAt }) => (reportedAt > latest ? reportedAt : latest),
+    report.createdAt
+  );
+  if (lastReportedAt < reportedBefore) {
+    return true;
+  }
+  return (
+    report.status !== "open" &&
+    report.handledAt !== null &&
+    report.handledAt < closedBefore
+  );
+}
 
 async function purgeGuild(
   client: Client<true>,
@@ -22,22 +44,24 @@ async function purgeGuild(
   ]);
   const retention = stored[module.id]?.["retention"];
   const t = createT(locale, module.id);
-  const before = new Date(
-    Date.now() -
+  const now = Date.now();
+  const closedBefore = new Date(
+    now -
       (typeof retention === "number"
-        ? retention
-        : module.config.retention.defaultValue) *
+        ? Math.min(retention, MAX_RETENTION_SECONDS)
+        : MAX_RETENTION_SECONDS) *
         1000
   );
+  const reportedBefore = new Date(now - MAX_RETENTION_SECONDS * 1000);
 
   let purged = 0;
-  for (const { id } of await store.closedBefore(guildId, before)) {
+  for (const { id } of await store.expired(
+    guildId,
+    closedBefore,
+    reportedBefore
+  )) {
     const done = await reportService.withReport(guildId, id, async (report) => {
-      if (
-        report.status === "open" ||
-        !report.handledAt ||
-        report.handledAt >= before
-      ) {
+      if (!isExpired(report, closedBefore, reportedBefore)) {
         return false;
       }
       if (report.alertChannelId && report.alertMessageId) {
