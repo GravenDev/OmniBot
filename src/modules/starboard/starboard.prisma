@@ -1,0 +1,11 @@
+model StarboardEntry {
+  messageId          String   @id
+  guildId            String
+  channelId          String
+  starboardChannelId String
+  starboardMessageId String?  @unique
+  createdAt          DateTime @default(now())
+
+  @@index([guildId, channelId])
+  @@index([guildId, starboardChannelId])
+}

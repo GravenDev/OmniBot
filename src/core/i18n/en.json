@@ -142,6 +142,9 @@
   "modules.clash-of-code.name": "Clash of Code",
   "modules.clash-of-code.description": "Follows the Clash of Code games whose link is posted, posts their results and keeps a wins leaderboard.",
 
+  "modules.starboard.name": "Starboard",
+  "modules.starboard.description": "Reposts the messages that get enough reactions in a dedicated channel, and keeps their count up to date.",
+
   "modules.test-config.name": "Test Config",
   "modules.test-config.description": "Development module declaring all configuration types, used to test the configuration UI.",
 
