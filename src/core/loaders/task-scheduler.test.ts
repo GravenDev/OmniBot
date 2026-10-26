@@ -64,6 +64,28 @@ describe("task scheduler", () => {
     expect(() => startMaintenanceTasks(client, moduleWith())).not.toThrow();
   });
 
+  it("lets a maintenance task share the id of a module task", async () => {
+    const task = (run: () => Promise<void>) =>
+      declareTask({
+        id: "purge",
+        schedule: "0 0 1 1 *",
+        runOnStart: true,
+        run,
+      });
+    const purge = vi.fn(async () => {});
+    const other = vi.fn(async () => {});
+    startModuleTasks(client, moduleWith(task(other)));
+    startMaintenanceTasks(client, {
+      ...moduleWith(),
+      maintenanceTasks: () => [task(purge)],
+    } as unknown as Module);
+
+    await vi.waitFor(() => {
+      expect(other).toHaveBeenCalledOnce();
+      expect(purge).toHaveBeenCalledOnce();
+    });
+  });
+
   it("does not run other tasks before their schedule", async () => {
     const run = vi.fn(async () => {});
     startModuleTasks(
