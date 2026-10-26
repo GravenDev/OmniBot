@@ -10,7 +10,7 @@ export const messageUpdateListener = declareEventListener<
 
   async execute(_before, after, config) {
     if (config) {
-      await starboard.refreshIfStarred(after, config);
+      await starboard.refreshContent(after, config);
     }
   },
 });
@@ -38,8 +38,6 @@ export const messageDeleteBulkListener = declareEventListener<
     if (!config) {
       return;
     }
-    for (const id of messages.keys()) {
-      await starboard.handleDeletion(id, channel.client);
-    }
+    await starboard.handleDeletions([...messages.keys()], channel.client);
   },
 });

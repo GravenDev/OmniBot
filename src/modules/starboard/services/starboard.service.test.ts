@@ -1,4 +1,4 @@
-import { DiscordAPIError, MessageType } from "discord.js";
+import { Collection, DiscordAPIError, MessageType } from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { makeTestConfig, silenceLogs } from "#lib/testing.js";
 import { starboardConfigSchema } from "#modules/starboard/starboard.config.js";
@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
     create: vi.fn(),
     dismiss: vi.fn(),
     remove: vi.fn(),
+    saveTally: vi.fn(),
     listForChannel: vi.fn(),
     removeForChannel: vi.fn(),
   },
@@ -53,21 +54,25 @@ const board = {
   isDMBased: () => false,
   send: vi.fn(async () => sent),
 };
+const bulkDelete = vi.fn(
+  async (ids: string[]) => new Collection(ids.map((id) => [id, {}]))
+);
 const client = {
   channels: {
     fetch: vi.fn(async () => ({
       isTextBased: () => true,
       isDMBased: () => false,
       messages: starboardMessages,
+      bulkDelete: bulkDelete,
     })),
   },
 };
 
-function fakeMessage() {
+function fakeMessage(channelId = "general") {
   const message = {
     id: "m1",
     guildId: "g1",
-    channelId: "general",
+    channelId,
     type: MessageType.Default,
     client,
     inGuild: () => true,
@@ -93,7 +98,10 @@ const entry = {
   channelId: "general",
   starboardChannelId: "board",
   starboardMessageId: "sb1",
+  tally: null,
 };
+
+const stored = { reactions: [{ emoji: "⭐", count: 9 }], total: 9 };
 
 beforeAll(() => {
   silenceLogs();
@@ -122,7 +130,48 @@ describe("refresh of a message not yet on the starboard", () => {
     await starboard.refresh(fakeMessage() as never, config());
 
     expect(board.send).toHaveBeenCalledWith({ rendered: true });
-    expect(mocks.store.create).toHaveBeenCalledWith(entry);
+    expect(mocks.store.create).toHaveBeenCalledWith({
+      ...entry,
+      tally: { reactions: [{ emoji: "⭐", count: 3 }], total: 3 },
+    });
+  });
+
+  it("does not fetch a cached message below the threshold", async () => {
+    mocks.tally.upperBound.mockReturnValue(2);
+    const message = fakeMessage();
+
+    await starboard.refresh(message as never, config());
+
+    expect(message.fetch).not.toHaveBeenCalled();
+  });
+
+  it("does not fetch the reposts the starboard itself holds", async () => {
+    const message = fakeMessage("board");
+
+    await starboard.refresh(message as never, config());
+
+    expect(message.fetch).not.toHaveBeenCalled();
+  });
+
+  it("applies the latest config to a burst of reactions", async () => {
+    const message = fakeMessage();
+
+    await Promise.all([
+      starboard.refresh(message as never, config()),
+      starboard.refresh(message as never, config({ threshold: 5 })),
+    ]);
+
+    expect(board.send).not.toHaveBeenCalled();
+  });
+
+  it("reposts without media when Discord refuses them", async () => {
+    board.send.mockRejectedValueOnce(apiError(50035));
+
+    await starboard.refresh(fakeMessage() as never, config());
+
+    expect(board.send).toHaveBeenCalledTimes(2);
+    expect(mocks.view.mock.calls.at(-1)?.at(-1)).toBe(false);
+    expect(mocks.store.create).toHaveBeenCalled();
   });
 
   it("does not look up the reactors while the raw count is too low", async () => {
@@ -260,6 +309,31 @@ describe("refresh of a message already on the starboard", () => {
     expect(starboardMessages.edit).toHaveBeenCalled();
   });
 
+  it("records the new count", async () => {
+    await starboard.refresh(fakeMessage() as never, config());
+
+    expect(mocks.store.saveTally).toHaveBeenCalledWith("m1", {
+      reactions: [{ emoji: "⭐", count: 3 }],
+      total: 3,
+    });
+  });
+
+  it("re-renders an edit with the stored count", async () => {
+    mocks.store.find.mockResolvedValue({ ...entry, tally: stored });
+
+    await starboard.refreshContent(fakeMessage() as never, config());
+
+    expect(mocks.tally.tallyReactions).not.toHaveBeenCalled();
+    expect(mocks.view.mock.calls.at(-1)?.[2]).toBe(stored);
+    expect(starboardMessages.edit).toHaveBeenCalled();
+  });
+
+  it("recounts an edit when no count is stored", async () => {
+    await starboard.refreshContent(fakeMessage() as never, config());
+
+    expect(mocks.tally.tallyReactions).toHaveBeenCalled();
+  });
+
   it("logs instead of throwing when Discord refuses", async () => {
     starboardMessages.edit.mockRejectedValueOnce(apiError(50013));
 
@@ -285,6 +359,7 @@ describe("refreshIfStarred", () => {
     const message = fakeMessage();
 
     await starboard.refreshIfStarred(message as never, config());
+    await starboard.refreshContent(message as never, config());
 
     expect(message.fetch).not.toHaveBeenCalled();
   });
@@ -323,9 +398,9 @@ describe("while a repost is being created", () => {
     const creating = starboard.refresh(fakeMessage() as never, config());
     await vi.waitFor(() => expect(board.send).toHaveBeenCalled());
 
-    mocks.store.findInvolving.mockResolvedValue(entry);
+    mocks.store.findInvolving.mockResolvedValue([entry]);
     mocks.store.find.mockResolvedValue(entry);
-    const deletion = starboard.handleDeletion("m1", client as never);
+    const deletion = starboard.handleDeletions(["m1"], client as never);
     release();
     await Promise.all([creating, deletion]);
 
@@ -335,21 +410,34 @@ describe("while a repost is being created", () => {
 });
 
 describe("handleChannelDeletion", () => {
-  it("removes the reposts of the deleted channel's messages", async () => {
+  it("removes the reposts of the deleted channel's messages at once", async () => {
+    mocks.store.listForChannel.mockResolvedValue([
+      entry,
+      { ...entry, messageId: "m2", starboardMessageId: "sb2" },
+      { ...entry, messageId: "m3", starboardMessageId: null },
+    ]);
+
+    await starboard.handleChannelDeletion("g1", "general", client as never);
+
+    expect(client.channels.fetch).toHaveBeenCalledTimes(1);
+    expect(bulkDelete).toHaveBeenCalledWith(["sb1", "sb2"], true);
+    expect(starboardMessages.delete).not.toHaveBeenCalled();
+    expect(mocks.store.removeForChannel).toHaveBeenCalledWith("g1", "general");
+  });
+
+  it("deletes one by one what bulk deletion left", async () => {
     mocks.store.listForChannel.mockResolvedValue([entry]);
-    mocks.store.find.mockResolvedValue(entry);
+    bulkDelete.mockRejectedValueOnce(apiError(50013));
 
     await starboard.handleChannelDeletion("g1", "general", client as never);
 
     expect(starboardMessages.delete).toHaveBeenCalledWith("sb1");
-    expect(mocks.store.remove).toHaveBeenCalledWith("m1");
-    expect(mocks.store.removeForChannel).toHaveBeenCalledWith("g1", "general");
   });
 });
 
 describe("handleDeletion", () => {
   it("removes the repost of a deleted message", async () => {
-    mocks.store.findInvolving.mockResolvedValue(entry);
+    mocks.store.findInvolving.mockResolvedValue([entry]);
     mocks.store.find.mockResolvedValue(entry);
 
     await starboard.handleDeletion("m1", client as never);
@@ -359,7 +447,7 @@ describe("handleDeletion", () => {
   });
 
   it("dismisses a message whose repost was deleted", async () => {
-    mocks.store.findInvolving.mockResolvedValue(entry);
+    mocks.store.findInvolving.mockResolvedValue([entry]);
 
     await starboard.handleDeletion("sb1", client as never);
 
@@ -368,11 +456,28 @@ describe("handleDeletion", () => {
   });
 
   it("ignores unrelated messages", async () => {
-    mocks.store.findInvolving.mockResolvedValue(null);
+    mocks.store.findInvolving.mockResolvedValue([]);
 
     await starboard.handleDeletion("other", client as never);
 
     expect(mocks.store.remove).not.toHaveBeenCalled();
     expect(mocks.store.dismiss).not.toHaveBeenCalled();
+  });
+});
+
+describe("handleDeletions", () => {
+  it("looks every deleted message up in one query", async () => {
+    mocks.store.findInvolving.mockResolvedValue([
+      entry,
+      { ...entry, messageId: "m2", starboardMessageId: "sb2" },
+    ]);
+    mocks.store.find.mockResolvedValue(entry);
+
+    await starboard.handleDeletions(["m1", "sb2", "x"], client as never);
+
+    expect(mocks.store.findInvolving).toHaveBeenCalledTimes(1);
+    expect(mocks.store.findInvolving).toHaveBeenCalledWith(["m1", "sb2", "x"]);
+    expect(mocks.store.remove).toHaveBeenCalledWith("m1");
+    expect(mocks.store.dismiss).toHaveBeenCalledWith("m2", "sb2");
   });
 });

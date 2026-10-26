@@ -10,6 +10,7 @@ import {
   time,
   TimestampStyles,
 } from "discord.js";
+import { truncate } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { Tally } from "./tally.js";
@@ -31,10 +32,6 @@ type Body = Pick<Message, "content" | "attachments" | "embeds" | "stickers">;
 interface GalleryItem {
   url: string;
   spoiler: boolean;
-}
-
-function truncate(text: string, limit: number): string {
-  return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
 }
 
 function quote(text: string): string {
@@ -168,7 +165,8 @@ export function starboardMessage(
   reply: Message | null,
   tally: Tally,
   fallbackEmoji: string,
-  t: TFunction
+  t: TFunction,
+  withMedia = true
 ) {
   const { body, forwarded } = bodyOf(message);
   const container = new ContainerBuilder().setAccentColor(ACCENT);
@@ -212,7 +210,7 @@ export function starboardMessage(
     container.addTextDisplayComponents((text) => text.setContent(others));
   }
 
-  const media = gallery(body);
+  const media = withMedia ? gallery(body) : [];
   if (media.length > 0) {
     container.addMediaGalleryComponents((mediaGallery) =>
       mediaGallery.addItems(

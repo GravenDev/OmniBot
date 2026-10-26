@@ -10,6 +10,7 @@ import {
   type MessageMentionOptions,
 } from "discord.js";
 import { formatDuration } from "#lib/duration.js";
+import { truncate } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { Action, AuthorHistory, Report, ReportStatus } from "./store.js";
@@ -48,10 +49,6 @@ export function messageUrl(
   report: Pick<Report, "guildId" | "channelId" | "messageId">
 ) {
   return `https://discord.com/channels/${report.guildId}/${report.channelId}/${report.messageId}`;
-}
-
-export function truncate(text: string, limit: number): string {
-  return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
 }
 
 function fitText(texts: string[], limit: number): string[] {

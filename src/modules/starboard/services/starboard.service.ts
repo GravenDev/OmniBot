@@ -33,6 +33,8 @@ const GONE = [
   RESTJSONErrorCodes.UnknownMessage,
   RESTJSONErrorCodes.UnknownChannel,
 ];
+const BULK_DELETE_LIMIT = 100;
+
 const FORBIDDEN = [
   RESTJSONErrorCodes.MissingAccess,
   RESTJSONErrorCodes.MissingPermissions,
@@ -47,9 +49,18 @@ export function isCounted(
     .some((configured) => matchesEmoji(configured, emoji));
 }
 
+type Mode = "edited" | "starred" | "any";
+
+const MODE_RANK: Record<Mode, number> = { edited: 0, starred: 1, any: 2 };
+
+interface Pending {
+  mode: Mode;
+  config: Config;
+}
+
 class StarboardService implements Service {
   private readonly queue = new KeyedQueue();
-  private readonly pending = new Map<string, "any" | "starred">();
+  private readonly pending = new Map<string, Pending>();
 
   refresh(message: AnyMessage, config: Config): Promise<void> {
     return this.schedule(message, config, "any");
@@ -59,9 +70,13 @@ class StarboardService implements Service {
     return this.schedule(message, config, "starred");
   }
 
+  refreshContent(message: AnyMessage, config: Config): Promise<void> {
+    return this.schedule(message, config, "edited");
+  }
+
   async handleDeletion(messageId: string, client: Client): Promise<void> {
     await this.queue.run(messageId, async () => {
-      const entry = await store.findInvolving(messageId);
+      const [entry] = await store.findInvolving([messageId]);
       if (!entry) {
         return;
       }
@@ -73,41 +88,103 @@ class StarboardService implements Service {
     });
   }
 
+  async handleDeletions(messageIds: string[], client: Client): Promise<void> {
+    const idle = messageIds.filter((id) => !this.queue.isBusy(id));
+    for (const id of messageIds.filter((id) => this.queue.isBusy(id))) {
+      await this.handleDeletion(id, client);
+    }
+    if (idle.length === 0) {
+      return;
+    }
+    const deleted = new Set(idle);
+    for (const entry of await store.findInvolving(idle)) {
+      if (deleted.has(entry.messageId)) {
+        await this.queue.run(entry.messageId, () =>
+          this.discard(entry.messageId, client)
+        );
+      } else if (entry.starboardMessageId) {
+        const starboardMessageId = entry.starboardMessageId;
+        await this.queue.run(starboardMessageId, () =>
+          store.dismiss(entry.messageId, starboardMessageId)
+        );
+      }
+    }
+  }
+
   async handleChannelDeletion(
     guildId: string,
     channelId: string,
     client: Client
   ): Promise<void> {
+    const reposts = new Map<string, string[]>();
     for (const entry of await store.listForChannel(guildId, channelId)) {
-      await this.queue
-        .run(entry.messageId, () => this.discard(entry.messageId, client))
-        .catch((err: unknown) =>
+      if (entry.starboardMessageId) {
+        const ids = reposts.get(entry.starboardChannelId) ?? [];
+        ids.push(entry.starboardMessageId);
+        reposts.set(entry.starboardChannelId, ids);
+      }
+    }
+    for (const [starboardChannelId, ids] of reposts) {
+      await this.deleteReposts(client, starboardChannelId, ids).catch(
+        (err: unknown) =>
           logger.warn(
             { err },
-            `Repost of a deleted channel not removed | messageId = ${entry.messageId}`
+            `Reposts of a deleted channel not removed | channelId = ${channelId}`
           )
-        );
+      );
     }
     await store.removeForChannel(guildId, channelId);
+  }
+
+  private async deleteReposts(
+    client: Client,
+    starboardChannelId: string,
+    ids: string[]
+  ): Promise<void> {
+    const channel = await this.starboardChannel(client, starboardChannelId);
+    if (!channel) {
+      return;
+    }
+    for (let start = 0; start < ids.length; start += BULK_DELETE_LIMIT) {
+      const batch = ids.slice(start, start + BULK_DELETE_LIMIT);
+      let remaining = batch;
+      try {
+        const deleted = await channel.bulkDelete(batch, true);
+        remaining = batch.filter((id) => !deleted.has(id));
+      } catch (err) {
+        if (!(err instanceof DiscordAPIError)) {
+          throw err;
+        }
+      }
+      for (const id of remaining) {
+        await channel.messages.delete(id).catch((err: unknown) => {
+          if (!isApiError(err, ...GONE)) {
+            throw err;
+          }
+        });
+      }
+    }
   }
 
   private async schedule(
     message: AnyMessage,
     config: Config,
-    mode: "any" | "starred"
+    mode: Mode
   ): Promise<void> {
-    if (this.pending.has(message.id)) {
-      if (mode === "any") {
-        this.pending.set(message.id, mode);
+    const queued = this.pending.get(message.id);
+    if (queued) {
+      queued.config = config;
+      if (MODE_RANK[mode] > MODE_RANK[queued.mode]) {
+        queued.mode = mode;
       }
       return;
     }
-    this.pending.set(message.id, mode);
+    this.pending.set(message.id, { mode, config });
     await this.queue.run(message.id, async () => {
-      const starredOnly = this.pending.get(message.id) === "starred";
+      const latest = this.pending.get(message.id) ?? { mode, config };
       this.pending.delete(message.id);
       try {
-        await this.sync(message, config, starredOnly);
+        await this.sync(message, latest.config, latest.mode);
       } catch (err) {
         if (isApiError(err, ...FORBIDDEN)) {
           logger.warn(
@@ -127,10 +204,22 @@ class StarboardService implements Service {
   private async sync(
     ref: AnyMessage,
     config: Config,
-    starredOnly: boolean
+    mode: Mode
   ): Promise<void> {
     const entry = await store.find(ref.id);
-    if ((!entry && starredOnly) || (entry && !entry.starboardMessageId)) {
+    if (entry && !entry.starboardMessageId) {
+      return;
+    }
+    const emojis = config.get("emojis");
+    const threshold = thresholdOf(config);
+    const starboard = starboardChannelOf(config);
+    if (
+      !entry &&
+      (mode !== "any" ||
+        !starboard ||
+        ref.channelId === starboard.id ||
+        (!ref.partial && upperBound(ref, emojis) < threshold))
+    ) {
       return;
     }
 
@@ -149,14 +238,19 @@ class StarboardService implements Service {
     }
 
     if (entry?.starboardMessageId) {
-      await this.update(message, entry, entry.starboardMessageId, config);
+      await this.update(
+        message,
+        entry,
+        entry.starboardMessageId,
+        config,
+        mode === "edited"
+      );
       return;
     }
-
-    const starboard = starboardChannelOf(config);
     if (!starboard) {
       return;
     }
+
     const blocked = ineligibility(message, starboard, config);
     if (blocked) {
       logger.debug(
@@ -164,8 +258,6 @@ class StarboardService implements Service {
       );
       return;
     }
-    const emojis = config.get("emojis");
-    const threshold = thresholdOf(config);
     if (upperBound(message, emojis) < threshold) {
       return;
     }
@@ -174,8 +266,8 @@ class StarboardService implements Service {
       return;
     }
 
-    const sent = await starboard.send(
-      await this.render(message, tally, config)
+    const sent = await this.post(message, tally, config, (payload) =>
+      starboard.send(payload)
     );
     try {
       await store.create({
@@ -184,6 +276,7 @@ class StarboardService implements Service {
         channelId: message.channelId,
         starboardChannelId: starboard.id,
         starboardMessageId: sent.id,
+        tally,
       });
     } catch (err) {
       await sent.delete().catch(() => undefined);
@@ -198,9 +291,13 @@ class StarboardService implements Service {
     message: Message<true>,
     entry: StarboardEntry,
     starboardMessageId: string,
-    config: Config
+    config: Config,
+    contentOnly: boolean
   ): Promise<void> {
-    const channel = await this.starboardChannel(message.client, entry);
+    const channel = await this.starboardChannel(
+      message.client,
+      entry.starboardChannelId
+    );
     if (!channel) {
       await store.remove(message.id);
       return;
@@ -214,23 +311,26 @@ class StarboardService implements Service {
       return;
     }
 
-    const tally = await tallyReactions(
-      message,
-      config.get("emojis"),
-      config.get("selfStar")
-    );
-    if (
-      tally.total < thresholdOf(config) &&
-      config.get("belowThreshold") === "remove"
-    ) {
-      await this.discard(message.id, message.client);
-      return;
+    let tally = contentOnly ? entry.tally : null;
+    if (!tally) {
+      tally = await tallyReactions(
+        message,
+        config.get("emojis"),
+        config.get("selfStar")
+      );
+      if (
+        tally.total < thresholdOf(config) &&
+        config.get("belowThreshold") === "remove"
+      ) {
+        await this.discard(message.id, message.client);
+        return;
+      }
+      await store.saveTally(message.id, tally);
     }
 
     try {
-      await channel.messages.edit(
-        starboardMessageId,
-        await this.render(message, tally, config)
+      await this.post(message, tally, config, (payload) =>
+        channel.messages.edit(starboardMessageId, payload)
       );
     } catch (err) {
       if (isApiError(err, ...GONE)) {
@@ -247,7 +347,10 @@ class StarboardService implements Service {
       return;
     }
     if (entry.starboardMessageId) {
-      const channel = await this.starboardChannel(client, entry);
+      const channel = await this.starboardChannel(
+        client,
+        entry.starboardChannelId
+      );
       await channel?.messages
         .delete(entry.starboardMessageId)
         .catch((err: unknown) => {
@@ -264,9 +367,9 @@ class StarboardService implements Service {
     await store.remove(messageId);
   }
 
-  private async starboardChannel(client: Client, entry: StarboardEntry) {
+  private async starboardChannel(client: Client, channelId: string) {
     try {
-      const channel = await client.channels.fetch(entry.starboardChannelId);
+      const channel = await client.channels.fetch(channelId);
       return channel?.isTextBased() && !channel.isDMBased() ? channel : null;
     } catch (err) {
       if (isApiError(err, ...GONE)) {
@@ -276,18 +379,37 @@ class StarboardService implements Service {
     }
   }
 
-  private async render(message: Message<true>, tally: Tally, config: Config) {
+  private async post<T>(
+    message: Message<true>,
+    tally: Tally,
+    config: Config,
+    send: (payload: ReturnType<typeof starboardMessage>) => Promise<T>
+  ): Promise<T> {
     const reply =
       message.type === MessageType.Reply
         ? await message.fetchReference().catch(() => null)
         : null;
-    return starboardMessage(
-      message,
-      reply,
-      tally,
-      config.get("emojis")[0] ?? "⭐",
-      config.t
-    );
+    const render = (withMedia: boolean) =>
+      starboardMessage(
+        message,
+        reply,
+        tally,
+        config.get("emojis")[0] ?? "⭐",
+        config.t,
+        withMedia
+      );
+    try {
+      return await send(render(true));
+    } catch (err) {
+      if (!isApiError(err, RESTJSONErrorCodes.InvalidFormBodyOrContentType)) {
+        throw err;
+      }
+      logger.warn(
+        { err },
+        `Repost refused by Discord, retrying without media | messageId = ${message.id}`
+      );
+      return send(render(false));
+    }
   }
 }
 

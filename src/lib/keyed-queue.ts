@@ -1,6 +1,10 @@
 export class KeyedQueue {
   private readonly tails = new Map<string, Promise<unknown>>();
 
+  isBusy(key: string): boolean {
+    return this.tails.has(key);
+  }
+
   run<T>(key: string, task: () => Promise<T>): Promise<T> {
     const next = (this.tails.get(key) ?? Promise.resolve()).then(task, task);
     const tail = next.catch(() => undefined);

@@ -51,4 +51,18 @@ describe("KeyedQueue", () => {
     ).rejects.toThrow("boom");
     await expect(queue.run("guild", async () => 42)).resolves.toBe(42);
   });
+
+  it("tells whether a key has a task queued or running", async () => {
+    const queue = new KeyedQueue();
+    const gate = deferred();
+
+    const task = queue.run("guild", () => gate.promise);
+
+    expect(queue.isBusy("guild")).toBe(true);
+    expect(queue.isBusy("other")).toBe(false);
+    gate.resolve();
+    await task;
+    await Promise.resolve();
+    expect(queue.isBusy("guild")).toBe(false);
+  });
 });

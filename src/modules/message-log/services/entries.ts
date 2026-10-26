@@ -8,6 +8,7 @@ import {
   type PartialMessage,
   type ReadonlyCollection,
 } from "discord.js";
+import { truncate } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
 import { truncate } from "#lib/text.js";
 
