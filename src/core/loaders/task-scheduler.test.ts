@@ -3,7 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
 import { Registry } from "#lib/registry.js";
 import { declareTask } from "#lib/task.js";
-import { startModuleTasks, stopAllTasks } from "./task-scheduler.js";
+import {
+  startMaintenanceTasks,
+  startModuleTasks,
+  stopAllTasks,
+} from "./task-scheduler.js";
 
 const client = {} as Client<true>;
 
@@ -36,6 +40,28 @@ describe("task scheduler", () => {
     );
 
     await vi.waitFor(() => expect(run).toHaveBeenCalledWith(client));
+  });
+
+  it("starts a module's maintenance tasks without its registry", async () => {
+    const run = vi.fn(async () => {});
+    startMaintenanceTasks(client, {
+      id: "skipped-module",
+      registry: new Registry(),
+      maintenanceTasks: () => [
+        declareTask({
+          id: "purge",
+          schedule: "0 0 1 1 *",
+          runOnStart: true,
+          run,
+        }),
+      ],
+    } as unknown as Module);
+
+    await vi.waitFor(() => expect(run).toHaveBeenCalledWith(client));
+  });
+
+  it("starts nothing for a module without maintenance tasks", () => {
+    expect(() => startMaintenanceTasks(client, moduleWith())).not.toThrow();
   });
 
   it("does not run other tasks before their schedule", async () => {

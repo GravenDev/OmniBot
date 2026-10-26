@@ -228,6 +228,14 @@ class ReportStore implements Service {
     return { total, sanctioned };
   }
 
+  async guildIds(): Promise<string[]> {
+    const rows = await prisma.messageReport.findMany({
+      distinct: ["guildId"],
+      select: { guildId: true },
+    });
+    return rows.map((row) => row.guildId);
+  }
+
   async closedBefore(
     guildId: string,
     before: Date

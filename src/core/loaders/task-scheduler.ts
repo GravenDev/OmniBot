@@ -26,8 +26,23 @@ async function runTask(
 }
 
 export function startModuleTasks(client: Client<true>, module: Module): void {
-  for (const task of module.registry.tasks) {
-    const name = `${module.id}:${task.id}`;
+  scheduleTasks(client, module.id, module.registry.tasks);
+}
+
+export function startMaintenanceTasks(
+  client: Client<true>,
+  module: Module
+): void {
+  scheduleTasks(client, module.id, module.maintenanceTasks?.() ?? []);
+}
+
+function scheduleTasks(
+  client: Client<true>,
+  moduleId: string,
+  tasks: readonly ScheduledTask[]
+): void {
+  for (const task of tasks) {
+    const name = `${moduleId}:${task.id}`;
     const job = new Cron(
       task.schedule,
       { name, timezone: task.timezone ?? "UTC", protect: true },

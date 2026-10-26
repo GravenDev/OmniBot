@@ -65,6 +65,19 @@ export function serverStatsTasks(module: Module<ServerStatsConfigSchema>) {
             )
           );
         }
+      },
+    }),
+  ];
+}
+
+export function serverStatsMaintenanceTasks() {
+  return [
+    declareTask({
+      id: "purge",
+      schedule: "0 0 * * *",
+      timezone: TIMEZONE,
+      async run() {
+        const day = addDays(dayOf(new Date()), -1);
         await store.purgeBefore(addDays(day, -RETENTION_DAYS));
       },
     }),

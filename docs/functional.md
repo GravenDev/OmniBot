@@ -298,7 +298,7 @@ Le bot a besoin des permissions Gérer les messages (dans les salons surveillés
 
 ### Conservation
 
-Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la durée de conservation sont supprimés, et leur alerte est remplacée par une mention « purgé ».
+Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la durée de conservation sont supprimés, et leur alerte est remplacée par une mention « purgé ». La purge passe sur tous les serveurs qui ont des signalements, y compris ceux où le module est désactivé ou que le bot a quittés, et même quand le module est écarté faute d'intent.
 
 ### Configuration — `/config reports`
 
@@ -558,7 +558,7 @@ Dès que le module est activé, le bot compte, par jour (heure de Paris) :
 - les réactions ajoutées, par emoji ;
 - les arrivées et les départs de membres.
 
-Les bots, les messages système, les salons et catégories exclus et, par défaut, les salons que `@everyone` ne voit pas (dont les fils privés) ne sont pas comptés. Seuls des compteurs sont enregistrés, jamais le contenu des messages ; ils sont supprimés au bout de 90 jours. Les événements survenus pendant que le bot est arrêté ne sont pas comptés.
+Les bots, les messages système, les salons et catégories exclus et, par défaut, les salons que `@everyone` ne voit pas (dont les fils privés) ne sont pas comptés. Seuls des compteurs sont enregistrés, jamais le contenu des messages ; ils sont supprimés au bout de 90 jours, même quand le module est désactivé ou écarté faute d'intent. Les événements survenus pendant que le bot est arrêté ne sont pas comptés.
 
 ### Bilan quotidien
 

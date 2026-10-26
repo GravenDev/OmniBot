@@ -125,6 +125,7 @@ interface ModuleDeclaration {
   onLoad: (client: Client, registry: Registry) => void;
   onInstall: (client: Client, guild: Guild, registry: Registry) => void;
   onUninstall: (client: Client, guild: Guild, registry: Registry) => void;
+  maintenanceTasks?: () => ScheduledTask[];
 }
 ```
 
@@ -135,6 +136,8 @@ interface ModuleDeclaration {
 | `onLoad`      | Démarrage du bot                | Enregistrer commandes, écouteurs, interactions via `registry.register()`    |
 | `onInstall`   | Module activé sur un serveur    | Créer des rôles, envoyer des messages de bienvenue, initialiser des données |
 | `onUninstall` | Module désactivé sur un serveur | Nettoyer les données, supprimer les rôles, effacer les configurations       |
+
+Les purges de données stockées vont dans `maintenanceTasks`, pas dans des tâches enregistrées depuis `onLoad` : elles sont planifiées pour chaque module découvert, y compris un module écarté parce que Discord n'a pas accordé son intention privilégiée, pour que les durées de conservation de la politique de confidentialité tiennent dans tous les cas.
 
 ### Gestion des intentions
 

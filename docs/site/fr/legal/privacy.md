@@ -85,7 +85,7 @@ Les données sont stockées dans une base de données PostgreSQL gérée par l'o
 ## Conservation des données
 
 - **Configuration et activation des modules** : conservées tant que le bot est sur le serveur. Quand le bot quitte un serveur (kick ou retrait), elles sont volontairement conservées afin que tout soit restauré automatiquement si le bot est réinvité. Désactiver un module ne supprime ni sa configuration ni ses données : elles restent soumises aux durées ci-dessous.
-- **Signalements** : un signalement en cours est conservé jusqu'à sa clôture. Un signalement clos est supprimé, copie du message comprise, au bout de 90 jours ; les administrateurs de chaque serveur peuvent changer ce délai.
+- **Signalements** : un signalement en cours est conservé jusqu'à sa clôture. Un signalement clos est supprimé, copie du message comprise, au bout de 90 jours ; les administrateurs de chaque serveur peuvent changer ce délai. La suppression a lieu même si le module est désactivé ou que le bot a quitté le serveur.
 - **Statistiques d'activité** : les compteurs sont supprimés au bout de 90 jours, un délai qui ne se change pas. La date de début du suivi est conservée sans limite de durée.
 - **RNGdle** : les tirages, le pseudo et l'inscription au rappel sont conservés jusqu'à ce que le membre se délie avec `/rngdle unlink`, ou qu'un administrateur le délie. L'indication de carte obtenue est supprimée le surlendemain.
 - **Jeu des 4h** : les scores et l'historique des points sont conservés jusqu'à ce qu'un administrateur supprime le score du joueur.
