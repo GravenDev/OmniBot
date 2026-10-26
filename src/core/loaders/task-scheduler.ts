@@ -33,7 +33,13 @@ export function startMaintenanceTasks(
   client: Client<true>,
   module: Module
 ): void {
-  scheduleTasks(client, module.id, module.maintenanceTasks?.() ?? []);
+  // Own namespace, so that a maintenance task can never take the name of a
+  // task the module registers from onLoad.
+  scheduleTasks(
+    client,
+    `${module.id}:maintenance`,
+    module.maintenanceTasks?.() ?? []
+  );
 }
 
 function scheduleTasks(
