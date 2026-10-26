@@ -55,6 +55,7 @@
   "scalarList.valueText": "Valeur (texte)",
   "scalarList.valueNumber": "Valeur (nombre)",
   "scalarList.valueBoolean": "Valeur (true / false)",
+  "scalarList.valueEmoji": "Valeur (emoji)",
   "scalarList.empty": "-# Liste vide.",
   "scalarList.booleanItem": "Élément {{index}} : {{value}}",
   "scalarList.remove": "Supprimer",

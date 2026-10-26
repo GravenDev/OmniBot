@@ -81,7 +81,7 @@ retention: {
 
 ### Lists
 
-Any type except `DURATION` and `EMOJI` can be declared as a **list** using `type: [ConfigType.X]`:
+Any type except `DURATION` can be declared as a **list** using `type: [ConfigType.X]`:
 
 ```typescript
 config: {
@@ -103,6 +103,7 @@ List editing depends on the element type:
 - **Entities** (`USER`, `ROLE`, `CHANNEL`, `CATEGORY`): native multi-select menus
 - **ENUM**: multi-select menu with the declared options
 - **Scalars** (`STRING`, `NUMBER`): dedicated add/remove editor
+- **`EMOJI`**: the same editor; a server emoji can be typed as `:name:`
 - **`BOOLEAN`**: add/remove editor with toggle buttons
 
 ### ENUM Type (Fixed Choices)

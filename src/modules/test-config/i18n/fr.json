@@ -31,6 +31,9 @@
   "config.boolList.name": "Liste de booléens",
   "config.boolList.description": "Une liste de booléens (éditeur ajouter/supprimer).",
 
+  "config.emojiList.name": "Liste d'emojis",
+  "config.emojiList.description": "Une liste d'emojis, standards ou personnalisés (éditeur ajouter/supprimer).",
+
   "config.roleList.name": "Liste de rôles",
   "config.roleList.description": "Plusieurs rôles Discord (multi-select).",
 

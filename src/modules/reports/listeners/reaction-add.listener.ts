@@ -1,9 +1,9 @@
+import { matchesEmoji } from "#lib/config.js";
 import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { ReportsConfigSchema } from "../reports.config.js";
 import reportService, {
   ineligibility,
-  matchesEmoji,
   snapshotOf,
 } from "../services/report.service.js";
 

@@ -49,7 +49,8 @@ export function isScalarType(type: ConfigType): boolean {
   return (
     type === ConfigType.STRING ||
     type === ConfigType.NUMBER ||
-    type === ConfigType.BOOLEAN
+    type === ConfigType.BOOLEAN ||
+    type === ConfigType.EMOJI
   );
 }
 

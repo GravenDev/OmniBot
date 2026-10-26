@@ -33,24 +33,6 @@ export type Ineligibility = "bot" | "self" | "alertChannel";
 
 type Config = ConfigProvider<ReportsConfigSchema>;
 
-const VARIATION_SELECTOR = /️/g;
-
-export function matchesEmoji(
-  configured: string,
-  emoji: { id: string | null; name: string | null }
-): boolean {
-  const custom = configured.match(/^<a?:\w+:(\d+)>$/);
-  if (custom) {
-    return emoji.id === custom[1];
-  }
-  return (
-    emoji.id === null &&
-    emoji.name !== null &&
-    emoji.name.replace(VARIATION_SELECTOR, "") ===
-      configured.replace(VARIATION_SELECTOR, "")
-  );
-}
-
 export function snapshotOf(message: Message<true>): MessageSnapshot {
   return {
     guildId: message.guildId,

@@ -73,11 +73,7 @@ const db = vi.hoisted(() => {
 
 vi.mock("./store.js", () => ({ default: db.store }));
 
-const {
-  default: service,
-  ineligibility,
-  matchesEmoji,
-} = await import("./report.service.js");
+const { default: service, ineligibility } = await import("./report.service.js");
 
 beforeAll(async () => {
   await initTestI18n();
@@ -328,23 +324,6 @@ describe("messageChanged", () => {
 
     expect(content).not.toHaveBeenCalled();
     expect(db.store.setMessageState).toHaveBeenCalledWith(1, "deleted");
-  });
-});
-
-describe("matchesEmoji", () => {
-  it("matches a unicode emoji with or without its variation selector", () => {
-    expect(matchesEmoji("🚩", { id: null, name: "🚩" })).toBe(true);
-    expect(matchesEmoji("⚠️", { id: null, name: "⚠" })).toBe(true);
-    expect(matchesEmoji("🚩", { id: null, name: "👍" })).toBe(false);
-  });
-
-  it("matches a custom emoji by id only", () => {
-    const custom = "<:report:123456789012345678>";
-    expect(
-      matchesEmoji(custom, { id: "123456789012345678", name: "renamed" })
-    ).toBe(true);
-    expect(matchesEmoji(custom, { id: "999", name: "report" })).toBe(false);
-    expect(matchesEmoji("🚩", { id: "1", name: "🚩" })).toBe(false);
   });
 });
 
