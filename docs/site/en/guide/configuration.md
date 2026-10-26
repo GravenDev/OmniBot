@@ -66,6 +66,18 @@ export default defineModule({
 | `DURATION` | Modal (`30s`, `4h`, `1h30m`) | `number` (seconds) | `number` (seconds)  |
 | `EMOJI`    | Modal (`🚩`, `:name:`)       | `string`           | `string`            |
 
+A `DURATION` entry can declare a `max` in seconds. The modal then refuses a longer value, and `config.get()` never returns more than `max`, even for a value saved before the limit existed:
+
+```typescript
+retention: {
+  name: "Retention",
+  description: "How long a closed report is kept",
+  type: ConfigType.DURATION,
+  defaultValue: 7 * 24 * 60 * 60,
+  max: 30 * 24 * 60 * 60,
+},
+```
+
 ### Lists
 
 Any type except `DURATION` and `EMOJI` can be declared as a **list** using `type: [ConfigType.X]`:

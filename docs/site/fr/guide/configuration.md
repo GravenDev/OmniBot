@@ -66,6 +66,18 @@ export default defineModule({
 | `DURATION` | Modale (`30s`, `4h`, `1h30m`)   | `number` (secondes) | `number` (secondes)   |
 | `EMOJI`    | Modale (`🚩`, `:nom:`)          | `string`            | `string`              |
 
+Une entrée `DURATION` peut déclarer un `max` en secondes. La modale refuse alors une valeur plus longue, et `config.get()` ne renvoie jamais plus que `max`, même pour une valeur enregistrée avant la limite :
+
+```typescript
+conservation: {
+  name: "Conservation",
+  description: "Durée de conservation d'un signalement clos",
+  type: ConfigType.DURATION,
+  defaultValue: 7 * 24 * 60 * 60,
+  max: 30 * 24 * 60 * 60,
+},
+```
+
 ### Listes
 
 N'importe quel type sauf `DURATION` et `EMOJI` peut être déclaré en **liste** via `type: [ConfigType.X]` :

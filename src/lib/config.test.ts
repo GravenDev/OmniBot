@@ -220,6 +220,26 @@ describe("ConfigProvider", () => {
     expect(provider.get("tags")).toEqual(["a", "c"]);
   });
 
+  it("caps a stored duration at the entry's maximum", () => {
+    const capped = {
+      delay: {
+        name: "Delay",
+        description: "A capped duration",
+        type: ConfigType.DURATION,
+        defaultValue: 60,
+        max: 3600,
+      },
+    } satisfies ConfigSchema;
+    const cappedModule = { config: capped } as unknown as Module<typeof capped>;
+
+    expect(new ConfigProvider(cappedModule, { delay: 7200 }).get("delay")).toBe(
+      3600
+    );
+    expect(new ConfigProvider(cappedModule, { delay: 1800 }).get("delay")).toBe(
+      1800
+    );
+  });
+
   it("exposes the module schema", () => {
     const provider = new ConfigProvider(module, {
       greeting: "hi",
