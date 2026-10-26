@@ -309,7 +309,7 @@ Le bot a besoin des permissions Gérer les messages (dans les salons surveillés
 
 ### Conservation
 
-Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la durée de conservation sont supprimés, et leur alerte est remplacée par une mention « purgé ». La purge passe sur tous les serveurs qui ont des signalements, y compris ceux où le module est désactivé ou que le bot a quittés, et même quand le module est écarté faute d'intent.
+Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la durée de conservation sont supprimés, et leur alerte est remplacée par une mention « purgé ». Un signalement dont le dernier signalement date de plus de 30 jours est supprimé de la même façon, qu'il soit clos ou encore ouvert : un message signalé de nouveau repart pour 30 jours. La purge passe sur tous les serveurs qui ont des signalements, y compris ceux où le module est désactivé ou que le bot a quittés, et même quand le module est écarté faute d'intent.
 
 ### Configuration — `/config reports`
 
@@ -318,7 +318,7 @@ Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la dur
 | `alertChannel`  | Salon | Salon où arrivent les alertes. Tant qu'il n'est pas défini, rien n'est signalé.                                                                                        |
 | `emoji`         | Emoji | Emoji de signalement, standard ou personnalisé (🚩 par défaut). Saisi tel quel, par son nom Discord (`:triangular_flag_on_post:`) ou par le nom d'un emoji du serveur. |
 | `moderatorRole` | Rôle  | Rôle mentionné à chaque nouvelle alerte. Sans rôle, personne n'est mentionné.                                                                                          |
-| `retention`     | Durée | Durée de conservation d'un signalement clos (90 jours par défaut).                                                                                                     |
+| `retention`     | Durée | Durée de conservation d'un signalement clos (30 jours, le maximum, par défaut).                                                                                        |
 
 Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
 
@@ -629,7 +629,7 @@ Dès que le module est activé, le bot compte, par jour (heure de Paris) :
 - les réactions ajoutées, par emoji ;
 - les arrivées et les départs de membres.
 
-Les bots, les messages système, les salons et catégories exclus et, par défaut, les salons que `@everyone` ne voit pas (dont les fils privés) ne sont pas comptés. Seuls des compteurs sont enregistrés, jamais le contenu des messages ; ils sont supprimés au bout de 90 jours, même quand le module est désactivé ou écarté faute d'intent. Les événements survenus pendant que le bot est arrêté ne sont pas comptés.
+Les bots, les messages système, les salons et catégories exclus et, par défaut, les salons que `@everyone` ne voit pas (dont les fils privés) ne sont pas comptés. Seuls des compteurs sont enregistrés, jamais le contenu des messages ; ils sont supprimés au bout de 30 jours, même quand le module est désactivé ou écarté faute d'intent. Les événements survenus pendant que le bot est arrêté ne sont pas comptés.
 
 ### Bilan quotidien
 

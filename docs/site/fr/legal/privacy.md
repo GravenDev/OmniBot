@@ -67,7 +67,7 @@ Le module Starboard enregistre, pour chaque message reposté, les ID du serveur,
 
 ### Statistiques d'activité
 
-Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, avec la date à laquelle le suivi a commencé sur le serveur, jamais le contenu des messages ni l'identité des membres qui arrivent ou partent. Ces compteurs sont supprimés au bout de 90 jours. Le bilan quotidien publié sur le serveur peut citer les membres les plus actifs ; les administrateurs peuvent le désactiver.
+Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, avec la date à laquelle le suivi a commencé sur le serveur, jamais le contenu des messages ni l'identité des membres qui arrivent ou partent. Ces compteurs sont supprimés au bout de 30 jours. Le bilan quotidien publié sur le serveur peut citer les membres les plus actifs ; les administrateurs peuvent le désactiver.
 
 ## Contenu des messages lu sans être stocké
 
@@ -91,8 +91,8 @@ Les données sont stockées dans une base de données PostgreSQL gérée par l'o
 ## Conservation des données
 
 - **Configuration et activation des modules** : conservées tant que le bot est sur le serveur. Quand le bot quitte un serveur (kick ou retrait), elles sont volontairement conservées afin que tout soit restauré automatiquement si le bot est réinvité. Désactiver un module ne supprime ni sa configuration ni ses données : elles restent soumises aux durées ci-dessous.
-- **Signalements** : un signalement en cours est conservé jusqu'à sa clôture. Un signalement clos est supprimé, copie du message comprise, au bout de 90 jours ; les administrateurs de chaque serveur peuvent changer ce délai. La suppression a lieu même si le module est désactivé ou que le bot a quitté le serveur.
-- **Statistiques d'activité** : les compteurs sont supprimés au bout de 90 jours, un délai qui ne se change pas. La date de début du suivi est conservée sans limite de durée.
+- **Signalements** : un signalement est supprimé, copie du message comprise, au plus tard 30 jours après le dernier signalement du message, qu'il soit clos ou non. Les administrateurs de chaque serveur peuvent raccourcir ce délai pour les signalements clos. La suppression a lieu même si le module est désactivé ou que le bot a quitté le serveur.
+- **Statistiques d'activité** : les compteurs sont supprimés au bout de 30 jours, un délai qui ne se change pas. La date de début du suivi est conservée sans limite de durée.
 - **RNGdle** : les tirages, le pseudo et l'inscription au rappel sont conservés jusqu'à ce que le membre se délie avec `/rngdle unlink`, ou qu'un administrateur le délie. L'indication de carte obtenue est supprimée le surlendemain.
 - **Jeu des 4h** : les scores et l'historique des points sont conservés jusqu'à ce qu'un administrateur supprime le score du joueur.
 - **Clash of Code** : les parties, les joueurs et leurs résultats sont conservés sans limite de durée, pour l'historique du classement. La liaison à un compte Discord est retirée quand le membre se délie avec `/coc unlink`, ou qu'un administrateur le délie.

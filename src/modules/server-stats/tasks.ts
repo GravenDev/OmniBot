@@ -9,7 +9,7 @@ import { addDays, dayOf, TIMEZONE } from "./services/day.js";
 import { reportEmbed } from "./services/report.js";
 import store from "./services/store.js";
 
-export const RETENTION_DAYS = 90;
+export const RETENTION_DAYS = 30;
 
 const logger = loggerMaker("server-stats");
 
