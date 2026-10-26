@@ -15,8 +15,9 @@ vi.mock("#modules/four-hour-game/services/four-hour-game.service.js", () => ({
   default: { handleMessage, getRank },
 }));
 
-const { default: listener, buildPointEmbed } =
-  await import("./message-create.listener.js");
+const { default: listener } = await import("./message-create.listener.js");
+const { buildPointEmbed } =
+  await import("#modules/four-hour-game/services/point-announcement.js");
 
 beforeAll(async () => {
   silenceLogs();
@@ -39,11 +40,12 @@ const memberFetch = vi.fn();
 const userFetch = vi.fn();
 
 function fakeMessage(overrides: Record<string, unknown> = {}) {
+  const guild = {
+    members: { fetch: memberFetch },
+    client: { users: { fetch: userFetch } },
+  };
   return {
-    guild: {
-      members: { fetch: memberFetch },
-      client: { users: { fetch: userFetch } },
-    },
+    guild,
     id: "message-1",
     guildId: "guild-1",
     channelId: GAME_CHANNEL,
@@ -51,7 +53,7 @@ function fakeMessage(overrides: Record<string, unknown> = {}) {
     author: { id: "alice", bot: false },
     system: false,
     inGuild: () => true,
-    channel: { send: vi.fn() },
+    channel: { send: vi.fn(), guild, guildId: "guild-1" },
     ...overrides,
   } as unknown as Message;
 }

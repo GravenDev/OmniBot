@@ -542,10 +542,14 @@ describe("FourHourGameService.setScore", () => {
     const busy = service.resyncLastMessage(
       "guild",
       "game",
-      () =>
-        new Promise((resolve) => {
-          release = () => resolve([]);
-        })
+      {
+        latest: () =>
+          new Promise((resolve) => {
+            release = () => resolve([]);
+          }),
+        since: async () => [],
+      },
+      DELAY
     );
 
     const set = service.setScore("guild", "alice", 3);
@@ -742,10 +746,10 @@ describe("FourHourGameService deletions and resync", () => {
       authorId,
       sentAt,
     }));
-  const history =
-    (...entries: [authorId: string, sentAt: Date][]) =>
-    async () =>
-      messagesOf(entries);
+  const history = (...entries: [authorId: string, sentAt: Date][]) => {
+    const read = async () => messagesOf(entries);
+    return { latest: vi.fn(read), since: vi.fn(read) };
+  };
   const paris = (iso: string) => new Date(`${iso}+02:00`);
 
   it("falls back to the channel's real last message when the stored one is deleted", async () => {
@@ -828,7 +832,8 @@ describe("FourHourGameService deletions and resync", () => {
         ["zed", paris("2026-10-14T08:00:00")],
         ["alice", paris("2026-10-14T09:00:00")],
         ["bob", paris("2026-10-14T22:00:00")]
-      )
+      ),
+      DELAY
     );
     const closed = await service.closeDays(
       "guild",
@@ -858,7 +863,8 @@ describe("FourHourGameService deletions and resync", () => {
         ["zed", paris("2026-10-14T08:00:00")],
         ["alice", paris("2026-10-14T09:00:00")],
         ["alice", paris("2026-10-14T09:30:00")]
-      )
+      ),
+      DELAY
     );
     const closed = await service.closeDays(
       "guild",
@@ -899,7 +905,8 @@ describe("FourHourGameService deletions and resync", () => {
         ["zed", paris("2026-10-14T07:00:00")],
         ["alice", paris("2026-10-14T08:00:00")],
         ["alice", paris("2026-10-14T10:00:00")]
-      )
+      ),
+      DELAY
     );
     const result = await service.handleMessage(
       message("carol", paris("2026-10-14T12:30:00")),
@@ -924,7 +931,8 @@ describe("FourHourGameService deletions and resync", () => {
       history(
         ["bob", paris("2026-10-14T12:00:00")],
         ["carol", paris("2026-10-14T13:00:00")]
-      )
+      ),
+      DELAY
     );
 
     expect(dailyBests.get(key("guild", "2026-10-14"))).toMatchObject({
@@ -946,7 +954,8 @@ describe("FourHourGameService deletions and resync", () => {
       history(
         ["bob", paris("2026-10-14T12:00:00")],
         ["bob", paris("2026-10-14T12:30:00")]
-      )
+      ),
+      DELAY
     );
 
     expect(dailyBests.size).toBe(0);
@@ -961,22 +970,23 @@ describe("FourHourGameService deletions and resync", () => {
       message("alice", paris("2026-10-14T08:00:00")),
       DELAY
     );
-    const fetchHistory = vi.fn(
-      history(
-        ["alice", paris("2026-10-14T08:00:00")],
-        ["bob", paris("2026-10-14T09:00:00")],
-        ["carol", paris("2026-10-14T13:00:00")]
-      )
+    const fetchHistory = history(
+      ["alice", paris("2026-10-14T08:00:00")],
+      ["bob", paris("2026-10-14T09:00:00")],
+      ["carol", paris("2026-10-14T13:00:00")]
     );
 
     await service.resyncLastMessage(
       "guild",
       "game",
       fetchHistory,
+      DELAY,
       paris("2026-10-14T14:00:00")
     );
 
-    expect(fetchHistory).toHaveBeenCalledWith(paris("2026-10-14T08:00:00"));
+    expect(fetchHistory.since).toHaveBeenCalledWith(
+      paris("2026-10-14T08:00:00")
+    );
     expect(dailyBests.get(key("guild", "2026-10-14"))).toMatchObject({
       userId: "bob",
       heldSeconds: 4 * 3600,
@@ -990,21 +1000,22 @@ describe("FourHourGameService deletions and resync", () => {
       message("alice", paris("2026-10-12T20:00:00")),
       DELAY
     );
-    const fetchHistory = vi.fn(
-      history(
-        ["bob", paris("2026-10-13T23:00:00")],
-        ["carol", paris("2026-10-14T02:00:00")]
-      )
+    const fetchHistory = history(
+      ["bob", paris("2026-10-13T23:00:00")],
+      ["carol", paris("2026-10-14T02:00:00")]
     );
 
     await service.resyncLastMessage(
       "guild",
       "game",
       fetchHistory,
+      DELAY,
       paris("2026-10-14T10:00:00")
     );
 
-    expect(fetchHistory).toHaveBeenCalledWith(paris("2026-10-14T00:00:00"));
+    expect(fetchHistory.since).toHaveBeenCalledWith(
+      paris("2026-10-14T00:00:00")
+    );
     expect(dailyBests.get(key("guild", "2026-10-14"))).toMatchObject({
       userId: "bob",
       heldSeconds: 2 * 3600,
@@ -1030,7 +1041,8 @@ describe("FourHourGameService deletions and resync", () => {
         ["alice", paris("2026-10-14T10:00:00")],
         ["bob", paris("2026-10-14T10:30:00")],
         ["alice", paris("2026-10-14T11:30:00")]
-      )
+      ),
+      DELAY
     );
     expect(dailyBests.get(key("guild", "2026-10-14"))?.userId).toBe("zed");
     const result = await service.handleMessage(
@@ -1062,7 +1074,8 @@ describe("FourHourGameService deletions and resync", () => {
         ["bob", paris("2026-10-14T15:00:00")],
         ["alice", paris("2026-10-14T15:00:30")],
         ["carol", paris("2026-10-14T20:00:00")]
-      )
+      ),
+      DELAY
     );
     const closed = await service.closeDays(
       "guild",
@@ -1079,7 +1092,12 @@ describe("FourHourGameService deletions and resync", () => {
     await service.handleMessage(message("zed", start), DELAY);
     await service.handleMessage(message("alice", at(60)), DELAY);
 
-    await service.resyncLastMessage("guild", "game", history(["zed", start]));
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["zed", start]),
+      DELAY
+    );
 
     expect(lastMessages.get("guild")).toMatchObject({
       authorId: "zed",
@@ -1087,12 +1105,50 @@ describe("FourHourGameService deletions and resync", () => {
     });
   });
 
+  it("scores the 4h points of the replies seen while down, and returns them", async () => {
+    await service.handleMessage(message("zed", start), DELAY);
+
+    // zed held 5h before alice replied, alice 1h before bob: one point.
+    const caughtUp = await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["zed", start], ["alice", at(5 * 3600)], ["bob", at(6 * 3600)]),
+      DELAY
+    );
+
+    expect(caughtUp).toEqual([
+      { winnerId: "zed", score: 1, heldSeconds: 5 * 3600, heldSince: start },
+    ]);
+    expect(scores.get(key("guild", "zed"))).toBe(1);
+    expect(points).toEqual([
+      expect.objectContaining({
+        userId: "zed",
+        heldSeconds: 5 * 3600,
+        awardedAt: at(5 * 3600),
+      }),
+    ]);
+  });
+
+  it("scores no 4h point on replay without a valid delay", async () => {
+    await service.handleMessage(message("zed", start), DELAY);
+
+    const caughtUp = await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["zed", start], ["alice", at(5 * 3600)]),
+      0
+    );
+
+    expect(caughtUp).toEqual([]);
+    expect(scores.has(key("guild", "zed"))).toBe(false);
+  });
+
   it("forgets the stored message when no player message is left after a restart", async () => {
     await service.handleMessage(message("alice", start), DELAY);
 
     // Every player message was deleted while down: none can hold the
     // channel, as after a live deletion of the last one.
-    await service.resyncLastMessage("guild", "game", history());
+    await service.resyncLastMessage("guild", "game", history(), DELAY);
 
     expect(lastMessages.has("guild")).toBe(false);
   });
@@ -1106,7 +1162,8 @@ describe("FourHourGameService deletions and resync", () => {
     await service.resyncLastMessage(
       "guild",
       "game",
-      history(["zed", start], ["bob", at(7200)], ["carol", at(10800)])
+      history(["zed", start], ["bob", at(7200)], ["carol", at(10800)]),
+      DELAY
     );
 
     expect([...dailyBests.values()]).toEqual([
@@ -1124,7 +1181,8 @@ describe("FourHourGameService deletions and resync", () => {
     await service.resyncLastMessage(
       "guild",
       "game",
-      history(["bob", at(3600)])
+      history(["bob", at(3600)]),
+      DELAY
     );
 
     expect(dailyBests.size).toBe(0);
@@ -1144,6 +1202,7 @@ describe("FourHourGameService deletions and resync", () => {
       "guild",
       "game",
       history(["bob", paris("2026-10-11T09:00:00")]),
+      DELAY,
       paris("2026-10-14T10:00:00")
     );
 
@@ -1157,7 +1216,8 @@ describe("FourHourGameService deletions and resync", () => {
     await service.resyncLastMessage(
       "guild",
       "game",
-      history(["dave", at(3600)])
+      history(["dave", at(3600)]),
+      DELAY
     );
 
     expect(lastMessages.get("guild")).toMatchObject({

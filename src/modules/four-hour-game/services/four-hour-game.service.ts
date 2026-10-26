@@ -17,17 +17,44 @@ import { computeProfileStats, type ProfileStats } from "./profile.js";
 import type {
   ChannelMessage,
   GameMessage,
-  HistoryFetcher,
+  HistoryReader,
   LatestMessageFetcher,
 } from "./types.js";
 
 const logger = loggerMaker("four-hour-game");
+
+// The writes of a 4h point: the winner's score, and the point itself.
+function pointWrites(
+  guildId: string,
+  winnerId: string,
+  heldSeconds: number,
+  awardedAt: Date
+) {
+  return [
+    prisma.fourHourGameScore.upsert({
+      where: { guildId_userId: { guildId, userId: winnerId } },
+      create: { guildId, userId: winnerId, score: 1 },
+      update: { score: { increment: 1 } },
+    }),
+    prisma.fourHourGamePoint.create({
+      data: { guildId, userId: winnerId, heldSeconds, awardedAt },
+    }),
+  ] as const;
+}
 
 export type MessageResult =
   | Exclude<MessageOutcome, { kind: "point" }>
   | (Extract<MessageOutcome, { kind: "point" }> & { score: number });
 
 export type SetScoreResult = "created" | "updated";
+
+/** A 4h point scored while the bot was down, awarded when it restarts. */
+export interface CaughtUpPoint {
+  winnerId: string;
+  score: number;
+  heldSeconds: number;
+  heldSince: Date;
+}
 
 export interface PlayerRank {
   rank: number;
@@ -106,26 +133,17 @@ class FourHourGameService implements Service {
       return outcome;
     }
 
-    const [winner] = await prisma.$transaction([
-      prisma.fourHourGameScore.upsert({
-        where: { guildId_userId: { guildId, userId: outcome.winnerId } },
-        create: { guildId, userId: outcome.winnerId, score: 1 },
-        update: { score: { increment: 1 } },
-      }),
-      recordMessage,
-      prisma.fourHourGamePoint.create({
-        data: {
-          guildId,
-          userId: outcome.winnerId,
-          heldSeconds: outcome.heldSeconds,
-          awardedAt: sentAt,
-        },
-      }),
-    ]);
+    const [winner, point] = pointWrites(
+      guildId,
+      outcome.winnerId,
+      outcome.heldSeconds,
+      sentAt
+    );
+    const [score] = await prisma.$transaction([winner, recordMessage, point]);
 
     await this.recordDailyHold(guildId, held, sentAt);
     this.bumpRevision(guildId);
-    return { ...outcome, score: winner.score };
+    return { ...outcome, score: score.score };
   }
 
   private async getClosedDay(guildId: string, now: Date): Promise<string> {
@@ -295,20 +313,27 @@ class FourHourGameService implements Service {
     });
   }
 
+  /**
+   * Replays the messages posted while the bot was down, as if they had been
+   * seen live: the holds count for the point of the day, and a reply after
+   * `delaySeconds` scores the 4h point. Returns those points, oldest first,
+   * for the caller to announce.
+   */
   resyncLastMessage(
     guildId: string,
     channelId: string,
-    fetchHistory: HistoryFetcher,
+    history: HistoryReader,
+    delaySeconds: number,
     now: Date = new Date()
-  ): Promise<void> {
+  ): Promise<CaughtUpPoint[]> {
     return this.queue.run(guildId, async () => {
       const last = await prisma.fourHourGameLastMessage.findUnique({
         where: { guildId },
       });
       if (!last || last.channelId !== channelId) {
-        const latest = await fetchHistory(null);
+        const latest = await history.latest();
         await this.storeLastMessage(guildId, channelId, standingOf(latest));
-        return;
+        return [];
       }
 
       // Only the days not closed yet can be credited: reading further back
@@ -316,8 +341,8 @@ class FourHourGameService implements Service {
       const closedDay = await this.getClosedDay(guildId, now);
       const openSince = startOfDay(nextDay(closedDay));
       const since = last.sentAt < openSince ? openSince : last.sentAt;
-      const history = await fetchHistory(since);
-      const found = history.some(
+      const read = await history.since(since);
+      const found = read.some(
         (message) => message.messageId === last.messageId
       );
 
@@ -329,18 +354,18 @@ class FourHourGameService implements Service {
       // not reach is credited to nobody.
       const start: ChannelMessage | null = found
         ? last
-        : (standingOf(history.filter((message) => message.sentAt <= since)) ??
-          history[0] ??
+        : (standingOf(read.filter((message) => message.sentAt <= since)) ??
+          read[0] ??
           null);
       if (!start) {
         // No player message is left: none holds the channel, as after a live
         // deletion of the last one.
         await this.storeLastMessage(guildId, channelId, null);
-        return;
+        return [];
       }
       const holds: { authorId: string; from: Date; to: Date }[] = [];
       let current = start;
-      for (const message of history) {
+      for (const message of read) {
         if (
           message.sentAt > start.sentAt &&
           message.authorId !== current.authorId
@@ -354,17 +379,40 @@ class FourHourGameService implements Service {
         }
       }
       if (holds.length === 0 && found) {
-        return;
+        return [];
       }
 
+      const points: CaughtUpPoint[] = [];
       for (const hold of holds) {
         await this.creditHolds(
           guildId,
           hold.authorId,
           splitHold(hold.from, hold.to, closedDay)
         );
+        // The rule of a live reply (evaluateMessage): held for the delay.
+        if (
+          delaySeconds > 0 &&
+          hold.from.getTime() + delaySeconds * 1000 <= hold.to.getTime()
+        ) {
+          const heldSeconds = Math.floor(
+            (hold.to.getTime() - hold.from.getTime()) / 1000
+          );
+          const [score] = await prisma.$transaction([
+            ...pointWrites(guildId, hold.authorId, heldSeconds, hold.to),
+          ]);
+          points.push({
+            winnerId: hold.authorId,
+            score: score.score,
+            heldSeconds,
+            heldSince: hold.from,
+          });
+        }
       }
       await this.storeLastMessage(guildId, channelId, current);
+      if (points.length > 0) {
+        this.bumpRevision(guildId);
+      }
+      return points;
     });
   }
 
