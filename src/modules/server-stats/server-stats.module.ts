@@ -5,6 +5,7 @@ import memberRemoveListener from "./listeners/member-remove.listener.js";
 import messageCreateListener from "./listeners/message-create.listener.js";
 import reactionAddListener from "./listeners/reaction-add.listener.js";
 import { serverStatsConfigSchema } from "./server-stats.config.js";
+import store from "./services/store.js";
 import { serverStatsMaintenanceTasks, serverStatsTasks } from "./tasks.js";
 
 const serverStatsModule = defineModule({
@@ -42,6 +43,7 @@ const serverStatsModule = defineModule({
   },
 
   maintenanceTasks: serverStatsMaintenanceTasks,
+  deleteMemberData: (guildId, userId) => store.deleteMember(guildId, userId),
 });
 
 export default serverStatsModule;

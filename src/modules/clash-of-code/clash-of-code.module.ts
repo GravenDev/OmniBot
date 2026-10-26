@@ -6,6 +6,7 @@ import cocAdminCommand from "./commands/coc-admin.command.js";
 import cocCommand from "./commands/coc.command.js";
 import leaderboardPageButton from "./interactions/leaderboard-page.button.js";
 import messageCreateListener from "./listeners/message-create.listener.js";
+import store from "./services/store.js";
 import watcher from "./services/watcher.js";
 import { clashOfCodeTasks } from "./tasks.js";
 
@@ -45,6 +46,10 @@ const clashOfCodeModule = defineModule({
 
   onUninstall(_client, guild) {
     logger.info(`Module uninstalled | guildId = ${guild.id}`);
+  },
+
+  async deleteMemberData(guildId, userId) {
+    await store.unlink(guildId, userId);
   },
 });
 

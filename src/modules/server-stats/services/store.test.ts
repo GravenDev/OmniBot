@@ -159,3 +159,21 @@ describe("purgeBefore", () => {
     expect(prisma.serverStatsGuild.deleteMany).not.toHaveBeenCalled();
   });
 });
+
+describe("deleteMember", () => {
+  it("deletes the member's counters on that guild only", async () => {
+    await store.deleteMember("guild-1", "user-1");
+
+    expect(prisma.serverStatsMember.deleteMany).toHaveBeenCalledWith({
+      where: { guildId: "guild-1", userId: "user-1" },
+    });
+    for (const model of [
+      prisma.serverStatsDay,
+      prisma.serverStatsChannel,
+      prisma.serverStatsReaction,
+      prisma.serverStatsGuild,
+    ]) {
+      expect(model.deleteMany).not.toHaveBeenCalled();
+    }
+  });
+});

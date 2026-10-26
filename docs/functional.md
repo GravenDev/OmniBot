@@ -44,6 +44,20 @@ Le résultat de chaque action (succès ou raison du refus) s'affiche en tête de
 
 `/pings enabled:False` inscrit le membre sur la liste des personnes que le bot ne mentionne plus dans ses annonces sur ce serveur ; `/pings enabled:True` l'en retire. La liste est propre à chaque serveur et commune à tous les modules. Le nom du membre reste affiché dans les annonces, mais il n'en reçoit plus de notification. La réponse n'est visible que de lui.
 
+### `/privacy delete` — Supprimer ses données
+
+**Permission requise :** aucune
+
+Le bot répond, en message visible du membre seul, par la liste de ce qui sera supprimé et un bouton **Supprimer mes données**. Le bouton efface, sur ce serveur seulement et que les modules y soient activés ou non :
+
+- ses compteurs de Server Stats ;
+- au jeu des 4h, son score, son historique de points, ses points du jour, et le dernier message du salon de jeu s'il en est l'auteur ;
+- son compte, ses tirages, son rappel et ses cartes du jour RNGdle ;
+- le lien vers son joueur Clash of Code : le joueur et ses résultats, venus de CodinGame, restent au classement ;
+- sa préférence `/pings`.
+
+Les signalements ne sont pas touchés : ils restent aux modérateurs jusqu'à leur purge. Si une suppression échoue, les autres ont quand même lieu et le message invite à réessayer.
+
 ### Erreurs
 
 Quand une commande ou un bouton échoue, la réponse d'erreur n'est visible que du membre concerné et lui indique quoi faire : relancer la commande, et prévenir un administrateur si le problème persiste. Un bouton devenu invalide (module ou option de configuration disparus depuis l'affichage du message) invite à relancer la commande pour obtenir un message à jour. Si l'échec vient d'une permission ou d'un accès manquant au bot sur Discord, le message le dit explicitement : un administrateur doit vérifier les permissions du bot sur le serveur et dans le salon.
