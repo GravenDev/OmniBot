@@ -222,15 +222,24 @@ export interface EnumListConfigEntry<Values extends string = string> {
   display?: EnumDisplay;
 }
 
+export interface DurationConfigEntry {
+  name: string;
+  description: string;
+  type: ConfigType.DURATION;
+  defaultValue?: number;
+  max?: number;
+}
+
 export type ConfigEntry<T extends ConfigType> =
   // ENUM is excluded from the scalar/entity variants so a `type: ConfigType.ENUM`
   // entry can only satisfy the enum shapes below — which require `options`.
   // Without this, `{ type: ENUM }` would match SimpleConfigEntry and compile
   // without options, then fail at runtime building an empty select menu.
-  | SimpleConfigEntry<Exclude<T, ConfigType.ENUM>>
+  | SimpleConfigEntry<Exclude<T, ConfigType.ENUM | ConfigType.DURATION>>
   | ListConfigEntry<
       Exclude<T, ConfigType.ENUM | ConfigType.DURATION | ConfigType.EMOJI>
     >
+  | DurationConfigEntry
   | EnumConfigEntry
   | EnumListConfigEntry;
 
@@ -362,6 +371,15 @@ export class ConfigProvider<TSchema extends ConfigSchema> {
     // Defaults are not persisted (see ConfigService), so an unconfigured entry
     // reaches this branch and is resolved fresh against the current locale.
     if (stored !== undefined) {
+      const entry = this.module.config[key];
+      if (
+        entry?.type === ConfigType.DURATION &&
+        entry.max !== undefined &&
+        typeof stored === "number" &&
+        stored > entry.max
+      ) {
+        return entry.max as ConfigEntryValue<TSchema[TKey]>;
+      }
       return stored;
     }
     return this.resolveDefault(key);

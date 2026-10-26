@@ -23,6 +23,7 @@
   "config.number.invalid": "❌ `{{value}}` n'est pas un nombre valide.",
   "config.duration.invalid": "❌ `{{value}}` n'est pas une durée valide. Utilisez un nombre suivi de `s`, `m`, `h` ou `d`, par ex. `30s`, `4h`, `1h30m`.",
   "config.duration.placeholder": "ex. 30s, 5m, 4h, 1h30m, 3d",
+  "config.duration.tooLong": "❌ `{{value}}` dépasse la durée maximale de cette option : {{max}}.",
   "config.emoji.invalid": "❌ `{{value}}` n'est pas un emoji. Saisissez un seul emoji, comme 🚩, ou le nom d'un emoji du serveur, comme `:nom:`.",
   "config.emoji.placeholder": "ex. 🚩 ou :nom:",
 
