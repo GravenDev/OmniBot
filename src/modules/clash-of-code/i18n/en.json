@@ -58,12 +58,17 @@
 
   "importChannel.running": "A channel import is already running on this server.",
   "importChannel.searching": "Looking for Clash of Code links in {{channel}}…",
+  "importChannel.searchProgress": "Looking for Clash of Code links in {{channel}}… {{messages}} messages read, {{found}} games found.",
   "importChannel.indexing": "Discord is still indexing this server's messages for search. Try again in a few minutes.",
   "importChannel.noAccess": "The bot cannot read the history of {{channel}}.",
   "importChannel.searchFailed": "Searching the messages failed. Try again later.",
   "importChannel.none": "No Clash of Code link in {{channel}}.",
   "importChannel.progress": "{{channel}}: {{done}}/{{found}} games checked…",
-  "importChannel.done": "Import of {{channel}} done. Games found: {{found}} · imported: {{imported}} · already recorded: {{known}} · not finished: {{unfinished}} · unknown to CodinGame: {{unknown}} · failed: {{failed}}",
+  "importChannel.paused": "{{channel}}: {{done}}/{{found}} games checked. CodinGame is limiting requests: resuming <t:{{until}}:R>.",
+  "importChannel.done": "Import of {{channel}} done. {{counts}}",
+  "importChannel.stoppedTime": "Import of {{channel}} stopped before the command expires: {{remaining}} games left to check. Run the command again to continue; the games already recorded will be skipped. {{counts}}",
+  "importChannel.stoppedRateLimit": "Import of {{channel}} stopped: CodinGame asks to wait more than {{minutes}} minutes, and {{remaining}} games are left to check. Run the command again later to continue. {{counts}}",
+  "importChannel.counts": "Games found: {{found}} · imported: {{imported}} · already recorded: {{known}} · not finished: {{unfinished}} · unknown to CodinGame: {{unknown}} · failed: {{failed}}",
 
   "adminUnlink.done": "{{user}} is no longer linked to **{{player}}**.",
   "adminUnlink.none": "{{user}} has no linked CodinGame account."

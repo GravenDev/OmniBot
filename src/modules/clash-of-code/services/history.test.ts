@@ -99,4 +99,20 @@ describe("findChannelClashes", () => {
     await vi.advanceTimersByTimeAsync(10 * 30_000);
     await outcome;
   });
+
+  it("reports its progress after each page", async () => {
+    const api = rest(
+      page(
+        message("1", `https://www.codingame.com/clashofcode/clash/${A}`),
+        message("2", `https://www.codingame.com/clashofcode/clash/${A}`)
+      ),
+      page(message("3", `https://codingame.com/clashofcode/clash/${C}`))
+    );
+    const onProgress = vi.fn();
+    await findChannelClashes(api as never, "g", "chan", onProgress);
+    expect(onProgress.mock.calls).toEqual([
+      [{ messages: 2, found: 1 }],
+      [{ messages: 3, found: 2 }],
+    ]);
+  });
 });

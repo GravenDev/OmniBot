@@ -19,7 +19,11 @@ import {
   ClashNotFoundError,
   fetchClashReport,
 } from "#modules/clash-of-code/services/api.js";
-import { importClashes } from "#modules/clash-of-code/services/channel-import.js";
+import {
+  type ImportSummary,
+  importClashes,
+  MAX_RATE_LIMIT_PAUSE_MS,
+} from "#modules/clash-of-code/services/channel-import.js";
 import {
   findChannelClashes,
   SearchNotReadyError,
@@ -33,6 +37,9 @@ import {
 
 const HANDLE_PATTERN = /^[0-9a-f]{30,40}$/i;
 const PROGRESS_INTERVAL_MS = 5_000;
+// The reply can be edited for 15 minutes after the command: the import stops
+// before, so the admin always gets the summary, and running it again resumes.
+const IMPORT_BUDGET_MS = 13 * 60_000;
 const IMPORTABLE_CHANNELS = [
   ChannelType.GuildText,
   ChannelType.GuildAnnouncement,
@@ -121,6 +128,28 @@ async function importGame(interaction: Interaction, config: Config) {
   });
 }
 
+function summaryMessage(
+  config: Config,
+  vars: { channel: string },
+  summary: ImportSummary
+): string {
+  const counts = config.t("importChannel.counts", { ...summary });
+  if (summary.stopped === null) {
+    return config.t("importChannel.done", { ...vars, counts });
+  }
+  return config.t(
+    summary.stopped === "time"
+      ? "importChannel.stoppedTime"
+      : "importChannel.stoppedRateLimit",
+    {
+      ...vars,
+      counts,
+      remaining: summary.found - summary.done,
+      minutes: MAX_RATE_LIMIT_PAUSE_MS / 60_000,
+    }
+  );
+}
+
 /**
  * Imports every finished game linked in a channel, found through Discord's
  * message search. Nothing is posted in the channel: the admin gets a progress
@@ -152,12 +181,24 @@ async function importChannel(interaction: Interaction, config: Config) {
     };
     await edit(config.t("importChannel.searching", vars));
 
+    let lastProgress = Date.now();
+    const throttled = (content: () => string) => {
+      if (Date.now() - lastProgress >= PROGRESS_INTERVAL_MS) {
+        lastProgress = Date.now();
+        void edit(content());
+      }
+    };
+
     let clashes;
     try {
       clashes = await findChannelClashes(
         interaction.client.rest,
         guildId,
-        channel.id
+        channel.id,
+        (progress) =>
+          throttled(() =>
+            config.t("importChannel.searchProgress", { ...vars, ...progress })
+          )
       );
     } catch (err) {
       const noAccess =
@@ -184,17 +225,30 @@ async function importChannel(interaction: Interaction, config: Config) {
       return;
     }
 
-    let lastProgress = Date.now();
-    const summary = await importClashes(guildId, clashes, (progress) => {
-      if (Date.now() - lastProgress >= PROGRESS_INTERVAL_MS) {
-        lastProgress = Date.now();
-        void edit(config.t("importChannel.progress", { ...vars, ...progress }));
-      }
+    const summary = await importClashes(guildId, clashes, {
+      deadline: interaction.createdTimestamp + IMPORT_BUDGET_MS,
+      onProgress: (progress) => {
+        if (progress.pausedUntil !== null) {
+          // Shown right away: the next progress line only comes after it.
+          lastProgress = Date.now();
+          void edit(
+            config.t("importChannel.paused", {
+              ...vars,
+              ...progress,
+              until: Math.ceil(progress.pausedUntil / 1000),
+            })
+          );
+          return;
+        }
+        throttled(() =>
+          config.t("importChannel.progress", { ...vars, ...progress })
+        );
+      },
     });
     logger.info(
       `Channel imported | guildId = ${guildId} | channelId = ${channel.id} | by = ${interaction.user.id} | ${JSON.stringify(summary)}`
     );
-    await edit(config.t("importChannel.done", { ...vars, ...summary }));
+    await edit(summaryMessage(config, vars, summary));
   } finally {
     importingGuilds.delete(guildId);
   }

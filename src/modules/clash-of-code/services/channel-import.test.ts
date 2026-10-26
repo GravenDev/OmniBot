@@ -21,6 +21,7 @@ vi.mock("./store.js", () => ({ default: mocks.store }));
 import { ClashNotFoundError, ClashRateLimitedError } from "./api.js";
 import {
   importClashes,
+  MAX_RATE_LIMIT_PAUSE_MS,
   MAX_RATE_LIMIT_RETRIES,
   RATE_LIMIT_PAUSE_MS,
   REQUEST_SPACING_MS,
@@ -85,6 +86,8 @@ describe("importClashes", () => {
       unfinished: 1,
       unknown: 1,
       failed: 1,
+      stopped: null,
+      pausedUntil: null,
     });
     expect(mocks.store.importReport).toHaveBeenCalledWith("g", report(), {
       channelId: "chan",
@@ -140,12 +143,61 @@ describe("importClashes", () => {
   it("reports its progress after each game", async () => {
     mocks.fetchClashReport.mockResolvedValue(report());
     const onProgress = vi.fn();
-    const result = importClashes("g", ["a", "b"].map(clash), onProgress);
+    const result = importClashes("g", ["a", "b"].map(clash), { onProgress });
     await vi.advanceTimersByTimeAsync(2 * REQUEST_SPACING_MS);
     await result;
     expect(onProgress).toHaveBeenCalledTimes(2);
     expect(onProgress).toHaveBeenLastCalledWith(
       expect.objectContaining({ done: 2, found: 2 })
     );
+  });
+
+  it("reports a pause, with when it resumes", async () => {
+    mocks.fetchClashReport
+      .mockRejectedValueOnce(new ClashRateLimitedError("a", 20_000))
+      .mockResolvedValue(report());
+    const onProgress = vi.fn();
+    const result = importClashes("g", [clash("a")], { onProgress });
+    await vi.advanceTimersByTimeAsync(20_000);
+    await result;
+    expect(onProgress.mock.calls[0]![0]).toMatchObject({
+      done: 0,
+      pausedUntil: Date.now(),
+    });
+    expect(onProgress).toHaveBeenLastCalledWith(
+      expect.objectContaining({ done: 1, pausedUntil: null })
+    );
+  });
+
+  it("stops instead of waiting longer than it allows", async () => {
+    mocks.fetchClashReport.mockRejectedValue(
+      new ClashRateLimitedError("a", MAX_RATE_LIMIT_PAUSE_MS + 1)
+    );
+    const summary = await run(["a", "b"].map(clash), REQUEST_SPACING_MS);
+    expect(summary).toMatchObject({ stopped: "rateLimit", done: 0, failed: 0 });
+  });
+
+  it("starts no game past its deadline", async () => {
+    mocks.fetchClashReport.mockResolvedValue(report());
+    const result = importClashes("g", ["a", "b", "c", "d"].map(clash), {
+      deadline: Date.now() + REQUEST_SPACING_MS + 1,
+    });
+    await vi.advanceTimersByTimeAsync(10 * REQUEST_SPACING_MS);
+    await expect(result).resolves.toMatchObject({
+      stopped: "time",
+      found: 4,
+      done: 2,
+    });
+  });
+
+  it("stops rather than pause past its deadline", async () => {
+    mocks.fetchClashReport.mockRejectedValue(
+      new ClashRateLimitedError("a", 20_000)
+    );
+    const late = importClashes("g", [clash("a")], {
+      deadline: Date.now() + 10_000,
+    });
+    await vi.advanceTimersByTimeAsync(REQUEST_SPACING_MS);
+    await expect(late).resolves.toMatchObject({ stopped: "time", done: 0 });
   });
 });

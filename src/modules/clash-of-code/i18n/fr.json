@@ -58,12 +58,17 @@
 
   "importChannel.running": "Un import de salon est déjà en cours sur ce serveur.",
   "importChannel.searching": "Recherche des liens de Clash of Code dans {{channel}}…",
+  "importChannel.searchProgress": "Recherche des liens de Clash of Code dans {{channel}}… {{messages}} messages parcourus, {{found}} parties trouvées.",
   "importChannel.indexing": "Discord indexe encore les messages du serveur pour la recherche. Réessayez dans quelques minutes.",
   "importChannel.noAccess": "Le bot ne peut pas lire l'historique de {{channel}}.",
   "importChannel.searchFailed": "La recherche des messages a échoué. Réessayez plus tard.",
   "importChannel.none": "Aucun lien de Clash of Code dans {{channel}}.",
   "importChannel.progress": "{{channel}} : {{done}}/{{found}} parties vérifiées…",
-  "importChannel.done": "Import de {{channel}} terminé. Parties trouvées : {{found}} · importées : {{imported}} · déjà enregistrées : {{known}} · pas terminées : {{unfinished}} · inconnues de CodinGame : {{unknown}} · en échec : {{failed}}",
+  "importChannel.paused": "{{channel}} : {{done}}/{{found}} parties vérifiées. CodinGame limite les requêtes : reprise <t:{{until}}:R>.",
+  "importChannel.done": "Import de {{channel}} terminé. {{counts}}",
+  "importChannel.stoppedTime": "Import de {{channel}} interrompu avant que la commande expire : il reste {{remaining}} parties à vérifier. Relancez la commande pour continuer, les parties déjà enregistrées seront passées. {{counts}}",
+  "importChannel.stoppedRateLimit": "Import de {{channel}} interrompu : CodinGame demande d'attendre plus de {{minutes}} minutes, et il reste {{remaining}} parties à vérifier. Relancez la commande plus tard pour continuer. {{counts}}",
+  "importChannel.counts": "Parties trouvées : {{found}} · importées : {{imported}} · déjà enregistrées : {{known}} · pas terminées : {{unfinished}} · inconnues de CodinGame : {{unknown}} · en échec : {{failed}}",
 
   "adminUnlink.done": "{{user}} n'est plus lié à **{{player}}**.",
   "adminUnlink.none": "{{user}} n'a aucun compte CodinGame lié."
