@@ -86,6 +86,35 @@ describe("task scheduler", () => {
     });
   });
 
+  it("skips a task with an invalid schedule and schedules the next ones", async () => {
+    const next = vi.fn(async () => {});
+    startModuleTasks(
+      client,
+      moduleWith(
+        declareTask({ id: "broken", schedule: "not a cron", run: vi.fn() }),
+        declareTask({
+          id: "next",
+          schedule: "0 0 1 1 *",
+          runOnStart: true,
+          run: next,
+        })
+      )
+    );
+
+    await vi.waitFor(() => expect(next).toHaveBeenCalledOnce());
+  });
+
+  it("survives maintenance tasks that fail to build", () => {
+    expect(() =>
+      startMaintenanceTasks(client, {
+        ...moduleWith(),
+        maintenanceTasks: () => {
+          throw new Error("boom");
+        },
+      } as unknown as Module)
+    ).not.toThrow();
+  });
+
   it("does not run other tasks before their schedule", async () => {
     const run = vi.fn(async () => {});
     startModuleTasks(
