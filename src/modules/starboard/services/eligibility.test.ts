@@ -37,6 +37,7 @@ function fakeMessage(overrides: Record<string, unknown> = {}) {
   return {
     system: false,
     webhookId: null,
+    client: { user: { id: "me" } },
     author: { id: "author", bot: false, ...(author as object) },
     channel: {
       id: "general",
@@ -78,6 +79,14 @@ describe("ineligibility", () => {
     expect(
       ineligibility(fakeMessage({ system: true }), fakeStarboard(), config())
     ).toBe("system");
+  });
+
+  it("never reposts the bot's own messages, such as old reposts", () => {
+    const own = fakeMessage({ author: { id: "me", bot: true } });
+
+    expect(
+      ineligibility(own, fakeStarboard(), config({ ignoreBots: false }))
+    ).toBe("bot");
   });
 
   it("refuses bots and webhooks unless configured otherwise", () => {

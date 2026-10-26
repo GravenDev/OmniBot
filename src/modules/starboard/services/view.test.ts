@@ -230,4 +230,23 @@ describe("starboardMessage", () => {
 
     expect(texts.join("").length).toBeLessThanOrEqual(4000);
   });
+
+  it("keeps a link preview hidden when its link is under a spoiler", () => {
+    const embed = {
+      url: "https://example.com/ending.png",
+      title: "The ending",
+      description: "big reveal",
+      data: { type: "image" },
+      image: { url: "https://example.com/ending.png" },
+    };
+    const { json } = render(
+      fakeMessage({
+        content: "look ||https://example.com/ending.png||",
+        embeds: [embed],
+      })
+    );
+
+    expect(json).toContain('"spoiler":true');
+    expect(json).not.toContain("big reveal");
+  });
 });

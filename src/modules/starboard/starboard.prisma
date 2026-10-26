@@ -2,11 +2,13 @@ model StarboardEntry {
   messageId          String   @id
   guildId            String
   channelId          String
+  parentChannelId    String?
   starboardChannelId String
   starboardMessageId String?  @unique
   tally              Json?
   createdAt          DateTime @default(now())
 
   @@index([guildId, channelId])
+  @@index([guildId, parentChannelId])
   @@index([guildId, starboardChannelId])
 }

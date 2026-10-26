@@ -63,7 +63,7 @@ Le module Messages collants enregistre, pour chaque salon configuré, le texte d
 
 ### Starboard
 
-Le module Starboard enregistre, pour chaque message reposté, les ID du serveur, du message d'origine et de son salon, et du repost et de son salon. Il n'enregistre ni le texte du message ni qui y a réagi : le repost, publié sur le serveur, contient le texte, et les réactions ne sont lues que pour compter les membres qui ont réagi.
+Le module Starboard enregistre, pour chaque message reposté, les ID du serveur, du message d'origine, de son salon et du parent de ce salon, et du repost et de son salon, ainsi que le nombre de réactions par emoji. Il n'enregistre ni le texte du message ni qui y a réagi : le repost, publié sur le serveur, contient le texte, et les réactions ne sont lues que pour compter les membres qui ont réagi.
 
 ### Statistiques d'activité
 
