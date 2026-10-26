@@ -61,6 +61,10 @@ Le module Auto React enregistre, pour chaque salon configuré, l'emoji à ajoute
 
 Le module Messages collants enregistre, pour chaque salon configuré, le texte du message collant écrit par un administrateur et l'ID de sa dernière publication. Il n'enregistre rien sur les membres et ne lit pas leurs messages : un nouveau message déclenche seulement la republication.
 
+### Starboard
+
+Le module Starboard enregistre, pour chaque message reposté, les ID du serveur, du message d'origine et de son salon, et du repost et de son salon. Il n'enregistre ni le texte du message ni qui y a réagi : le repost, publié sur le serveur, contient le texte, et les réactions ne sont lues que pour compter les membres qui ont réagi.
+
 ### Statistiques d'activité
 
 Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, avec la date à laquelle le suivi a commencé sur le serveur, jamais le contenu des messages ni l'identité des membres qui arrivent ou partent. Ces compteurs sont supprimés au bout de 90 jours. Le bilan quotidien publié sur le serveur peut citer les membres les plus actifs ; les administrateurs peuvent le désactiver.
@@ -75,9 +79,10 @@ Certains modules lisent le contenu des messages pour fonctionner, sans l'enregis
 - **LaTeX** lit les messages pour repérer les formules et les rendre en image ;
 - **Thread Creator** peut reprendre les 50 premiers caractères d'un message dans le nom du fil qu'il crée ;
 - **RNGdle** lit les messages du seul salon RNGdle, pour reconnaître un résultat collé et y répondre avec une carte ;
-- **Clash of Code** lit les messages des salons choisis par les administrateurs (tous les salons si aucun n'est choisi), pour repérer les liens de partie : seul l'identifiant de la partie est conservé.
+- **Clash of Code** lit les messages des salons choisis par les administrateurs (tous les salons si aucun n'est choisi), pour repérer les liens de partie : seul l'identifiant de la partie est conservé ;
+- **Starboard** lit un message qui reçoit des réactions, pour en reposter l'auteur, le texte, les images, les embeds et le message auquel il répond dans le salon starboard, jamais dans un salon visible par des personnes qui ne peuvent pas lire le salon d'origine.
 
-Ce que ces modules publient reste sur le serveur Discord, sous le contrôle de ses administrateurs. Le bot ignore les messages des autres bots, à trois exceptions : Auto React leur ajoute aussi sa réaction, Messages collants republie aussi son message après eux, tous deux sans les lire, et Message Quote cite le message d'un bot quand un membre en poste le lien.
+Ce que ces modules publient reste sur le serveur Discord, sous le contrôle de ses administrateurs. Le bot ignore les messages des autres bots, à quatre exceptions : Auto React leur ajoute aussi sa réaction, Messages collants republie aussi son message après eux, tous deux sans les lire, Message Quote cite le message d'un bot quand un membre en poste le lien, et Starboard reposte le message d'un bot quand les administrateurs l'autorisent.
 
 ## Stockage des données
 
@@ -93,6 +98,7 @@ Les données sont stockées dans une base de données PostgreSQL gérée par l'o
 - **Clash of Code** : les parties, les joueurs et leurs résultats sont conservés sans limite de durée, pour l'historique du classement. La liaison à un compte Discord est retirée quand le membre se délie avec `/coc unlink`, ou qu'un administrateur le délie.
 - **Préférence de mention et réactions automatiques** : conservées jusqu'à ce que le membre, ou un administrateur, les retire.
 - **Messages collants** : conservés jusqu'à ce qu'un administrateur les retire avec `/sticky remove`, ou que le salon soit supprimé.
+- **Starboard** : une entrée est supprimée avec le message d'origine, avec son repost quand il repasse sous le seuil et que les administrateurs ont choisi de le retirer, quand le salon ou le fil d'origine est supprimé (le repost l'est aussi), ou quand le salon starboard est supprimé. Quand un modérateur supprime un repost, l'entrée est conservée pour que le message ne soit plus jamais reposté.
 
 Pour demander la suppression de vos données, contactez l'opérateur de l'instance.
 

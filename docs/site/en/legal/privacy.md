@@ -61,6 +61,10 @@ The Auto React module stores, for each configured channel, the emoji to add. It 
 
 The Sticky Messages module stores, for each configured channel, the text of the sticky message written by an administrator and the ID of its last post. It stores nothing about members and does not read their messages: a new message only triggers the repost.
 
+### Starboard
+
+The Starboard module stores, for each reposted message, the IDs of the guild, of the original message and its channel, and of the repost and its channel. It does not store the text of the message nor who reacted to it: the repost, posted on the guild, holds the text, and the reactions are only read to count the members who reacted.
+
 ### Activity Statistics
 
 When the Server Stats module is enabled on a guild, the bot counts every day, per guild, the messages per channel and per member, the reactions per emoji, and the members joining and leaving. Only counters are stored, along with the date tracking started on the guild, never message content nor who joined or left. These counters are deleted after 90 days. The daily report posted on the guild may list the most active members; administrators can turn this off.
@@ -75,9 +79,10 @@ Some modules read message content to work, without saving it to the database:
 - **LaTeX** reads messages to find formulas and render them as images;
 - **Thread Creator** can use the first 50 characters of a message in the name of the thread it creates;
 - **RNGdle** reads messages in the RNGdle channel only, to recognize a pasted result and reply with a card;
-- **Clash of Code** reads messages in the channels chosen by the administrators (every channel when none is chosen), to spot game links: only the game identifier is kept.
+- **Clash of Code** reads messages in the channels chosen by the administrators (every channel when none is chosen), to spot game links: only the game identifier is kept;
+- **Starboard** reads a message that gets reactions, to repost its author, text, images, embeds and the message it replies to in the starboard channel, never in a channel visible to people who cannot read the original one.
 
-What these modules post stays on the Discord server, under the control of its administrators. The bot ignores messages from other bots, with three exceptions: Auto React also adds its reaction to them, Sticky Messages also reposts its message after them, both without reading them, and Message Quote quotes a bot's message when a member posts its link.
+What these modules post stays on the Discord server, under the control of its administrators. The bot ignores messages from other bots, with four exceptions: Auto React also adds its reaction to them, Sticky Messages also reposts its message after them, both without reading them, Message Quote quotes a bot's message when a member posts its link, and Starboard reposts a bot's message when the administrators allow it.
 
 ## Data Storage
 
@@ -93,6 +98,7 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 - **Clash of Code**: games, players and their results are kept with no time limit, for the leaderboard's history. The link to a Discord account is removed when the member unlinks with `/coc unlink`, or an administrator unlinks them.
 - **Mention preference and automatic reactions**: kept until the member, or an administrator, removes them.
 - **Sticky messages**: kept until an administrator removes them with `/sticky remove`, or the channel is deleted.
+- **Starboard**: an entry is deleted with the original message, with its repost when it falls below the threshold and the administrators chose to remove it, when the original channel or thread is deleted (the repost is deleted too), or when the starboard channel is deleted. When a moderator deletes a repost, the entry is kept so that the message is never reposted.
 
 To request deletion of your data, contact the instance operator.
 
