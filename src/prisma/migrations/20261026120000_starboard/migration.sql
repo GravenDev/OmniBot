@@ -5,6 +5,7 @@ CREATE TABLE "StarboardEntry" (
     "channelId" TEXT NOT NULL,
     "starboardChannelId" TEXT NOT NULL,
     "starboardMessageId" TEXT,
+    "tally" JSONB,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "StarboardEntry_pkey" PRIMARY KEY ("messageId")

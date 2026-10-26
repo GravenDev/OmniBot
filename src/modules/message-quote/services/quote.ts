@@ -13,10 +13,12 @@ import {
 import {
   excludedIdsOf,
   isExcluded,
+  isNsfw,
   READ_PERMISSIONS,
   widensAudience,
 } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { truncate } from "#lib/format.js";
 import { stripHiddenText } from "#lib/hidden-text.js";
 import type { TFunction } from "#lib/i18n.js";
 import { NO_MENTIONS_REPLY } from "#lib/mentions.js";
@@ -66,11 +68,6 @@ export function parseMessageLinks(
     }
   }
   return links;
-}
-
-export function isNsfw(channel: GuildBasedChannel): boolean {
-  const base = channel.isThread() ? channel.parent : channel;
-  return !!base && "nsfw" in base && base.nsfw;
 }
 
 function isOwnQuote(quoted: Message<true>): boolean {
@@ -131,23 +128,6 @@ export async function resolveQuote(
   }
   const quoted = await channel.messages.fetch(link.messageId).catch(() => null);
   return quoted && !isOwnQuote(quoted) ? quoted : null;
-}
-
-export function truncate(text: string, limit: number): string {
-  if (text.length <= limit) {
-    return text;
-  }
-  let kept = "";
-  for (const character of text) {
-    if (kept.length + character.length > limit - 1) {
-      break;
-    }
-    kept += character;
-  }
-  if (kept.split("||").length % 2 === 0) {
-    kept = kept.slice(0, kept.lastIndexOf("||"));
-  }
-  return `${kept}…`;
 }
 
 function isImage(attachment: Attachment): boolean {

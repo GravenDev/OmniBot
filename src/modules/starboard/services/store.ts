@@ -1,5 +1,6 @@
-import prisma from "#lib/database.js";
+import prisma, { Prisma } from "#lib/database.js";
 import { declareService, type Service } from "#lib/service.js";
+import type { Tally } from "./tally.js";
 
 export interface StarboardEntry {
   messageId: string;
@@ -7,28 +8,61 @@ export interface StarboardEntry {
   channelId: string;
   starboardChannelId: string;
   starboardMessageId: string | null;
+  tally: Tally | null;
+}
+
+type Row = Omit<StarboardEntry, "tally"> & { tally: Prisma.JsonValue };
+
+function entryOf(row: Row): StarboardEntry {
+  return { ...row, tally: row.tally as Tally | null };
 }
 
 class StarboardStore implements Service {
-  find(messageId: string): Promise<StarboardEntry | null> {
-    return prisma.starboardEntry.findUnique({ where: { messageId } });
+  async find(messageId: string): Promise<StarboardEntry | null> {
+    const row = await prisma.starboardEntry.findUnique({
+      where: { messageId },
+    });
+    return row && entryOf(row);
   }
 
-  findInvolving(messageId: string): Promise<StarboardEntry | null> {
-    return prisma.starboardEntry.findFirst({
-      where: { OR: [{ messageId }, { starboardMessageId: messageId }] },
+  async findInvolving(messageIds: string[]): Promise<StarboardEntry[]> {
+    const rows = await prisma.starboardEntry.findMany({
+      where: {
+        OR: [
+          { messageId: { in: messageIds } },
+          { starboardMessageId: { in: messageIds } },
+        ],
+      },
     });
+    return rows.map(entryOf);
   }
 
   async create(entry: StarboardEntry): Promise<void> {
-    await prisma.starboardEntry.create({ data: entry });
+    await prisma.starboardEntry.create({
+      data: {
+        ...entry,
+        tally: entry.tally
+          ? (entry.tally as unknown as Prisma.InputJsonObject)
+          : Prisma.DbNull,
+      },
+    });
   }
 
-  listForChannel(
+  async saveTally(messageId: string, tally: Tally): Promise<void> {
+    await prisma.starboardEntry.updateMany({
+      where: { messageId },
+      data: { tally: tally as unknown as Prisma.InputJsonObject },
+    });
+  }
+
+  async listForChannel(
     guildId: string,
     channelId: string
   ): Promise<StarboardEntry[]> {
-    return prisma.starboardEntry.findMany({ where: { guildId, channelId } });
+    const rows = await prisma.starboardEntry.findMany({
+      where: { guildId, channelId },
+    });
+    return rows.map(entryOf);
   }
 
   async dismiss(messageId: string, starboardMessageId: string): Promise<void> {

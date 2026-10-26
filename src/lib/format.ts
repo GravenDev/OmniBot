@@ -71,3 +71,20 @@ export function decimalSeparator(locale: string): string {
       .find((part) => part.type === "decimal")?.value ?? "."
   );
 }
+
+export function truncate(text: string, limit: number): string {
+  if (text.length <= limit) {
+    return text;
+  }
+  let kept = "";
+  for (const character of text) {
+    if (kept.length + character.length > limit - 1) {
+      break;
+    }
+    kept += character;
+  }
+  if (kept.split("||").length % 2 === 0) {
+    kept = kept.slice(0, kept.lastIndexOf("||"));
+  }
+  return `${kept}…`;
+}

@@ -34,6 +34,11 @@ function grants(
   return permissions.has(required);
 }
 
+export function isNsfw(channel: GuildBasedChannel): boolean {
+  const base = channel.isThread() ? channel.parent : channel;
+  return !!base && "nsfw" in base && base.nsfw;
+}
+
 export function widensAudience(
   source: GuildBasedChannel,
   destination: GuildBasedChannel,

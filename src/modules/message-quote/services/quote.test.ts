@@ -10,34 +10,18 @@ import {
   type Message,
 } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
+import { isNsfw } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { MessageQuoteConfigSchema } from "#modules/message-quote/message-quote.config.js";
 import {
   canRead,
-  isNsfw,
   MAX_QUOTES,
   parseMessageLinks,
   quoteEmbed,
   quoteLinks,
   quoteReply,
   resolveQuote,
-  truncate,
 } from "./quote.js";
-
-describe("truncate", () => {
-  it("never splits an emoji and stays within the UTF-16 limit", () => {
-    const truncated = truncate("😀".repeat(600), 1024);
-    expect(truncated.length).toBeLessThanOrEqual(1024);
-    expect(truncated.endsWith("😀…")).toBe(true);
-  });
-
-  it("drops a spoiler the cut would leave open", () => {
-    expect(truncate(`intro ||${"secret ".repeat(20)}||`, 30)).toBe("intro …");
-    expect(truncate(`||a|| ${"b".repeat(40)}`, 20)).toBe(
-      `||a|| ${"b".repeat(13)}…`
-    );
-  });
-});
 
 const GUILD = "100";
 

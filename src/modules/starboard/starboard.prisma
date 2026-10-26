@@ -4,6 +4,7 @@ model StarboardEntry {
   channelId          String
   starboardChannelId String
   starboardMessageId String?  @unique
+  tally              Json?
   createdAt          DateTime @default(now())
 
   @@index([guildId, channelId])

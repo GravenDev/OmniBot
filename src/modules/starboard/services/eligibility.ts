@@ -1,5 +1,4 @@
 import {
-  type GuildBasedChannel,
   type GuildTextBasedChannel,
   type Message,
   PermissionFlagsBits,
@@ -7,6 +6,7 @@ import {
 import {
   excludedIdsOf,
   isExcluded,
+  isNsfw,
   widensAudience,
 } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
@@ -27,11 +27,6 @@ const REQUIRED_PERMISSIONS = [
   PermissionFlagsBits.ViewChannel,
   PermissionFlagsBits.SendMessages,
 ];
-
-function isNsfw(channel: GuildBasedChannel): boolean {
-  const base = channel.isThread() ? channel.parent : channel;
-  return !!base && "nsfw" in base && base.nsfw;
-}
 
 export function starboardChannelOf(
   config: Config

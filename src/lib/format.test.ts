@@ -5,6 +5,7 @@ import {
   formatInteger,
   formatPercentage,
   preview,
+  truncate,
 } from "./format.js";
 
 describe("preview", () => {
@@ -86,5 +87,25 @@ describe("describeLines", () => {
   it("counts a single hidden line", () => {
     const lines = Array.from({ length: 41 }, () => "x".repeat(99));
     expect(describeLines(lines, more).split("\n").at(-1)).toBe("+1");
+  });
+});
+
+describe("truncate", () => {
+  it("never splits an emoji", () => {
+    expect(truncate("ab😀c", 4)).toBe("ab…");
+    expect(truncate("😀😀😀😀", 5)).toBe("😀😀…");
+  });
+
+  it("stays within the limit counted the way Discord counts it", () => {
+    const truncated = truncate("😀".repeat(600), 1024);
+    expect(truncated.length).toBeLessThanOrEqual(1024);
+    expect(truncated.endsWith("😀…")).toBe(true);
+  });
+
+  it("drops a spoiler the cut would leave open", () => {
+    expect(truncate(`intro ||${"secret ".repeat(20)}||`, 30)).toBe("intro …");
+    expect(truncate(`||a|| ${"b".repeat(40)}`, 20)).toBe(
+      `||a|| ${"b".repeat(13)}…`
+    );
   });
 });

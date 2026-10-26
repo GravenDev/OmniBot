@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   starboard: {
     refresh: vi.fn(),
     refreshIfStarred: vi.fn(),
-    handleDeletion: vi.fn(),
+    handleDeletions: vi.fn(),
     handleChannelDeletion: vi.fn(),
   },
 }));
@@ -98,7 +98,7 @@ describe("reaction removals", () => {
 });
 
 describe("messageDeleteBulk", () => {
-  it("handles every deleted message", async () => {
+  it("hands every deleted message to the service at once", async () => {
     const channel = { client: {} };
 
     await messageDeleteBulkListener.execute(
@@ -110,12 +110,8 @@ describe("messageDeleteBulk", () => {
       config
     );
 
-    expect(mocks.starboard.handleDeletion).toHaveBeenCalledWith(
-      "a",
-      channel.client
-    );
-    expect(mocks.starboard.handleDeletion).toHaveBeenCalledWith(
-      "b",
+    expect(mocks.starboard.handleDeletions).toHaveBeenCalledWith(
+      ["a", "b"],
       channel.client
     );
   });

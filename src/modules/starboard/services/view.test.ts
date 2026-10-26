@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { createT } from "#lib/i18n.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import { initTestI18n } from "#lib/testing.js";
-import en from "../i18n/en.json" with { type: "json" };
+import en from "#modules/starboard/i18n/en.json" with { type: "json" };
 import { counterLine, starboardMessage } from "./view.js";
 
 const t = createT("en", "starboard");
