@@ -54,6 +54,16 @@ function bodyOf(message: Message): { body: Body; forwarded: boolean } {
   return { body: message, forwarded: false };
 }
 
+const SPOILER = /\|\|([\s\S]+?)\|\|/g;
+
+function isSpoilered(embed: Embed, content: string): boolean {
+  const url = embed.url;
+  return (
+    !!url &&
+    [...content.matchAll(SPOILER)].some(([, hidden]) => hidden!.includes(url))
+  );
+}
+
 function embedText(embed: Embed): string | null {
   const parts = [
     embed.title ? `**${embed.title}**` : null,
@@ -78,6 +88,13 @@ function embedMedia(embed: Embed): string | undefined {
 }
 
 function gallery(body: Body): GalleryItem[] {
+  const embedItems: GalleryItem[] = [];
+  for (const embed of body.embeds) {
+    const url = embedMedia(embed);
+    if (url) {
+      embedItems.push({ url, spoiler: isSpoilered(embed, body.content) });
+    }
+  }
   const items: GalleryItem[] = [
     ...body.attachments.filter(isMedia).map((attachment) => ({
       url: attachment.url,
@@ -86,10 +103,7 @@ function gallery(body: Body): GalleryItem[] {
     ...body.stickers
       .filter((sticker) => sticker.format !== StickerFormatType.Lottie)
       .map((sticker) => ({ url: sticker.url, spoiler: false })),
-    ...body.embeds
-      .map(embedMedia)
-      .filter((url): url is string => !!url)
-      .map((url) => ({ url, spoiler: false })),
+    ...embedItems,
   ];
   return items.slice(0, GALLERY_LIMIT);
 }
@@ -105,7 +119,10 @@ function extras(body: Body, t: TFunction): string {
     length += line.length + 1;
     return true;
   };
-  for (const embed of body.embeds.slice(0, SHOWN_EMBEDS)) {
+  const visible = body.embeds.filter(
+    (embed) => !isSpoilered(embed, body.content)
+  );
+  for (const embed of visible.slice(0, SHOWN_EMBEDS)) {
     const text = embedText(embed);
     if (text) {
       add(text);

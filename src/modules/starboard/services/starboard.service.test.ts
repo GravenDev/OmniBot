@@ -68,11 +68,12 @@ const client = {
   },
 };
 
-function fakeMessage(channelId = "general") {
+function fakeMessage(channelId = "general", parentId: string | null = null) {
   const message = {
     id: "m1",
     guildId: "g1",
     channelId,
+    channel: { isThread: () => parentId !== null, parentId },
     type: MessageType.Default,
     client,
     inGuild: () => true,
@@ -96,6 +97,7 @@ const entry = {
   messageId: "m1",
   guildId: "g1",
   channelId: "general",
+  parentChannelId: null,
   starboardChannelId: "board",
   starboardMessageId: "sb1",
   tally: null,
@@ -134,6 +136,14 @@ describe("refresh of a message not yet on the starboard", () => {
       ...entry,
       tally: { reactions: [{ emoji: "⭐", count: 3 }], total: 3 },
     });
+  });
+
+  it("records the parent of a message posted in a thread", async () => {
+    await starboard.refresh(fakeMessage("thread", "forum") as never, config());
+
+    expect(mocks.store.create).toHaveBeenCalledWith(
+      expect.objectContaining({ channelId: "thread", parentChannelId: "forum" })
+    );
   });
 
   it("does not fetch a cached message below the threshold", async () => {
@@ -318,6 +328,31 @@ describe("refresh of a message already on the starboard", () => {
     });
   });
 
+  it("does not edit the repost when the count did not change", async () => {
+    mocks.store.find.mockResolvedValue({
+      ...entry,
+      tally: { reactions: [{ emoji: "⭐", count: 3 }], total: 3 },
+    });
+
+    await starboard.refresh(fakeMessage() as never, config());
+
+    expect(starboardMessages.edit).not.toHaveBeenCalled();
+    expect(mocks.store.saveTally).not.toHaveBeenCalled();
+  });
+
+  it("keeps a repost a moderator deleted meanwhile dismissed", async () => {
+    mocks.tally.tallyReactions.mockResolvedValue({ reactions: [], total: 0 });
+    starboardMessages.delete.mockRejectedValueOnce(apiError(10008));
+
+    await starboard.refresh(
+      fakeMessage() as never,
+      config({ belowThreshold: "remove" })
+    );
+
+    expect(mocks.store.dismiss).toHaveBeenCalledWith("m1", "sb1");
+    expect(mocks.store.remove).not.toHaveBeenCalled();
+  });
+
   it("re-renders an edit with the stored count", async () => {
     mocks.store.find.mockResolvedValue({ ...entry, tally: stored });
 
@@ -479,5 +514,29 @@ describe("handleDeletions", () => {
     expect(mocks.store.findInvolving).toHaveBeenCalledWith(["m1", "sb2", "x"]);
     expect(mocks.store.remove).toHaveBeenCalledWith("m1");
     expect(mocks.store.dismiss).toHaveBeenCalledWith("m2", "sb2");
+  });
+});
+
+describe("deletion of a repost while its original is refreshed", () => {
+  it("waits for the refresh before dismissing", async () => {
+    mocks.store.find.mockResolvedValue(entry);
+    mocks.store.findInvolving.mockResolvedValue([entry]);
+    let release = () => {};
+    starboardMessages.edit.mockImplementationOnce(
+      () =>
+        new Promise<undefined>((resolve) => {
+          release = () => resolve(undefined);
+        })
+    );
+    const refreshing = starboard.refresh(fakeMessage() as never, config());
+    await vi.waitFor(() => expect(starboardMessages.edit).toHaveBeenCalled());
+
+    const deletion = starboard.handleDeletion("sb1", client as never);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(mocks.store.dismiss).not.toHaveBeenCalled();
+
+    release();
+    await Promise.all([refreshing, deletion]);
+    expect(mocks.store.dismiss).toHaveBeenCalledWith("m1", "sb1");
   });
 });

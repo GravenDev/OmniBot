@@ -63,7 +63,7 @@ The Sticky Messages module stores, for each configured channel, the text of the 
 
 ### Starboard
 
-The Starboard module stores, for each reposted message, the IDs of the guild, of the original message and its channel, and of the repost and its channel. It does not store the text of the message nor who reacted to it: the repost, posted on the guild, holds the text, and the reactions are only read to count the members who reacted.
+The Starboard module stores, for each reposted message, the IDs of the guild, of the original message, its channel and that channel's parent, and of the repost and its channel, along with the number of reactions per emoji. It does not store the text of the message nor who reacted to it: the repost, posted on the guild, holds the text, and the reactions are only read to count the members who reacted.
 
 ### Activity Statistics
 

@@ -6,6 +6,7 @@ export interface StarboardEntry {
   messageId: string;
   guildId: string;
   channelId: string;
+  parentChannelId: string | null;
   starboardChannelId: string;
   starboardMessageId: string | null;
   tally: Tally | null;
@@ -60,7 +61,7 @@ class StarboardStore implements Service {
     channelId: string
   ): Promise<StarboardEntry[]> {
     const rows = await prisma.starboardEntry.findMany({
-      where: { guildId, channelId },
+      where: { guildId, OR: [{ channelId }, { parentChannelId: channelId }] },
     });
     return rows.map(entryOf);
   }
@@ -80,7 +81,11 @@ class StarboardStore implements Service {
     await prisma.starboardEntry.deleteMany({
       where: {
         guildId,
-        OR: [{ channelId }, { starboardChannelId: channelId }],
+        OR: [
+          { channelId },
+          { parentChannelId: channelId },
+          { starboardChannelId: channelId },
+        ],
       },
     });
   }

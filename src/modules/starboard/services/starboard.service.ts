@@ -51,6 +51,10 @@ export function isCounted(
 
 type Mode = "edited" | "starred" | "any";
 
+function sameTally(a: Tally, b: Tally | null): boolean {
+  return !!b && JSON.stringify(a) === JSON.stringify(b);
+}
+
 const MODE_RANK: Record<Mode, number> = { edited: 0, starred: 1, any: 2 };
 
 interface Pending {
@@ -83,7 +87,9 @@ class StarboardService implements Service {
       if (entry.messageId === messageId) {
         await this.discard(messageId, client);
       } else {
-        await store.dismiss(entry.messageId, messageId);
+        await this.queue.run(entry.messageId, () =>
+          store.dismiss(entry.messageId, messageId)
+        );
       }
     });
   }
@@ -104,7 +110,7 @@ class StarboardService implements Service {
         );
       } else if (entry.starboardMessageId) {
         const starboardMessageId = entry.starboardMessageId;
-        await this.queue.run(starboardMessageId, () =>
+        await this.queue.run(entry.messageId, () =>
           store.dismiss(entry.messageId, starboardMessageId)
         );
       }
@@ -274,6 +280,9 @@ class StarboardService implements Service {
         messageId: message.id,
         guildId: message.guildId,
         channelId: message.channelId,
+        parentChannelId: message.channel.isThread()
+          ? message.channel.parentId
+          : null,
         starboardChannelId: starboard.id,
         starboardMessageId: sent.id,
         tally,
@@ -322,7 +331,10 @@ class StarboardService implements Service {
         tally.total < thresholdOf(config) &&
         config.get("belowThreshold") === "remove"
       ) {
-        await this.discard(message.id, message.client);
+        await this.discard(message.id, message.client, true);
+        return;
+      }
+      if (sameTally(tally, entry.tally) && !contentOnly) {
         return;
       }
       await store.saveTally(message.id, tally);
@@ -341,11 +353,16 @@ class StarboardService implements Service {
     }
   }
 
-  private async discard(messageId: string, client: Client): Promise<void> {
+  private async discard(
+    messageId: string,
+    client: Client,
+    dismissIfGone = false
+  ): Promise<void> {
     const entry = await store.find(messageId);
     if (!entry) {
       return;
     }
+    let gone = false;
     if (entry.starboardMessageId) {
       const channel = await this.starboardChannel(
         client,
@@ -359,10 +376,16 @@ class StarboardService implements Service {
               { err },
               `Repost not deleted, missing permissions | messageId = ${messageId}`
             );
-          } else if (!isApiError(err, ...GONE)) {
+          } else if (isApiError(err, ...GONE)) {
+            gone = true;
+          } else {
             throw err;
           }
         });
+    }
+    if (gone && dismissIfGone && entry.starboardMessageId) {
+      await store.dismiss(messageId, entry.starboardMessageId);
+      return;
     }
     await store.remove(messageId);
   }

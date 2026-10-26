@@ -52,7 +52,24 @@ describe("StarboardStore", () => {
     expect(prisma.starboardEntry.deleteMany).toHaveBeenCalledWith({
       where: {
         guildId: "g1",
-        OR: [{ channelId: "c1" }, { starboardChannelId: "c1" }],
+        OR: [
+          { channelId: "c1" },
+          { parentChannelId: "c1" },
+          { starboardChannelId: "c1" },
+        ],
+      },
+    });
+  });
+
+  it("lists the entries of a channel and of its threads", async () => {
+    prisma.starboardEntry.findMany.mockResolvedValue([]);
+
+    await store.listForChannel("g1", "forum");
+
+    expect(prisma.starboardEntry.findMany).toHaveBeenCalledWith({
+      where: {
+        guildId: "g1",
+        OR: [{ channelId: "forum" }, { parentChannelId: "forum" }],
       },
     });
   });

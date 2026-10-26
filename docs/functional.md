@@ -381,14 +381,14 @@ Reposte dans un salon dédié les messages qui reçoivent assez de réactions, e
 ### Comportement automatique
 
 - Un message est reposté quand assez de membres différents ont réagi avec l'un des emojis configurés. Les super réactions comptent comme les autres, et un membre qui réagit avec plusieurs de ces emojis ne compte qu'une fois ; les bots ne comptent jamais, l'auteur du message seulement si l'auto-star est activé.
-- Le repost reprend l'auteur, le salon, la date, le texte (1500 caractères au plus), les images et vidéos, les stickers, les embeds (titre, description, image), la liste des autres fichiers, le message auquel il répond, et le contenu d'un message transféré. Un bouton renvoie au message d'origine. Personne n'est mentionné : ni l'auteur affiché, ni les mentions du texte.
+- Le repost reprend l'auteur, le salon, la date, le texte (1500 caractères au plus), les images et vidéos, les stickers, les embeds (titre, description, image), la liste des autres fichiers, le message auquel il répond, et le contenu d'un message transféré. Un bouton renvoie au message d'origine. Personne n'est mentionné : ni l'auteur affiché, ni les mentions du texte. Un aperçu de lien caché sous un spoiler reste flouté, sans son titre ni sa description.
 - Le compteur du repost suit chaque réaction ajoutée ou retirée, la suppression d'un emoji ou de toutes les réactions, et la modification du message d'origine. Les réactions sur le repost lui-même ne comptent pas. Une rafale de réactions ne déclenche qu'un recomptage à la fois par message.
 - Quand les réactions repassent sous le seuil, le repost est conservé avec son compteur, ou supprimé si `belowThreshold` vaut `remove` ; dans ce cas, il peut revenir si le seuil est de nouveau atteint.
 - Si le message d'origine est supprimé, son repost l'est aussi. Si un modérateur supprime le repost, le message n'est plus jamais reposté.
-- Ne sont jamais repostés : les messages du salon starboard et de ses fils, les messages système, ceux des bots et des webhooks (sauf si `ignoreBots` est désactivé), ceux des salons exclus ou hors des salons surveillés, ceux d'un salon NSFW vers un starboard qui ne l'est pas, et ceux d'un salon que des membres voyant le starboard ne peuvent pas lire (le repost élargirait leur audience).
+- Ne sont jamais repostés : les messages du salon starboard et de ses fils, les messages système, ceux du bot lui-même (dont les reposts d'un ancien salon starboard), ceux des bots et des webhooks (sauf si `ignoreBots` est désactivé), ceux des salons exclus ou hors des salons surveillés, ceux d'un salon NSFW vers un starboard qui ne l'est pas, et ceux d'un salon que des membres voyant le starboard ne peuvent pas lire (le repost élargirait leur audience).
 - Si le bot ne peut pas voir le salon starboard ou y écrire, rien n'est reposté. Changer de salon starboard laisse les anciens reposts en place ; leur compteur continue d'être mis à jour.
 - Si le salon d'origine devient NSFW ou que des membres voyant le starboard ne peuvent plus le lire, le repost est supprimé à la réaction ou à la modification suivante.
-- La suppression d'un salon ou d'un fil supprime les reposts de ses messages ; celle du salon starboard oublie ses reposts.
+- La suppression d'un salon, d'un forum ou d'un fil supprime les reposts de ses messages, fils compris ; celle du salon starboard oublie ses reposts.
 
 ### Configuration — `/config starboard`
 

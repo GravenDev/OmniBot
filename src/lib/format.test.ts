@@ -102,10 +102,18 @@ describe("truncate", () => {
     expect(truncated.endsWith("😀…")).toBe(true);
   });
 
-  it("drops a spoiler the cut would leave open", () => {
-    expect(truncate(`intro ||${"secret ".repeat(20)}||`, 30)).toBe("intro …");
+  it("closes a spoiler the cut would leave open", () => {
+    const truncated = truncate(`intro ||${"secret ".repeat(20)}||`, 30);
+    expect(truncated).toBe(`intro ||${"secret ".repeat(2)}secre||…`);
+    expect(truncated.length).toBeLessThanOrEqual(30);
     expect(truncate(`||a|| ${"b".repeat(40)}`, 20)).toBe(
       `||a|| ${"b".repeat(13)}…`
+    );
+  });
+
+  it("keeps the text around a lone || such as code", () => {
+    expect(truncate(`a || b ${"c".repeat(40)}`, 20)).toBe(
+      `a || b ${"c".repeat(10)}||…`
     );
   });
 });

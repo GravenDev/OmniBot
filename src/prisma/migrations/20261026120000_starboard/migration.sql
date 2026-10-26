@@ -3,6 +3,7 @@ CREATE TABLE "StarboardEntry" (
     "messageId" TEXT NOT NULL,
     "guildId" TEXT NOT NULL,
     "channelId" TEXT NOT NULL,
+    "parentChannelId" TEXT,
     "starboardChannelId" TEXT NOT NULL,
     "starboardMessageId" TEXT,
     "tally" JSONB,
@@ -16,6 +17,9 @@ CREATE UNIQUE INDEX "StarboardEntry_starboardMessageId_key" ON "StarboardEntry"(
 
 -- CreateIndex
 CREATE INDEX "StarboardEntry_guildId_channelId_idx" ON "StarboardEntry"("guildId", "channelId");
+
+-- CreateIndex
+CREATE INDEX "StarboardEntry_guildId_parentChannelId_idx" ON "StarboardEntry"("guildId", "parentChannelId");
 
 -- CreateIndex
 CREATE INDEX "StarboardEntry_guildId_starboardChannelId_idx" ON "StarboardEntry"("guildId", "starboardChannelId");

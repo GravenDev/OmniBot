@@ -55,6 +55,9 @@ export function ineligibility(
   if (message.system) {
     return "system";
   }
+  if (message.author.id === message.client.user.id) {
+    return "bot";
+  }
   if (config.get("ignoreBots") && (message.author.bot || message.webhookId)) {
     return "bot";
   }
