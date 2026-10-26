@@ -77,6 +77,12 @@ export interface ModuleDeclaration<ConfigType extends ConfigSchema = {}> {
    */
   onUninstall?: (client: Client, guild: Guild, registry: Registry) => void;
 
+  /**
+   * Tasks that keep stored data within its retention period, such as purges.
+   * Unlike tasks registered from `onLoad`, they are scheduled for every
+   * discovered module, even one skipped for a missing privileged intent or
+   * whose `onLoad` failed.
+   */
   maintenanceTasks?: () => ScheduledTask[];
 }
 

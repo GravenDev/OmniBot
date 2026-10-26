@@ -1,5 +1,5 @@
 import type { Client } from "discord.js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
 import type { ServerStatsConfigSchema } from "./server-stats.config.js";
 
@@ -62,6 +62,10 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("postReport", () => {
   it("posts the report without pinging anyone", async () => {
     const send = vi.fn(async () => ({}));
@@ -114,7 +118,6 @@ describe("daily-report task", () => {
       timezone: "Europe/Paris",
     });
     await task!.run(client);
-    vi.useRealTimers();
 
     expect(mocks.dailyStats).toHaveBeenCalledWith(
       "guild-1",
@@ -155,7 +158,6 @@ describe("purge maintenance task", () => {
       timezone: "Europe/Paris",
     });
     await task!.run(client);
-    vi.useRealTimers();
 
     expect(mocks.purgeBefore).toHaveBeenCalledWith(
       new Date("2026-07-15T00:00:00Z")

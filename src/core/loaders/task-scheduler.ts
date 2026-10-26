@@ -33,27 +33,42 @@ export function startMaintenanceTasks(
   client: Client<true>,
   module: Module
 ): void {
+  let tasks: ScheduledTask[];
+  try {
+    tasks = module.maintenanceTasks?.() ?? [];
+  } catch (err) {
+    // Runs during startup, before the core is loaded: one module failing
+    // must not stop the others or the core.
+    logger.error(
+      { err },
+      `Maintenance tasks failed to build | module = ${module.id}`
+    );
+    return;
+  }
   // Own namespace, so that a maintenance task can never take the name of a
   // task the module registers from onLoad.
-  scheduleTasks(
-    client,
-    `${module.id}:maintenance`,
-    module.maintenanceTasks?.() ?? []
-  );
+  scheduleTasks(client, `${module.id}:maintenance`, tasks);
 }
 
 function scheduleTasks(
   client: Client<true>,
-  moduleId: string,
+  prefix: string,
   tasks: readonly ScheduledTask[]
 ): void {
   for (const task of tasks) {
-    const name = `${moduleId}:${task.id}`;
-    const job = new Cron(
-      task.schedule,
-      { name, timezone: task.timezone ?? "UTC", protect: true },
-      () => runTask(client, name, task)
-    );
+    const name = `${prefix}:${task.id}`;
+    let job: Cron;
+    try {
+      // Throws on an invalid schedule or timezone, or a name already taken.
+      job = new Cron(
+        task.schedule,
+        { name, timezone: task.timezone ?? "UTC", protect: true },
+        () => runTask(client, name, task)
+      );
+    } catch (err) {
+      logger.error({ err }, `Task not scheduled | task = ${name}`);
+      continue;
+    }
     jobs.push(job);
     logger.info(
       `Task scheduled | task = ${name} | schedule = ${task.schedule} | next = ${job.nextRun()?.toISOString()}`
