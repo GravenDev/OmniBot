@@ -35,6 +35,13 @@ export interface LinkedClash {
   messageId: string;
 }
 
+export interface SearchProgress {
+  /** Messages read so far, all of them holding a CodinGame link. */
+  messages: number;
+  /** Distinct games found so far. */
+  found: number;
+}
+
 export class SearchNotReadyError extends Error {
   constructor() {
     super("Discord is still indexing the guild for search");
@@ -79,9 +86,11 @@ async function searchPage(
 export async function findChannelClashes(
   rest: REST,
   guildId: string,
-  channelId: string
+  channelId: string,
+  onProgress: (progress: SearchProgress) => void = () => undefined
 ): Promise<LinkedClash[]> {
   const found = new Map<string, LinkedClash>();
+  let messagesRead = 0;
   let after: string | undefined;
   for (;;) {
     const messages = await searchPage(rest, guildId, channelId, after);
@@ -103,6 +112,8 @@ export async function findChannelClashes(
         }
       }
     }
+    messagesRead += messages.length;
+    onProgress({ messages: messagesRead, found: found.size });
     after = last.id;
   }
   return [...found.values()];

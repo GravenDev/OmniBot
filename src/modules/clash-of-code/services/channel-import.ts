@@ -13,11 +13,17 @@ const logger = loggerMaker("clash-of-code");
 // A channel can hold hundreds of links: CodinGame is asked gently, a couple of
 // games at a time with a gap between requests. When it still answers 429 (the
 // API client already retried), every worker pauses for as long as it asks, and
-// the game is tried again rather than counted as failed.
+// the game is tried again rather than counted as failed. Past
+// MAX_RATE_LIMIT_PAUSE_MS, the import stops instead: a server asking for that
+// long would turn an earlier retry down anyway.
 export const CONCURRENCY = 2;
 export const REQUEST_SPACING_MS = 500;
 export const RATE_LIMIT_PAUSE_MS = 60_000;
+export const MAX_RATE_LIMIT_PAUSE_MS = 5 * 60_000;
 export const MAX_RATE_LIMIT_RETRIES = 5;
+
+/** Why an import stopped before checking every game. */
+export type StopReason = "time" | "rateLimit";
 
 export interface ImportSummary {
   found: number;
@@ -27,6 +33,15 @@ export interface ImportSummary {
   unfinished: number;
   unknown: number;
   failed: number;
+  stopped: StopReason | null;
+  /** While CodinGame makes the import wait: when it resumes (epoch ms). */
+  pausedUntil: number | null;
+}
+
+export interface ImportOptions {
+  /** No game is started, nor waited for, past this time (epoch ms). */
+  deadline?: number;
+  onProgress?: (summary: ImportSummary) => void;
 }
 
 type Outcome = "imported" | "known" | "unfinished" | "unknown" | "failed";
@@ -53,14 +68,20 @@ class Pacer {
 async function importOne(
   guildId: string,
   clash: LinkedClash,
-  pacer: Pacer
-): Promise<Outcome> {
+  pacer: Pacer,
+  deadline: number,
+  onPause: (until: number) => void
+): Promise<Outcome | StopReason> {
   for (let attempt = 0; ; attempt++) {
     try {
       if (await store.isKnown(guildId, clash.handle)) {
         return "known";
       }
       await pacer.turn();
+      // The turn may come after the deadline, behind the other worker's.
+      if (Date.now() >= deadline) {
+        return "time";
+      }
       const report = await fetchClashReport(clash.handle);
       if (!report.finished || !report.started) {
         return "unfinished";
@@ -79,10 +100,20 @@ async function importOne(
         attempt < MAX_RATE_LIMIT_RETRIES
       ) {
         const pauseMs = err.retryAfterMs ?? RATE_LIMIT_PAUSE_MS;
+        if (pauseMs > MAX_RATE_LIMIT_PAUSE_MS) {
+          logger.warn(
+            `CodinGame asks to wait too long, stopping the import | guildId = ${guildId} | pauseMs = ${pauseMs}`
+          );
+          return "rateLimit";
+        }
+        if (Date.now() + pauseMs >= deadline) {
+          return "time";
+        }
         logger.warn(
           `CodinGame rate limit, pausing the import | guildId = ${guildId} | pauseMs = ${pauseMs}`
         );
         pacer.pause(pauseMs);
+        onPause(Date.now() + pauseMs);
         continue;
       }
       logger.warn(
@@ -94,11 +125,18 @@ async function importOne(
   }
 }
 
-/** Imports the finished games among `clashes`, without posting anything. */
+/**
+ * Imports the finished games among `clashes`, without posting anything. When
+ * it stops early (`stopped`), running it again resumes: the games already
+ * imported are skipped without asking CodinGame.
+ */
 export async function importClashes(
   guildId: string,
   clashes: LinkedClash[],
-  onProgress: (summary: ImportSummary) => void = () => undefined
+  {
+    deadline = Number.POSITIVE_INFINITY,
+    onProgress = () => undefined,
+  }: ImportOptions = {}
 ): Promise<ImportSummary> {
   const summary: ImportSummary = {
     found: clashes.length,
@@ -108,13 +146,29 @@ export async function importClashes(
     unfinished: 0,
     unknown: 0,
     failed: 0,
+    stopped: null,
+    pausedUntil: null,
+  };
+  const onPause = (until: number) => {
+    summary.pausedUntil = until;
+    onProgress({ ...summary });
   };
   const pacer = new Pacer();
   let next = 0;
   const worker = async () => {
-    while (next < clashes.length) {
+    while (next < clashes.length && !summary.stopped) {
+      if (Date.now() >= deadline) {
+        summary.stopped = "time";
+        break;
+      }
       const clash = clashes[next++]!;
-      summary[await importOne(guildId, clash, pacer)]++;
+      const outcome = await importOne(guildId, clash, pacer, deadline, onPause);
+      summary.pausedUntil = null;
+      if (outcome === "time" || outcome === "rateLimit") {
+        summary.stopped ??= outcome;
+        break;
+      }
+      summary[outcome]++;
       summary.done++;
       onProgress({ ...summary });
     }
