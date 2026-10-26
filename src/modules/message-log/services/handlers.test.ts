@@ -204,7 +204,7 @@ describe("logDeletion", () => {
     expect(payload.files).toHaveLength(0);
   });
 
-  it("hides the content of a channel more private than the log channel", async () => {
+  it("shows the content of a channel more private than the log channel", async () => {
     const { config, send } = fakeConfig();
     await logDeletion(
       fakeMessage({
@@ -220,11 +220,9 @@ describe("logDeletion", () => {
       noDeleter
     );
     const [payload] = send.mock.calls[0] as unknown as [
-      { embeds: { data: { description: string } }[]; files: unknown[] },
+      { embeds: { data: { description: string } }[] },
     ];
-    expect(payload.embeds[0]!.data.description).toContain("hidden");
-    expect(payload.embeds[0]!.data.description).not.toContain("secret plan");
-    expect(payload.files).toHaveLength(0);
+    expect(payload.embeds[0]!.data.description).toContain("secret plan");
   });
 });
 
@@ -257,7 +255,7 @@ describe("logEdit", () => {
     expect(send).toHaveBeenCalledOnce();
   });
 
-  it("hides both versions of an edit in a more private channel", async () => {
+  it("shows both versions of an edit in a more private channel", async () => {
     const { config, send } = fakeConfig();
     const channel = fakeSourceChannel(
       "thread",
@@ -271,10 +269,9 @@ describe("logEdit", () => {
       config
     );
     const [payload] = send.mock.calls[0] as unknown as [
-      { embeds: { data: { description: string; fields?: unknown[] } }[] },
+      { embeds: { data: { fields?: unknown[] } }[] },
     ];
-    expect(payload.embeds[0]!.data.description).toContain("hidden");
-    expect(payload.embeds[0]!.data.fields ?? []).toHaveLength(0);
+    expect(payload.embeds[0]!.data.fields).toHaveLength(2);
   });
 
   it("ignores updates that keep the content, like an embed loading", async () => {

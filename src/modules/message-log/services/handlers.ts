@@ -50,10 +50,7 @@ export async function logDeletion(
     message.author.id,
     message.channelId
   );
-  await send(
-    target,
-    deletedLog(message, config.t, deletedBy, target.withContent)
-  );
+  await send(target, deletedLog(message, config.t, deletedBy));
 }
 
 export async function logBulkDeletion(
@@ -67,10 +64,7 @@ export async function logBulkDeletion(
   if (!target) {
     return;
   }
-  await send(
-    target,
-    bulkDeleteLog(messages, channel.id, config.t, target.withContent)
-  );
+  await send(target, bulkDeleteLog(messages, channel.id, config.t));
 }
 
 export async function logEdit(
@@ -92,5 +86,5 @@ export async function logEdit(
   if (!target) {
     return;
   }
-  await send(target, editedLog(before, after, config.t, target.withContent));
+  await send(target, editedLog(before, after, config.t));
 }
