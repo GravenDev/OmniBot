@@ -22,7 +22,5 @@
   "bulk.title": "🗑️ {{count}} messages deleted at once in {{channel}}",
   "bulk.known": "Known content: {{count}} (attached file).",
 
-  "hidden": "🔒 *Content not shown: more people can see the log channel than the original channel.*",
-
   "footer": "Author ID: {{authorId}} | Message ID: {{messageId}}"
 }

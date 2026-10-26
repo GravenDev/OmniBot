@@ -467,7 +467,7 @@ Les messages des bots, des webhooks et les messages système, ceux des salons et
 | `excludedCategories` | Catégories (liste) | Catégories dont les messages des salons ne sont pas consignés.    |
 | `logEdits`           | Booléen            | Consigne aussi les messages modifiés. Activé par défaut.          |
 
-Un forum ou un fil précis ne se sélectionne pas dans les salons exclus : excluez sa catégorie. Dans le salon des logs, le bot a besoin de _Voir le salon_, d'_Envoyer des messages_, d'_Intégrer des liens_ et de _Joindre des fichiers_. Sans les trois premières, rien n'est consigné ; sans la dernière, les logs partent sans fichier joint. Le salon des logs doit être réservé au staff. Quand un rôle voit le salon des logs sans pouvoir lire le salon d'origine (ou que le message vient d'un fil privé), le log est publié sans le contenu ni les fichiers, avec la mention « Contenu masqué ». Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
+Un forum ou un fil précis ne se sélectionne pas dans les salons exclus : excluez sa catégorie. Dans le salon des logs, le bot a besoin de _Voir le salon_, d'_Envoyer des messages_, d'_Intégrer des liens_ et de _Joindre des fichiers_. Sans les trois premières, rien n'est consigné ; sans la dernière, les logs partent sans fichier joint. Le salon des logs doit être réservé au staff : le contenu des messages y est publié quel que soit le salon d'origine, fils privés compris. Pour ne pas consigner un salon sensible, excluez-le. Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
 
 ---
 

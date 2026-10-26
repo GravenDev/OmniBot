@@ -3,17 +3,12 @@ import {
   type GuildTextBasedChannel,
   PermissionFlagsBits,
 } from "discord.js";
-import {
-  excludedIdsOf,
-  isExcluded,
-  widensAudience,
-} from "#lib/channel-audience.js";
+import { excludedIdsOf, isExcluded } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { MessageLogConfigSchema } from "#modules/message-log/message-log.config.js";
 
 export interface LogTarget {
   channel: GuildTextBasedChannel;
-  withContent: boolean;
   withFiles: boolean;
 }
 
@@ -46,7 +41,6 @@ export function logTargetFor(
   }
   return {
     channel: logChannel,
-    withContent: !widensAudience(source, logChannel),
     withFiles: !permissions || permissions.has(PermissionFlagsBits.AttachFiles),
   };
 }

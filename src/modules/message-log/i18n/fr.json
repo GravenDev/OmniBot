@@ -22,7 +22,5 @@
   "bulk.title": "🗑️ {{count}} messages supprimés d'un coup dans {{channel}}",
   "bulk.known": "Contenus connus : {{count}} (fichier joint).",
 
-  "hidden": "🔒 *Contenu masqué : le salon des logs est visible par plus de monde que le salon d'origine.*",
-
   "footer": "ID auteur : {{authorId}} | ID message : {{messageId}}"
 }
