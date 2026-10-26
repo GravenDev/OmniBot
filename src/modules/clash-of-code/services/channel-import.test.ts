@@ -200,4 +200,19 @@ describe("importClashes", () => {
     await vi.advanceTimersByTimeAsync(REQUEST_SPACING_MS);
     await expect(late).resolves.toMatchObject({ stopped: "time", done: 0 });
   });
+
+  it("records every game it checked, and none it left", async () => {
+    mocks.fetchClashReport.mockImplementation(async (handle: string) => {
+      if (handle === "unknown") throw new ClashNotFoundError(handle);
+      return report();
+    });
+    const checked = new Set<string>();
+    const result = importClashes("g", ["a", "unknown", "c", "d"].map(clash), {
+      deadline: Date.now() + REQUEST_SPACING_MS + 1,
+      checked,
+    });
+    await vi.advanceTimersByTimeAsync(10 * REQUEST_SPACING_MS);
+    await expect(result).resolves.toMatchObject({ stopped: "time", done: 2 });
+    expect([...checked]).toEqual(["a", "unknown"]);
+  });
 });
