@@ -42,6 +42,11 @@ export interface ImportOptions {
   /** No game is started, nor waited for, past this time (epoch ms). */
   deadline?: number;
   onProgress?: (summary: ImportSummary) => void;
+  /**
+   * Gets the handle of every game checked, whatever its outcome: a later run
+   * can leave them out and go on with the others.
+   */
+  checked?: Set<string>;
 }
 
 type Outcome = "imported" | "known" | "unfinished" | "unknown" | "failed";
@@ -126,9 +131,8 @@ async function importOne(
 }
 
 /**
- * Imports the finished games among `clashes`, without posting anything. When
- * it stops early (`stopped`), running it again resumes: the games already
- * imported are skipped without asking CodinGame.
+ * Imports the finished games among `clashes`, without posting anything. It
+ * can stop early (`stopped`): the games it checked are in `checked`.
  */
 export async function importClashes(
   guildId: string,
@@ -136,6 +140,7 @@ export async function importClashes(
   {
     deadline = Number.POSITIVE_INFINITY,
     onProgress = () => undefined,
+    checked,
   }: ImportOptions = {}
 ): Promise<ImportSummary> {
   const summary: ImportSummary = {
@@ -170,6 +175,7 @@ export async function importClashes(
       }
       summary[outcome]++;
       summary.done++;
+      checked?.add(clash.handle);
       onProgress({ ...summary });
     }
   };

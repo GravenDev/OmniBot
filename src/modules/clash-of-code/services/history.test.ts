@@ -4,7 +4,12 @@ vi.mock("node:timers/promises", () => ({
   setTimeout: (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)),
 }));
 
-import { findChannelClashes, SearchNotReadyError } from "./history.js";
+import {
+  newSearchState,
+  type SearchProgress,
+  searchChannelClashes,
+  SearchNotReadyError,
+} from "./history.js";
 
 const A = "a".repeat(40);
 const B = "b".repeat(40);
@@ -17,6 +22,24 @@ function message(id: string, content: string, bot = false) {
 // The search nests each message in its own array.
 function page(...messages: ReturnType<typeof message>[]) {
   return { messages: messages.map((m) => [m]), total_results: messages.length };
+}
+
+// A whole search from scratch: the clashes found.
+async function findChannelClashes(
+  api: never,
+  guildId: string,
+  channelId: string,
+  onProgress?: (progress: SearchProgress) => void
+) {
+  const state = newSearchState();
+  await searchChannelClashes(
+    api,
+    guildId,
+    channelId,
+    state,
+    onProgress ? { onProgress } : {}
+  );
+  return [...state.found.values()];
 }
 
 function rest(...responses: unknown[]) {
@@ -57,6 +80,7 @@ describe("findChannelClashes", () => {
     expect(Object.fromEntries(query)).toMatchObject({
       channel_id: "chan",
       link_hostname: "codingame.com",
+      include_nsfw: "true",
       sort_by: "timestamp",
       sort_order: "asc",
     });
@@ -114,5 +138,48 @@ describe("findChannelClashes", () => {
       [{ messages: 2, found: 1 }],
       [{ messages: 3, found: 2 }],
     ]);
+  });
+
+  it("stops at its deadline, then goes on from where it stopped", async () => {
+    vi.useFakeTimers({ now: 0 });
+    const api = {
+      get: vi
+        .fn()
+        .mockImplementationOnce(async () => {
+          vi.setSystemTime(1_000);
+          return page(
+            message("1", `https://www.codingame.com/clashofcode/clash/${A}`)
+          );
+        })
+        .mockResolvedValueOnce(
+          page(message("2", `https://www.codingame.com/clashofcode/clash/${B}`))
+        )
+        .mockResolvedValue({ messages: [] }),
+    };
+    const state = newSearchState();
+
+    await expect(
+      searchChannelClashes(api as never, "g", "chan", state, {
+        deadline: 1_000,
+      })
+    ).resolves.toBe(false);
+    expect([...state.found.keys()]).toEqual([A]);
+
+    await expect(
+      searchChannelClashes(api as never, "g", "chan", state)
+    ).resolves.toBe(true);
+    expect([...state.found.keys()]).toEqual([A, B]);
+    expect(api.get.mock.calls[1]![1].query.get("min_id")).toBe("1");
+  });
+
+  it("does not wait for the indexing past its deadline", async () => {
+    vi.useFakeTimers({ now: 0 });
+    const api = { get: vi.fn().mockResolvedValue({ code: 110000 }) };
+    await expect(
+      searchChannelClashes(api as never, "g", "chan", newSearchState(), {
+        deadline: 1_000,
+      })
+    ).resolves.toBe(false);
+    expect(api.get).toHaveBeenCalledTimes(1);
   });
 });
