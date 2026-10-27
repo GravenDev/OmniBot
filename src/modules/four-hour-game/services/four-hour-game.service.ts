@@ -28,18 +28,26 @@ import type {
 
 const logger = loggerMaker("four-hour-game");
 
-// The write of the last message, or its removal when none is left.
+// The write of the last message, or its removal when none is left. Without
+// `scoringFrom`, a message already in place keeps its own (it replaced one
+// without scoring, or is back after a deletion); a new one starts at its time.
 function lastMessageWrite(
   guildId: string,
   channelId: string,
   latest: ChannelMessage | null,
+  scoringFrom?: Date,
   db: Prisma.TransactionClient = prisma
 ) {
   return latest
     ? db.fourHourGameLastMessage.upsert({
         where: { guildId },
-        create: { guildId, channelId, ...latest },
-        update: { channelId, ...latest },
+        create: {
+          guildId,
+          channelId,
+          ...latest,
+          scoringFrom: scoringFrom ?? latest.sentAt,
+        },
+        update: { channelId, ...latest, ...(scoringFrom && { scoringFrom }) },
       })
     : db.fourHourGameLastMessage.deleteMany({ where: { guildId } });
 }
@@ -153,11 +161,15 @@ class FourHourGameService implements Service {
       return outcome;
     }
 
-    const recordMessage = prisma.fourHourGameLastMessage.upsert({
-      where: { guildId },
-      create: { guildId, channelId, messageId, authorId, sentAt },
-      update: { channelId, messageId, authorId, sentAt },
-    });
+    // A first message starts the count, and so does a point; a reply too soon
+    // keeps the time the previous one counted from, as a later deletion may
+    // put that one back.
+    const recordMessage = lastMessageWrite(
+      guildId,
+      channelId,
+      { messageId, authorId, sentAt },
+      outcome.kind === "tooSoon" ? undefined : sentAt
+    );
 
     const held = outcome.kind === "first" ? null : last;
 
@@ -405,7 +417,9 @@ class FourHourGameService implements Service {
     });
     if (!last || last.channelId !== channelId) {
       const latest = await history.latest();
-      await lastMessageWrite(guildId, channelId, standingOf(latest));
+      // Taken up now: whatever it held before, its 4h count starts here, as a
+      // first message's would.
+      await lastMessageWrite(guildId, channelId, standingOf(latest), now);
       return [];
     }
 
@@ -450,7 +464,8 @@ class FourHourGameService implements Service {
       holds,
       points,
       last: current,
-    } = replayMessages(start, read, delaySeconds);
+      scoringFrom,
+    } = replayMessages(start, read, delaySeconds, last.scoringFrom);
     if (holds.length === 0 && found) {
       return [];
     }
@@ -485,7 +500,7 @@ class FourHourGameService implements Service {
         await point;
         written.push({ winnerId, score, heldSeconds, heldSince });
       }
-      await lastMessageWrite(guildId, channelId, current, tx);
+      await lastMessageWrite(guildId, channelId, current, scoringFrom, tx);
       return written;
     });
     if (scored.length > 0) {

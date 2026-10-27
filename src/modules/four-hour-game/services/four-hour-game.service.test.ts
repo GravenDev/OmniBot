@@ -8,6 +8,7 @@ interface LastMessageRow {
   messageId: string;
   authorId: string;
   sentAt: Date;
+  scoringFrom?: Date;
 }
 
 interface PointRow {
@@ -40,14 +41,18 @@ vi.mock("#lib/database.js", () => ({
         await sleep(5);
         return row;
       },
+      // Like Prisma: `update` applies to a row already there.
       async upsert({
         create,
+        update,
       }: {
         create: LastMessageRow;
         update: Partial<LastMessageRow>;
       }) {
-        lastMessages.set(create.guildId, create);
-        return create;
+        const existing = lastMessages.get(create.guildId);
+        const row = existing ? { ...existing, ...update } : create;
+        lastMessages.set(create.guildId, row);
+        return row;
       },
       async deleteMany({
         where,
@@ -1373,6 +1378,100 @@ describe("FourHourGameService deletions and resync", () => {
       heldSeconds: 3 * 3600,
     });
     upsert.mockRestore();
+  });
+
+  it("does not score twice for a message back in place after the reply that scored is deleted", async () => {
+    await service.handleMessage(message("alice", start), DELAY);
+    await service.handleMessage(message("bob", at(5 * 3600)), DELAY);
+    expect(scores.get(key("guild", "alice"))).toBe(1);
+
+    await service.handleDeletion(
+      "guild",
+      "game",
+      [`bob-${at(5 * 3600).getTime()}`],
+      latest("alice", start)
+    );
+    // alice's message is back, but its time before the point already scored.
+    const again = await service.handleMessage(
+      message("bob", at(5 * 3600 + 60)),
+      DELAY
+    );
+
+    expect(again.kind).toBe("tooSoon");
+    expect(scores.get(key("guild", "alice"))).toBe(1);
+  });
+
+  it("lets a message back in place score for the time it holds after the last point", async () => {
+    await service.handleMessage(message("alice", start), DELAY);
+    await service.handleMessage(message("bob", at(5 * 3600)), DELAY);
+    await service.handleDeletion(
+      "guild",
+      "game",
+      [`bob-${at(5 * 3600).getTime()}`],
+      latest("alice", start)
+    );
+
+    const result = await service.handleMessage(
+      message("carol", at(9 * 3600)),
+      DELAY
+    );
+
+    expect(result).toMatchObject({
+      kind: "point",
+      winnerId: "alice",
+      heldSeconds: 4 * 3600,
+    });
+    expect(scores.get(key("guild", "alice"))).toBe(2);
+  });
+
+  it("does not score again on replay for a message back in place after the reply that scored", async () => {
+    await service.handleMessage(message("alice", start), DELAY);
+    await service.handleMessage(message("bob", at(5 * 3600)), DELAY);
+
+    // bob's reply was deleted while down; carol replied an hour later.
+    const caughtUp = await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["alice", start], ["carol", at(6 * 3600)]),
+      DELAY
+    );
+
+    expect(caughtUp).toEqual([]);
+    expect(scores.get(key("guild", "alice"))).toBe(1);
+    expect(lastMessages.get("guild")?.authorId).toBe("carol");
+  });
+
+  it("starts the 4h count of a message taken up on restart from that restart", async () => {
+    // Nothing stored yet: zed's message of three days ago is taken up.
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["zed", at(-3 * 24 * 3600)]),
+      DELAY,
+      start
+    );
+
+    const reply = await service.handleMessage(message("alice", at(60)), DELAY);
+
+    expect(reply.kind).toBe("tooSoon");
+    expect(scores.has(key("guild", "zed"))).toBe(false);
+  });
+
+  it("starts the count again from the first message of a new game channel", async () => {
+    await service.handleMessage(
+      message("alice", start, { channelId: "old" }),
+      DELAY
+    );
+    await service.handleMessage(message("bob", at(60)), DELAY);
+    expect(lastMessages.get("guild")?.scoringFrom).toEqual(at(60));
+
+    const soon = await service.handleMessage(message("carol", at(3600)), DELAY);
+    expect(soon.kind).toBe("tooSoon");
+    const late = await service.handleMessage(
+      message("dave", at(3600 + DELAY)),
+      DELAY
+    );
+    expect(late).toMatchObject({ kind: "point", winnerId: "carol" });
   });
 
   it("forgets the stored message when no player message is left after a restart", async () => {

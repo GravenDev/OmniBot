@@ -87,6 +87,28 @@ describe("evaluateMessage", () => {
     ).toEqual({ kind: "outdated" });
   });
 
+  it("counts the delay from scoringFrom when it is later than the message", () => {
+    const last = { ...msg("alice", start), scoringFrom: after(3600) };
+    expect(
+      evaluateMessage(last, msg("bob", after(FOUR_HOURS)), FOUR_HOURS)
+    ).toEqual({ kind: "tooSoon" });
+    expect(
+      evaluateMessage(last, msg("bob", after(3600 + FOUR_HOURS)), FOUR_HOURS)
+    ).toEqual({
+      kind: "point",
+      winnerId: "alice",
+      heldSeconds: FOUR_HOURS,
+      heldSince: start,
+    });
+  });
+
+  it("counts the delay from the message when scoringFrom is earlier", () => {
+    const last = { ...msg("alice", start), scoringFrom: after(-3600) };
+    expect(
+      evaluateMessage(last, msg("bob", after(FOUR_HOURS)), FOUR_HOURS)
+    ).toMatchObject({ kind: "point", heldSeconds: FOUR_HOURS });
+  });
+
   it("starts over when the last message was in another channel", () => {
     expect(
       evaluateMessage(

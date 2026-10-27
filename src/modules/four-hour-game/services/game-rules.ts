@@ -17,8 +17,23 @@ export type MessageOutcome =
       heldSince: Date;
     };
 
+/**
+ * The message in place: `scoringFrom`, when set, is the time its 4h delay
+ * counts from at the earliest (see FourHourGameLastMessage).
+ */
+export type StandingInfo = GameMessageInfo & { scoringFrom?: Date };
+
+/** When the 4h delay of the message in place starts. */
+export function delayStart(
+  last: Pick<StandingInfo, "sentAt" | "scoringFrom">
+): Date {
+  return last.scoringFrom && last.scoringFrom > last.sentAt
+    ? last.scoringFrom
+    : last.sentAt;
+}
+
 export function evaluateMessage(
-  last: GameMessageInfo | null,
+  last: StandingInfo | null,
   incoming: GameMessageInfo,
   delaySeconds: number
 ): MessageOutcome {
@@ -32,7 +47,7 @@ type ReplyInfo = Pick<GameMessage, "authorId" | "sentAt">;
 
 /** The rule of a reply to the message in place, live or replayed. */
 function evaluateReply(
-  last: ReplyInfo,
+  last: ReplyInfo & Pick<StandingInfo, "scoringFrom">,
   incoming: ReplyInfo,
   delaySeconds: number
 ): MessageOutcome {
@@ -42,16 +57,12 @@ function evaluateReply(
   if (last.authorId === incoming.authorId) {
     return { kind: "sameAuthor" };
   }
-  if (
-    last.sentAt.getTime() + delaySeconds * 1000 <=
-    incoming.sentAt.getTime()
-  ) {
+  const from = delayStart(last).getTime();
+  if (from + delaySeconds * 1000 <= incoming.sentAt.getTime()) {
     return {
       kind: "point",
       winnerId: last.authorId,
-      heldSeconds: Math.floor(
-        (incoming.sentAt.getTime() - last.sentAt.getTime()) / 1000
-      ),
+      heldSeconds: Math.floor((incoming.sentAt.getTime() - from) / 1000),
       heldSince: last.sentAt,
     };
   }
@@ -75,6 +86,8 @@ export interface Replay<M extends ChannelMessage> {
   holds: Hold[];
   points: ReplayedPoint[];
   last: M;
+  /** When the 4h delay of `last` counts from (see delayStart). */
+  scoringFrom: Date | undefined;
 }
 
 /**
@@ -86,16 +99,23 @@ export interface Replay<M extends ChannelMessage> {
 export function replayMessages<M extends ChannelMessage>(
   start: M,
   messages: readonly M[],
-  delaySeconds: number
+  delaySeconds: number,
+  startScoringFrom?: Date
 ): Replay<M> {
   const holds: Hold[] = [];
   const points: ReplayedPoint[] = [];
   let last = start;
+  // As live: a point restarts the count, a reply too soon keeps it.
+  let scoringFrom = startScoringFrom;
   for (const message of messages) {
     if (message.sentAt <= start.sentAt) {
       continue;
     }
-    const outcome = evaluateReply(last, message, delaySeconds);
+    const outcome = evaluateReply(
+      { ...last, ...(scoringFrom && { scoringFrom }) },
+      message,
+      delaySeconds
+    );
     if (outcome.kind === "sameAuthor" || outcome.kind === "outdated") {
       continue;
     }
@@ -106,6 +126,7 @@ export function replayMessages<M extends ChannelMessage>(
     });
     if (outcome.kind === "point") {
       const { winnerId, heldSeconds, heldSince } = outcome;
+      scoringFrom = message.sentAt;
       points.push({
         winnerId,
         heldSeconds,
@@ -115,5 +136,5 @@ export function replayMessages<M extends ChannelMessage>(
     }
     last = message;
   }
-  return { holds, points, last };
+  return { holds, points, last, scoringFrom };
 }
