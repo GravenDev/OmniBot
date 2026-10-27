@@ -19,13 +19,13 @@ concurrency:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions: &read-only
       contents: read
 
     steps:
       - &checkout
-        uses: actions/checkout@v7
+        uses: useblacksmith/checkout@v1
         with:
           persist-credentials: false
       - uses: $/.github/actions/setup
@@ -35,7 +35,7 @@ jobs:
         run: pnpm exec oxlint --deny-warnings
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions: *read-only
 
     steps:
@@ -47,16 +47,14 @@ jobs:
         run: pnpm test
 
   docker:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions: *read-only
 
     steps:
       - *checkout
       - &setup-buildx
-        name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-        with:
-          cleanup: false
+        name: Setup Blacksmith Builder
+        uses: useblacksmith/setup-docker-builder@v1
       # amd64 only, like the release: the Portainer host is amd64, and nothing
       # consumes an arm64 image.
       #
@@ -102,7 +100,7 @@ jobs:
   publish:
     needs: [lint, build, docker]
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       contents: read
       packages: write
@@ -149,7 +147,7 @@ jobs:
       # exported their cache, so this is mostly a push. Nothing is exported
       # here: that cache is already there.
       - name: Build and push the bot image
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        uses: useblacksmith/build-push-action@v2 # v7.4.0
         with:
           context: .
           target: runtime
@@ -157,7 +155,6 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=ci
 
       # The migrator ships as its own package, under the same tags as the bot:
       # a deployment pulls the pair for one version, and the migration history
@@ -172,7 +169,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
 
       - name: Build and push the migrator image
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        uses: useblacksmith/build-push-action@v2 # v7.4.0
         with:
           context: .
           target: migrator
@@ -180,7 +177,6 @@ jobs:
           push: true
           tags: ${{ steps.meta-migrator.outputs.tags }}
           labels: ${{ steps.meta-migrator.outputs.labels }}
-          cache-from: type=gha,scope=ci
 
   # The stack is defined in Portainer against this repository; the webhook only
   # asks it to redeploy, which re-pulls `latest`. Unlike an SSH deploy key, the
@@ -191,7 +187,7 @@ jobs:
     # on one would restart the stack onto the version already running — a
     # deployment that reports success and changes nothing.
     if: ${{ !contains(github.ref_name, '-') }}
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions: {}
 
     steps:
@@ -208,7 +204,7 @@ jobs:
   scan:
     needs: publish
     if: ${{ !contains(github.ref_name, '-') }}
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions:
       actions: write
 
