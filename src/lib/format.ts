@@ -1,4 +1,5 @@
 import { escapeMarkdown } from "discord.js";
+import { truncate } from "./text.js";
 
 const PREVIEW_MAX = 80;
 
@@ -8,11 +9,6 @@ const ESCAPE_ALL = {
   bulletedList: true,
   numberedList: true,
 } as const;
-
-export function truncate(text: string, max: number): string {
-  const chars = Array.from(text);
-  return chars.length > max ? `${chars.slice(0, max - 1).join("")}…` : text;
-}
 
 export function preview(content: string): string {
   const line = truncate(content.replace(/\s+/g, " ").trim(), PREVIEW_MAX);

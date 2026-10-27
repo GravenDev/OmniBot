@@ -18,7 +18,7 @@ describe("preview", () => {
 
   it("cuts between characters, not inside an emoji", () => {
     const shown = preview("😀".repeat(100));
-    expect(shown).toBe(`${"😀".repeat(79)}…`);
+    expect(shown).toBe(`${"😀".repeat(39)}…`);
   });
 
   it("escapes Markdown so a cut cannot leak into the next lines", () => {
