@@ -97,7 +97,7 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 - **4-hour game**: scores and point history are kept until an administrator deletes the player's score.
 - **Clash of Code**: games, players and their results are kept with no time limit, for the leaderboard's history. The link to a Discord account is removed when the member unlinks with `/coc unlink`, or an administrator unlinks them.
 - **Mention preference and automatic reactions**: kept until the member, or an administrator, removes them.
-- **Sticky messages**: kept until an administrator removes them with `/sticky remove`, or the channel is deleted.
+- **Sticky messages**: kept until an administrator removes them in `/config`, or the channel is deleted.
 - **Starboard**: an entry is deleted with the original message, with its repost when it falls below the threshold and the administrators chose to remove it, when the original channel or thread is deleted (the repost is deleted too), or when the starboard channel is deleted. When a moderator deletes a repost, the entry is kept so that the message is never reposted. The bot only sees these deletions while the module is enabled and the bot is online: a message or channel deleted while the module is disabled, or while the bot is offline, leaves its entry and its repost in place. The guild's administrators can then delete the repost by hand.
 
 To request deletion of your data, contact the instance operator.
