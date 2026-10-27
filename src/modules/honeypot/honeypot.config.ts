@@ -16,7 +16,7 @@ export const honeypotConfigSchema = {
   exemptRoles: {
     name: "Exempt roles",
     description:
-      "Members with one of these roles are never sanctioned. Members who can manage messages always are.",
+      "Members with one of these roles are never sanctioned, nor are members who can manage messages in the trap channel.",
     type: [ConfigType.ROLE],
   },
   purgeWindow: {
