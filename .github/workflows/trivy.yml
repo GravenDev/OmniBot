@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
       matrix:
         image: [omnibot, omnibot-migrator]
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
       contents: read
       security-events: write
