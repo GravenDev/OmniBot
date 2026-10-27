@@ -139,6 +139,9 @@
   "modules.sticky.name": "Messages collants",
   "modules.sticky.description": "Garde un message en bas des salons configurés avec /config sticky en le republiant après chaque nouveau message.",
 
+  "modules.temp-voice.name": "Salons vocaux temporaires",
+  "modules.temp-voice.description": "Crée un salon vocal pour qui rejoint un hub défini avec /config temp-voice, géré par son propriétaire depuis un panneau, et le supprime une fois vide.",
+
   "modules.clash-of-code.name": "Clash of Code",
   "modules.clash-of-code.description": "Suit les parties de Clash of Code dont le lien est posté, publie leur résultat et tient un classement des victoires.",
 
