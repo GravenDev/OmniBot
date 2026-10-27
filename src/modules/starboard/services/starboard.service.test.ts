@@ -18,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   },
   tally: { tallyReactions: vi.fn(), upperBound: vi.fn() },
   ineligibility: vi.fn(),
+  leakage: vi.fn(),
   view: vi.fn(() => ({ rendered: true })),
 }));
 
@@ -27,6 +28,7 @@ vi.mock("./view.js", () => ({ starboardMessage: mocks.view }));
 vi.mock("./eligibility.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./eligibility.js")>()),
   ineligibility: mocks.ineligibility,
+  leakage: mocks.leakage,
 }));
 
 const { default: starboard, isCounted } =
@@ -113,6 +115,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.store.find.mockResolvedValue(null);
   mocks.ineligibility.mockReturnValue(null);
+  mocks.leakage.mockReturnValue(null);
   mocks.tally.upperBound.mockReturnValue(3);
   mocks.tally.tallyReactions.mockResolvedValue({
     reactions: [{ emoji: "⭐", count: 3 }],
@@ -302,13 +305,23 @@ describe("refresh of a message already on the starboard", () => {
   });
 
   it("removes the repost once the source channel got more private", async () => {
-    mocks.ineligibility.mockReturnValue("audience");
+    mocks.leakage.mockReturnValue("audience");
 
     await starboard.refresh(fakeMessage() as never, config());
 
     expect(starboardMessages.edit).not.toHaveBeenCalled();
     expect(starboardMessages.delete).toHaveBeenCalledWith("sb1");
     expect(mocks.store.remove).toHaveBeenCalledWith("m1");
+  });
+
+  it("removes it from a now private channel that is also excluded", async () => {
+    mocks.ineligibility.mockReturnValue("channel");
+    mocks.leakage.mockReturnValue("audience");
+
+    await starboard.refresh(fakeMessage() as never, config());
+
+    expect(starboardMessages.edit).not.toHaveBeenCalled();
+    expect(starboardMessages.delete).toHaveBeenCalledWith("sb1");
   });
 
   it("keeps updating it when only the watched channels changed", async () => {
@@ -361,6 +374,30 @@ describe("refresh of a message already on the starboard", () => {
     expect(mocks.tally.tallyReactions).not.toHaveBeenCalled();
     expect(mocks.view.mock.calls.at(-1)?.[2]).toBe(stored);
     expect(starboardMessages.edit).toHaveBeenCalled();
+  });
+
+  it("re-renders an edit that came in with a burst of reactions", async () => {
+    const same = { reactions: [{ emoji: "⭐", count: 3 }], total: 3 };
+    mocks.store.find.mockResolvedValue({ ...entry, tally: same });
+    const message = fakeMessage();
+    let release = () => {};
+    message.fetch.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve(message);
+        })
+    );
+    const first = starboard.refresh(message as never, config());
+    await vi.waitFor(() => expect(message.fetch).toHaveBeenCalled());
+
+    const burst = Promise.all([
+      starboard.refresh(message as never, config()),
+      starboard.refreshContent(message as never, config()),
+    ]);
+    release();
+    await Promise.all([first, burst]);
+
+    expect(starboardMessages.edit).toHaveBeenCalledTimes(1);
   });
 
   it("recounts an edit when no count is stored", async () => {

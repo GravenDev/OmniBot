@@ -13,6 +13,7 @@ import { declareService, type Service } from "#lib/service.js";
 import type { StarboardConfigSchema } from "#modules/starboard/starboard.config.js";
 import {
   ineligibility,
+  leakage,
   starboardChannelOf,
   thresholdOf,
 } from "./eligibility.js";
@@ -59,6 +60,7 @@ const MODE_RANK: Record<Mode, number> = { edited: 0, starred: 1, any: 2 };
 
 interface Pending {
   mode: Mode;
+  edited: boolean;
   config: Config;
 }
 
@@ -183,14 +185,16 @@ class StarboardService implements Service {
       if (MODE_RANK[mode] > MODE_RANK[queued.mode]) {
         queued.mode = mode;
       }
+      queued.edited ||= mode === "edited";
       return;
     }
-    this.pending.set(message.id, { mode, config });
+    const edited = mode === "edited";
+    this.pending.set(message.id, { mode, edited, config });
     await this.queue.run(message.id, async () => {
-      const latest = this.pending.get(message.id) ?? { mode, config };
+      const latest = this.pending.get(message.id) ?? { mode, edited, config };
       this.pending.delete(message.id);
       try {
-        await this.sync(message, latest.config, latest.mode);
+        await this.sync(message, latest.config, latest.mode, latest.edited);
       } catch (err) {
         if (isApiError(err, ...FORBIDDEN)) {
           logger.warn(
@@ -210,7 +214,8 @@ class StarboardService implements Service {
   private async sync(
     ref: AnyMessage,
     config: Config,
-    mode: Mode
+    mode: Mode,
+    edited: boolean
   ): Promise<void> {
     const entry = await store.find(ref.id);
     if (entry && !entry.starboardMessageId) {
@@ -249,7 +254,8 @@ class StarboardService implements Service {
         entry,
         entry.starboardMessageId,
         config,
-        mode === "edited"
+        mode === "edited",
+        edited
       );
       return;
     }
@@ -301,7 +307,8 @@ class StarboardService implements Service {
     entry: StarboardEntry,
     starboardMessageId: string,
     config: Config,
-    contentOnly: boolean
+    contentOnly: boolean,
+    edited: boolean
   ): Promise<void> {
     const channel = await this.starboardChannel(
       message.client,
@@ -311,8 +318,8 @@ class StarboardService implements Service {
       await store.remove(message.id);
       return;
     }
-    const blocked = ineligibility(message, channel, config);
-    if (blocked === "audience" || blocked === "nsfw") {
+    const blocked = leakage(message.channel, channel);
+    if (blocked) {
       logger.info(
         `Repost removed | reason = ${blocked} | messageId = ${message.id}`
       );
@@ -334,7 +341,7 @@ class StarboardService implements Service {
         await this.discard(message.id, message.client, true);
         return;
       }
-      if (sameTally(tally, entry.tally) && !contentOnly) {
+      if (sameTally(tally, entry.tally) && !edited) {
         return;
       }
       await store.saveTally(message.id, tally);
