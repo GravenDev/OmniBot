@@ -25,7 +25,7 @@ jobs:
 
     steps:
       - &checkout
-        uses: useblacksmith/checkout@v1
+        uses: useblacksmith/checkout@25227e61ff9dafe400e22fa487b673eac4e4409a # v1
         with:
           persist-credentials: false
       - uses: $/.github/actions/setup
@@ -54,7 +54,7 @@ jobs:
       - *checkout
       - &setup-buildx
         name: Setup Blacksmith Builder
-        uses: useblacksmith/setup-docker-builder@v1
+        uses: useblacksmith/setup-docker-builder@e4c1c000c95f9cc255f72940e9c56bcbd1239436 # v1
       # amd64 only, like the release: the Portainer host is amd64, and nothing
       # consumes an arm64 image.
       #
@@ -147,7 +147,7 @@ jobs:
       # exported their cache, so this is mostly a push. Nothing is exported
       # here: that cache is already there.
       - name: Build and push the bot image
-        uses: useblacksmith/build-push-action@v2 # v7.4.0
+        uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2
         with:
           context: .
           target: runtime
@@ -169,7 +169,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
 
       - name: Build and push the migrator image
-        uses: useblacksmith/build-push-action@v2 # v7.4.0
+        uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2
         with:
           context: .
           target: migrator
