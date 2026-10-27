@@ -22,6 +22,7 @@ export interface OverwriteContext {
   base: Overwrite[];
   current?: Overwrite[];
   grantable?: ReadonlyMap<string, bigint>;
+  staffRoles?: ReadonlySet<string>;
   released?: readonly string[];
 }
 
@@ -42,7 +43,7 @@ const BOT_ALLOW =
   PermissionFlagsBits.SendMessages |
   PermissionFlagsBits.EmbedLinks |
   PermissionFlagsBits.ReadMessageHistory;
-const STAFF =
+export const STAFF_PERMISSIONS =
   PermissionFlagsBits.Administrator |
   PermissionFlagsBits.ManageChannels |
   PermissionFlagsBits.MoveMembers;
@@ -68,7 +69,9 @@ function copy(overwrite: Overwrite): Overwrite {
 
 function isStaff(overwrite: Overwrite, context: OverwriteContext): boolean {
   return (
-    overwrite.id !== context.everyoneId && (overwrite.allow & STAFF) !== 0n
+    overwrite.id !== context.everyoneId &&
+    ((overwrite.allow & STAFF_PERMISSIONS) !== 0n ||
+      (context.staffRoles?.has(overwrite.id) ?? false))
   );
 }
 

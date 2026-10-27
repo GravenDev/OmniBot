@@ -1,6 +1,6 @@
 import type { Guild, GuildMember, VoiceBasedChannel } from "discord.js";
 import { loggerMaker } from "#lib/logger.js";
-import type { TempVoiceConfig } from "../temp-voice.config.js";
+import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
 import {
   accessState,
   applyAccess,
@@ -22,6 +22,9 @@ const logger = loggerMaker("temp-voice");
 export const MAX_ACCESS_ENTRIES = 25;
 
 const RENAME_WAIT_MS = 5_000;
+const INVITE_COOLDOWN_MS = 10 * 60_000;
+
+const invited = new Set<string>();
 
 export interface Outcome {
   ok: boolean;
@@ -235,6 +238,42 @@ function eligibleTargets(
   );
 }
 
+async function rememberAccess(
+  ctx: ActionContext,
+  {
+    trust = [],
+    block = [],
+    clear = [],
+  }: { trust?: string[]; block?: string[]; clear?: string[] }
+): Promise<void> {
+  if (!isOwner(ctx)) {
+    return;
+  }
+  const preference = await store.preference(ctx.guild.id, ctx.actor.id);
+  const untrusted = new Set([...block, ...clear]);
+  const unblocked = new Set([...trust, ...clear]);
+  const trusted = [
+    ...new Set([
+      ...(preference?.trusted ?? []).filter((id) => !untrusted.has(id)),
+      ...trust,
+    ]),
+  ];
+  const blocked = [
+    ...new Set([
+      ...(preference?.blocked ?? []).filter((id) => !unblocked.has(id)),
+      ...block,
+    ]),
+  ];
+  const overflow = Math.max(
+    0,
+    trusted.length + blocked.length - MAX_ACCESS_ENTRIES
+  );
+  await store.savePreference(ctx.guild.id, ctx.actor.id, {
+    trusted: trusted.slice(Math.min(overflow, trusted.length)),
+    blocked: blocked.slice(Math.max(0, overflow - trusted.length)),
+  });
+}
+
 export async function trust(
   ctx: ActionContext,
   members: GuildMember[]
@@ -248,7 +287,8 @@ export async function trust(
     return fail("access.full", { max: String(MAX_ACCESS_ENTRIES) });
   }
   const blocked = ctx.row.blocked.filter((id) => !ids.includes(id));
-  await commit(ctx, { trusted, blocked }, { trusted, blocked });
+  await commit(ctx, { trusted, blocked });
+  await rememberAccess(ctx, { trust: ids });
   return done("trust.done", { users: mentions(ids) });
 }
 
@@ -256,10 +296,17 @@ export async function invite(
   ctx: ActionContext,
   member: GuildMember
 ): Promise<Outcome> {
+  const alreadyTrusted = ctx.row.trusted.includes(member.id);
   const trusted = await trust(ctx, [member]);
   if (!trusted.ok) {
     return trusted;
   }
+  const key = `${ctx.channel.id}:${member.id}`;
+  if (alreadyTrusted || invited.has(key)) {
+    return done("invite.already", { user: `<@${member.id}>` });
+  }
+  invited.add(key);
+  setTimeout(() => invited.delete(key), INVITE_COOLDOWN_MS).unref();
   try {
     await member.send({
       content: ctx.config.t("invite.dm", {
@@ -288,7 +335,8 @@ export async function revoke(
   ) {
     return fail("revoke.none");
   }
-  await commit(ctx, { trusted, blocked }, { trusted, blocked });
+  await commit(ctx, { trusted, blocked });
+  await rememberAccess(ctx, { clear: ids });
   return done("revoke.done", { users: mentions(ids) });
 }
 
@@ -326,7 +374,8 @@ export async function block(
     return fail("access.full", { max: String(MAX_ACCESS_ENTRIES) });
   }
   const trusted = ctx.row.trusted.filter((id) => !ids.includes(id));
-  await commit(ctx, { trusted, blocked }, { trusted, blocked });
+  await commit(ctx, { trusted, blocked });
+  await rememberAccess(ctx, { block: ids });
   for (const member of blockable) {
     if (inChannel(ctx, member)) {
       await disconnect(member);

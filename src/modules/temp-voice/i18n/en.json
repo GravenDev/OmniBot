@@ -84,6 +84,7 @@
 
   "trust.done": "{{users}} can now join the channel, even when it is locked or hidden.",
   "trust.none": "Choose members other than the owner and the bots.",
+  "invite.already": "{{user}} is trusted and was already invited recently: no new DM.",
   "invite.done": "{{user}} is trusted and was invited by DM.",
   "invite.noDm": "{{user}} is trusted, but could not be reached by DM.",
   "invite.dm": "{{user}} invites you to their voice channel on **{{guild}}**: {{channel}}",

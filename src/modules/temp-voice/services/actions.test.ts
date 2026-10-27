@@ -6,6 +6,7 @@ const store = vi.hoisted(() => ({
   channel: vi.fn(),
   updateChannel: vi.fn(),
   savePreference: vi.fn(),
+  preference: vi.fn(),
   ownedBy: vi.fn(),
 }));
 const lifecycle = vi.hoisted(() => ({
@@ -87,6 +88,7 @@ beforeEach(() => {
     ...change,
   }));
   store.ownedBy.mockResolvedValue(null);
+  store.preference.mockResolvedValue(null);
 });
 
 describe("withChannel", () => {
@@ -254,13 +256,49 @@ describe("rename failures", () => {
   });
 });
 
+describe("remembered access", () => {
+  it("saves only what the owner changed, not the lists inherited from a claim", async () => {
+    store.preference.mockResolvedValue({
+      trusted: ["kept"],
+      blocked: ["old"],
+    });
+    const owner = fakeMember("owner");
+    await actions.trust(
+      ctx(owner, [], { trusted: ["inherited"], blocked: ["x", "y"] }),
+      [fakeMember("z")]
+    );
+    expect(store.savePreference).toHaveBeenCalledWith("g1", "owner", {
+      trusted: ["kept", "z"],
+      blocked: ["old"],
+    });
+  });
+});
+
+describe("invite", () => {
+  it("sends one DM per member, not one per click", async () => {
+    const owner = fakeMember("owner");
+    const target = { ...fakeMember("target-1"), send: vi.fn() };
+    const context = ctx(owner);
+    context.guild.name = "Graven";
+    context.channel.url = "https://discord.com/channels/g1/c1";
+    expect(await actions.invite(context, target)).toMatchObject({
+      key: "invite.done",
+    });
+    expect(
+      await actions.invite(ctx(owner, [], { trusted: [] }), target)
+    ).toMatchObject({ key: "invite.already" });
+    expect(target.send).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("authorize", () => {
   it("hands back the channel and row to the owner", async () => {
     const { guild, channel } = setup();
-    store.channel.mockResolvedValue(row());
+    const stored = row();
+    store.channel.mockResolvedValue(stored);
     expect(await actions.authorize(guild, "c1", fakeMember("owner"))).toEqual({
       channel,
-      row: row(),
+      row: stored,
     });
     expect(await actions.authorize(guild, "c1", fakeMember("someone"))).toEqual(
       { ok: false, key: "action.notOwner" }
