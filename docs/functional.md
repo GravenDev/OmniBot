@@ -409,6 +409,55 @@ Le module lit le contenu des messages : l'intent privilégié _Message Content_ 
 
 ---
 
+## Module Salons vocaux temporaires
+
+Remplace un bot comme TempVoice : rejoindre un salon vocal « hub » crée un salon vocal temporaire, y déplace le membre et lui en donne la propriété. Le salon est supprimé dès qu'il n'y reste plus aucun membre (les bots ne comptent pas).
+
+### Comportement automatique
+
+- Le salon est créé dans la catégorie du hub, synchronisé avec ses permissions, avec le débit binaire et la région du hub. Son nom vient du hub (`{user}` est remplacé par le pseudo du membre) et sa limite de membres aussi, sauf si le membre a des réglages mémorisés (voir plus bas).
+- Le propriétaire reçoit l'accès au salon (le voir et s'y connecter), sans jamais obtenir plus que ce qu'il a déjà sur le hub : un rôle qui l'empêche de parler ou de se connecter continue de s'appliquer. Le bot s'y donne les permissions dont il a besoin pour le gérer.
+- Un membre qui possède déjà un salon temporaire et rejoint un hub est ramené dans son salon au lieu d'en recevoir un deuxième. Après une création, le même membre doit attendre 10 secondes avant d'en créer un autre : le bot le lui dit dans le chat du hub (message effacé au bout de 10 secondes).
+- Si le bot n'a pas les permissions nécessaires dans la catégorie du hub (voir le salon, se connecter, gérer les salons, gérer les permissions, déplacer des membres, envoyer des messages, intégrer des liens), ou si la création échoue, rien n'est créé et le membre en est averti dans le chat du hub.
+- Un panneau de contrôle est publié dans le chat textuel du salon vocal. Il affiche le propriétaire, l'état (verrouillé, masqué), la limite et le nombre de membres de confiance et bloqués, et se met à jour à chaque changement.
+- Toutes les 10 minutes, et au démarrage du bot, les salons temporaires vides depuis plus d'une minute sont supprimés et ceux supprimés à la main sont oubliés : un salon vidé pendant que le bot était hors ligne disparaît donc à son retour, et les membres restés dans un hub entre-temps reçoivent leur salon. Supprimer un hub à la main le retire de la configuration.
+- Quand le module est désactivé, les salons temporaires existants restent en place et leur panneau ne répond plus, mais ils sont toujours supprimés une fois vides (dans les 10 minutes).
+
+### Panneau de contrôle
+
+Seuls le propriétaire et les membres qui peuvent gérer le salon (modérateurs) peuvent utiliser le panneau ; **Récupérer** est ouvert à tous les membres présents dans le salon. Les réponses sont visibles de soi seul.
+
+| Bouton                              | Effet                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Renommer**                        | Ouvre un formulaire prérempli avec le nom actuel (100 caractères au plus). Discord n'autorise que 2 renommages par salon toutes les 10 minutes : au-delà, le bot indique quand réessayer. Si Discord retient malgré tout le renommage, le bot l'annonce et le nom change dès que Discord le permet.                                                                                                                                                                    |
+| **Limite**                          | Nombre maximal de membres, de 0 (aucune limite) à 99.                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| **Verrouiller** / **Déverrouiller** | Retire (ou rend) la permission de se connecter à `@everyone` et à chaque rôle réglé sur la catégorie. Les rôles de modération (administrateur, gérer les salons, déplacer des membres) ne sont jamais touchés. Si Discord refuse la modification d'un rôle, par exemple parce qu'il accorde une permission que le bot n'a pas, le bot répond par une erreur et le salon garde son état précédent. Le propriétaire et les membres de confiance peuvent toujours entrer. |
+| **Masquer** / **Afficher**          | Même principe pour la permission de voir le salon.                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| **Confiance**                       | Jusqu'à 10 membres à la fois, qui peuvent voir et rejoindre le salon même verrouillé ou masqué, dans la limite de ce qu'ils peuvent déjà faire sur le hub.                                                                                                                                                                                                                                                                                                             |
+| **Inviter**                         | Rend un membre de confiance et lui envoie un MP avec le lien du salon (le bot signale si le MP n'a pas pu partir).                                                                                                                                                                                                                                                                                                                                                     |
+| **Retirer l'accès**                 | Liste les membres de confiance et bloqués pour réinitialiser leur accès.                                                                                                                                                                                                                                                                                                                                                                                               |
+| **Bloquer**                         | Le membre ne peut plus voir ni rejoindre le salon, et il est déconnecté s'il y est. Les modérateurs (déplacer des membres, gérer le salon ou administrateur) ne peuvent pas être bloqués.                                                                                                                                                                                                                                                                              |
+| **Expulser**                        | Déconnecte des membres présents dans le salon, sans les bloquer. Mêmes exceptions que pour le blocage.                                                                                                                                                                                                                                                                                                                                                                 |
+| **Récupérer**                       | Quand le propriétaire a quitté le salon, un membre présent en prend la propriété, s'il n'en possède pas déjà un autre. Les listes de confiance et de blocage du salon sont conservées.                                                                                                                                                                                                                                                                                 |
+| **Transférer**                      | Donne le salon à un membre présent dans le salon qui n'en possède pas déjà un.                                                                                                                                                                                                                                                                                                                                                                                         |
+| **Supprimer**                       | Supprime le salon tout de suite.                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+
+Les listes de confiance et de blocage sont limitées à 25 membres au total par salon. Les permissions ajoutées à la main sur un salon temporaire pour d'autres membres ou rôles sont laissées telles quelles.
+
+### Réglages mémorisés
+
+Quand le propriétaire renomme son salon, change sa limite, le verrouille ou le masque, ou modifie ses listes de confiance et de blocage, ces réglages sont mémorisés pour lui sur le serveur et appliqués à son prochain salon. Les changements faits par un modérateur ne sont pas mémorisés. Les réglages d'un membre qui n'a pas créé de salon depuis un an sont supprimés.
+
+### Configuration — `/config temp-voice`
+
+| Champ  | Type               | Description                                                                                                                                                         |
+| ------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `hubs` | Réglages par salon | Pour chaque salon vocal hub, le nom des salons créés (`{user}` pour le pseudo du membre, 100 caractères au plus) et leur limite de membres (0 à 99, 0 pour aucune). |
+
+Le bot refuse un hub où il lui manque une des permissions nécessaires, ou qui est lui-même un salon temporaire. Retirer un hub ne supprime pas les salons qu'il a déjà créés.
+
+---
+
 ## Module Thread Creator
 
 Crée automatiquement un fil de discussion sous chaque nouveau message dans un salon configuré.

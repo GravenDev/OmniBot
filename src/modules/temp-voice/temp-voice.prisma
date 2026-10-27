@@ -1,0 +1,37 @@
+model TempVoiceHub {
+  guildId      String
+  channelId    String
+  nameTemplate String
+  userLimit    Int
+
+  @@id([guildId, channelId])
+}
+
+model TempVoiceChannel {
+  channelId      String   @id
+  guildId        String
+  hubId          String
+  ownerId        String
+  locked         Boolean  @default(false)
+  hidden         Boolean  @default(false)
+  trusted        String[]
+  blocked        String[]
+  panelMessageId String?
+  createdAt      DateTime @default(now())
+
+  @@unique([guildId, ownerId])
+}
+
+model TempVoicePreference {
+  guildId   String
+  userId    String
+  name      String?
+  userLimit Int?
+  locked    Boolean  @default(false)
+  hidden    Boolean  @default(false)
+  trusted   String[]
+  blocked   String[]
+  updatedAt DateTime @updatedAt
+
+  @@id([guildId, userId])
+}

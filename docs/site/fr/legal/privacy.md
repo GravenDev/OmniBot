@@ -65,6 +65,10 @@ Le module Messages collants enregistre, pour chaque salon configuré, le texte d
 
 Le module Starboard enregistre, pour chaque message reposté, les ID du serveur, du message d'origine, de son salon et du parent de ce salon, et du repost et de son salon, ainsi que le nombre de réactions par emoji. Il n'enregistre ni le texte du message ni qui y a réagi : le repost, publié sur le serveur, contient le texte, et les réactions ne sont lues que pour compter les membres qui ont réagi.
 
+### Salons vocaux temporaires
+
+Le module Salons vocaux temporaires enregistre, pour chaque salon temporaire ouvert, l'ID du salon, de son hub et de son propriétaire, son état (verrouillé, masqué) et les IDs des membres de confiance et bloqués. Pour chaque membre qui a personnalisé son salon, il enregistre aussi le nom, la limite, l'état et ces listes, pour les réappliquer à son prochain salon.
+
 ### Statistiques d'activité
 
 Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, avec la date à laquelle le suivi a commencé sur le serveur, jamais le contenu des messages ni l'identité des membres qui arrivent ou partent. Ces compteurs sont supprimés au bout de 90 jours. Le bilan quotidien publié sur le serveur peut citer les membres les plus actifs ; les administrateurs peuvent le désactiver.
@@ -99,6 +103,7 @@ Les données sont stockées dans une base de données PostgreSQL gérée par l'o
 - **Préférence de mention et réactions automatiques** : conservées jusqu'à ce que le membre, ou un administrateur, les retire.
 - **Messages collants** : conservés jusqu'à ce qu'un administrateur les retire dans `/config`, ou que le salon soit supprimé.
 - **Starboard** : une entrée est supprimée avec le message d'origine, avec son repost quand il repasse sous le seuil et que les administrateurs ont choisi de le retirer, quand le salon ou le fil d'origine est supprimé (le repost l'est aussi), ou quand le salon starboard est supprimé. Quand un modérateur supprime un repost, l'entrée est conservée pour que le message ne soit plus jamais reposté. Le bot ne voit ces suppressions que quand le module est activé et qu'il est en ligne : un message ou un salon supprimé pendant que le module est désactivé, ou que le bot est hors ligne, laisse son entrée et son repost en place. Le repost peut alors être supprimé à la main par les administrateurs du serveur.
+- **Salons vocaux temporaires** : l'entrée d'un salon est supprimée avec le salon, quand il se vide ou qu'il est supprimé ; si le bot est hors ligne à ce moment-là, elle l'est à son retour, même si le module a été désactivé entre-temps. Les réglages mémorisés d'un membre sont supprimés un an après la dernière fois qu'il les a modifiés ou qu'il a créé un salon, même si le module est désactivé.
 
 Pour demander la suppression de vos données, contactez l'opérateur de l'instance.
 
