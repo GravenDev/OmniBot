@@ -19,7 +19,7 @@ on:
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions: &upload-results
       contents: read
       security-events: write
@@ -30,7 +30,7 @@ jobs:
     steps:
       - &checkout
         name: Checkout repository
-        uses: actions/checkout@v7
+        uses: useblacksmith/checkout@v1
         with:
           persist-credentials: false
 
@@ -53,7 +53,7 @@ jobs:
   # the run takes seconds. The weekly run catches what the online audits learn
   # in the meantime.
   zizmor:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
     permissions: *upload-results
     steps:
       - *checkout
