@@ -83,6 +83,20 @@ describe("splitHold", () => {
     ]);
   });
 
+  it("counts 23 hours for the spring change", () => {
+    expect(
+      splitHold(
+        new Date("2026-03-28T22:00:00Z"),
+        new Date("2026-03-30T00:00:00Z"),
+        "2026-03-27"
+      )
+    ).toEqual([
+      { day: "2026-03-28", seconds: HOUR },
+      { day: "2026-03-29", seconds: 23 * HOUR },
+      { day: "2026-03-30", seconds: 2 * HOUR },
+    ]);
+  });
+
   it("skips the days already closed", () => {
     expect(
       splitHold(
