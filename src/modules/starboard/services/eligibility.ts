@@ -42,6 +42,19 @@ export function thresholdOf(config: Config): number {
   return Math.max(1, Math.floor(config.get("threshold")));
 }
 
+export function leakage(
+  channel: GuildTextBasedChannel,
+  starboard: GuildTextBasedChannel
+): "nsfw" | "audience" | null {
+  if (isNsfw(channel) && !isNsfw(starboard)) {
+    return "nsfw";
+  }
+  if (widensAudience(channel, starboard)) {
+    return "audience";
+  }
+  return null;
+}
+
 export function ineligibility(
   message: Message<true>,
   starboard: GuildTextBasedChannel,
@@ -75,11 +88,9 @@ export function ineligibility(
   if (isExcluded(channel, excludedIds)) {
     return "channel";
   }
-  if (isNsfw(channel) && !isNsfw(starboard)) {
-    return "nsfw";
-  }
-  if (widensAudience(channel, starboard)) {
-    return "audience";
+  const leak = leakage(channel, starboard);
+  if (leak) {
+    return leak;
   }
   const me = starboard.guild.members.me;
   const required = starboard.isThread()
