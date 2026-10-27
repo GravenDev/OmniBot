@@ -387,8 +387,9 @@ Reposte dans un salon dédié les messages qui reçoivent assez de réactions, e
 - Si le message d'origine est supprimé, son repost l'est aussi. Si un modérateur supprime le repost, le message n'est plus jamais reposté.
 - Ne sont jamais repostés : les messages du salon starboard et de ses fils, les messages système, ceux du bot lui-même (dont les reposts d'un ancien salon starboard), ceux des bots et des webhooks (sauf si `ignoreBots` est désactivé), ceux des salons exclus ou hors des salons surveillés, ceux d'un salon NSFW vers un starboard qui ne l'est pas, et ceux d'un salon que des membres voyant le starboard ne peuvent pas lire (le repost élargirait leur audience).
 - Si le bot ne peut pas voir le salon starboard ou y écrire, rien n'est reposté. Changer de salon starboard laisse les anciens reposts en place ; leur compteur continue d'être mis à jour.
-- Si le salon d'origine devient NSFW ou que des membres voyant le starboard ne peuvent plus le lire, le repost est supprimé à la réaction ou à la modification suivante.
+- Si le salon d'origine devient NSFW ou que des membres voyant le starboard ne peuvent plus le lire, le repost est supprimé à la réaction ou à la modification suivante, même si le salon a aussi été exclu entre-temps.
 - La suppression d'un salon, d'un forum ou d'un fil supprime les reposts de ses messages, fils compris ; celle du salon starboard oublie ses reposts.
+- Ces suppressions ne sont vues que quand le module est activé et le bot en ligne : un message ou un salon supprimé pendant que le module est désactivé, ou que le bot est hors ligne, laisse son repost en place ; un administrateur peut le supprimer à la main.
 
 ### Configuration — `/config starboard`
 
