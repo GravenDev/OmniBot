@@ -4,7 +4,7 @@
   "config.logChannel.name": "Salon des logs",
   "config.logChannel.description": "Salon où chaque piège déclenché est consigné.",
   "config.exemptRoles.name": "Rôles exemptés",
-  "config.exemptRoles.description": "Les membres ayant l'un de ces rôles ne sont jamais sanctionnés. Ceux qui peuvent gérer les messages le sont toujours.",
+  "config.exemptRoles.description": "Les membres ayant l'un de ces rôles ne sont jamais sanctionnés, pas plus que ceux qui peuvent gérer les messages dans le salon piège.",
   "config.purgeWindow.name": "Durée de purge",
   "config.purgeWindow.description": "Jusqu'où le softban supprime les messages du membre sur tout le serveur (7 jours au plus).",
 

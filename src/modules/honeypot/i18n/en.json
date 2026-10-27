@@ -4,7 +4,7 @@
   "config.logChannel.name": "Log channel",
   "config.logChannel.description": "Channel where each triggered trap is logged.",
   "config.exemptRoles.name": "Exempt roles",
-  "config.exemptRoles.description": "Members with one of these roles are never sanctioned. Members who can manage messages always are.",
+  "config.exemptRoles.description": "Members with one of these roles are never sanctioned, nor are members who can manage messages in the trap channel.",
   "config.purgeWindow.name": "Purge window",
   "config.purgeWindow.description": "How far back the softban deletes the member's messages across the server (7 days at most).",
 
