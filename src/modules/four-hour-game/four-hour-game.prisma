@@ -12,6 +12,10 @@ model FourHourGameLastMessage {
   messageId String
   authorId  String
   sentAt    DateTime
+  // No 4h point counts time before it: the last point of the server, or when
+  // the game took this message up. A message back in place after a deletion
+  // keeps it, so it cannot score twice for the same time.
+  scoringFrom DateTime
 }
 
 model FourHourGamePoint {
