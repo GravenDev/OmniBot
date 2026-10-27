@@ -26,7 +26,7 @@ import {
   type ChannelRecordOutcome,
   type ChannelRecordsConfigEntry,
 } from "#lib/config.js";
-import { preview, truncate } from "#lib/format.js";
+import { preview } from "#lib/format.js";
 import { createT, type TFunction } from "#lib/i18n.js";
 import {
   declareInteractionHandler,
@@ -35,6 +35,7 @@ import {
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import type { Registry } from "#lib/registry.js";
+import { truncate } from "#lib/text.js";
 import { Colors } from "#utils/colors.js";
 import {
   getConfigEntry,
