@@ -11,11 +11,12 @@ import {
 } from "discord.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
-import type { TempVoiceConfig } from "../temp-voice.config.js";
+import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
 import { RenameLimiter, renderName } from "./naming.js";
 import {
   managedMembers,
   overwriteChanges,
+  STAFF_PERMISSIONS,
   type AccessState,
   type Overwrite,
 } from "./overwrites.js";
@@ -80,25 +81,49 @@ export function accessState(row: TempChannel): AccessState {
   };
 }
 
-function grantable(
+async function grantable(
   channel: VoiceBasedChannel,
   state: AccessState,
   hubId: string
-): Map<string, bigint> {
-  const reference =
-    channel.guild.channels.cache.get(hubId) ?? channel.parent ?? null;
+): Promise<Map<string, bigint>> {
+  const guild = channel.guild;
+  const reference = guild.channels.cache.get(hubId) ?? channel.parent ?? null;
   const bits = new Map<string, bigint>();
   for (const id of [state.ownerId, ...state.trusted]) {
-    const member = channel.guild.members.cache.get(id);
-    if (member) {
-      bits.set(
-        id,
-        (reference ? reference.permissionsFor(member) : member.permissions)
-          .bitfield
-      );
-    }
+    const member =
+      guild.members.cache.get(id) ??
+      (await guild.members.fetch(id).catch(() => null));
+    bits.set(
+      id,
+      member
+        ? (reference ? reference.permissionsFor(member) : member.permissions)
+            .bitfield
+        : 0n
+    );
   }
   return bits;
+}
+
+function staffRoles(guild: Guild): Set<string> {
+  return new Set(
+    guild.roles.cache
+      .filter((role) => role.permissions.any(STAFF_PERMISSIONS))
+      .map((role) => role.id)
+  );
+}
+
+async function writeOverwrite(
+  channel: VoiceBasedChannel,
+  id: string,
+  overwrite: Overwrite | undefined
+): Promise<void> {
+  if (overwrite) {
+    await channel.permissionOverwrites.create(id, overwriteOptions(overwrite), {
+      type: overwrite.type,
+    });
+  } else {
+    await channel.permissionOverwrites.delete(id);
+  }
 }
 
 export async function applyAccess(
@@ -108,28 +133,45 @@ export async function applyAccess(
   previous?: AccessState
 ): Promise<void> {
   const me = await botMember(channel.guild);
+  const fresh = await channel.fetch(true);
+  const current = fresh.permissionOverwrites.cache.map(toOverwrite);
   const changes = overwriteChanges(state, {
     everyoneId: channel.guild.id,
     botId: me.id,
-    botPermissions: botPermissions(me, channel.parent),
-    base: baseOverwrites(channel.parent),
-    current: channel.permissionOverwrites.cache.map(toOverwrite),
-    grantable: grantable(channel, state, hubId),
+    botPermissions: botPermissions(me, fresh.parent),
+    base: baseOverwrites(fresh.parent),
+    current,
+    grantable: await grantable(fresh, state, hubId),
+    staffRoles: staffRoles(channel.guild),
     released: previous ? managedMembers(previous) : [],
   });
   const isBot = (change: (typeof changes)[number]) =>
     change.kind === "set" && change.overwrite.id === me.id;
   changes.sort((a, b) => Number(isBot(b)) - Number(isBot(a)));
-  for (const change of changes) {
-    if (change.kind === "set") {
-      await channel.permissionOverwrites.create(
-        change.overwrite.id,
-        overwriteOptions(change.overwrite),
-        { type: change.overwrite.type }
+
+  const before = new Map(current.map((o) => [o.id, o]));
+  const applied: string[] = [];
+  try {
+    for (const change of changes) {
+      const id = change.kind === "set" ? change.overwrite.id : change.id;
+      await writeOverwrite(
+        fresh,
+        id,
+        change.kind === "set" ? change.overwrite : undefined
       );
-    } else {
-      await channel.permissionOverwrites.delete(change.id);
+      applied.push(id);
     }
+  } catch (err) {
+    for (const id of applied.reverse()) {
+      await writeOverwrite(fresh, id, before.get(id)).catch(
+        (undoErr: unknown) =>
+          logger.error(
+            { err: undoErr },
+            `Overwrite not restored | channelId = ${channel.id} | id = ${id}`
+          )
+      );
+    }
+    throw err;
   }
 }
 
@@ -246,7 +288,7 @@ export function joinHub(
     }
 
     const preference = await store.preference(guild.id, member.id);
-    const state: AccessState = {
+    let state: AccessState = {
       ownerId: member.id,
       locked: preference?.locked ?? false,
       hidden: preference?.hidden ?? false,
@@ -284,7 +326,19 @@ export function joinHub(
 
     let row: TempChannel;
     try {
-      await applyAccess(channel, hubChannel.id, state);
+      try {
+        await applyAccess(channel, hubChannel.id, state);
+      } catch (err) {
+        if (!state.locked && !state.hidden) {
+          throw err;
+        }
+        logger.warn(
+          { err },
+          `Remembered lock not applied, opening the channel | channelId = ${channel.id}`
+        );
+        state = { ...state, locked: false, hidden: false };
+        await applyAccess(channel, hubChannel.id, state);
+      }
       row = await store.createChannel({
         channelId: channel.id,
         guildId: guild.id,
@@ -369,6 +423,14 @@ export function channelDeleted(guild: Guild, channelId: string): Promise<void> {
 
 export async function reconcile(guild: Guild): Promise<void> {
   const now = Date.now();
+  for (const hub of await store.hubs(guild.id)) {
+    if (!voiceChannel(guild, hub.channelId)) {
+      await store.removeHub(guild.id, hub.channelId);
+      logger.info(
+        `Deleted hub forgotten | guildId = ${guild.id} | channelId = ${hub.channelId}`
+      );
+    }
+  }
   for (const row of await store.channels(guild.id)) {
     await queue.run(row.channelId, async () => {
       const current = await store.channel(row.channelId);

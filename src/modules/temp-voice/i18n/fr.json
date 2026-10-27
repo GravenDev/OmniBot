@@ -84,6 +84,7 @@
 
   "trust.done": "{{users}} peuvent désormais rejoindre le salon, même verrouillé ou masqué.",
   "trust.none": "Choisissez des membres autres que le propriétaire et les bots.",
+  "invite.already": "{{user}} est de confiance et a déjà été invité récemment : pas de nouveau MP.",
   "invite.done": "{{user}} est de confiance et a été invité en MP.",
   "invite.noDm": "{{user}} est de confiance, mais n'a pas pu être joint en MP.",
   "invite.dm": "{{user}} vous invite dans son salon vocal sur **{{guild}}** : {{channel}}",

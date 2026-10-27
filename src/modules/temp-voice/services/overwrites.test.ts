@@ -181,6 +181,20 @@ describe("overwriteChanges", () => {
     expect(result.get("soundboard")!.allow & CONNECT).toBe(0n);
   });
 
+  it("never locks out a role that is staff through its server permissions", () => {
+    const mods = role("mods", VIEW);
+    const result = new Map(
+      desiredOverwrites(state({ locked: true, hidden: true }), {
+        everyoneId: everyone,
+        botId: bot,
+        botPermissions: ALL,
+        base: [...base, mods],
+        staffRoles: new Set(["mods"]),
+      }).map((o) => [o.id, o])
+    );
+    expect(result.get("mods")).toEqual(mods);
+  });
+
   it("leaves a role overwrite added by hand intact through lock and unlock", () => {
     const manual = role("guests", VIEW | CONNECT);
     const open = [...desiredOverwrites(state(), context(base)), manual];
