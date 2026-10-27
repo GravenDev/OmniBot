@@ -18,10 +18,10 @@ import {
   widensAudience,
 } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
-import { truncate } from "#lib/format.js";
 import { stripHiddenText } from "#lib/hidden-text.js";
 import type { TFunction } from "#lib/i18n.js";
 import { NO_MENTIONS_REPLY } from "#lib/mentions.js";
+import { truncate } from "#lib/text.js";
 import {
   deleteButton,
   QUOTE_CUSTOM_ID,

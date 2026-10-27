@@ -10,9 +10,9 @@ import {
   time,
   TimestampStyles,
 } from "discord.js";
-import { truncate } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
+import { truncate } from "#lib/text.js";
 import type { Tally } from "./tally.js";
 
 const ACCENT = 0xf5c518;
