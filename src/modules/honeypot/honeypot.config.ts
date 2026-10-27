@@ -1,4 +1,5 @@
 import { ConfigType, type ConfigSchema } from "#lib/config.js";
+import { MAX_BAN_PURGE_SECONDS } from "#lib/moderation.js";
 
 export const honeypotConfigSchema = {
   trapChannels: {
@@ -24,6 +25,7 @@ export const honeypotConfigSchema = {
       "How far back the softban deletes the member's messages across the server (7 days at most).",
     type: ConfigType.DURATION,
     defaultValue: 60 * 60,
+    max: MAX_BAN_PURGE_SECONDS,
   },
 } satisfies ConfigSchema;
 
