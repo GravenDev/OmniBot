@@ -20,13 +20,13 @@ const store = vi.hoisted(() => ({
   removeChannel: vi.fn(),
   updateChannel: vi.fn(),
 }));
-const panel = vi.hoisted(() => ({ postPanel: vi.fn() }));
+const panel = vi.hoisted(() => ({ postPanel: vi.fn(), refreshPanel: vi.fn() }));
 
 vi.mock("#lib/database.js", () => ({ default: {} }));
 vi.mock("./store.js", () => ({ default: store }));
 vi.mock("./panel.js", () => panel);
 
-const { applyAccess, joinHub, memberLeft, reconcile } =
+const { applyAccess, joinHub, memberLeft, ownerMoved, reconcile } =
   await import("./lifecycle.js");
 
 silenceLogs();
@@ -289,8 +289,9 @@ describe("memberLeft", () => {
   it("deletes the channel when only bots are left", async () => {
     store.channel.mockResolvedValue({ channelId: "temp", ownerId: "alice" });
     const channel = channelWith({ id: "music", bot: true });
-    await memberLeft(channel);
+    await memberLeft(channel, "alice", config.t);
     expect(channel.delete).toHaveBeenCalled();
+    expect(panel.refreshPanel).not.toHaveBeenCalled();
     expect(store.removeChannel).toHaveBeenCalledWith("temp");
   });
 
@@ -300,8 +301,22 @@ describe("memberLeft", () => {
       { id: "music", bot: true },
       { id: "bob", bot: false }
     );
-    await memberLeft(channel);
+    await memberLeft(channel, "carol", config.t);
     expect(channel.delete).not.toHaveBeenCalled();
+    expect(panel.refreshPanel).not.toHaveBeenCalled();
+    await memberLeft(channel, "alice", config.t);
+    expect(panel.refreshPanel).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ownerMoved", () => {
+  it("redraws the panel only when the owner comes or goes", async () => {
+    const channel = { id: "c1" } as any;
+    store.channel.mockResolvedValue({ channelId: "c1", ownerId: "owner" });
+    await ownerMoved(channel, "guest", config.t);
+    expect(panel.refreshPanel).not.toHaveBeenCalled();
+    await ownerMoved(channel, "owner", config.t);
+    expect(panel.refreshPanel).toHaveBeenCalledTimes(1);
   });
 });
 

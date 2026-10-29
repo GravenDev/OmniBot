@@ -1,6 +1,7 @@
 import type { Guild, GuildMember, VoiceBasedChannel } from "discord.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
+import { accessMode, modeFlags, type AccessMode } from "./access-mode.js";
 import {
   accessState,
   applyAccess,
@@ -23,8 +24,10 @@ export const MAX_ACCESS_ENTRIES = 25;
 
 const RENAME_WAIT_MS = 5_000;
 const INVITE_COOLDOWN_MS = 10 * 60_000;
+const NOTICE_LIFETIME_MS = 15 * 60_000;
 
 const invited = new Set<string>();
+const notices = new Map<string, string[]>();
 
 export interface Outcome {
   ok: boolean;
@@ -89,6 +92,18 @@ export async function authorize(
   return actor.id === row.ownerId || isModerator(actor, channel)
     ? { channel, row }
     : fail("action.notOwner");
+}
+
+export async function redrawPanel(
+  guild: Guild,
+  channelId: string,
+  config: TempVoiceConfig
+): Promise<void> {
+  const channel = tempChannelOf(guild, channelId);
+  const row = channel ? await store.channel(channelId) : null;
+  if (channel && row) {
+    await refreshPanel(channel, row, config.t);
+  }
 }
 
 export function withChannel(
@@ -178,6 +193,19 @@ export async function rename(
       if (isOwner(ctx)) {
         await store.savePreference(ctx.guild.id, ctx.actor.id, { name });
       }
+      queue
+        .run(channelId, async () => {
+          const row = await store.channel(channelId);
+          if (row) {
+            await refreshPanel(ctx.channel, row, ctx.config.t);
+          }
+        })
+        .catch((err: unknown) =>
+          logger.debug(
+            { err },
+            `Panel not refreshed | channelId = ${channelId}`
+          )
+        );
     },
     (err: unknown) => {
       renames.release(channelId, at);
@@ -213,20 +241,42 @@ export async function setLimit(
   });
 }
 
-export async function setLocked(
+export async function setAccess(
   ctx: ActionContext,
-  locked: boolean
+  mode: AccessMode
 ): Promise<Outcome> {
-  await commit(ctx, { locked }, { locked });
-  return done(locked ? "lock.done" : "unlock.done");
+  if (accessMode(ctx.row) === mode) {
+    return done(`mode.${mode}.done`);
+  }
+  const flags = modeFlags(mode);
+  await commit(ctx, flags, flags);
+  return done(`mode.${mode}.done`);
 }
 
-export async function setHidden(
+export async function edit(
   ctx: ActionContext,
-  hidden: boolean
+  name: string,
+  userLimit: number
 ): Promise<Outcome> {
-  await commit(ctx, { hidden }, { hidden });
-  return done(hidden ? "hide.done" : "show.done");
+  const outcomes: Outcome[] = [];
+  if (cleanName(name) !== ctx.channel.name) {
+    outcomes.push(await rename(ctx, name));
+  }
+  if (userLimit !== ctx.channel.userLimit) {
+    outcomes.push(await setLimit(ctx, userLimit));
+  }
+  if (outcomes.length === 0) {
+    return done("edit.unchanged");
+  }
+  return {
+    ok: outcomes.every((outcome) => outcome.ok),
+    key: "edit.done",
+    params: {
+      details: outcomes
+        .map((outcome) => ctx.config.t(outcome.key, outcome.params))
+        .join("\n"),
+    },
+  };
 }
 
 function eligibleTargets(
@@ -292,34 +342,62 @@ export async function trust(
   return done("trust.done", { users: mentions(ids) });
 }
 
-export async function invite(
+export function rememberNotice(token: string, ids: string[]): void {
+  notices.set(token, ids);
+  setTimeout(() => notices.delete(token), NOTICE_LIFETIME_MS).unref();
+}
+
+export function noticeMembers(guild: Guild, token: string): GuildMember[] {
+  return (notices.get(token) ?? [])
+    .map((id) => guild.members.cache.get(id))
+    .filter((member) => member !== undefined);
+}
+
+export async function notify(
   ctx: ActionContext,
-  member: GuildMember
+  members: GuildMember[]
 ): Promise<Outcome> {
-  const alreadyTrusted = ctx.row.trusted.includes(member.id);
-  const trusted = await trust(ctx, [member]);
-  if (!trusted.ok) {
-    return trusted;
+  const targets = members.filter((member) =>
+    ctx.row.trusted.includes(member.id)
+  );
+  if (targets.length === 0) {
+    return fail("notify.none");
   }
-  const key = `${ctx.channel.id}:${member.id}`;
-  if (alreadyTrusted || invited.has(key)) {
-    return done("invite.already", { user: `<@${member.id}>` });
+  const sent: string[] = [];
+  const failed: string[] = [];
+  for (const member of targets) {
+    const key = `${ctx.channel.id}:${member.id}`;
+    if (invited.has(key)) {
+      continue;
+    }
+    try {
+      await member.send({
+        content: ctx.config.t("notify.dm", {
+          user: ctx.actor.displayName,
+          guild: ctx.guild.name,
+          channel: ctx.channel.url,
+        }),
+        allowedMentions: { parse: [] },
+      });
+      invited.add(key);
+      setTimeout(() => invited.delete(key), INVITE_COOLDOWN_MS).unref();
+      sent.push(member.id);
+    } catch {
+      failed.push(member.id);
+    }
   }
-  invited.add(key);
-  setTimeout(() => invited.delete(key), INVITE_COOLDOWN_MS).unref();
-  try {
-    await member.send({
-      content: ctx.config.t("invite.dm", {
-        user: ctx.actor.displayName,
-        guild: ctx.guild.name,
-        channel: ctx.channel.url,
-      }),
-      allowedMentions: { parse: [] },
-    });
-    return done("invite.done", { user: `<@${member.id}>` });
-  } catch {
-    return done("invite.noDm", { user: `<@${member.id}>` });
+  if (sent.length === 0 && failed.length === 0) {
+    return done("notify.already");
   }
+  if (failed.length === 0) {
+    return done("notify.done", { users: mentions(sent) });
+  }
+  return sent.length === 0
+    ? fail("notify.failed", { failed: mentions(failed) })
+    : done("notify.partial", {
+        users: mentions(sent),
+        failed: mentions(failed),
+      });
 }
 
 export async function revoke(

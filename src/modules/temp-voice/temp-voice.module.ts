@@ -1,5 +1,6 @@
 import { GatewayIntentBits } from "discord.js";
 import { defineModule } from "#lib/module.js";
+import accessSelect from "./interactions/access.select.js";
 import panelButton from "./interactions/panel.button.js";
 import panelModal from "./interactions/panel.modal.js";
 import pickSelect from "./interactions/pick.select.js";
@@ -23,6 +24,7 @@ const tempVoiceModule = defineModule({
 
   onLoad(_client, registry) {
     registry.register(panelButton);
+    registry.register(accessSelect);
     registry.register(panelModal);
     registry.register(usersSelect);
     registry.register(pickSelect);

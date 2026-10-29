@@ -178,7 +178,7 @@ describe("claim", () => {
       new Error("Missing Permissions")
     );
     const owner = fakeMember("owner");
-    await expect(actions.setLocked(ctx(owner), true)).rejects.toThrow();
+    await expect(actions.setAccess(ctx(owner), "invite")).rejects.toThrow();
     expect(store.updateChannel).not.toHaveBeenCalled();
     expect(store.savePreference).not.toHaveBeenCalled();
   });
@@ -274,20 +274,76 @@ describe("remembered access", () => {
   });
 });
 
-describe("invite", () => {
-  it("sends one DM per member, not one per click", async () => {
+describe("setAccess", () => {
+  it("makes a private channel both locked and hidden, and remembers it", async () => {
+    const owner = fakeMember("owner");
+    expect(await actions.setAccess(ctx(owner), "private")).toMatchObject({
+      ok: true,
+      key: "mode.private.done",
+    });
+    expect(store.updateChannel).toHaveBeenCalledWith("c1", {
+      locked: true,
+      hidden: true,
+    });
+    expect(store.savePreference).toHaveBeenCalledWith("g1", "owner", {
+      locked: true,
+      hidden: true,
+    });
+  });
+
+  it("touches nothing when the mode does not change", async () => {
+    const owner = fakeMember("owner");
+    await actions.setAccess(ctx(owner, [], { locked: true }), "invite");
+    expect(lifecycle.applyAccess).not.toHaveBeenCalled();
+    expect(store.updateChannel).not.toHaveBeenCalled();
+  });
+});
+
+describe("edit", () => {
+  it("only applies what changed", async () => {
+    const owner = fakeMember("owner");
+    const context = ctx(owner, [], { channelId: "c7" });
+    Object.assign(context.channel, { id: "c7", name: "Salon", userLimit: 5 });
+    expect(await actions.edit(context, "Salon", 5)).toMatchObject({
+      key: "edit.unchanged",
+    });
+    expect(await actions.edit(context, " Salon ", 8)).toMatchObject({
+      ok: true,
+      key: "edit.done",
+      params: { details: "limit.done" },
+    });
+    expect(context.channel.setUserLimit).toHaveBeenCalledWith(8);
+    expect(context.channel.setName).not.toHaveBeenCalled();
+  });
+});
+
+describe("notify", () => {
+  it("sends one DM per invited member, not one per click", async () => {
     const owner = fakeMember("owner");
     const target = { ...fakeMember("target-1"), send: vi.fn() };
-    const context = ctx(owner);
+    const stranger = { ...fakeMember("stranger"), send: vi.fn() };
+    const context = ctx(owner, [], { trusted: ["target-1"] });
     context.guild.name = "Graven";
     context.channel.url = "https://discord.com/channels/g1/c1";
-    expect(await actions.invite(context, target)).toMatchObject({
-      key: "invite.done",
+    expect(await actions.notify(context, [target, stranger])).toMatchObject({
+      key: "notify.done",
+      params: { users: "<@target-1>" },
     });
-    expect(
-      await actions.invite(ctx(owner, [], { trusted: [] }), target)
-    ).toMatchObject({ key: "invite.already" });
+    expect(await actions.notify(context, [target])).toMatchObject({
+      key: "notify.already",
+    });
     expect(target.send).toHaveBeenCalledTimes(1);
+    expect(stranger.send).not.toHaveBeenCalled();
+  });
+
+  it("forgets the members of an expired notice", () => {
+    const { guild } = setup();
+    guild.members = { cache: new Map([["a", fakeMember("a")]]) };
+    actions.rememberNotice("token", ["a", "gone"]);
+    expect(actions.noticeMembers(guild, "token").map((m) => m.id)).toEqual([
+      "a",
+    ]);
+    expect(actions.noticeMembers(guild, "other")).toEqual([]);
   });
 });
 

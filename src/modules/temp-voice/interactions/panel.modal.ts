@@ -1,11 +1,7 @@
 import { MessageFlags, type ModalSubmitInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
-import {
-  rename,
-  setLimit,
-  withChannel,
-} from "#modules/temp-voice/services/actions.js";
+import { edit, withChannel } from "#modules/temp-voice/services/actions.js";
 import { parseUserLimit } from "#modules/temp-voice/services/naming.js";
 import { MODAL_ID } from "#modules/temp-voice/services/panel.js";
 import { outcomeText } from "#modules/temp-voice/services/views.js";
@@ -23,15 +19,22 @@ export default declareInteractionHandler<
     if (!interaction.inCachedGuild() || !channelId) {
       return;
     }
-    const value = interaction.fields.getTextInputValue("value");
-    if (action === "limit" && parseUserLimit(value) === null) {
+    if (action !== "edit") {
       await interaction.reply({
-        content: config.t("limit.invalid"),
+        content: config.t("panel.expired"),
         flags: MessageFlags.Ephemeral,
       });
       return;
     }
-    if (action !== "limit" && action !== "rename") {
+    const name = interaction.fields.getTextInputValue("name");
+    const userLimit = parseUserLimit(
+      interaction.fields.getTextInputValue("limit")
+    );
+    if (userLimit === null) {
+      await interaction.reply({
+        content: config.t("limit.invalid"),
+        flags: MessageFlags.Ephemeral,
+      });
       return;
     }
 
@@ -41,10 +44,7 @@ export default declareInteractionHandler<
       channelId,
       interaction.member,
       config,
-      (ctx) =>
-        action === "limit"
-          ? setLimit(ctx, parseUserLimit(value)!)
-          : rename(ctx, value)
+      (ctx) => edit(ctx, name, userLimit)
     );
     await interaction.editReply({
       content: outcomeText(config.t, outcome),
