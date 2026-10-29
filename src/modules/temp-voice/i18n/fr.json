@@ -21,7 +21,6 @@
   "permission.ManageChannels": "Gérer les salons",
   "permission.ManageRoles": "Gérer les permissions",
   "permission.MoveMembers": "Déplacer des membres",
-  "permission.EmbedLinks": "Intégrer des liens",
   "permission.SendMessages": "Envoyer des messages",
 
   "panel.owner": "Propriétaire : {{owner}}",
@@ -33,6 +32,7 @@
   "panel.accessTitle": "**Qui peut rejoindre ?**",
   "panel.footer": "-# Réservé au propriétaire et aux modérateurs. Vos réglages (nom, limite, accès, invités, bloqués) sont repris à votre prochain salon.",
   "panel.outdated": "Ce panneau était périmé : un nouveau vient d'être publié dans le salon.",
+  "panel.stale": "Ce panneau n'est plus à jour : utilisez le dernier panneau publié dans le salon.",
   "panel.notReplaced": "Ce panneau est périmé, mais le bot n'a pas pu en publier un nouveau. Prévenez un administrateur.",
   "panel.expired": "Ce menu a expiré : rouvrez-le depuis le panneau du salon.",
   "panel.button.edit": "Nom et limite",

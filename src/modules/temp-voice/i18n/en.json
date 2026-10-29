@@ -21,7 +21,6 @@
   "permission.ManageChannels": "Manage Channels",
   "permission.ManageRoles": "Manage Permissions",
   "permission.MoveMembers": "Move Members",
-  "permission.EmbedLinks": "Embed Links",
   "permission.SendMessages": "Send Messages",
 
   "panel.owner": "Owner: {{owner}}",
@@ -33,6 +32,7 @@
   "panel.accessTitle": "**Who can join?**",
   "panel.footer": "-# Only the owner and moderators can use this panel. Your settings (name, limit, access, invited, blocked) carry over to your next channel.",
   "panel.outdated": "This panel was out of date: a new one has just been posted in the channel.",
+  "panel.stale": "This panel is out of date: use the latest panel posted in the channel.",
   "panel.notReplaced": "This panel is out of date, but the bot could not post a new one. Ask an administrator.",
   "panel.expired": "This menu has expired: open it again from the channel panel.",
   "panel.button.edit": "Name and limit",

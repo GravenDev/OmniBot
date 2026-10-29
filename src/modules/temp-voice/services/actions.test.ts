@@ -315,6 +315,20 @@ describe("edit", () => {
     expect(context.channel.setUserLimit).toHaveBeenCalledWith(8);
     expect(context.channel.setName).not.toHaveBeenCalled();
   });
+
+  it("renames before changing the limit, and reports both", async () => {
+    const owner = fakeMember("owner");
+    const context = ctx(owner, [], { channelId: "c8" });
+    Object.assign(context.channel, { id: "c8", name: "Salon", userLimit: 5 });
+    context.channel.setName.mockRejectedValueOnce(new Error("AutoMod"));
+    await expect(actions.edit(context, "Bad", 8)).rejects.toThrow();
+    expect(context.channel.setUserLimit).not.toHaveBeenCalled();
+
+    expect(await actions.edit(context, "Good", 8)).toMatchObject({
+      ok: true,
+      params: { details: "rename.done\nlimit.done" },
+    });
+  });
 });
 
 describe("notify", () => {

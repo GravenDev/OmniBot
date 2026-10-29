@@ -7,6 +7,7 @@ import {
   setAccess,
   withChannel,
 } from "#modules/temp-voice/services/actions.js";
+import { queue } from "#modules/temp-voice/services/lifecycle.js";
 import { ACCESS_ID } from "#modules/temp-voice/services/panel.js";
 import { outcomeText } from "#modules/temp-voice/services/views.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
@@ -24,6 +25,10 @@ export default declareInteractionHandler<
     if (!interaction.inCachedGuild() || !channelId || !isAccessMode(mode)) {
       return;
     }
+    const redraw = () =>
+      queue.run(channelId, () =>
+        redrawPanel(interaction.guild, channelId, config)
+      );
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const outcome = await withChannel(
       interaction.guild,
@@ -32,11 +37,11 @@ export default declareInteractionHandler<
       config,
       (ctx) => setAccess(ctx, mode)
     ).catch(async (err: unknown) => {
-      await redrawPanel(interaction.guild, channelId, config);
+      await redraw();
       throw err;
     });
     if (!outcome.ok) {
-      await redrawPanel(interaction.guild, channelId, config);
+      await redraw();
     }
     await interaction.editReply({
       content: outcomeText(config.t, outcome),

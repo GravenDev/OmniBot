@@ -9,6 +9,7 @@ import {
   remove,
   tempChannelOf,
   withChannel,
+  type ActionContext,
   type Outcome,
 } from "#modules/temp-voice/services/actions.js";
 import { queue } from "#modules/temp-voice/services/lifecycle.js";
@@ -38,21 +39,19 @@ async function replaceOutdatedPanel(
   config: TempVoiceConfig
 ): Promise<void> {
   await interaction.deferReply(ephemeral);
-  const replaced = await queue.run(channelId, async () => {
+  const key = await queue.run(channelId, async () => {
     const channel = tempChannelOf(interaction.guild, channelId);
     const row = channel ? await store.channel(channelId) : null;
     if (!channel || row?.panelMessageId !== interaction.message.id) {
-      return true;
+      return "panel.stale";
     }
     if (!(await postPanel(channel, row, config.t))) {
-      return false;
+      return "panel.notReplaced";
     }
     await interaction.message.delete().catch(() => undefined);
-    return true;
+    return "panel.outdated";
   });
-  await interaction.editReply(
-    config.t(replaced ? "panel.outdated" : "panel.notReplaced")
-  );
+  await interaction.editReply(config.t(key));
 }
 
 export default declareInteractionHandler<
@@ -110,13 +109,26 @@ export default declareInteractionHandler<
       case "notify": {
         await interaction.deferUpdate();
         const members = noticeMembers(guild, token ?? "");
-        const outcome =
-          members.length === 0
-            ? { ok: false, key: "notify.expired" }
-            : await withChannel(guild, channelId, actor, config, (ctx) =>
-                notify(ctx, members)
-              );
-        await interaction.editReply(answer(outcome));
+        if (members.length === 0) {
+          await interaction.editReply(
+            answer({ ok: false, key: "notify.expired" })
+          );
+          return;
+        }
+        const checked: { ctx?: ActionContext } = {};
+        const refused = await withChannel(
+          guild,
+          channelId,
+          actor,
+          config,
+          async (ctx) => {
+            checked.ctx = { ...ctx, row: { ...ctx.row } };
+            return { ok: true, key: "" };
+          }
+        );
+        await interaction.editReply(
+          answer(checked.ctx ? await notify(checked.ctx, members) : refused)
+        );
         return;
       }
       case "cancel":
