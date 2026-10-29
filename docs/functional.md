@@ -433,14 +433,14 @@ Remplace un bot comme TempVoice : rejoindre un salon vocal « hub » crée un sa
 - Le salon est créé dans la catégorie du hub, synchronisé avec ses permissions, avec le débit binaire et la région du hub. Son nom vient du hub (`{user}` est remplacé par le pseudo du membre) et sa limite de membres aussi, sauf si le membre a des réglages mémorisés (voir plus bas).
 - Le propriétaire reçoit l'accès au salon (le voir et s'y connecter), sans jamais obtenir plus que ce qu'il a déjà sur le hub : un rôle qui l'empêche de parler ou de se connecter continue de s'appliquer. Le bot s'y donne les permissions dont il a besoin pour le gérer.
 - Un membre qui possède déjà un salon temporaire et rejoint un hub est ramené dans son salon au lieu d'en recevoir un deuxième. Après une création, le même membre doit attendre 10 secondes avant d'en créer un autre : le bot le lui dit dans le chat du hub (message effacé au bout de 10 secondes).
-- Si le bot n'a pas les permissions nécessaires dans la catégorie du hub (voir le salon, se connecter, gérer les salons, gérer les permissions, déplacer des membres, envoyer des messages, intégrer des liens), ou si la création échoue, rien n'est créé et le membre en est averti dans le chat du hub.
+- Si le bot n'a pas les permissions nécessaires dans la catégorie du hub (voir le salon, se connecter, gérer les salons, gérer les permissions, déplacer des membres, envoyer des messages), ou si la création échoue, rien n'est créé et le membre en est averti dans le chat du hub.
 - Un panneau de contrôle est publié dans le chat textuel du salon vocal. Il affiche le nom du salon, son mode d'accès, sa limite, le nombre d'invités et de bloqués et le propriétaire, et se met à jour à chaque changement ainsi que quand le propriétaire quitte le salon ou y revient.
 - Toutes les 10 minutes, et au démarrage du bot, les salons temporaires vides depuis plus d'une minute sont supprimés et ceux supprimés à la main sont oubliés : un salon vidé pendant que le bot était hors ligne disparaît donc à son retour, et les membres restés dans un hub entre-temps reçoivent leur salon. Supprimer un hub à la main le retire de la configuration.
 - Quand le module est désactivé, les salons temporaires existants restent en place et leur panneau ne répond plus, mais ils sont toujours supprimés une fois vides (dans les 10 minutes).
 
 ### Panneau de contrôle
 
-Seuls le propriétaire et les membres qui peuvent gérer le salon (modérateurs) peuvent utiliser le panneau ; **Récupérer le salon** est ouvert à tous les membres présents dans le salon. Les réponses sont visibles de soi seul. Un clic sur un panneau publié avant cette version en publie un nouveau à sa place.
+Seuls le propriétaire et les membres qui peuvent gérer le salon (modérateurs) peuvent utiliser le panneau ; **Récupérer le salon** est ouvert à tous les membres présents dans le salon. Les réponses sont visibles de soi seul. Sur un panneau publié avant cette version, un clic sur un bouton qui n'existe plus publie un nouveau panneau à sa place ; le bouton d'un panneau qui n'est plus le dernier publié renvoie vers celui-ci. Quand le propriétaire est absent au redémarrage du bot, le panneau affiche le bouton **Récupérer le salon** à la tâche de nettoyage suivante.
 
 Le menu **Qui peut rejoindre ?** règle le mode d'accès :
 

@@ -333,4 +333,25 @@ describe("reconcile", () => {
     expect(store.removeHub).toHaveBeenCalledTimes(1);
     expect(store.removeHub).toHaveBeenCalledWith("g1", "deleted-hub");
   });
+
+  it("redraws the panel of a channel whose owner left while the bot was away", async () => {
+    const temp = {
+      id: "temp",
+      isVoiceBased: () => true,
+      members: new Collection([["bob", { id: "bob", user: { bot: false } }]]),
+    };
+    const guild = { id: "g1", channels: { cache: new Map([["temp", temp]]) } };
+    const stored = {
+      channelId: "temp",
+      ownerId: "alice",
+      createdAt: new Date(0),
+    };
+    store.hubs.mockResolvedValue([]);
+    store.channels.mockResolvedValue([stored]);
+    store.channel.mockResolvedValue(stored);
+    await reconcile(guild as any);
+    expect(panel.refreshPanel).not.toHaveBeenCalled();
+    await reconcile(guild as any, config.t);
+    expect(panel.refreshPanel).toHaveBeenCalledWith(temp, stored, config.t);
+  });
 });

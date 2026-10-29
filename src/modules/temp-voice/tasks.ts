@@ -32,12 +32,12 @@ export function tempVoiceTasks(module: Module<TempVoiceConfigSchema>) {
             continue;
           }
           try {
-            await reconcile(guild);
-            if (activated.has(guildId)) {
-              await seatWaitingMembers(
-                guild,
-                await configService.getConfigForModuleIn(module, guildId)
-              );
+            const config = activated.has(guildId)
+              ? await configService.getConfigForModuleIn(module, guildId)
+              : null;
+            await reconcile(guild, config?.t);
+            if (config) {
+              await seatWaitingMembers(guild, config);
             }
           } catch (err) {
             logger.error(

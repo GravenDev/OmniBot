@@ -444,7 +444,7 @@ export function channelDeleted(guild: Guild, channelId: string): Promise<void> {
   });
 }
 
-export async function reconcile(guild: Guild): Promise<void> {
+export async function reconcile(guild: Guild, t?: TFunction): Promise<void> {
   const now = Date.now();
   for (const hub of await store.hubs(guild.id)) {
     if (!voiceChannel(guild, hub.channelId)) {
@@ -470,6 +470,8 @@ export async function reconcile(guild: Guild): Promise<void> {
         now - current.createdAt.getTime() > RECONCILE_GRACE_MS
       ) {
         await removeTempChannel(channel, current, "empty");
+      } else if (t && !channel.members.has(current.ownerId)) {
+        await refreshPanel(channel, current, t);
       }
     });
   }

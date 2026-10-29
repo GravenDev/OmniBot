@@ -12,7 +12,6 @@ export const REQUIRED_PERMISSIONS: PermissionsString[] = [
   "ManageRoles",
   "MoveMembers",
   "SendMessages",
-  "EmbedLinks",
 ];
 
 export function isModerator(

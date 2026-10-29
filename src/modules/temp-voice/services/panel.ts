@@ -3,6 +3,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   ContainerBuilder,
+  escapeMarkdown,
   MessageFlags,
   StringSelectMenuBuilder,
   type VoiceBasedChannel,
@@ -75,7 +76,7 @@ function header(
     t("panel.blocked", { count: String(row.blocked.length) }),
   ].join(" · ");
   return [
-    `## ${channel.name}`,
+    `## ${escapeMarkdown(channel.name)}`,
     status,
     t("panel.owner", { owner: `<@${row.ownerId}>` }),
   ].join("\n");

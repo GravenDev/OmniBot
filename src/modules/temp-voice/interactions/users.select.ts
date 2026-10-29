@@ -45,6 +45,7 @@ export default declareInteractionHandler<
     }
     await interaction.deferUpdate();
     const members = [...interaction.members.values()];
+    let added: string[] = [];
     const outcome =
       members.length === 0
         ? none
@@ -53,14 +54,16 @@ export default declareInteractionHandler<
             channelId,
             interaction.member,
             config,
-            (ctx) => run(ctx, members)
+            async (ctx) => {
+              const before = new Set(ctx.row.trusted);
+              const result = await run(ctx, members);
+              added = ctx.row.trusted.filter((id) => !before.has(id));
+              return result;
+            }
           );
-    const offerNotice = action === "trust" && outcome.ok;
+    const offerNotice = action === "trust" && outcome.ok && added.length > 0;
     if (offerNotice) {
-      rememberNotice(
-        interaction.id,
-        members.filter((member) => !member.user.bot).map((member) => member.id)
-      );
+      rememberNotice(interaction.id, added);
     }
     await interaction.editReply({
       content: outcomeText(config.t, outcome),

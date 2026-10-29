@@ -259,7 +259,7 @@ export async function edit(
   userLimit: number
 ): Promise<Outcome> {
   const outcomes: Outcome[] = [];
-  if (cleanName(name) !== ctx.channel.name) {
+  if (cleanName(name) !== cleanName(ctx.channel.name)) {
     outcomes.push(await rename(ctx, name));
   }
   if (userLimit !== ctx.channel.userLimit) {
@@ -370,6 +370,7 @@ export async function notify(
     if (invited.has(key)) {
       continue;
     }
+    invited.add(key);
     try {
       await member.send({
         content: ctx.config.t("notify.dm", {
@@ -379,10 +380,10 @@ export async function notify(
         }),
         allowedMentions: { parse: [] },
       });
-      invited.add(key);
       setTimeout(() => invited.delete(key), INVITE_COOLDOWN_MS).unref();
       sent.push(member.id);
     } catch {
+      invited.delete(key);
       failed.push(member.id);
     }
   }
