@@ -192,6 +192,20 @@ describe("renderReport", () => {
     });
   });
 
+  it("never claims more newcomers spoke than joined", async () => {
+    await renderReport(
+      guild,
+      { ...stats, joins: 2, activeNewcomers: 5 },
+      context
+    );
+    expect(rendered().data.notes).toMatchObject({
+      joins: {
+        subtext:
+          'report.activeNewcomers {"count":2} · report.record {"count":30}',
+      },
+    });
+  });
+
   it("says nothing of the newcomers on a day without arrivals", async () => {
     await renderReport(
       guild,

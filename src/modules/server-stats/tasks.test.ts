@@ -150,7 +150,7 @@ describe("postReport", () => {
       unknown,
       { insights: { messages: { change: number } } },
     ];
-    expect(context.insights.messages.change).toBeCloseTo(2);
+    expect(context.insights.messages.change).toBeNull();
   });
 
   it("posts nothing without a report channel", async () => {

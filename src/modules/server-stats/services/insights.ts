@@ -46,7 +46,10 @@ export function compare(today: Totals, previous: Totals[]): Insights {
       Math.max(recent.length, 1);
     const best = Math.max(0, ...previous.map((totals) => totals[metric]));
     return {
-      change: average > 0 ? today[metric] / average - 1 : null,
+      change:
+        recent.length === TREND_DAYS && average > 0
+          ? today[metric] / average - 1
+          : null,
       record:
         previous.length >= MIN_RECORD_DAYS &&
         today[metric] >= MIN_RECORD_VALUE &&

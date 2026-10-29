@@ -105,7 +105,7 @@ function notes(
       ...(complete && stats.joins > 0
         ? {
             extra: t("report.activeNewcomers", {
-              count: stats.activeNewcomers,
+              count: Math.min(stats.activeNewcomers, stats.joins),
             }),
           }
         : {}),

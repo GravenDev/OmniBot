@@ -39,9 +39,19 @@ describe("compare", () => {
     expect(compare(totals(150), previous).messages.change).toBeCloseTo(0.5);
   });
 
+  it("has no trend before 7 counted days", () => {
+    const sixDays = Array.from({ length: 6 }, () => totals(100));
+    expect(compare(totals(150), sixDays).messages.change).toBeNull();
+  });
+
   it("has no trend without a previous day or with a zero average", () => {
     expect(compare(totals(10), []).messages.change).toBeNull();
-    expect(compare(totals(10), [totals(0)]).messages.change).toBeNull();
+    expect(
+      compare(
+        totals(10),
+        Array.from({ length: 7 }, () => totals(0))
+      ).messages.change
+    ).toBeNull();
   });
 
   it("marks a record only above every compared day, after a week", () => {

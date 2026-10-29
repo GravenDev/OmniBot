@@ -103,17 +103,6 @@ async function recordMemberChange(
   });
 }
 
-async function hourlyMessages(guildId: string, day: Date): Promise<number[]> {
-  const hours = Array.from({ length: 24 }, () => 0);
-  const rows = await prisma.serverStatsHour.findMany({
-    where: { guildId, day },
-  });
-  for (const row of rows) {
-    hours[row.hour] = row.messages;
-  }
-  return hours;
-}
-
 async function history(
   guildId: string,
   from: Date,
@@ -178,36 +167,43 @@ async function dailyStats(
     members,
     reactionTotals,
     reactions,
-    hours,
-  ] = await Promise.all([
-    prisma.serverStatsDay.findUnique({ where: { guildId_day: where } }),
-    prisma.serverStatsChannel.aggregate({
-      where,
-      _sum: { messages: true },
-      _count: true,
-    }),
-    prisma.serverStatsChannel.findMany({
-      where,
-      orderBy: [{ messages: "desc" }, { channelId: "asc" }],
-      take: TOP_SIZE,
-    }),
-    prisma.serverStatsMember.count({ where }),
-    prisma.serverStatsMember.findMany({
-      where,
-      orderBy: [{ messages: "desc" }, { userId: "asc" }],
-      take: TOP_SIZE,
-    }),
-    prisma.serverStatsReaction.aggregate({
-      where,
-      _sum: { reactions: true },
-    }),
-    prisma.serverStatsReaction.findMany({
-      where,
-      orderBy: [{ reactions: "desc" }, { emoji: "asc" }],
-      take: TOP_SIZE,
-    }),
-    hourlyMessages(guildId, day),
-  ]);
+    hourRows,
+  ] = await prisma.$transaction(
+    [
+      prisma.serverStatsDay.findUnique({ where: { guildId_day: where } }),
+      prisma.serverStatsChannel.aggregate({
+        where,
+        _sum: { messages: true },
+        _count: true,
+      }),
+      prisma.serverStatsChannel.findMany({
+        where,
+        orderBy: [{ messages: "desc" }, { channelId: "asc" }],
+        take: TOP_SIZE,
+      }),
+      prisma.serverStatsMember.count({ where }),
+      prisma.serverStatsMember.findMany({
+        where,
+        orderBy: [{ messages: "desc" }, { userId: "asc" }],
+        take: TOP_SIZE,
+      }),
+      prisma.serverStatsReaction.aggregate({
+        where,
+        _sum: { reactions: true },
+      }),
+      prisma.serverStatsReaction.findMany({
+        where,
+        orderBy: [{ reactions: "desc" }, { emoji: "asc" }],
+        take: TOP_SIZE,
+      }),
+      prisma.serverStatsHour.findMany({ where }),
+    ],
+    { isolationLevel: "RepeatableRead" }
+  );
+  const hours = Array.from({ length: 24 }, () => 0);
+  for (const row of hourRows) {
+    hours[row.hour] = row.messages;
+  }
 
   return {
     startedAt: guild.startedAt,
