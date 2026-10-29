@@ -108,6 +108,7 @@ export function drawText(
 ): void {
   ctx.font = font(size);
   ctx.fillStyle = rgb(color);
+  ctx.textAlign = "left";
   fillTextAnchored(ctx, value, x, y, "ascender");
 }
 

@@ -7,9 +7,18 @@ export interface Ranked {
   count: number;
 }
 
+export interface Totals {
+  joins: number;
+  messages: number;
+  activeMembers: number;
+  reactions: number;
+}
+
 export interface DailyStats {
   startedAt: Date;
   joins: number;
+  activeNewcomers: number;
+  hours: number[];
   leaves: number;
   messages: number;
   activeMembers: number;
@@ -36,11 +45,18 @@ async function ensureStarted(guildId: string): Promise<void> {
 async function recordMessage(
   guildId: string,
   day: Date,
+  hour: number,
   channelId: string,
-  userId: string
+  userId: string,
+  newcomer: boolean
 ): Promise<void> {
   await ensureStarted(guildId);
-  await prisma.$transaction([
+  const [, , member] = await prisma.$transaction([
+    prisma.serverStatsHour.upsert({
+      where: { guildId_day_hour: { guildId, day, hour } },
+      create: { guildId, day, hour, messages: 1 },
+      update: { messages: { increment: 1 } },
+    }),
     prisma.serverStatsChannel.upsert({
       where: { guildId_day_channelId: { guildId, day, channelId } },
       create: { guildId, day, channelId, messages: 1 },
@@ -52,6 +68,13 @@ async function recordMessage(
       update: { messages: { increment: 1 } },
     }),
   ]);
+  if (newcomer && member.messages === 1) {
+    await prisma.serverStatsDay.upsert({
+      where: { guildId_day: { guildId, day } },
+      create: { guildId, day, activeNewcomers: 1 },
+      update: { activeNewcomers: { increment: 1 } },
+    });
+  }
 }
 
 async function recordReaction(
@@ -80,6 +103,61 @@ async function recordMemberChange(
   });
 }
 
+async function hourlyMessages(guildId: string, day: Date): Promise<number[]> {
+  const hours = Array.from({ length: 24 }, () => 0);
+  const rows = await prisma.serverStatsHour.findMany({
+    where: { guildId, day },
+  });
+  for (const row of rows) {
+    hours[row.hour] = row.messages;
+  }
+  return hours;
+}
+
+async function history(
+  guildId: string,
+  from: Date,
+  to: Date
+): Promise<Map<number, Totals>> {
+  const where = { guildId, day: { gte: from, lte: to } };
+  const [days, channels, members, reactions] = await Promise.all([
+    prisma.serverStatsDay.findMany({ where }),
+    prisma.serverStatsChannel.groupBy({
+      by: ["day"],
+      where,
+      _sum: { messages: true },
+    }),
+    prisma.serverStatsMember.groupBy({ by: ["day"], where, _count: true }),
+    prisma.serverStatsReaction.groupBy({
+      by: ["day"],
+      where,
+      _sum: { reactions: true },
+    }),
+  ]);
+  const totals = new Map<number, Totals>();
+  const at = (day: Date) => {
+    let entry = totals.get(day.getTime());
+    if (!entry) {
+      entry = { joins: 0, messages: 0, activeMembers: 0, reactions: 0 };
+      totals.set(day.getTime(), entry);
+    }
+    return entry;
+  };
+  for (const row of days) {
+    at(row.day).joins = row.joins;
+  }
+  for (const row of channels) {
+    at(row.day).messages = row._sum.messages ?? 0;
+  }
+  for (const row of members) {
+    at(row.day).activeMembers = row._count;
+  }
+  for (const row of reactions) {
+    at(row.day).reactions = row._sum.reactions ?? 0;
+  }
+  return totals;
+}
+
 async function dailyStats(
   guildId: string,
   day: Date
@@ -100,6 +178,7 @@ async function dailyStats(
     members,
     reactionTotals,
     reactions,
+    hours,
   ] = await Promise.all([
     prisma.serverStatsDay.findUnique({ where: { guildId_day: where } }),
     prisma.serverStatsChannel.aggregate({
@@ -127,11 +206,14 @@ async function dailyStats(
       orderBy: [{ reactions: "desc" }, { emoji: "asc" }],
       take: TOP_SIZE,
     }),
+    hourlyMessages(guildId, day),
   ]);
 
   return {
     startedAt: guild.startedAt,
     joins: dayRow?.joins ?? 0,
+    activeNewcomers: dayRow?.activeNewcomers ?? 0,
+    hours,
     leaves: dayRow?.leaves ?? 0,
     messages: channelTotals._sum.messages ?? 0,
     activeChannels: channelTotals._count,
@@ -156,6 +238,7 @@ async function purgeBefore(day: Date): Promise<void> {
     prisma.serverStatsChannel.deleteMany({ where }),
     prisma.serverStatsMember.deleteMany({ where }),
     prisma.serverStatsReaction.deleteMany({ where }),
+    prisma.serverStatsHour.deleteMany({ where }),
   ]);
 }
 
@@ -168,6 +251,7 @@ export default {
   recordReaction,
   recordMemberChange,
   dailyStats,
+  history,
   purgeBefore,
   deleteMember,
 };

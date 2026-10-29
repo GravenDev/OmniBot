@@ -47,6 +47,7 @@ function fakeMessage(
     bot?: boolean;
     system?: boolean;
     channel?: ReturnType<typeof fakeChannel>;
+    joinedAt?: Date;
   } = {}
 ) {
   return {
@@ -55,6 +56,7 @@ function fakeMessage(
     guildId: "guild-1",
     createdAt: new Date("2026-10-13T22:30:00Z"),
     channel: options.channel ?? fakeChannel(),
+    member: { joinedAt: options.joinedAt ?? new Date("2026-01-01T00:00:00Z") },
     inGuild: () => true,
   } as unknown as Message;
 }
@@ -64,13 +66,45 @@ beforeEach(() => {
 });
 
 describe("collectMessage", () => {
-  it("counts a member's message on the Paris day", async () => {
+  it("counts a member's message on the Paris day and hour", async () => {
     await collectMessage(fakeMessage(), config);
     expect(store.recordMessage).toHaveBeenCalledWith(
       "guild-1",
       new Date("2026-10-14T00:00:00Z"),
+      0,
       "200",
-      "user-1"
+      "user-1",
+      false
+    );
+  });
+
+  it("flags a member who joined the same Paris day", async () => {
+    await collectMessage(
+      fakeMessage({ joinedAt: new Date("2026-10-13T22:05:00Z") }),
+      config
+    );
+    expect(store.recordMessage).toHaveBeenCalledWith(
+      "guild-1",
+      new Date("2026-10-14T00:00:00Z"),
+      0,
+      "200",
+      "user-1",
+      true
+    );
+  });
+
+  it("does not flag a member who joined the evening before", async () => {
+    await collectMessage(
+      fakeMessage({ joinedAt: new Date("2026-10-13T21:55:00Z") }),
+      config
+    );
+    expect(store.recordMessage).toHaveBeenCalledWith(
+      "guild-1",
+      expect.any(Date),
+      0,
+      "200",
+      "user-1",
+      false
     );
   });
 
@@ -82,8 +116,10 @@ describe("collectMessage", () => {
     expect(store.recordMessage).toHaveBeenCalledWith(
       "guild-1",
       expect.any(Date),
+      0,
       "200",
-      "user-1"
+      "user-1",
+      false
     );
   });
 
@@ -171,6 +207,7 @@ describe("collectMemberChange", () => {
 
   it("counts humans joining or leaving", async () => {
     const member = {
+      id: "user-1",
       user: { bot: false },
       guild: { id: "guild-1" },
     } as unknown as GuildMember;

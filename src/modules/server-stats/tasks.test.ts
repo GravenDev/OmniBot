@@ -9,7 +9,12 @@ const mocks = vi.hoisted(() => ({
   getConfigForModuleIn: vi.fn(),
   getActivatedGuildIds: vi.fn(async () => ["guild-1"]),
   dailyStats: vi.fn(),
+  history: vi.fn(async () => new Map()),
   purgeBefore: vi.fn(async () => {}),
+  renderReport: vi.fn(async () => ({
+    content: "Server stats",
+    image: Buffer.from("png"),
+  })),
 }));
 vi.mock("#core/services/config.service.js", () => ({
   default: { getConfigForModuleIn: mocks.getConfigForModuleIn },
@@ -18,17 +23,25 @@ vi.mock("#core/services/module.service.js", () => ({
   default: { getActivatedGuildIds: mocks.getActivatedGuildIds },
 }));
 vi.mock("./services/store.js", () => ({
-  default: { dailyStats: mocks.dailyStats, purgeBefore: mocks.purgeBefore },
+  default: {
+    dailyStats: mocks.dailyStats,
+    history: mocks.history,
+    purgeBefore: mocks.purgeBefore,
+  },
+}));
+vi.mock("./services/report.js", () => ({
+  renderReport: mocks.renderReport,
 }));
 
 const { postReport, serverStatsMaintenanceTasks, serverStatsTasks } =
   await import("./tasks.js");
 
 const module = { id: "server-stats" } as Module<ServerStatsConfigSchema>;
+const guild = { id: "guild-1" };
 const client = {
   guilds: {
     cache: { has: (id: string) => id !== "gone" },
-    fetch: async () => ({ memberCount: 120 }),
+    fetch: async () => guild,
   },
 } as unknown as Client<true>;
 const day = new Date("2026-10-13T00:00:00Z");
@@ -48,6 +61,8 @@ function fakeConfig(channel: unknown) {
 const stats = {
   startedAt: day,
   joins: 0,
+  activeNewcomers: 0,
+  hours: Array.from({ length: 24 }, () => 0),
   leaves: 0,
   messages: 1,
   activeMembers: 1,
@@ -77,14 +92,65 @@ describe("postReport", () => {
     await postReport(client, module, "guild-1", day);
 
     expect(mocks.dailyStats).toHaveBeenCalledWith("guild-1", day);
+    expect(mocks.renderReport).toHaveBeenCalledWith(guild, stats, {
+      day,
+      insights: expect.any(Object),
+      comparedDays: 0,
+      showTopMembers: true,
+      t: expect.any(Function),
+      locale: "en",
+    });
     const [message] = send.mock.calls[0] as unknown as [
       {
-        embeds: { data: { fields: { value: string }[] } }[];
+        content: string;
+        files: { attachment: Buffer; name: string }[];
         allowedMentions: unknown;
       },
     ];
+    expect(message.content).toBe("Server stats");
+    expect(message.files[0]).toMatchObject({
+      attachment: Buffer.from("png"),
+      name: "server-stats.png",
+    });
     expect(message.allowedMentions).toEqual({ parse: [] });
-    expect(message.embeds[0]!.data.fields[0]!.value).toBe("120");
+  });
+
+  it("compares the day with the days counted before it, skipping those without data", async () => {
+    mocks.getConfigForModuleIn.mockResolvedValue(
+      fakeConfig({ isSendable: () => true, send: vi.fn(async () => ({})) })
+    );
+    mocks.dailyStats.mockResolvedValue({
+      ...stats,
+      messages: 30,
+      startedAt: new Date("2026-10-10T15:00:00Z"),
+    });
+    mocks.history.mockResolvedValueOnce(
+      new Map([
+        [
+          new Date("2026-10-12T00:00:00Z").getTime(),
+          { joins: 0, messages: 10, activeMembers: 0, reactions: 0 },
+        ],
+      ])
+    );
+
+    await postReport(client, module, "guild-1", day);
+
+    expect(mocks.history).toHaveBeenCalledWith(
+      "guild-1",
+      new Date("2026-10-11T00:00:00Z"),
+      new Date("2026-10-12T00:00:00Z")
+    );
+    expect(mocks.renderReport).toHaveBeenCalledWith(
+      guild,
+      expect.anything(),
+      expect.objectContaining({ comparedDays: 1 })
+    );
+    const [, , context] = mocks.renderReport.mock.calls[0] as unknown as [
+      unknown,
+      unknown,
+      { insights: { messages: { change: number } } },
+    ];
+    expect(context.insights.messages.change).toBeCloseTo(2);
   });
 
   it("posts nothing without a report channel", async () => {

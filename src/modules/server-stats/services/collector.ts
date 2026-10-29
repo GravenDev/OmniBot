@@ -9,7 +9,7 @@ import type {
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
-import { dayOf } from "./day.js";
+import { dayOf, hourOf } from "./day.js";
 import store from "./store.js";
 import { countedChannelId, isTracked } from "./tracking.js";
 
@@ -25,11 +25,15 @@ export async function collectMessage(
   if (!isTracked(message.channel, config)) {
     return;
   }
+  const day = dayOf(message.createdAt);
+  const joinedAt = message.member?.joinedAt;
   await store.recordMessage(
     message.guildId,
-    dayOf(message.createdAt),
+    day,
+    hourOf(message.createdAt),
     countedChannelId(message.channel),
-    message.author.id
+    message.author.id,
+    joinedAt ? dayOf(joinedAt).getTime() === day.getTime() : false
   );
 }
 

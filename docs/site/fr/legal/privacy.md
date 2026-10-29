@@ -71,7 +71,7 @@ Le module Salons vocaux temporaires enregistre, pour chaque salon temporaire ouv
 
 ### Statistiques d'activité
 
-Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, avec la date à laquelle le suivi a commencé sur le serveur, jamais le contenu des messages ni l'identité des membres qui arrivent ou partent. Ces compteurs sont supprimés au bout de 30 jours. Le bilan quotidien publié sur le serveur peut citer les membres les plus actifs ; les administrateurs peuvent le désactiver.
+Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon, par membre et par heure, les réactions par emoji, les arrivées et départs de membres, ainsi que le nombre de nouveaux membres du jour qui ont posté un message. Seuls des compteurs sont enregistrés, avec la date à laquelle le suivi a commencé sur le serveur, jamais le contenu des messages ni l'identité des membres qui arrivent ou partent. Ces compteurs sont supprimés au bout de 30 jours. Le bilan quotidien publié sur le serveur peut citer les membres les plus actifs ; les administrateurs peuvent le désactiver.
 
 ## Contenu des messages lu sans être stocké
 

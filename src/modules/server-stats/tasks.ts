@@ -1,4 +1,4 @@
-import type { Client } from "discord.js";
+import { AttachmentBuilder, type Client } from "discord.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import { loggerMaker } from "#lib/logger.js";
@@ -6,8 +6,9 @@ import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
 import type { ServerStatsConfigSchema } from "./server-stats.config.js";
 import { addDays, dayOf, TIMEZONE } from "./services/day.js";
-import { reportEmbed } from "./services/report.js";
-import store from "./services/store.js";
+import { compare, previousDays } from "./services/insights.js";
+import { renderReport } from "./services/report.js";
+import store, { type Totals } from "./services/store.js";
 
 export const RETENTION_DAYS = 30;
 
@@ -31,17 +32,27 @@ export async function postReport(
   if (!stats) {
     return;
   }
+  const days = previousDays(day, stats.startedAt, RETENTION_DAYS);
+  const history =
+    days.length > 0
+      ? await store.history(guildId, days.at(-1)!, days[0]!)
+      : new Map<number, Totals>();
+  const previous = days.flatMap((previousDay) => {
+    const totals = history.get(previousDay.getTime());
+    return totals ? [totals] : [];
+  });
   const guild = await client.guilds.fetch(guildId);
+  const report = await renderReport(guild, stats, {
+    day,
+    insights: compare(stats, previous),
+    comparedDays: previous.length,
+    showTopMembers: config.get("showTopMembers"),
+    t: config.t,
+    locale: config.locale,
+  });
   await channel.send({
-    embeds: [
-      reportEmbed(stats, {
-        day,
-        memberCount: guild.memberCount,
-        showTopMembers: config.get("showTopMembers"),
-        t: config.t,
-        locale: config.locale,
-      }),
-    ],
+    content: report.content,
+    files: [new AttachmentBuilder(report.image, { name: "server-stats.png" })],
     allowedMentions: { parse: [] },
   });
   logger.info(`Daily report posted | guildId = ${guildId}`);

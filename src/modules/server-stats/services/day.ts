@@ -9,6 +9,16 @@ const calendarDate = new Intl.DateTimeFormat("en-CA", {
   day: "2-digit",
 });
 
+const hourOfDay = new Intl.DateTimeFormat("en-GB", {
+  timeZone: TIMEZONE,
+  hour: "numeric",
+  hourCycle: "h23",
+});
+
+export function hourOf(date: Date): number {
+  return Number(hourOfDay.format(date));
+}
+
 export function dayOf(date: Date): Date {
   return new Date(`${calendarDate.format(date)}T00:00:00Z`);
 }
