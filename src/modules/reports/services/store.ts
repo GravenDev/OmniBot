@@ -236,13 +236,20 @@ class ReportStore implements Service {
     return rows.map((row) => row.guildId);
   }
 
-  async closedBefore(
+  async expired(
     guildId: string,
-    before: Date
-  ): Promise<Pick<Report, "id" | "alertChannelId" | "alertMessageId">[]> {
+    closedBefore: Date,
+    reportedBefore: Date
+  ): Promise<Pick<Report, "id">[]> {
     return prisma.messageReport.findMany({
-      where: { guildId, status: { not: "open" }, handledAt: { lt: before } },
-      select: { id: true, alertChannelId: true, alertMessageId: true },
+      where: {
+        guildId,
+        OR: [
+          { reporters: { none: { reportedAt: { gte: reportedBefore } } } },
+          { status: { not: "open" }, handledAt: { lt: closedBefore } },
+        ],
+      },
+      select: { id: true },
     });
   }
 

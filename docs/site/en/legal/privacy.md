@@ -71,7 +71,7 @@ The Temporary Voice Channels module stores, for each open temporary channel, the
 
 ### Activity Statistics
 
-When the Server Stats module is enabled on a guild, the bot counts every day, per guild, the messages per channel and per member, the reactions per emoji, and the members joining and leaving. Only counters are stored, along with the date tracking started on the guild, never message content nor who joined or left. These counters are deleted after 90 days. The daily report posted on the guild may list the most active members; administrators can turn this off.
+When the Server Stats module is enabled on a guild, the bot counts every day, per guild, the messages per channel and per member, the reactions per emoji, and the members joining and leaving. Only counters are stored, along with the date tracking started on the guild, never message content nor who joined or left. These counters are deleted after 30 days. The daily report posted on the guild may list the most active members; administrators can turn this off.
 
 ## Message Content Read Without Being Stored
 
@@ -83,7 +83,7 @@ Some modules read message content to work, without saving it to the database:
 - **LaTeX** reads messages to find formulas and render them as images;
 - **Thread Creator** can use the first 50 characters of a message in the name of the thread it creates;
 - **RNGdle** reads messages in the RNGdle channel only, to recognize a pasted result and reply with a card;
-- **Clash of Code** reads messages in the channels chosen by the administrators (every channel when none is chosen), to spot game links: only the game identifier is kept;
+- **Clash of Code** reads messages in the channels chosen by the administrators (every channel when none is chosen), to spot game links; at an administrator's request (`/coc-admin import-channel`), it also goes through a channel's history, using Discord's message search. Only the game identifier and the ID of the message that held it are kept;
 - **Starboard** reads a message that gets reactions, to repost its author, text, images, embeds and the message it replies to in the starboard channel, never in a channel visible to people who cannot read the original one.
 
 What these modules post stays on the Discord server, under the control of its administrators. The bot ignores messages from other bots, with four exceptions: Auto React also adds its reaction to them, Sticky Messages also reposts its message after them, both without reading them, Message Quote quotes a bot's message when a member posts its link, and Starboard reposts a bot's message when the administrators allow it.
@@ -95,8 +95,8 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 ## Data Retention
 
 - **Module configuration and activation**: kept as long as the bot is on the guild. When the bot leaves a guild (kick or removal), they are deliberately kept so everything is restored automatically if the bot is re-invited. Disabling a module deletes neither its configuration nor its data: they remain subject to the periods below.
-- **Reports**: an open report is kept until it is closed. A closed report is deleted, message copy included, after 90 days; each guild's administrators can change this period. The deletion happens even when the module is disabled or the bot has left the guild.
-- **Activity statistics**: counters are deleted after 90 days, a period that cannot be changed. The date tracking started is kept with no time limit.
+- **Reports**: a report is deleted, message copy included, 30 days after the message was last reported at the latest, whether it is closed or not. Each guild's administrators can shorten this period for closed reports. The deletion happens even when the module is disabled or the bot has left the guild.
+- **Activity statistics**: counters are deleted after 30 days, a period that cannot be changed. The date tracking started is kept with no time limit.
 - **RNGdle**: rolls, username and reminder subscription are kept until the member unlinks with `/rngdle unlink`, or an administrator unlinks them. The record of a claimed card is deleted two days later.
 - **4-hour game**: scores and point history are kept until an administrator deletes the player's score.
 - **Clash of Code**: games, players and their results are kept with no time limit, for the leaderboard's history. The link to a Discord account is removed when the member unlinks with `/coc unlink`, or an administrator unlinks them.
@@ -105,7 +105,7 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 - **Starboard**: an entry is deleted with the original message, with its repost when it falls below the threshold and the administrators chose to remove it, when the original channel or thread is deleted (the repost is deleted too), or when the starboard channel is deleted. When a moderator deletes a repost, the entry is kept so that the message is never reposted. The bot only sees these deletions while the module is enabled and the bot is online: a message or channel deleted while the module is disabled, or while the bot is offline, leaves its entry and its repost in place. The guild's administrators can then delete the repost by hand.
 - **Temporary voice channels**: a channel's entry is deleted with the channel, when it empties or is deleted; if the bot is offline at that moment, it is deleted when the bot comes back, even if the module was disabled in the meantime. A member's remembered settings are deleted one year after they last changed them or created a channel, even if the module is disabled.
 
-To request deletion of your data, contact the instance operator.
+Any member can delete the data the bot keeps about them on a guild themselves, at any time, with the `/privacy delete` command: their activity statistics, their game data (4-hour game, RNGdle, Clash of Code link) and their mention preference. Reports are not part of it: they stay with the moderators until they are deleted automatically. For any other deletion request, contact the instance operator.
 
 ## Data Sharing
 
@@ -136,7 +136,7 @@ Depending on your jurisdiction, you may have the right to:
 - Request deletion of your personal data
 - Restrict or object to processing
 
-To exercise these rights, contact the operator of the bot instance you interact with; for the official instance, the Graven - Développement team.
+To delete your data from a guild, use `/privacy delete`. To exercise the other rights, contact the operator of the bot instance you interact with; for the official instance, the Graven - Développement team.
 
 ## Changes to This Policy
 

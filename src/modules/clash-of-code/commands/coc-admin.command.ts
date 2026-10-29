@@ -1,10 +1,13 @@
 import {
   AttachmentBuilder,
+  ChannelType,
+  DiscordAPIError,
   escapeMarkdown,
   InteractionContextType,
   MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
+  RESTJSONErrorCodes,
   type ChatInputCommandInteraction,
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
@@ -16,6 +19,18 @@ import {
   ClashNotFoundError,
   fetchClashReport,
 } from "#modules/clash-of-code/services/api.js";
+import {
+  type ImportSummary,
+  importClashes,
+  MAX_RATE_LIMIT_PAUSE_MS,
+} from "#modules/clash-of-code/services/channel-import.js";
+import {
+  newSearchState,
+  type SearchProgress,
+  type SearchState,
+  searchChannelClashes,
+  SearchNotReadyError,
+} from "#modules/clash-of-code/services/history.js";
 import { parseClashLinks } from "#modules/clash-of-code/services/links.js";
 import store from "#modules/clash-of-code/services/store.js";
 import {
@@ -24,6 +39,30 @@ import {
 } from "#modules/clash-of-code/services/views.js";
 
 const HANDLE_PATTERN = /^[0-9a-f]{30,40}$/i;
+const PROGRESS_INTERVAL_MS = 5_000;
+// The reply can be edited for 15 minutes after the command: the import stops
+// before, search included, so the admin always gets the summary.
+const IMPORT_BUDGET_MS = 13 * 60_000;
+const IMPORTABLE_CHANNELS = [
+  ChannelType.GuildText,
+  ChannelType.GuildAnnouncement,
+  ChannelType.PublicThread,
+  ChannelType.PrivateThread,
+  ChannelType.AnnouncementThread,
+] as const;
+
+// One channel import at a time per guild: it can run for minutes.
+const importingGuilds = new Set<string>();
+
+// Where an unfinished channel import stands, per guild and channel: run again,
+// it searches on from there and leaves out the games already checked, whatever
+// their outcome. Lost on restart, when the next run starts over.
+interface ChannelImport {
+  search: SearchState;
+  searched: boolean;
+  checked: Set<string>;
+}
+const unfinishedImports = new Map<string, ChannelImport>();
 
 const logger = loggerMaker("clash-of-code");
 
@@ -102,6 +141,193 @@ async function importGame(interaction: Interaction, config: Config) {
   });
 }
 
+function searchCounts(config: Config, progress: SearchProgress) {
+  return {
+    messages: config.t("importChannel.messagesRead", {
+      count: progress.messages,
+    }),
+    found: config.t("importChannel.gamesFound", { count: progress.found }),
+  };
+}
+
+function summaryMessage(
+  config: Config,
+  vars: { channel: string },
+  summary: ImportSummary,
+  totals: { found: number; previously: number; remaining: number }
+): string {
+  const counts =
+    config.t("importChannel.counts", { ...summary, found: totals.found }) +
+    (totals.previously > 0
+      ? config.t("importChannel.previously", { count: totals.previously })
+      : "");
+  if (summary.stopped === null) {
+    return config.t("importChannel.done", { ...vars, counts });
+  }
+  return config.t(
+    summary.stopped === "time"
+      ? "importChannel.stoppedTime"
+      : "importChannel.stoppedRateLimit",
+    {
+      ...vars,
+      counts,
+      count: totals.remaining,
+      minutes: MAX_RATE_LIMIT_PAUSE_MS / 60_000,
+    }
+  );
+}
+
+/**
+ * Imports every finished game linked in a channel, found through Discord's
+ * message search. Nothing is posted in the channel: the admin gets a progress
+ * line, then a summary. An import stopped short resumes when run again.
+ */
+async function importChannel(interaction: Interaction, config: Config) {
+  const { guildId } = interaction;
+  const channel = interaction.options.getChannel("channel", true);
+  const vars = { channel: `<#${channel.id}>` };
+  if (importingGuilds.has(guildId)) {
+    await interaction.reply({
+      content: config.t("importChannel.running"),
+      ...ephemeral,
+    });
+    return;
+  }
+  importingGuilds.add(guildId);
+  try {
+    await interaction.deferReply(ephemeral);
+    // Edits run one after another, so a late progress line never overwrites
+    // the summary. Past 15 minutes the reply can no longer be edited.
+    let editing = Promise.resolve();
+    const edit = (content: string) => {
+      editing = editing
+        .then(() => interaction.editReply({ content }))
+        .then(() => undefined)
+        .catch(() => undefined);
+      return editing;
+    };
+    await edit(config.t("importChannel.searching", vars));
+
+    let lastProgress = Date.now();
+    const throttled = (content: () => string) => {
+      if (Date.now() - lastProgress >= PROGRESS_INTERVAL_MS) {
+        lastProgress = Date.now();
+        void edit(content());
+      }
+    };
+
+    const key = `${guildId}:${channel.id}`;
+    const state = unfinishedImports.get(key) ?? {
+      search: newSearchState(),
+      searched: false,
+      checked: new Set<string>(),
+    };
+    // Kept until the import ends, so a failed or stopped run resumes.
+    unfinishedImports.set(key, state);
+    const deadline = interaction.createdTimestamp + IMPORT_BUDGET_MS;
+
+    try {
+      state.searched ||= await searchChannelClashes(
+        interaction.client.rest,
+        guildId,
+        channel.id,
+        state.search,
+        {
+          deadline,
+          onProgress: (progress) =>
+            throttled(() =>
+              config.t("importChannel.searchProgress", {
+                ...vars,
+                ...searchCounts(config, progress),
+              })
+            ),
+        }
+      );
+    } catch (err) {
+      const noAccess =
+        err instanceof DiscordAPIError &&
+        (err.code === RESTJSONErrorCodes.MissingAccess ||
+          err.code === RESTJSONErrorCodes.MissingPermissions);
+      if (!noAccess && !(err instanceof SearchNotReadyError)) {
+        logger.warn({ err }, `Message search failed | guildId = ${guildId}`);
+      }
+      await edit(
+        config.t(
+          err instanceof SearchNotReadyError
+            ? "importChannel.indexing"
+            : noAccess
+              ? "importChannel.noAccess"
+              : "importChannel.searchFailed",
+          vars
+        )
+      );
+      return;
+    }
+    if (!state.searched) {
+      await edit(
+        config.t("importChannel.stoppedSearch", {
+          ...vars,
+          ...searchCounts(config, {
+            messages: state.search.messages,
+            found: state.search.found.size,
+          }),
+        })
+      );
+      return;
+    }
+    const clashes = [...state.search.found.values()];
+    if (clashes.length === 0) {
+      unfinishedImports.delete(key);
+      await edit(config.t("importChannel.none", vars));
+      return;
+    }
+
+    const previously = state.checked.size;
+    const line = (progress: ImportSummary) => ({
+      ...vars,
+      done: previously + progress.done,
+      count: clashes.length,
+    });
+    const summary = await importClashes(
+      guildId,
+      clashes.filter((clash) => !state.checked.has(clash.handle)),
+      {
+        deadline,
+        checked: state.checked,
+        onProgress: (progress) => {
+          if (progress.pausedUntil !== null) {
+            // Shown right away: the next progress line only comes after it.
+            lastProgress = Date.now();
+            void edit(
+              config.t("importChannel.paused", {
+                ...line(progress),
+                until: Math.ceil(progress.pausedUntil / 1000),
+              })
+            );
+            return;
+          }
+          throttled(() => config.t("importChannel.progress", line(progress)));
+        },
+      }
+    );
+    if (summary.stopped === null) {
+      unfinishedImports.delete(key);
+    }
+    logger.info(
+      `Channel imported | guildId = ${guildId} | channelId = ${channel.id} | by = ${interaction.user.id} | previously = ${previously} | ${JSON.stringify(summary)}`
+    );
+    await edit(
+      summaryMessage(config, vars, summary, {
+        found: clashes.length,
+        previously,
+        remaining: clashes.length - state.checked.size,
+      })
+    );
+  } finally {
+    importingGuilds.delete(guildId);
+  }
+}
+
 async function unlink(interaction: Interaction, config: Config) {
   const member = interaction.options.getUser("member", true);
   const nickname = await store.unlink(interaction.guildId, member.id);
@@ -125,7 +351,7 @@ async function unlink(interaction: Interaction, config: Config) {
 const subcommands: Record<
   string,
   (interaction: Interaction, config: Config) => Promise<void>
-> = { import: importGame, unlink };
+> = { import: importGame, "import-channel": importChannel, unlink };
 
 export default declareCommand<ClashOfCodeConfigSchema>({
   requiresAdmin: true,
@@ -149,6 +375,22 @@ export default declareCommand<ClashOfCodeConfigSchema>({
               fr: "Lien ou identifiant de la partie",
             })
             .setMaxLength(200)
+            .setRequired(true)
+        )
+    )
+    .addSubcommand((sub) =>
+      sub
+        .setName("import-channel")
+        .setDescription("Import every finished game linked in a channel")
+        .setDescriptionLocalizations({
+          fr: "Importer toutes les parties terminées dont le lien est dans un salon",
+        })
+        .addChannelOption((option) =>
+          option
+            .setName("channel")
+            .setDescription("Channel to search")
+            .setDescriptionLocalizations({ fr: "Salon à parcourir" })
+            .addChannelTypes(...IMPORTABLE_CHANNELS)
             .setRequired(true)
         )
     )

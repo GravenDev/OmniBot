@@ -45,6 +45,16 @@ export class ClashNotFoundError extends Error {
 
 export class ClashApiError extends Error {}
 
+/** CodinGame still answered 429 after the retries; `retryAfterMs` is its ask. */
+export class ClashRateLimitedError extends ClashApiError {
+  constructor(
+    readonly handle: string,
+    readonly retryAfterMs: number | null
+  ) {
+    super(`CodinGame rate-limited clash ${handle}`);
+  }
+}
+
 export function avatarUrl(avatarId: bigint): string {
   return `${AVATAR_URL}?id=${avatarId}&format=profile_avatar`;
 }
@@ -53,12 +63,22 @@ export function isClashMode(value: unknown): value is ClashMode {
   return CLASH_MODES.includes(value as ClashMode);
 }
 
+// Retry-After is either a number of seconds or an HTTP date.
+function retryAfterMs(response: Response): number | null {
+  const header = response.headers.get("retry-after");
+  if (!header) {
+    return null;
+  }
+  const seconds = Number(header);
+  if (Number.isFinite(seconds)) {
+    return seconds > 0 ? seconds * 1000 : null;
+  }
+  const date = Date.parse(header);
+  return Number.isNaN(date) ? null : Math.max(date - Date.now(), 0) || null;
+}
+
 function retryDelayMs(response: Response, attempt: number): number {
-  const retryAfter = Number(response.headers.get("retry-after"));
-  const delay =
-    Number.isFinite(retryAfter) && retryAfter > 0
-      ? retryAfter * 1000
-      : 1000 * 2 ** (attempt - 1);
+  const delay = retryAfterMs(response) ?? 1000 * 2 ** (attempt - 1);
   return Math.min(delay, MAX_RETRY_DELAY_MS);
 }
 
@@ -136,6 +156,9 @@ export async function fetchClashReport(handle: string): Promise<ClashReport> {
   const response = await request(handle);
   if (response.status === 422 || response.status === 404) {
     throw new ClashNotFoundError(handle);
+  }
+  if (response.status === 429) {
+    throw new ClashRateLimitedError(handle, retryAfterMs(response));
   }
   if (!response.ok) {
     throw new ClashApiError(

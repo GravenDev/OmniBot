@@ -44,6 +44,20 @@ Le résultat de chaque action (succès ou raison du refus) s'affiche en tête de
 
 `/pings enabled:False` inscrit le membre sur la liste des personnes que le bot ne mentionne plus dans ses annonces sur ce serveur ; `/pings enabled:True` l'en retire. La liste est propre à chaque serveur et commune à tous les modules. Le nom du membre reste affiché dans les annonces, mais il n'en reçoit plus de notification. La réponse n'est visible que de lui.
 
+### `/privacy delete` — Supprimer ses données
+
+**Permission requise :** aucune
+
+Le bot répond, en message visible du membre seul, par la liste de ce qui sera supprimé et un bouton **Supprimer mes données**. Le bouton efface, sur ce serveur seulement et que les modules y soient activés ou non :
+
+- ses compteurs de Server Stats ;
+- au jeu des 4h, son score, son historique de points, ses points du jour, et le dernier message du salon de jeu s'il en est l'auteur ;
+- son compte, ses tirages, son rappel et ses cartes du jour RNGdle ;
+- le lien vers son joueur Clash of Code : le joueur et ses résultats, venus de CodinGame, restent au classement ;
+- sa préférence `/pings`.
+
+Les signalements ne sont pas touchés : ils restent aux modérateurs jusqu'à leur purge. Si une suppression échoue, les autres ont quand même lieu et le message invite à réessayer.
+
 ### Erreurs
 
 Quand une commande ou un bouton échoue, la réponse d'erreur n'est visible que du membre concerné et lui indique quoi faire : relancer la commande, et prévenir un administrateur si le problème persiste. Un bouton devenu invalide (module ou option de configuration disparus depuis l'affichage du message) invite à relancer la commande pour obtenir un message à jour. Si l'échec vient d'une permission ou d'un accès manquant au bot sur Discord, le message le dit explicitement : un administrateur doit vérifier les permissions du bot sur le serveur et dans le salon.
@@ -252,10 +266,11 @@ Lie votre compte Discord à un joueur CodinGame déjà vu dans une partie du ser
 
 **Permission requise :** Administrateur.
 
-| Sous-commande     | Effet                                                                                                                                                                                                                                           |
-| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `import <game>`   | Importe une partie terminée, à partir de son lien ou de son identifiant, et publie son résultat : c'est le seul moyen d'ajouter une partie dont le lien n'a pas été posté avant sa fin. Une partie déjà enregistrée sur le serveur est refusée. |
-| `unlink <member>` | Délie le compte CodinGame d'un membre. Réponse visible de l'administrateur seul.                                                                                                                                                                |
+| Sous-commande              | Effet                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `import <game>`            | Importe une partie terminée, à partir de son lien ou de son identifiant, et publie son résultat : avec `import-channel`, c'est le seul moyen d'ajouter une partie dont le lien n'a pas été posté avant sa fin. Une partie déjà enregistrée sur le serveur est refusée.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| `import-channel <channel>` | Importe toutes les parties terminées dont le lien a été posté dans un salon (ou un fil), sans rien y publier : le bot les trouve avec la recherche de messages de Discord, ignore les liens des bots et ceux qui ne sont pas des parties (`/ide`, profils…), et répond à l'administrateur seul, avec l'avancement puis un bilan (importées, déjà enregistrées, pas terminées, inconnues de CodinGame, en échec). Un seul import de salon à la fois par serveur. Si CodinGame limite le débit, l'import fait une pause aussi longue que demandé, puis reprend ; s'il demande d'attendre plus de 5 minutes, l'import s'arrête. Il s'arrête aussi au bout de 13 minutes, recherche comprise, avant que la réponse ne puisse plus être modifiée. Dans tous les cas, le bilan indique ce qui reste, et relancer la commande sur le même salon reprend là où elle s'était arrêtée : la recherche repart du dernier message lu, et les parties déjà vérifiées sont passées, quel qu'ait été leur résultat. Cet état est perdu au redémarrage du bot, et la relance suivante repart du début. Les salons soumis à une limite d'âge sont aussi parcourus. |
+| `unlink <member>`          | Délie le compte CodinGame d'un membre. Réponse visible de l'administrateur seul.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 
 ### Configuration — `/config clash-of-code`
 
@@ -308,7 +323,7 @@ Le bot a besoin des permissions Gérer les messages (dans les salons surveillés
 
 ### Conservation
 
-Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la durée de conservation sont supprimés, et leur alerte est remplacée par une mention « purgé ». La purge passe sur tous les serveurs qui ont des signalements, y compris ceux où le module est désactivé ou que le bot a quittés, et même quand le module est écarté faute d'intent.
+Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la durée de conservation sont supprimés, et leur alerte est remplacée par une mention « purgé ». Un signalement dont le dernier signalement date de plus de 30 jours est supprimé de la même façon, qu'il soit clos ou encore ouvert : un message signalé de nouveau repart pour 30 jours. La purge passe sur tous les serveurs qui ont des signalements, y compris ceux où le module est désactivé ou que le bot a quittés, et même quand le module est écarté faute d'intent.
 
 ### Configuration — `/config reports`
 
@@ -317,7 +332,7 @@ Chaque jour à 04:00 UTC, les signalements clos depuis plus longtemps que la dur
 | `alertChannel`  | Salon | Salon où arrivent les alertes. Tant qu'il n'est pas défini, rien n'est signalé.                                                                                        |
 | `emoji`         | Emoji | Emoji de signalement, standard ou personnalisé (🚩 par défaut). Saisi tel quel, par son nom Discord (`:triangular_flag_on_post:`) ou par le nom d'un emoji du serveur. |
 | `moderatorRole` | Rôle  | Rôle mentionné à chaque nouvelle alerte. Sans rôle, personne n'est mentionné.                                                                                          |
-| `retention`     | Durée | Durée de conservation d'un signalement clos (90 jours par défaut).                                                                                                     |
+| `retention`     | Durée | Durée de conservation d'un signalement clos (30 jours, le maximum, par défaut).                                                                                        |
 
 Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
 
@@ -677,7 +692,7 @@ Dès que le module est activé, le bot compte, par jour (heure de Paris) :
 - les réactions ajoutées, par emoji ;
 - les arrivées et les départs de membres.
 
-Les bots, les messages système, les salons et catégories exclus et, par défaut, les salons que `@everyone` ne voit pas (dont les fils privés) ne sont pas comptés. Seuls des compteurs sont enregistrés, jamais le contenu des messages ; ils sont supprimés au bout de 90 jours, même quand le module est désactivé ou écarté faute d'intent. Les événements survenus pendant que le bot est arrêté ne sont pas comptés.
+Les bots, les messages système, les salons et catégories exclus et, par défaut, les salons que `@everyone` ne voit pas (dont les fils privés) ne sont pas comptés. Seuls des compteurs sont enregistrés, jamais le contenu des messages ; ils sont supprimés au bout de 30 jours, même quand le module est désactivé ou écarté faute d'intent. Les événements survenus pendant que le bot est arrêté ne sont pas comptés.
 
 ### Bilan quotidien
 

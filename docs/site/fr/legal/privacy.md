@@ -71,7 +71,7 @@ Le module Salons vocaux temporaires enregistre, pour chaque salon temporaire ouv
 
 ### Statistiques d'activité
 
-Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, avec la date à laquelle le suivi a commencé sur le serveur, jamais le contenu des messages ni l'identité des membres qui arrivent ou partent. Ces compteurs sont supprimés au bout de 90 jours. Le bilan quotidien publié sur le serveur peut citer les membres les plus actifs ; les administrateurs peuvent le désactiver.
+Quand le module Server Stats est activé sur un serveur, le bot compte chaque jour, par serveur, les messages par salon et par membre, les réactions par emoji, ainsi que les arrivées et départs de membres. Seuls des compteurs sont enregistrés, avec la date à laquelle le suivi a commencé sur le serveur, jamais le contenu des messages ni l'identité des membres qui arrivent ou partent. Ces compteurs sont supprimés au bout de 30 jours. Le bilan quotidien publié sur le serveur peut citer les membres les plus actifs ; les administrateurs peuvent le désactiver.
 
 ## Contenu des messages lu sans être stocké
 
@@ -83,7 +83,7 @@ Certains modules lisent le contenu des messages pour fonctionner, sans l'enregis
 - **LaTeX** lit les messages pour repérer les formules et les rendre en image ;
 - **Thread Creator** peut reprendre les 50 premiers caractères d'un message dans le nom du fil qu'il crée ;
 - **RNGdle** lit les messages du seul salon RNGdle, pour reconnaître un résultat collé et y répondre avec une carte ;
-- **Clash of Code** lit les messages des salons choisis par les administrateurs (tous les salons si aucun n'est choisi), pour repérer les liens de partie : seul l'identifiant de la partie est conservé ;
+- **Clash of Code** lit les messages des salons choisis par les administrateurs (tous les salons si aucun n'est choisi), pour repérer les liens de partie ; sur demande d'un administrateur (`/coc-admin import-channel`), il parcourt aussi l'historique d'un salon, à travers la recherche de messages de Discord. Seuls l'identifiant de la partie et l'ID du message qui la contenait sont conservés ;
 - **Starboard** lit un message qui reçoit des réactions, pour en reposter l'auteur, le texte, les images, les embeds et le message auquel il répond dans le salon starboard, jamais dans un salon visible par des personnes qui ne peuvent pas lire le salon d'origine.
 
 Ce que ces modules publient reste sur le serveur Discord, sous le contrôle de ses administrateurs. Le bot ignore les messages des autres bots, à quatre exceptions : Auto React leur ajoute aussi sa réaction, Messages collants republie aussi son message après eux, tous deux sans les lire, Message Quote cite le message d'un bot quand un membre en poste le lien, et Starboard reposte le message d'un bot quand les administrateurs l'autorisent.
@@ -95,8 +95,8 @@ Les données sont stockées dans une base de données PostgreSQL gérée par l'o
 ## Conservation des données
 
 - **Configuration et activation des modules** : conservées tant que le bot est sur le serveur. Quand le bot quitte un serveur (kick ou retrait), elles sont volontairement conservées afin que tout soit restauré automatiquement si le bot est réinvité. Désactiver un module ne supprime ni sa configuration ni ses données : elles restent soumises aux durées ci-dessous.
-- **Signalements** : un signalement en cours est conservé jusqu'à sa clôture. Un signalement clos est supprimé, copie du message comprise, au bout de 90 jours ; les administrateurs de chaque serveur peuvent changer ce délai. La suppression a lieu même si le module est désactivé ou que le bot a quitté le serveur.
-- **Statistiques d'activité** : les compteurs sont supprimés au bout de 90 jours, un délai qui ne se change pas. La date de début du suivi est conservée sans limite de durée.
+- **Signalements** : un signalement est supprimé, copie du message comprise, au plus tard 30 jours après le dernier signalement du message, qu'il soit clos ou non. Les administrateurs de chaque serveur peuvent raccourcir ce délai pour les signalements clos. La suppression a lieu même si le module est désactivé ou que le bot a quitté le serveur.
+- **Statistiques d'activité** : les compteurs sont supprimés au bout de 30 jours, un délai qui ne se change pas. La date de début du suivi est conservée sans limite de durée.
 - **RNGdle** : les tirages, le pseudo et l'inscription au rappel sont conservés jusqu'à ce que le membre se délie avec `/rngdle unlink`, ou qu'un administrateur le délie. L'indication de carte obtenue est supprimée le surlendemain.
 - **Jeu des 4h** : les scores et l'historique des points sont conservés jusqu'à ce qu'un administrateur supprime le score du joueur.
 - **Clash of Code** : les parties, les joueurs et leurs résultats sont conservés sans limite de durée, pour l'historique du classement. La liaison à un compte Discord est retirée quand le membre se délie avec `/coc unlink`, ou qu'un administrateur le délie.
@@ -105,7 +105,7 @@ Les données sont stockées dans une base de données PostgreSQL gérée par l'o
 - **Starboard** : une entrée est supprimée avec le message d'origine, avec son repost quand il repasse sous le seuil et que les administrateurs ont choisi de le retirer, quand le salon ou le fil d'origine est supprimé (le repost l'est aussi), ou quand le salon starboard est supprimé. Quand un modérateur supprime un repost, l'entrée est conservée pour que le message ne soit plus jamais reposté. Le bot ne voit ces suppressions que quand le module est activé et qu'il est en ligne : un message ou un salon supprimé pendant que le module est désactivé, ou que le bot est hors ligne, laisse son entrée et son repost en place. Le repost peut alors être supprimé à la main par les administrateurs du serveur.
 - **Salons vocaux temporaires** : l'entrée d'un salon est supprimée avec le salon, quand il se vide ou qu'il est supprimé ; si le bot est hors ligne à ce moment-là, elle l'est à son retour, même si le module a été désactivé entre-temps. Les réglages mémorisés d'un membre sont supprimés un an après la dernière fois qu'il les a modifiés ou qu'il a créé un salon, même si le module est désactivé.
 
-Pour demander la suppression de vos données, contactez l'opérateur de l'instance.
+Chaque membre peut supprimer lui-même, à tout moment, les données que le bot garde sur lui sur un serveur, avec la commande `/privacy delete` : ses statistiques d'activité, ses données de jeu (jeu des 4h, RNGdle, liaison Clash of Code) et sa préférence de mention. Les signalements n'en font pas partie : ils restent aux modérateurs jusqu'à leur suppression automatique. Pour toute autre demande de suppression, contactez l'opérateur de l'instance.
 
 ## Partage des données
 
@@ -136,7 +136,7 @@ Selon votre juridiction, vous pouvez avoir le droit de :
 - Demander la suppression de vos données personnelles
 - Restreindre ou vous opposer au traitement
 
-Pour exercer ces droits, contactez l'opérateur de l'instance du bot avec laquelle vous interagissez ; pour l'instance officielle, l'équipe de Graven - Développement.
+Pour supprimer vos données d'un serveur, utilisez `/privacy delete`. Pour exercer les autres droits, contactez l'opérateur de l'instance du bot avec laquelle vous interagissez ; pour l'instance officielle, l'équipe de Graven - Développement.
 
 ## Modifications de cette politique
 

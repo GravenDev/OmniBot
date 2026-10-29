@@ -18,14 +18,22 @@ concurrency:
   cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
 jobs:
+  # Blacksmith only where it pays: its builder keeps the Docker layer cache on
+  # disk, which cut the image builds from about 60 s to 12 s. Everything else
+  # ran as fast on GitHub's runners, free for a public repository. Two vCPUs: a
+  # cached build waits on the disk more than on the CPU. The tests do not: they
+  # took 30 s there against 20 s on GitHub's four, so `build` stays on GitHub.
+  # With both kinds of runner in this workflow, every job names Ubuntu 24.04
+  # rather than `ubuntu-latest`: they all run on the same system, whichever side
+  # they land on.
   lint:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     permissions: &read-only
       contents: read
 
     steps:
       - &checkout
-        uses: useblacksmith/checkout@25227e61ff9dafe400e22fa487b673eac4e4409a # v1
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - uses: $/.github/actions/setup
@@ -35,7 +43,7 @@ jobs:
         run: pnpm exec oxlint --deny-warnings
 
   build:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     permissions: *read-only
 
     steps:
@@ -47,7 +55,7 @@ jobs:
         run: pnpm test
 
   docker:
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions: *read-only
 
     steps:
@@ -100,7 +108,7 @@ jobs:
   publish:
     needs: [lint, build, docker]
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     permissions:
       contents: read
       packages: write
@@ -187,7 +195,7 @@ jobs:
     # on one would restart the stack onto the version already running — a
     # deployment that reports success and changes nothing.
     if: ${{ !contains(github.ref_name, '-') }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     permissions: {}
 
     steps:
@@ -204,7 +212,7 @@ jobs:
   scan:
     needs: publish
     if: ${{ !contains(github.ref_name, '-') }}
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     permissions:
       actions: write
 

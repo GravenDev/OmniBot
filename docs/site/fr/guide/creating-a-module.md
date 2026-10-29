@@ -126,16 +126,20 @@ interface ModuleDeclaration {
   onInstall: (client: Client, guild: Guild, registry: Registry) => void;
   onUninstall: (client: Client, guild: Guild, registry: Registry) => void;
   maintenanceTasks?: () => ScheduledTask[];
+  deleteMemberData?: (guildId: string, userId: string) => Promise<void>;
 }
 ```
 
 ### Cycles de vie
 
-| Hook          | Quand                           | Utilisation typique                                                         |
-| ------------- | ------------------------------- | --------------------------------------------------------------------------- |
-| `onLoad`      | Démarrage du bot                | Enregistrer commandes, écouteurs, interactions via `registry.register()`    |
-| `onInstall`   | Module activé sur un serveur    | Créer des rôles, envoyer des messages de bienvenue, initialiser des données |
-| `onUninstall` | Module désactivé sur un serveur | Nettoyer les données, supprimer les rôles, effacer les configurations       |
+| Hook               | Quand                                            | Utilisation typique                                                         |
+| ------------------ | ------------------------------------------------ | --------------------------------------------------------------------------- |
+| `onLoad`           | Démarrage du bot                                 | Enregistrer commandes, écouteurs, interactions via `registry.register()`    |
+| `onInstall`        | Module activé sur un serveur                     | Créer des rôles, envoyer des messages de bienvenue, initialiser des données |
+| `onUninstall`      | Module désactivé sur un serveur                  | Nettoyer les données, supprimer les rôles, effacer les configurations       |
+| `deleteMemberData` | Un membre lance `/privacy delete` sur un serveur | Supprimer tout ce que le module garde sur ce membre sur ce serveur          |
+
+Un module qui enregistre quoi que ce soit lié à l'ID d'un membre doit implémenter `deleteMemberData`, et décrire ce qu'il enregistre dans la politique de confidentialité (`docs/site/*/legal/privacy.md`). Il est appelé que le module soit activé ou non sur le serveur, et aussi pour un module écarté parce que Discord n'a pas accordé son intention privilégiée.
 
 Les purges de données stockées vont dans `maintenanceTasks`, pas dans des tâches enregistrées depuis `onLoad` : elles sont planifiées pour chaque module découvert, y compris un module écarté parce que Discord n'a pas accordé son intention privilégiée, pour que les durées de conservation de la politique de confidentialité tiennent dans tous les cas.
 

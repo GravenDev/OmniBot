@@ -86,6 +86,7 @@ export interface ModuleDeclaration<ConfigType extends ConfigSchema = {}> {
    * whose `onLoad` failed.
    */
   maintenanceTasks?: () => ScheduledTask[];
+  deleteMemberData?: (guildId: string, userId: string) => Promise<void>;
 }
 
 /**
