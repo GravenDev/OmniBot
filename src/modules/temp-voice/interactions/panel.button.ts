@@ -4,40 +4,56 @@ import { NO_MENTIONS } from "#lib/mentions.js";
 import {
   authorize,
   claim,
+  noticeMembers,
+  notify,
   remove,
-  setHidden,
-  setLocked,
+  tempChannelOf,
   withChannel,
-  type ActionContext,
   type Outcome,
 } from "#modules/temp-voice/services/actions.js";
+import { queue } from "#modules/temp-voice/services/lifecycle.js";
 import {
   isPanelAction,
   PANEL_ID,
-  type PanelAction,
+  postPanel,
 } from "#modules/temp-voice/services/panel.js";
+import store from "#modules/temp-voice/services/store.js";
 import {
-  limitModal,
+  deleteConfirmation,
+  editModal,
+  membersSheet,
   outcomeText,
-  presentSelect,
-  renameModal,
-  revokeSelect,
-  userSelect,
+  transferSelect,
 } from "#modules/temp-voice/services/views.js";
-import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
-
-const IMMEDIATE: Partial<
-  Record<PanelAction, (ctx: ActionContext) => Promise<Outcome>>
-> = {
-  lock: (ctx) => setLocked(ctx, true),
-  unlock: (ctx) => setLocked(ctx, false),
-  hide: (ctx) => setHidden(ctx, true),
-  show: (ctx) => setHidden(ctx, false),
-  claim,
-  delete: remove,
-};
+import type {
+  TempVoiceConfig,
+  TempVoiceConfigSchema,
+} from "#modules/temp-voice/temp-voice.config.js";
 
 const ephemeral = { flags: MessageFlags.Ephemeral } as const;
+
+async function replaceOutdatedPanel(
+  interaction: ButtonInteraction<"cached">,
+  channelId: string,
+  config: TempVoiceConfig
+): Promise<void> {
+  await interaction.deferReply(ephemeral);
+  const replaced = await queue.run(channelId, async () => {
+    const channel = tempChannelOf(interaction.guild, channelId);
+    const row = channel ? await store.channel(channelId) : null;
+    if (!channel || row?.panelMessageId !== interaction.message.id) {
+      return true;
+    }
+    if (!(await postPanel(channel, row, config.t))) {
+      return false;
+    }
+    await interaction.message.delete().catch(() => undefined);
+    return true;
+  });
+  await interaction.editReply(
+    config.t(replaced ? "panel.outdated" : "panel.notReplaced")
+  );
+}
 
 export default declareInteractionHandler<
   ButtonInteraction,
@@ -47,31 +63,70 @@ export default declareInteractionHandler<
   access: "everyone",
   check: (interaction): interaction is ButtonInteraction =>
     interaction.isButton(),
-  async execute(interaction, [action, channelId], config) {
-    if (!interaction.inCachedGuild() || !isPanelAction(action) || !channelId) {
+  async execute(interaction, [action, channelId, token], config) {
+    if (!interaction.inCachedGuild() || !channelId) {
       return;
     }
     const { guild, member: actor } = interaction;
     const t = config.t;
 
-    const immediate = IMMEDIATE[action];
-    if (immediate) {
-      await interaction.deferReply(ephemeral);
-      const outcome = await withChannel(
-        guild,
-        channelId,
-        actor,
-        config,
-        immediate,
-        { ownerOnly: action !== "claim" }
-      );
-      await interaction
-        .editReply({
-          content: outcomeText(t, outcome),
-          allowedMentions: NO_MENTIONS,
-        })
-        .catch(() => undefined);
+    if (!isPanelAction(action)) {
+      await replaceOutdatedPanel(interaction, channelId, config);
       return;
+    }
+
+    const answer = (outcome: Outcome) => ({
+      content: outcomeText(t, outcome),
+      components: [],
+      allowedMentions: NO_MENTIONS,
+    });
+
+    switch (action) {
+      case "claim": {
+        await interaction.deferReply(ephemeral);
+        const outcome = await withChannel(
+          guild,
+          channelId,
+          actor,
+          config,
+          claim,
+          { ownerOnly: false }
+        );
+        await interaction.editReply(answer(outcome)).catch(() => undefined);
+        return;
+      }
+      case "deleteConfirm": {
+        await interaction.deferUpdate();
+        const outcome = await withChannel(
+          guild,
+          channelId,
+          actor,
+          config,
+          remove
+        );
+        await interaction.editReply(answer(outcome)).catch(() => undefined);
+        return;
+      }
+      case "notify": {
+        await interaction.deferUpdate();
+        const members = noticeMembers(guild, token ?? "");
+        const outcome =
+          members.length === 0
+            ? { ok: false, key: "notify.expired" }
+            : await withChannel(guild, channelId, actor, config, (ctx) =>
+                notify(ctx, members)
+              );
+        await interaction.editReply(answer(outcome));
+        return;
+      }
+      case "cancel":
+        await interaction.update({
+          content: t("delete.cancelled"),
+          components: [],
+        });
+        return;
+      default:
+        break;
     }
 
     const authorized = await authorize(guild, channelId, actor);
@@ -85,41 +140,28 @@ export default declareInteractionHandler<
     const { channel, row } = authorized;
 
     switch (action) {
-      case "rename":
-        await interaction.showModal(renameModal(t, channelId, channel.name));
+      case "edit":
+        await interaction.showModal(editModal(t, channel));
         return;
-      case "limit":
-        await interaction.showModal(
-          limitModal(t, channelId, channel.userLimit)
-        );
-        return;
-      case "trust":
-      case "invite":
-      case "block":
+      case "members":
         await interaction.reply({
-          ...userSelect(t, action, channelId),
+          ...membersSheet(t, guild, channel, row, actor.id),
+          allowedMentions: NO_MENTIONS,
           ...ephemeral,
         });
         return;
-      case "kick":
-      case "transfer": {
-        const select = presentSelect(t, action, channel, row, actor.id);
-        await interaction.reply(
-          select
-            ? { ...select, ...ephemeral }
-            : { content: t(`${action}.empty`), ...ephemeral }
-        );
+      case "transfer":
+        await interaction.reply({
+          ...transferSelect(t, channel, row, actor.id),
+          ...ephemeral,
+        });
         return;
-      }
-      case "untrust": {
-        const select = revokeSelect(t, guild, row);
-        await interaction.reply(
-          select
-            ? { ...select, ...ephemeral }
-            : { content: t("revoke.empty"), ...ephemeral }
-        );
+      case "delete":
+        await interaction.reply({
+          ...deleteConfirmation(t, channel, channelId, actor.id),
+          ...ephemeral,
+        });
         return;
-      }
       default:
         return;
     }

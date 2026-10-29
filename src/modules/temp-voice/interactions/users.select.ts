@@ -3,14 +3,14 @@ import { declareInteractionHandler } from "#lib/interaction.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import {
   block,
-  invite,
+  rememberNotice,
   trust,
   withChannel,
   type ActionContext,
   type Outcome,
 } from "#modules/temp-voice/services/actions.js";
 import { USERS_ID } from "#modules/temp-voice/services/panel.js";
-import { outcomeText } from "#modules/temp-voice/services/views.js";
+import { notifyRow, outcomeText } from "#modules/temp-voice/services/views.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
 
 const none: Outcome = { ok: false, key: "select.noMember" };
@@ -21,8 +21,6 @@ const ACTIONS: Record<
 > = {
   trust,
   block,
-  invite: (ctx, [member]) =>
-    member ? invite(ctx, member) : Promise.resolve(none),
 };
 
 export default declareInteractionHandler<
@@ -35,7 +33,14 @@ export default declareInteractionHandler<
     interaction.isUserSelectMenu(),
   async execute(interaction, [action, channelId], config) {
     const run = action ? ACTIONS[action] : undefined;
-    if (!interaction.inCachedGuild() || !run || !channelId) {
+    if (!interaction.inCachedGuild() || !channelId) {
+      return;
+    }
+    if (!run) {
+      await interaction.update({
+        content: config.t("panel.expired"),
+        components: [],
+      });
       return;
     }
     await interaction.deferUpdate();
@@ -50,9 +55,18 @@ export default declareInteractionHandler<
             config,
             (ctx) => run(ctx, members)
           );
+    const offerNotice = action === "trust" && outcome.ok;
+    if (offerNotice) {
+      rememberNotice(
+        interaction.id,
+        members.filter((member) => !member.user.bot).map((member) => member.id)
+      );
+    }
     await interaction.editReply({
       content: outcomeText(config.t, outcome),
-      components: [],
+      components: offerNotice
+        ? [notifyRow(config.t, channelId, interaction.id)]
+        : [],
       allowedMentions: NO_MENTIONS,
     });
   },

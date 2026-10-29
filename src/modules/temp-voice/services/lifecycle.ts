@@ -9,6 +9,7 @@ import {
   type VoiceBasedChannel,
   type VoiceChannel,
 } from "discord.js";
+import type { TFunction } from "#lib/i18n.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
@@ -20,7 +21,7 @@ import {
   type AccessState,
   type Overwrite,
 } from "./overwrites.js";
-import { postPanel } from "./panel.js";
+import { postPanel, refreshPanel } from "./panel.js";
 import { isProtected, REQUIRED_PERMISSIONS } from "./permissions.js";
 import store, { type Hub, type TempChannel } from "./store.js";
 
@@ -370,7 +371,7 @@ export function joinHub(
     logger.info(
       `Temporary channel created | guildId = ${guild.id} | channelId = ${channel.id} | ownerId = ${member.id}`
     );
-    await postPanel(channel, row, config.t);
+    await postPanel(channel, row, config.t, true);
   });
 }
 
@@ -398,11 +399,33 @@ export async function removeTempChannel(
   return true;
 }
 
-export function memberLeft(channel: VoiceBasedChannel): Promise<void> {
+export function memberLeft(
+  channel: VoiceBasedChannel,
+  userId: string,
+  t: TFunction
+): Promise<void> {
   return queue.run(channel.id, async () => {
     const row = await store.channel(channel.id);
-    if (row && humanCount(channel) === 0) {
+    if (!row) {
+      return;
+    }
+    if (humanCount(channel) === 0) {
       await removeTempChannel(channel, row, "empty");
+    } else if (row.ownerId === userId) {
+      await refreshPanel(channel, row, t);
+    }
+  });
+}
+
+export function ownerMoved(
+  channel: VoiceBasedChannel,
+  userId: string,
+  t: TFunction
+): Promise<void> {
+  return queue.run(channel.id, async () => {
+    const row = await store.channel(channel.id);
+    if (row?.ownerId === userId) {
+      await refreshPanel(channel, row, t);
     }
   });
 }
