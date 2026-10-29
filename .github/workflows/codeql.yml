@@ -17,9 +17,17 @@ on:
     - cron: "33 4 * * 0"
 
 jobs:
-  analyze:
+  # One job per language, but a single upload: the pull request check is
+  # computed as soon as an analysis arrives. Uploaded by each job, the quicker
+  # `actions` results came first, and the check warned that the
+  # `javascript-typescript` configuration of master was missing. One job for
+  # both languages would upload once too, but under a single category, a new
+  # configuration that loses track of the existing ones.
+  codeql:
     name: Analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
+    # security-events: CodeQL also sends its database from master, apart from
+    # the results.
     permissions: &upload-results
       contents: read
       security-events: write
@@ -41,10 +49,42 @@ jobs:
           build-mode: none
           queries: security-and-quality
 
+      # The category is written into the SARIF file: the upload below keeps it.
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
+          upload: never
+          output: sarif
+
+      - name: Keep the results for the upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: codeql-${{ matrix.language }}
+          path: sarif
+          retention-days: 1
+
+  # Named `analyze` like the job that uploaded before, as code scanning also
+  # tells configurations apart by the job that sent them.
+  analyze:
+    name: Upload the CodeQL results
+    needs: codeql
+    runs-on: ubuntu-latest
+    permissions: *upload-results
+    steps:
+      - *checkout
+
+      - name: Fetch the results
+        uses: actions/download-artifact@v8
+        with:
+          pattern: codeql-*
+          path: sarif
+          merge-multiple: true
+
+      - name: Upload the results
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: sarif
 
   # Template injection, credentials left behind by checkout, unpinned or
   # known-vulnerable actions, impostor commits… Rules are tuned in
