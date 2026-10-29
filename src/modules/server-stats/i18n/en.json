@@ -34,5 +34,6 @@
   "report.activeNewcomers_other": "{{count}} of them spoke",
   "report.hours": "Messages per hour",
   "report.peak": "peak at {{hour}}:00",
-  "report.hour": "{{hour}}:00"
+  "report.hour": "{{hour}}:00",
+  "report.activeNewcomers_zero": "none of them spoke"
 }

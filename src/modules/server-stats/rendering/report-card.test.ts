@@ -1,5 +1,5 @@
 import { loadImage } from "@napi-rs/canvas";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { tableHeight } from "#lib/table.js";
 import {
   rankingHeight,
@@ -81,6 +81,12 @@ describe("renderReportCard", () => {
         20 +
         tableHeight(2, false, true)
     );
+  });
+
+  it("names the busiest hour", async () => {
+    const peak = vi.fn((hour: number) => `pic à ${hour} h`);
+    await renderReportCard(data, { ...labels, peak });
+    expect(peak).toHaveBeenCalledWith(23);
   });
 
   it("leaves the hours out when no message was counted by hour", async () => {

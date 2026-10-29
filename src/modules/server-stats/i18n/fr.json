@@ -28,11 +28,12 @@
   "report.topChannels_one": "Salons les plus actifs · {{count}} actif",
   "report.topChannels_other": "Salons les plus actifs · {{count}} actifs",
   "report.trend": "{{change}} vs 7 j",
-  "report.record_one": "record sur {{count}} jour",
-  "report.record_other": "record sur {{count}} jours",
+  "report.record_one": "record {{count}} j",
+  "report.record_other": "record {{count}} j",
   "report.activeNewcomers_one": "dont {{count}} a parlé",
   "report.activeNewcomers_other": "dont {{count}} ont parlé",
   "report.hours": "Messages par heure",
   "report.peak": "pic à {{hour}} h",
-  "report.hour": "{{hour}} h"
+  "report.hour": "{{hour}} h",
+  "report.activeNewcomers_zero": "aucun n'a parlé"
 }

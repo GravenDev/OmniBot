@@ -18,10 +18,10 @@ const prisma = vi.hoisted(() => {
     serverStatsMember: model(),
     serverStatsReaction: model(),
     serverStatsHour: model(),
-    $transaction: vi.fn(async (operations: unknown[]) => [
-      ...operations.slice(0, -1),
-      { messages: 2 },
-    ]),
+    $transaction: vi.fn(
+      async (operations: unknown[], _options?: unknown): Promise<unknown[]> =>
+        Promise.all(operations)
+    ),
   };
 });
 vi.mock("#lib/database.js", () => ({ default: prisma }));
@@ -152,6 +152,9 @@ describe("dailyStats", () => {
       topMembers: [{ id: "u1", count: 20 }],
       topReactions: [{ id: "👍", count: 5 }],
     });
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Array), {
+      isolationLevel: "RepeatableRead",
+    });
     expect(prisma.serverStatsMember.findMany).toHaveBeenCalledWith({
       where: { guildId: "guild-1", day },
       orderBy: [{ messages: "desc" }, { userId: "asc" }],
@@ -183,7 +186,7 @@ describe("dailyStats", () => {
 });
 
 describe("history", () => {
-  it("totals each day of the range, with zeros where nothing was counted", async () => {
+  it("totals each day of the range that has data, and leaves out the others", async () => {
     const before = new Date("2026-10-12T00:00:00Z");
     prisma.serverStatsDay.findMany.mockResolvedValueOnce([
       { day: before, joins: 4, leaves: 1 },
@@ -206,6 +209,7 @@ describe("history", () => {
       activeMembers: 0,
       reactions: 9,
     });
+    expect(history.has(new Date("2026-10-11T00:00:00Z").getTime())).toBe(false);
     expect(history.get(day.getTime())).toEqual({
       joins: 0,
       messages: 120,
