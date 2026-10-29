@@ -71,7 +71,7 @@ The Temporary Voice Channels module stores, for each open temporary channel, the
 
 ### Activity Statistics
 
-When the Server Stats module is enabled on a guild, the bot counts every day, per guild, the messages per channel and per member, the reactions per emoji, and the members joining and leaving. Only counters are stored, along with the date tracking started on the guild, never message content nor who joined or left. These counters are deleted after 30 days. The daily report posted on the guild may list the most active members; administrators can turn this off.
+When the Server Stats module is enabled on a guild, the bot counts every day, per guild, the messages per channel, per member and per hour, the reactions per emoji, the members joining and leaving, and how many of the day's newcomers posted a message. Only counters are stored, along with the date tracking started on the guild, never message content nor who joined or left. These counters are deleted after 30 days. The daily report posted on the guild may list the most active members; administrators can turn this off.
 
 ## Message Content Read Without Being Stored
 

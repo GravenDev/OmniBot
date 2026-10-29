@@ -4,10 +4,11 @@ model ServerStatsGuild {
 }
 
 model ServerStatsDay {
-  guildId String
-  day     DateTime @db.Date
-  joins   Int      @default(0)
-  leaves  Int      @default(0)
+  guildId         String
+  day             DateTime @db.Date
+  joins           Int      @default(0)
+  leaves          Int      @default(0)
+  activeNewcomers Int      @default(0)
 
   @@id([guildId, day])
   @@index([day])
@@ -40,5 +41,15 @@ model ServerStatsReaction {
   reactions Int      @default(0)
 
   @@id([guildId, day, emoji])
+  @@index([day])
+}
+
+model ServerStatsHour {
+  guildId  String
+  day      DateTime @db.Date
+  hour     Int
+  messages Int      @default(0)
+
+  @@id([guildId, day, hour])
   @@index([day])
 }

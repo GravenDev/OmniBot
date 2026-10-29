@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { addDays, dayOf } from "./day.js";
+import { addDays, dayOf, hourOf } from "./day.js";
 
 describe("dayOf", () => {
   it("uses the Paris calendar day", () => {
@@ -18,6 +18,15 @@ describe("dayOf", () => {
     expect(dayOf(new Date("2026-12-31T23:00:00Z")).toISOString()).toBe(
       "2027-01-01T00:00:00.000Z"
     );
+  });
+});
+
+describe("hourOf", () => {
+  it("uses the Paris hour, summer and winter", () => {
+    expect(hourOf(new Date("2026-10-13T21:59:59Z"))).toBe(23);
+    expect(hourOf(new Date("2026-10-13T22:00:00Z"))).toBe(0);
+    expect(hourOf(new Date("2026-12-31T23:30:00Z"))).toBe(0);
+    expect(hourOf(new Date("2026-12-31T12:00:00Z"))).toBe(13);
   });
 });
 
