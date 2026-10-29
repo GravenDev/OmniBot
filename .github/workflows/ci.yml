@@ -20,11 +20,12 @@ concurrency:
 jobs:
   # Blacksmith only where it pays: its builder keeps the Docker layer cache on
   # disk, which cut the image builds from about 60 s to 12 s. Everything else
-  # ran as fast on GitHub's runners, free for a public repository; `build` stays
-  # for its tests, a few seconds quicker. Two vCPUs: a cached build waits on the
-  # disk more than on the CPU. With both kinds of runner in this workflow, every
-  # job names Ubuntu 24.04 rather than `ubuntu-latest`: they all run on the same
-  # system, whichever side they land on.
+  # ran as fast on GitHub's runners, free for a public repository. Two vCPUs: a
+  # cached build waits on the disk more than on the CPU. The tests do not: they
+  # took 30 s there against 20 s on GitHub's four, so `build` stays on GitHub.
+  # With both kinds of runner in this workflow, every job names Ubuntu 24.04
+  # rather than `ubuntu-latest`: they all run on the same system, whichever side
+  # they land on.
   lint:
     runs-on: ubuntu-24.04
     permissions: &read-only
@@ -42,7 +43,7 @@ jobs:
         run: pnpm exec oxlint --deny-warnings
 
   build:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-24.04
     permissions: *read-only
 
     steps:
