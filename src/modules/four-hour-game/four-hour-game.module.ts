@@ -18,7 +18,7 @@ const fourHourGameModule = defineModule({
   name: "4h Game",
   description:
     "Score a point when your message stays the last one in the game channel for the configured delay, and a daily point for the longest hold of the day.",
-  version: "1.1.0",
+  version: "1.1.1",
   author: "LoicR",
 
   config: fourHourGameConfigSchema,
