@@ -134,7 +134,7 @@
   "modules.latex.description": "Renders LaTeX formulas as images with the /latex command, and the messages containing LaTeX.",
 
   "modules.server-stats.name": "Server Stats",
-  "modules.server-stats.description": "Counts the server's daily activity and posts a report every night.",
+  "modules.server-stats.description": "Counts the server's daily activity, posts a report every night and shows it on demand.",
 
   "modules.sticky.name": "Sticky Messages",
   "modules.sticky.description": "Keeps a message at the bottom of the channels set with /config sticky by reposting it after every new message.",

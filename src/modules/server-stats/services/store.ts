@@ -227,6 +227,103 @@ async function dailyStats(
   };
 }
 
+function ranked<Row>(rows: Row[], entry: (row: Row) => Ranked): Ranked[] {
+  return rows
+    .map(entry)
+    .sort((a, b) => b.count - a.count || (a.id < b.id ? -1 : 1));
+}
+
+async function startedAt(guildId: string): Promise<Date | null> {
+  const guild = await prisma.serverStatsGuild.findUnique({
+    where: { guildId },
+  });
+  return guild?.startedAt ?? null;
+}
+
+// The days from `from` to `to` added up, in the shape of a single day. A
+// member, a channel or an emoji counts once however many days they are active.
+async function periodStats(
+  guildId: string,
+  from: Date,
+  to: Date
+): Promise<DailyStats | null> {
+  const guild = await prisma.serverStatsGuild.findUnique({
+    where: { guildId },
+  });
+  if (!guild) {
+    return null;
+  }
+
+  const where = { guildId, day: { gte: from, lte: to } };
+  const [dayTotals, channelRows, memberRows, reactionRows, hourRows] =
+    await prisma.$transaction(
+      [
+        prisma.serverStatsDay.aggregate({
+          where,
+          _sum: { joins: true, leaves: true, activeNewcomers: true },
+        }),
+        prisma.serverStatsChannel.groupBy({
+          by: ["channelId"],
+          where,
+          _sum: { messages: true },
+          orderBy: { channelId: "asc" },
+        }),
+        prisma.serverStatsMember.groupBy({
+          by: ["userId"],
+          where,
+          _sum: { messages: true },
+          orderBy: { userId: "asc" },
+        }),
+        prisma.serverStatsReaction.groupBy({
+          by: ["emoji"],
+          where,
+          _sum: { reactions: true },
+          orderBy: { emoji: "asc" },
+        }),
+        prisma.serverStatsHour.groupBy({
+          by: ["hour"],
+          where,
+          _sum: { messages: true },
+          orderBy: { hour: "asc" },
+        }),
+      ],
+      { isolationLevel: "RepeatableRead" }
+    );
+  const channels = ranked(channelRows, (row) => ({
+    id: row.channelId,
+    count: row._sum.messages ?? 0,
+  }));
+  const members = ranked(memberRows, (row) => ({
+    id: row.userId,
+    count: row._sum.messages ?? 0,
+  }));
+  const reactions = ranked(reactionRows, (row) => ({
+    id: row.emoji,
+    count: row._sum.reactions ?? 0,
+  }));
+  const hours = Array.from({ length: 24 }, () => 0);
+  for (const row of hourRows) {
+    hours[row.hour] = row._sum.messages ?? 0;
+  }
+  const total = (entries: Ranked[]) =>
+    entries.reduce((sum, entry) => sum + entry.count, 0);
+
+  return {
+    startedAt: guild.startedAt,
+    joins: dayTotals._sum.joins ?? 0,
+    activeNewcomers: dayTotals._sum.activeNewcomers ?? 0,
+    hours,
+    leaves: dayTotals._sum.leaves ?? 0,
+    messages: total(channels),
+    activeChannels: channels.length,
+    activeMembers: members.length,
+    reactions: total(reactions),
+    topChannels: channels.slice(0, TOP_SIZE),
+    topMembers: members.slice(0, TOP_SIZE),
+    topReactions: reactions.slice(0, TOP_SIZE),
+  };
+}
+
 async function purgeBefore(day: Date): Promise<void> {
   const where = { day: { lt: day } };
   await prisma.$transaction([
@@ -246,7 +343,9 @@ export default {
   recordMessage,
   recordReaction,
   recordMemberChange,
+  startedAt,
   dailyStats,
+  periodStats,
   history,
   purgeBefore,
   deleteMember,

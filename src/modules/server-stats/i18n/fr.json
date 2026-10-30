@@ -35,5 +35,18 @@
   "report.hours": "Messages par heure",
   "report.peak": "pic à {{hour}} h",
   "report.hour": "{{hour}} h",
-  "report.activeNewcomers_zero": "aucun n'a parlé"
+  "report.activeNewcomers_zero": "aucun n'a parlé",
+  "report.days_one": "{{count}} jour",
+  "report.days_other": "{{count}} jours",
+  "report.until": "jusqu'à {{time}}",
+  "report.hoursCombined": "Messages par heure, tous jours confondus",
+  "command.today": "Aujourd'hui — {{date}}",
+  "command.yesterday": "Hier — {{date}}",
+  "command.invalidDate": "« {{value}} » n'est pas une date : choisissez-en une dans la liste, ou écrivez-la 2026-10-29 ou 29/10.",
+  "command.future": "Ce jour n'est pas encore arrivé.",
+  "command.tooOld_one": "Seul le dernier jour est conservé : choisissez un jour à partir du {{date}}.",
+  "command.tooOld_other": "Seuls les {{count}} derniers jours sont conservés : choisissez un jour à partir du {{date}}.",
+  "command.daysAndDates": "Choisissez un nombre de jours ou des dates, pas les deux.",
+  "command.notStarted": "Rien n'a encore été compté sur ce serveur.",
+  "command.beforeStart": "Le comptage a commencé le {{date}} : rien n'a été compté avant."
 }
