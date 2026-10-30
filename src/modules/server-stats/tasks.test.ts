@@ -94,6 +94,8 @@ describe("postReport", () => {
     expect(mocks.dailyStats).toHaveBeenCalledWith("guild-1", day);
     expect(mocks.renderReport).toHaveBeenCalledWith(guild, stats, {
       day,
+      lastDay: day,
+      until: null,
       insights: expect.any(Object),
       comparedDays: 0,
       showTopMembers: true,

@@ -185,6 +185,110 @@ describe("dailyStats", () => {
   });
 });
 
+describe("startedAt", () => {
+  it("gives when counting started, or null before", async () => {
+    const startedAt = new Date("2026-10-01T10:00:00Z");
+    prisma.serverStatsGuild.findUnique.mockResolvedValueOnce({ startedAt });
+    expect(await store.startedAt("guild-1")).toEqual(startedAt);
+    expect(await store.startedAt("guild-1")).toBeNull();
+  });
+});
+
+describe("periodStats", () => {
+  const from = new Date("2026-10-07T00:00:00Z");
+
+  it("returns null before counting started", async () => {
+    expect(await store.periodStats("guild-1", from, day)).toBeNull();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("adds the days up, counting each member, channel and emoji once", async () => {
+    const startedAt = new Date("2026-10-01T10:00:00Z");
+    prisma.serverStatsGuild.findUnique.mockResolvedValueOnce({ startedAt });
+    prisma.serverStatsDay.aggregate.mockResolvedValueOnce({
+      _sum: { joins: 9, leaves: 4, activeNewcomers: 3 },
+    });
+    prisma.serverStatsChannel.groupBy.mockResolvedValueOnce([
+      { channelId: "c1", _sum: { messages: 30 } },
+      { channelId: "c2", _sum: { messages: 120 } },
+      { channelId: "c3", _sum: { messages: 30 } },
+    ]);
+    prisma.serverStatsMember.groupBy.mockResolvedValueOnce(
+      Array.from({ length: 7 }, (_, index) => ({
+        userId: `u${index}`,
+        _sum: { messages: index * 10 },
+      }))
+    );
+    prisma.serverStatsReaction.groupBy.mockResolvedValueOnce([
+      { emoji: "👍", _sum: { reactions: 5 } },
+      { emoji: "🔥", _sum: { reactions: 8 } },
+    ]);
+    prisma.serverStatsHour.groupBy.mockResolvedValueOnce([
+      { hour: 0, _sum: { messages: 60 } },
+      { hour: 21, _sum: { messages: 120 } },
+    ]);
+    const hours = Array.from({ length: 24 }, () => 0);
+    hours[0] = 60;
+    hours[21] = 120;
+
+    expect(await store.periodStats("guild-1", from, day)).toEqual({
+      startedAt,
+      joins: 9,
+      activeNewcomers: 3,
+      hours,
+      leaves: 4,
+      messages: 180,
+      activeChannels: 3,
+      activeMembers: 7,
+      reactions: 13,
+      topChannels: [
+        { id: "c2", count: 120 },
+        { id: "c1", count: 30 },
+        { id: "c3", count: 30 },
+      ],
+      topMembers: [
+        { id: "u6", count: 60 },
+        { id: "u5", count: 50 },
+        { id: "u4", count: 40 },
+        { id: "u3", count: 30 },
+        { id: "u2", count: 20 },
+      ],
+      topReactions: [
+        { id: "🔥", count: 8 },
+        { id: "👍", count: 5 },
+      ],
+    });
+    expect(prisma.$transaction).toHaveBeenCalledWith(expect.any(Array), {
+      isolationLevel: "RepeatableRead",
+    });
+    expect(prisma.serverStatsMember.groupBy).toHaveBeenCalledWith({
+      by: ["userId"],
+      where: { guildId: "guild-1", day: { gte: from, lte: day } },
+      _sum: { messages: true },
+      orderBy: { userId: "asc" },
+    });
+  });
+
+  it("reports zeros for quiet days", async () => {
+    prisma.serverStatsGuild.findUnique.mockResolvedValueOnce({
+      startedAt: from,
+    });
+    prisma.serverStatsDay.aggregate.mockResolvedValueOnce({
+      _sum: { joins: null, leaves: null, activeNewcomers: null },
+    });
+    expect(await store.periodStats("guild-1", from, day)).toMatchObject({
+      joins: 0,
+      activeNewcomers: 0,
+      hours: Array.from({ length: 24 }, () => 0),
+      leaves: 0,
+      messages: 0,
+      activeMembers: 0,
+      reactions: 0,
+      topChannels: [],
+    });
+  });
+});
+
 describe("history", () => {
   it("totals each day of the range that has data, and leaves out the others", async () => {
     const before = new Date("2026-10-12T00:00:00Z");

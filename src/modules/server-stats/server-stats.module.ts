@@ -1,5 +1,6 @@
 import { GatewayIntentBits, Partials } from "discord.js";
 import { defineModule } from "#lib/module.js";
+import serverStatsCommand from "./commands/server-stats.command.js";
 import memberAddListener from "./listeners/member-add.listener.js";
 import memberRemoveListener from "./listeners/member-remove.listener.js";
 import messageCreateListener from "./listeners/message-create.listener.js";
@@ -12,8 +13,8 @@ const serverStatsModule = defineModule({
   id: "server-stats",
   name: "Server Stats",
   description:
-    "Counts the server's daily activity and posts a report every night.",
-  version: "1.0.0",
+    "Counts the server's daily activity, posts a report every night and shows it on demand.",
+  version: "1.1.0",
   author: "LoicR",
 
   config: serverStatsConfigSchema,
@@ -33,6 +34,7 @@ const serverStatsModule = defineModule({
   ],
 
   onLoad(_client, registry) {
+    registry.register(serverStatsCommand);
     registry.register(messageCreateListener);
     registry.register(reactionAddListener);
     registry.register(memberAddListener);

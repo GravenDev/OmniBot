@@ -54,6 +54,8 @@ const noChange = { change: null, record: false };
 
 const context: ReportContext = {
   day: new Date("2026-10-13T00:00:00Z"),
+  lastDay: new Date("2026-10-13T00:00:00Z"),
+  until: null,
   insights: {
     joins: { change: 0.5, record: true },
     messages: { change: 0.183, record: false },
@@ -106,6 +108,60 @@ describe("renderReport", () => {
     );
     expect(rendered().labels.subtitle).toBe(
       'mardi 13 octobre 2026 · report.since {"time":"04:12"}'
+    );
+  });
+
+  it("tells how far a day still going is counted", async () => {
+    await renderReport(guild, stats, {
+      ...context,
+      until: new Date("2026-10-13T12:32:00Z"),
+    });
+    expect(rendered().labels.subtitle).toBe(
+      'mardi 13 octobre 2026 · report.until {"time":"14:32"}'
+    );
+  });
+
+  it("gives both times on the first day, still going", async () => {
+    await renderReport(
+      guild,
+      { ...stats, startedAt: new Date("2026-10-13T02:12:00Z") },
+      { ...context, until: new Date("2026-10-13T12:32:00Z") }
+    );
+    expect(rendered().labels.subtitle).toBe(
+      'mardi 13 octobre 2026 · report.since {"time":"04:12"} · report.until {"time":"14:32"}'
+    );
+  });
+
+  it("spans the days of a period and adds their hours up", async () => {
+    const report = await renderReport(guild, stats, {
+      ...context,
+      day: new Date("2026-10-07T00:00:00Z"),
+      lastDay: new Date("2026-10-13T00:00:00Z"),
+    });
+    expect(report.content).toBe('report.message {"date":"7–13 octobre 2026"}');
+    expect(rendered().labels.subtitle).toBe(
+      '7–13 octobre 2026 · report.days {"count":7}'
+    );
+    expect(rendered().labels.hours).toBe("report.hoursCombined");
+  });
+
+  it("names the hours of a single day plainly", async () => {
+    await renderReport(guild, stats, context);
+    expect(rendered().labels.hours).toBe("report.hours");
+  });
+
+  it("notes the start of counting on the first day of a period", async () => {
+    await renderReport(
+      guild,
+      { ...stats, startedAt: new Date("2026-10-12T08:00:00Z") },
+      {
+        ...context,
+        day: new Date("2026-10-12T00:00:00Z"),
+        until: new Date("2026-10-13T12:32:00Z"),
+      }
+    );
+    expect(rendered().labels.subtitle).toBe(
+      '12–13 octobre 2026 · report.days {"count":2} · report.since {"time":"10:00"} · report.until {"time":"14:32"}'
     );
   });
 

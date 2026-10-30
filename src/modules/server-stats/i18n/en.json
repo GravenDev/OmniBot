@@ -35,5 +35,18 @@
   "report.hours": "Messages per hour",
   "report.peak": "peak at {{hour}}:00",
   "report.hour": "{{hour}}:00",
-  "report.activeNewcomers_zero": "none of them spoke"
+  "report.activeNewcomers_zero": "none of them spoke",
+  "report.days_one": "{{count}} day",
+  "report.days_other": "{{count}} days",
+  "report.until": "up to {{time}}",
+  "report.hoursCombined": "Messages per hour, all days combined",
+  "command.today": "Today — {{date}}",
+  "command.yesterday": "Yesterday — {{date}}",
+  "command.invalidDate": "“{{value}}” is not a date: pick one in the list, or type it as 2026-10-29 or 29/10.",
+  "command.future": "This day has not come yet.",
+  "command.tooOld_one": "Only the last {{count}} day is kept: pick a day from {{date}} on.",
+  "command.tooOld_other": "Only the last {{count}} days are kept: pick a day from {{date}} on.",
+  "command.daysAndDates": "Pick either a number of days or dates, not both.",
+  "command.notStarted": "Nothing has been counted on this server yet.",
+  "command.beforeStart": "Counting started on {{date}}: nothing was counted before."
 }

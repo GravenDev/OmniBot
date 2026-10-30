@@ -1,6 +1,8 @@
 export const TIMEZONE = "Europe/Paris";
 
-const DAY_MS = 86_400_000;
+export const RETENTION_DAYS = 30;
+
+export const DAY_MS = 86_400_000;
 
 const calendarDate = new Intl.DateTimeFormat("en-CA", {
   timeZone: TIMEZONE,

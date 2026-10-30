@@ -11,7 +11,7 @@ import {
   type ReactionEntry,
   renderReportCard,
 } from "#modules/server-stats/rendering/report-card.js";
-import { dayOf, TIMEZONE } from "./day.js";
+import { DAY_MS, dayOf, TIMEZONE } from "./day.js";
 import type { Insights, Metric } from "./insights.js";
 import type { DailyStats, Ranked } from "./store.js";
 
@@ -41,6 +41,10 @@ function channelEntry(
 
 export interface ReportContext {
   day: Date;
+  // The last day of a report on several days, `day` otherwise.
+  lastDay: Date;
+  // Set when the last day is still going: the time it is counted up to.
+  until: Date | null;
   insights: Insights;
   comparedDays: number;
   showTopMembers: boolean;
@@ -82,15 +86,41 @@ async function memberEntries(
   }));
 }
 
-function subtitle(stats: DailyStats, context: ReportContext, date: string) {
-  if (dayOf(stats.startedAt).getTime() !== context.day.getTime()) {
-    return date;
+function days(context: ReportContext): number {
+  return (context.lastDay.getTime() - context.day.getTime()) / DAY_MS + 1;
+}
+
+function reportDate({ day, lastDay, locale }: ReportContext): string {
+  if (lastDay.getTime() === day.getTime()) {
+    return new Intl.DateTimeFormat(locale, {
+      dateStyle: "full",
+      timeZone: "UTC",
+    }).format(day);
   }
-  const time = new Intl.DateTimeFormat(context.locale, {
-    timeStyle: "short",
-    timeZone: TIMEZONE,
-  }).format(stats.startedAt);
-  return `${date} · ${context.t("report.since", { time })}`;
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "long",
+    timeZone: "UTC",
+  }).formatRange(day, lastDay);
+}
+
+function subtitle(stats: DailyStats, context: ReportContext, date: string) {
+  const { t, until } = context;
+  const time = (at: Date) =>
+    new Intl.DateTimeFormat(context.locale, {
+      timeStyle: "short",
+      timeZone: TIMEZONE,
+    }).format(at);
+  const count = days(context);
+  return [
+    date,
+    count > 1 ? t("report.days", { count }) : undefined,
+    dayOf(stats.startedAt).getTime() === context.day.getTime()
+      ? t("report.since", { time: time(stats.startedAt) })
+      : undefined,
+    until ? t("report.until", { time: time(until) }) : undefined,
+  ]
+    .filter((part) => part !== undefined)
+    .join(" · ");
 }
 
 function notes(
@@ -145,10 +175,7 @@ export async function renderReport(
   context: ReportContext
 ): Promise<Report> {
   const { t, locale } = context;
-  const date = new Intl.DateTimeFormat(locale, {
-    dateStyle: "full",
-    timeZone: "UTC",
-  }).format(context.day);
+  const date = reportDate(context);
   const complete =
     stats.hours.reduce((sum, count) => sum + count, 0) === stats.messages;
 
@@ -193,7 +220,7 @@ export async function renderReport(
       activeMembers: t("report.activeMembers"),
       reactions: t("report.reactions"),
       topChannels: (count) => t("report.topChannels", { count }),
-      hours: t("report.hours"),
+      hours: t(days(context) > 1 ? "report.hoursCombined" : "report.hours"),
       peak: (hour) => t("report.peak", { hour }),
       hour: (hour) => t("report.hour", { hour }),
       topReactions: t("report.topReactions"),

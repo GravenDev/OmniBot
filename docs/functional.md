@@ -700,7 +700,7 @@ Le module lit le contenu des messages : l'intent privilégié _Message Content_ 
 
 ## Module Server Stats
 
-Compte l'activité quotidienne du serveur et publie un bilan chaque nuit.
+Compte l'activité quotidienne du serveur, publie un bilan chaque nuit et l'affiche à la demande.
 
 ### Comptage
 
@@ -717,6 +717,20 @@ Les bots, les messages système, les salons et catégories exclus et, par défau
 Chaque jour à minuit (heure de Paris), le bot publie dans le salon configuré le bilan de la veille, sous forme d'image accompagnée d'une ligne avec la date : nombre de membres (bots compris), nouveaux membres (hors bots, avec combien d'entre eux ont posté le jour même dans un salon compté : un message dans un salon exclu ou privé non compté n'en fait pas partie) et départs, messages postés, membres actifs, réactions ajoutées, puis les 5 salons (avec le nombre de salons actifs) et les 5 réactions les plus actifs (avec une barre proportionnelle), les messages par heure (heure de Paris, pic mis en avant) et le classement des 5 membres les plus actifs.
 
 Messages, membres actifs et réactions affichent leur écart avec la moyenne des 7 dernières journées comptées, une fois que 7 journées ont été comptées. Une valeur qui dépasse toutes celles des jours conservés (jusqu'à 30) est signalée comme record, en doré ; c'est aussi le cas des nouveaux membres. Ces comparaisons ne portent que sur les journées où quelque chose a été compté : la journée où le comptage a commencé est écartée, tout comme les journées sans aucune donnée (bot arrêté, module désactivé). Un record demande au moins 7 journées de comparaison et une valeur d'au moins 5. Un écart arrondi à 0 % n'est pas affiché. Les messages par heure et le nombre de nouveaux membres qui ont parlé ne s'affichent que si la journée a été comptée par heure en entier, ce qui écarte le jour de la mise en place de cette mesure. Un nouveau membre est un membre arrivé le jour même (d'après sa date d'arrivée sur Discord) ; le nombre affiché ne dépasse jamais celui des arrivées comptées, et un membre qui efface ses données avec `/privacy delete` puis reparle le même jour peut être compté deux fois dans cette limite. Les jours de changement d'heure, l'heure doublée en octobre est cumulée sur une seule barre et celle sautée en mars reste vide. Les emojis personnalisés sont dessinés depuis leur image, même ceux d'un autre serveur ; chaque salon est précédé de l'icône que Discord affiche pour son type (`#` pour un salon textuel, 🔊 vocal, 🎙️ conférence, 📢 annonces, 💬 forum, 🖼️ média), les messages des fils comptant pour leur salon parent ; un salon supprimé apparaît comme « # salon supprimé ». Si le comptage a commencé pendant la journée du bilan (premier événement compté sur le serveur ; une désactivation temporaire du module ne remet pas cette date à zéro), l'heure de début est indiquée sous la date, la journée n'étant que partielle. Personne n'est notifié. Tant que le salon n'est pas défini, ou si rien n'a encore été compté, rien n'est publié.
+
+### `/server-stats today`, `/server-stats day <date>` et `/server-stats period [days] [from] [to]`
+
+**Permission requise :** Administrateur
+
+Affiche le bilan à la demande, sous la même forme d'image que le bilan quotidien, dans une réponse visible de l'administrateur seul (le bilan public reste celui de minuit). Personne n'est notifié, et le réglage `showTopMembers` s'applique comme pour le bilan quotidien. Le nombre de membres est celui du moment de la commande, même pour un jour passé ou une période.
+
+- `today` : la journée en cours, comptée en direct ; l'heure jusqu'à laquelle elle est comptée (heure de Paris) est indiquée sous la date.
+- `day <date>` : un jour parmi aujourd'hui et les 30 précédents (les jours conservés). La liste proposée donne ces jours, du plus récent au plus ancien ; on peut aussi écrire la date sous la forme `2026-10-29`, `29/10/2026` ou `29/10` (sans année : la dernière fois que ce jour est passé). Aujourd'hui donne le même bilan que `today`.
+- `period` : plusieurs jours cumulés. `days` prend les 7 (par défaut), 14 ou 30 derniers jours complets, aujourd'hui exclu ; ou bien `from` et `to` donnent le premier et le dernier jour, choisis comme pour `day` (par défaut, le plus ancien jour conservé et aujourd'hui ; dans le désordre, ils sont remis dans l'ordre). `days` ne se combine pas avec `from` ou `to`. Le sous-titre donne les dates et le nombre de jours. Les totaux s'additionnent, sauf les membres actifs et le nombre de salons actifs, où chacun ne compte qu'une fois sur la période ; les classements (salons, réactions, membres) et les messages par heure (« tous jours confondus ») sont cumulés. Le nombre de nouveaux membres qui ont parlé compte ceux qui ont posté le jour même de leur arrivée. Les messages par heure ne s'affichent que si tous les jours de la période ont été comptés par heure en entier.
+
+Seul un jour passé est comparé aux jours précédents (écarts et records, exactement comme dans le bilan quotidien de ce jour). La journée en cours et les périodes n'affichent ni écart ni record : une journée commencée se comparerait à des journées complètes (à 14 h, les messages paraîtraient en baisse de moitié et aucun record ne serait possible), et seuls les messages sont comptés par heure, ce qui ne permet pas de comparer à la même heure les membres actifs ou les réactions ; une période se comparerait à des journées seules.
+
+Une date illisible, à venir ou plus ancienne que les jours conservés donne un message d'explication. Si le comptage a commencé pendant la sélection, elle commence au jour du début du comptage, dont l'heure est indiquée comme dans le bilan quotidien ; si elle se termine avant, un message donne la date du début du comptage. Tant que rien n'a été compté sur le serveur, un message le dit.
 
 ### Configuration — `/config server-stats`
 

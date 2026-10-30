@@ -21,6 +21,11 @@ export interface Insight {
 
 export type Insights = Record<Metric, Insight>;
 
+// For the reports that compare nothing: a day still going, or several days.
+export const NO_INSIGHTS = Object.fromEntries(
+  METRICS.map((metric) => [metric, { change: null, record: false }])
+) as Insights;
+
 export function previousDays(
   day: Date,
   startedAt: Date,
