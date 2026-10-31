@@ -75,7 +75,7 @@ The Temporary Voice Channels module stores, for each open temporary channel, the
 
 ### Activity Statistics
 
-When the Server Stats module is enabled on a guild, the bot counts every day, per guild, the messages per channel, per member and per hour, the reactions per emoji, the members joining and leaving, and how many of the day's newcomers posted a message. Only counters are stored, along with the date tracking started on the guild, never message content nor who joined or left. These counters are deleted after 30 days. The daily report posted on the guild, and the report administrators, and the roles they allow, can display with `/server-stats`, may list the most active members; administrators can turn this off.
+When the Server Stats module is enabled on a guild, the bot counts every day, per guild, the messages per channel, per member and per hour, the reactions per emoji, the members joining and leaving, and how many of the day's newcomers posted a message. Only counters are stored, along with the date tracking started on the guild, never message content nor who joined or left. These counters, totals and per-member message counts, never the identity of who joins or leaves, are deleted after a year. The daily report posted on the guild, and the report administrators, and the roles they allow, can display with `/server-stats`, may list the most active members; administrators can turn this off.
 
 ## Message Content Read Without Being Stored
 
@@ -100,7 +100,7 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 
 - **Module configuration and activation**: kept as long as the bot is on the guild. When the bot leaves a guild (kick or removal), they are deliberately kept so everything is restored automatically if the bot is re-invited. Disabling a module deletes neither its configuration nor its data: they remain subject to the periods below.
 - **Reports**: a report is deleted, message copy included, 30 days after the message was last reported at the latest, whether it is closed or not. Each guild's administrators can shorten this period for closed reports. The deletion happens even when the module is disabled or the bot has left the guild.
-- **Activity statistics**: counters are deleted after 30 days, a period that cannot be changed. The date tracking started is kept with no time limit.
+- **Activity statistics**: counters are deleted after a year, a period that cannot be changed. The date tracking started is kept with no time limit.
 - **RNGdle**: rolls, username and reminder subscription are kept until the member unlinks with `/rngdle unlink`, or an administrator unlinks them. The record of a claimed card is deleted two days later.
 - **4-hour game**: scores and point history are kept until an administrator deletes the player's score.
 - **Clash of Code**: games, players and their results are kept with no time limit, for the leaderboard's history. The link to a Discord account is removed when the member unlinks with `/coc unlink`, or an administrator unlinks them.
