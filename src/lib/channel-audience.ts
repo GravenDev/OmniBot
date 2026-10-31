@@ -41,8 +41,7 @@ export function isNsfw(channel: GuildBasedChannel): boolean {
 
 export function widensAudience(
   source: GuildBasedChannel,
-  destination: GuildBasedChannel,
-  ignoredRoleIds: ReadonlySet<string> = new Set()
+  destination: GuildBasedChannel
 ): boolean {
   if (source.id === destination.id) {
     return false;
@@ -53,7 +52,6 @@ export function widensAudience(
   return source.guild.roles.cache.some(
     (role) =>
       !role.managed &&
-      !ignoredRoleIds.has(role.id) &&
       grants(destination, role, [PermissionFlagsBits.ViewChannel]) &&
       !grants(source, role, READ_PERMISSIONS)
   );
