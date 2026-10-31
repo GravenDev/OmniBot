@@ -1,5 +1,6 @@
 import type { Image, SKRSContext2D } from "@napi-rs/canvas";
 import {
+  drawableText,
   drawCircularImage,
   drawHighlight,
   fillTextCentered,
@@ -194,10 +195,11 @@ export function drawCellText(
     fitWidth?: number;
   } = {}
 ): void {
+  const shown = drawableText(text);
   const fitted =
     fitWidth === undefined
-      ? { text, size }
-      : fitText(ctx, text, size, fitWidth, MIN_NAME_SIZE);
+      ? { text: shown, size }
+      : fitText(ctx, shown, size, fitWidth, MIN_NAME_SIZE);
   ctx.font = font(fitted.size);
   ctx.textAlign = align;
   ctx.fillStyle = rgb(color);

@@ -73,6 +73,19 @@ export function font(size: number, family: string = FONT): string {
   return `${size}px ${family}${emojiFamily()}`;
 }
 
+// Look-alikes of `|` that channel and member names use as separators
+// (`🎪｜le-jeu-des-4h`, `❔︱c︱cpp︱rust`): neither Outfit nor the emoji font
+// has them, so they would be drawn as crossed squares. Covering U+FF5C or
+// U+FE31 would take a CJK font. The fullwidth ones span a whole em, so they
+// keep a space on each side.
+const FULLWIDTH_BARS = /\s*[｜︱]\s*/gu;
+const NARROW_BARS = /[ǀ∣⏐│┃]/gu;
+
+/** The text with the glyphs the fonts lack swapped for ones they have, for display only. */
+export function drawableText(text: string): string {
+  return text.replace(FULLWIDTH_BARS, " | ").replace(NARROW_BARS, "|");
+}
+
 const registeredFonts = new Set<string>();
 
 export function registerFont(file: URL, family: string): void {
