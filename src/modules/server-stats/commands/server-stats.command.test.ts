@@ -128,13 +128,12 @@ describe("/server-stats access", () => {
 });
 
 describe("/server-stats", () => {
-  it("shows today so far, to the admin only, without pinging anyone", async () => {
+  it("shows today so far, publicly, without pinging anyone", async () => {
     const { interaction, done } = run("today");
     await done;
 
-    expect(interaction.deferReply).toHaveBeenCalledWith({
-      flags: MessageFlags.Ephemeral,
-    });
+    // Public: the command is there to show the statistics to others.
+    expect(interaction.deferReply).toHaveBeenCalledWith();
     expect(mocks.statsReport).toHaveBeenCalledWith(
       guild,
       { from: day("2026-10-30"), to: day("2026-10-30") },
@@ -203,8 +202,10 @@ describe("/server-stats", () => {
     await done;
 
     expect(mocks.statsReport).not.toHaveBeenCalled();
-    expect(interaction.editReply).toHaveBeenCalledWith({
+    expect(interaction.deferReply).not.toHaveBeenCalled();
+    expect(interaction.reply).toHaveBeenCalledWith({
       content: 'command.beforeStart {"date":"30 octobre 2026"}',
+      flags: MessageFlags.Ephemeral,
     });
   });
 
@@ -212,8 +213,9 @@ describe("/server-stats", () => {
     mocks.startedAt.mockResolvedValue(null);
     const { interaction, done } = run("today");
     await done;
-    expect(interaction.editReply).toHaveBeenCalledWith({
+    expect(interaction.reply).toHaveBeenCalledWith({
       content: "command.notStarted",
+      flags: MessageFlags.Ephemeral,
     });
   });
 });
