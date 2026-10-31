@@ -168,12 +168,12 @@ describe("/server-stats", () => {
   });
 
   it("explains a date it cannot use, before deferring", async () => {
-    const { interaction, done } = run("day", { date: "2026-09-01" });
+    const { interaction, done } = run("day", { date: "2025-09-01" });
     await done;
 
     expect(interaction.deferReply).not.toHaveBeenCalled();
     expect(interaction.reply).toHaveBeenCalledWith({
-      content: 'command.tooOld {"count":30,"date":"30 septembre 2026"}',
+      content: 'command.tooOld {"count":365,"date":"30 octobre 2025"}',
       allowedMentions: { parse: [] },
       flags: MessageFlags.Ephemeral,
     });
@@ -275,9 +275,9 @@ describe("/server-stats autocomplete", () => {
   });
 
   it("finds a day by its name or as typed", async () => {
-    expect((await complete("septembre")).map((choice) => choice.value)).toEqual(
-      ["2026-09-30"]
-    );
+    expect(
+      (await complete("30 septembre")).map((choice) => choice.value)
+    ).toEqual(["2026-09-30"]);
     expect((await complete("12/10")).map((choice) => choice.value)).toEqual([
       "2026-10-12",
     ]);

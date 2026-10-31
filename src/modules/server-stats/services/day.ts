@@ -1,6 +1,7 @@
 export const TIMEZONE = "Europe/Paris";
 
-export const RETENTION_DAYS = 30;
+// A year of counters: totals and counts per member, never who joined or left.
+export const RETENTION_DAYS = 365;
 
 export const DAY_MS = 86_400_000;
 

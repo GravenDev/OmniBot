@@ -1,6 +1,6 @@
 import { addDays, dayOf, RETENTION_DAYS } from "./day.js";
 
-export const PERIOD_DAYS = [7, 14, 30] as const;
+export const PERIOD_DAYS = [7, 14, 30, 90, 365] as const;
 export const DEFAULT_PERIOD_DAYS = 7;
 
 const ISO_DATE = /^(\d{4})-(\d{1,2})-(\d{1,2})$/;
