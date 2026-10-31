@@ -15,7 +15,6 @@ import {
   isExcluded,
   isNsfw,
   READ_PERMISSIONS,
-  widensAudience,
 } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { stripHiddenText } from "#lib/hidden-text.js";
@@ -111,8 +110,7 @@ export async function resolveQuote(
   source: Message<true>,
   member: GuildMember,
   link: MessageLink,
-  excludedIds: ReadonlySet<string>,
-  ignoredRoleIds: ReadonlySet<string> = new Set()
+  excludedIds: ReadonlySet<string>
 ): Promise<Message<true> | null> {
   const channel = await source.guild.channels
     .fetch(link.channelId)
@@ -121,7 +119,6 @@ export async function resolveQuote(
     !channel?.isTextBased() ||
     isExcluded(channel, excludedIds) ||
     (isNsfw(channel) && !isNsfw(source.channel)) ||
-    widensAudience(channel, source.channel, ignoredRoleIds) ||
     !(await canRead(member, channel))
   ) {
     return null;
@@ -245,10 +242,6 @@ export async function quoteLinks(
     return;
   }
 
-  const ignoredRoleIds = new Set(
-    (config.get("ignoredRoles") ?? []).map((role) => role.id)
-  );
-
   const member =
     message.member ??
     (await message.guild.members.fetch(message.author.id).catch(() => null));
@@ -258,9 +251,7 @@ export async function quoteLinks(
 
   const quotes = (
     await Promise.all(
-      links.map((link) =>
-        resolveQuote(message, member, link, excludedIds, ignoredRoleIds)
-      )
+      links.map((link) => resolveQuote(message, member, link, excludedIds))
     )
   ).filter((quoted) => quoted !== null);
   if (quotes.length === 0) {

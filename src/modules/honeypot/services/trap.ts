@@ -15,6 +15,7 @@ import {
   honeypotConfigSchema,
   type HoneypotConfigSchema,
 } from "#modules/honeypot/honeypot.config.js";
+import { recordCatch } from "./counter.js";
 import { logTrap } from "./log.js";
 
 type Config = ConfigProvider<HoneypotConfigSchema>;
@@ -166,6 +167,7 @@ async function sanction(
     "Honeypot triggered"
   );
   await logTrap(message, config, result, purgeSeconds);
+  void recordCatch(message.guild, config);
   return result;
 }
 

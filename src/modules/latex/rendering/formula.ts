@@ -7,6 +7,7 @@ import "@mathjax/src/js/input/tex/boldsymbol/BoldsymbolConfiguration.js";
 import "@mathjax/src/js/input/tex/braket/BraketConfiguration.js";
 import "@mathjax/src/js/input/tex/cancel/CancelConfiguration.js";
 import "@mathjax/src/js/input/tex/color/ColorConfiguration.js";
+import "@mathjax/src/js/input/tex/configmacros/ConfigMacrosConfiguration.js";
 import "@mathjax/src/js/input/tex/mathtools/MathtoolsConfiguration.js";
 import "@mathjax/src/js/input/tex/mhchem/MhchemConfiguration.js";
 import "@mathjax/src/js/input/tex/newcommand/NewcommandConfiguration.js";
@@ -16,6 +17,7 @@ import { SVG } from "@mathjax/src/js/output/svg.js";
 import "@mathjax/src/js/util/asyncLoad/esm.js";
 import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
 import { PALETTE, rgb, type Rgb } from "#lib/imaging.js";
+import { MACROS, PAIRED_DELIMITERS } from "./macros.js";
 
 export const FORMULA_MAX_LENGTH = 1000;
 export const TEXT_MAX_LENGTH = 4000;
@@ -70,11 +72,14 @@ const newDocument = () =>
         "braket",
         "cancel",
         "color",
+        "configmacros",
         "mathtools",
         "mhchem",
         "newcommand",
         "textmacros",
       ],
+      macros: MACROS,
+      mathtools: { pairedDelimiters: PAIRED_DELIMITERS },
       maxMacros: MAX_MACROS,
       maxBuffer: MAX_BUFFER,
       formatError: (_jax: unknown, err: { message: string }) => {

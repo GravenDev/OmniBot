@@ -7,6 +7,8 @@ import en from "#modules/honeypot/i18n/en.json" with { type: "json" };
 
 const log = vi.hoisted(() => ({ logTrap: vi.fn() }));
 vi.mock("./log.js", () => log);
+const counter = vi.hoisted(() => ({ recordCatch: vi.fn() }));
+vi.mock("./counter.js", () => counter);
 
 const { springTrap, purgeSecondsOf } = await import("./trap.js");
 
@@ -164,6 +166,10 @@ describe("springTrap", () => {
       "Honeypot: message in #piege"
     );
     expectLogged(message, "softbanned");
+    expect(counter.recordCatch).toHaveBeenCalledWith(
+      message.guild,
+      expect.anything()
+    );
   });
 
   it("ignores other channels", async () => {
@@ -205,6 +211,7 @@ describe("springTrap", () => {
     await run(message);
     expect(message.guild.bans.create).not.toHaveBeenCalled();
     expect(log.logTrap).not.toHaveBeenCalled();
+    expect(counter.recordCatch).not.toHaveBeenCalled();
   });
 
   it("spares members with an exempt role", async () => {
@@ -261,6 +268,7 @@ describe("springTrap", () => {
     await run(second);
     expect(second.delete).toHaveBeenCalled();
     expect(log.logTrap).toHaveBeenCalledTimes(1);
+    expect(counter.recordCatch).toHaveBeenCalledTimes(1);
   });
 
   it("does not delete the burst again after a softban", async () => {

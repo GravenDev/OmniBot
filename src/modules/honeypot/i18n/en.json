@@ -3,6 +3,8 @@
   "config.trapChannels.description": "Channels nobody should write in. A member who posts there is softbanned. Nothing happens until one is set.",
   "config.logChannel.name": "Log channel",
   "config.logChannel.description": "Channel where each triggered trap is logged.",
+  "config.counterChannel.name": "Counter channel",
+  "config.counterChannel.description": "Channel where the bot keeps a message counting the members caught by the trap, updated after each catch.",
   "config.exemptRoles.name": "Exempt roles",
   "config.exemptRoles.description": "Members with one of these roles are never sanctioned, nor are members who can manage messages in the trap channel.",
   "config.purgeWindow.name": "Purge window",
@@ -19,5 +21,11 @@
   "outcome.softbanned": "✅ Softbanned: their messages from the last {{window}} were deleted.",
   "outcome.notBannable": "⚠️ No sanction: the bot cannot ban this member (role too high or missing _Ban Members_ permission).",
   "outcome.failed": "⚠️ The softban failed: check that the bot has the _Ban Members_ permission.",
-  "outcome.stillBanned": "⚠️ The member was banned but could not be unbanned: unban them by hand."
+  "outcome.stillBanned": "⚠️ The member was banned but could not be unbanned: unban them by hand.",
+
+  "counter.title": "🍯 The honey pot",
+  "counter.count_one": "🐝 **{{count}}** little bee fell into the trap.",
+  "counter.count_other": "🐝 **{{count}}** little bees fell into the trap.",
+  "counter.last": "Latest sweet tooth: {{when}}",
+  "counter.footer": "Bzzz… the honey looked so good."
 }

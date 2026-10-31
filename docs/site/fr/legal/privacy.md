@@ -57,6 +57,10 @@ Cette copie permet aux modérateurs de juger le message même si son auteur le m
 
 Le module Auto React enregistre, pour chaque salon configuré, l'emoji à ajouter. Il n'enregistre rien sur les membres.
 
+### Honeypot
+
+Le module Honeypot enregistre, pour chaque serveur, le nombre de membres pris au piège, la date de la dernière prise et l'ID du message compteur et de son salon. Il n'enregistre pas qui a été pris.
+
 ### Messages collants
 
 Le module Messages collants enregistre, pour chaque salon configuré, le texte du message collant écrit par un administrateur et l'ID de sa dernière publication. Il n'enregistre rien sur les membres et ne lit pas leurs messages : un nouveau message déclenche seulement la republication.
@@ -101,6 +105,7 @@ Les données sont stockées dans une base de données PostgreSQL gérée par l'o
 - **Jeu des 4h** : les scores et l'historique des points sont conservés jusqu'à ce qu'un administrateur supprime le score du joueur.
 - **Clash of Code** : les parties, les joueurs et leurs résultats sont conservés sans limite de durée, pour l'historique du classement. La liaison à un compte Discord est retirée quand le membre se délie avec `/coc unlink`, ou qu'un administrateur le délie.
 - **Préférence de mention et réactions automatiques** : conservées jusqu'à ce que le membre, ou un administrateur, les retire.
+- **Compteur du Honeypot** : conservé sans limite de durée, même quand le module est désactivé ou que le bot quitte le serveur, comme la configuration.
 - **Messages collants** : conservés jusqu'à ce qu'un administrateur les retire dans `/config`, ou que le salon soit supprimé.
 - **Starboard** : une entrée est supprimée avec le message d'origine, avec son repost quand il repasse sous le seuil et que les administrateurs ont choisi de le retirer, quand le salon ou le fil d'origine est supprimé (le repost l'est aussi), ou quand le salon starboard est supprimé. Quand un modérateur supprime un repost, l'entrée est conservée pour que le message ne soit plus jamais reposté. Le bot ne voit ces suppressions que quand le module est activé et qu'il est en ligne : un message ou un salon supprimé pendant que le module est désactivé, ou que le bot est hors ligne, laisse son entrée et son repost en place. Le repost peut alors être supprimé à la main par les administrateurs du serveur.
 - **Salons vocaux temporaires** : l'entrée d'un salon est supprimée avec le salon, quand il se vide ou qu'il est supprimé ; si le bot est hors ligne à ce moment-là, elle l'est à son retour, même si le module a été désactivé entre-temps. Les réglages mémorisés d'un membre sont supprimés un an après la dernière fois qu'il les a modifiés ou qu'il a créé un salon, même si le module est désactivé.

@@ -113,6 +113,53 @@ describe("renderFormula", () => {
     ).rejects.toBeInstanceOf(FormulaError);
   });
 
+  it("knows the predefined macros", async () => {
+    const same = async (macro: string, expanded: string) =>
+      (await renderFormula(macro)).equals(await renderFormula(expanded));
+
+    expect(
+      await same(String.raw`\NN \RRp`, String.raw`\mathbb{N} \mathbb{R}_{+}`)
+    ).toBe(true);
+    expect(await same(String.raw`\emptyset`, String.raw`\varnothing`)).toBe(
+      true
+    );
+    expect(await same(String.raw`\comp{A}`, String.raw`{A}^{\mathsf{c}}`)).toBe(
+      true
+    );
+    expect(
+      await same(
+        String.raw`\abs*{\frac{a}{b}}`,
+        String.raw`\mathopen{\left\lvert \frac{a}{b}\right\rvert}\mathclose{}`
+      )
+    ).toBe(true);
+    expect(
+      await same(
+        String.raw`\set*{\frac{a}{2} \given b}`,
+        String.raw`\mathopen{\left\lbrace \frac{a}{2} \nonscript\:\middle\vert\nonscript\:\mathopen{} b\right\rbrace}\mathclose{}`
+      )
+    ).toBe(true);
+  });
+
+  it("keeps \\given empty outside a set", async () => {
+    expect(
+      (
+        await renderFormula(String.raw`\set*{\frac{a}{2} \given b} a \given b`)
+      ).equals(await renderFormula(String.raw`\set*{\frac{a}{2} \given b} a b`))
+    ).toBe(true);
+    await expect(
+      renderText(
+        String.raw`Soit $\set*{\frac{x}{2} \given x > 0}$ puis $a \given b$.`
+      )
+    ).resolves.toBeInstanceOf(Buffer);
+  });
+
+  it("lets a formula redefine a predefined macro", async () => {
+    const png = await renderFormula(
+      String.raw`\newcommand{\NN}{\mathbb{N}} \NN`
+    );
+    expect(await textPixels(png)).toBeGreaterThan(100);
+  });
+
   it("renders comparisons", async () => {
     expect(await textPixels(await renderFormula("a<b>c"))).toBeGreaterThan(100);
   });

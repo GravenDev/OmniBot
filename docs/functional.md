@@ -600,14 +600,19 @@ Les fils d'un salon piège sont piégés eux aussi ; la raison du journal d'audi
 
 Si un salon des logs est défini, chaque déclenchement y est consigné : l'auteur, le salon piège, le message en citation (texte et nom des pièces jointes) et le résultat de la sanction, avec l'ID de l'auteur en pied. Un message trop long est coupé pour tenir dans le log. Les mentions ne notifient personne. Quand un rôle voit le salon des logs sans pouvoir lire le salon piège (ou que le message vient d'un fil privé), le log est publié sans le contenu, avec la mention « Contenu masqué ». Le bot y a besoin de _Voir le salon_, d'_Envoyer des messages_ et d'_Intégrer des liens_ ; sans elles, la sanction s'applique sans log.
 
+### Compteur
+
+Si un salon du compteur est défini, le bot y publie un message « 🍯 Le pot de miel » qui compte les membres pris au piège (« 🐝 12 petites abeilles sont tombées dans le piège. ») et indique quand le dernier s'est fait prendre. Le message est modifié à chaque prise, sans notifier personne ; il apparaît à la première prise qui suit le choix du salon. Chaque déclenchement compte, même quand la sanction échoue, mais pas les membres épargnés ni les messages suivants d'une rafale. Le compte est tenu par serveur, même sans salon du compteur, et part de zéro à l'activation de cette fonction. Plusieurs prises rapprochées (un raid) sont regroupées en une seule modification, et la mise à jour du compteur ne retarde jamais la sanction. Si le message est supprimé, le bot en publie un nouveau à la prise suivante ; si le salon change ou est retiré de la configuration, l'ancien message est supprimé à la prise suivante. Le bot y a besoin de _Voir le salon_, d'_Envoyer des messages_ et d'_Intégrer des liens_. Le compteur peut être affiché dans le salon piège lui-même, où il sert aussi d'avertissement.
+
 ### Configuration — `/config honeypot`
 
-| Champ          | Type           | Description                                                                            |
-| -------------- | -------------- | -------------------------------------------------------------------------------------- |
-| `trapChannels` | Salons (liste) | Salons pièges. Tant qu'aucun n'est défini, le module ne fait rien.                     |
-| `logChannel`   | Salon          | Salon où chaque déclenchement est consigné.                                            |
-| `exemptRoles`  | Rôles (liste)  | Rôles jamais sanctionnés.                                                              |
-| `purgeWindow`  | Durée          | Ancienneté des messages supprimés par le softban. 1 h par défaut, plafonnée à 7 jours. |
+| Champ            | Type           | Description                                                                            |
+| ---------------- | -------------- | -------------------------------------------------------------------------------------- |
+| `trapChannels`   | Salons (liste) | Salons pièges. Tant qu'aucun n'est défini, le module ne fait rien.                     |
+| `logChannel`     | Salon          | Salon où chaque déclenchement est consigné.                                            |
+| `counterChannel` | Salon          | Salon où le bot tient le compteur des membres pris au piège.                           |
+| `exemptRoles`    | Rôles (liste)  | Rôles jamais sanctionnés.                                                              |
+| `purgeWindow`    | Durée          | Ancienneté des messages supprimés par le softban. 1 h par défaut, plafonnée à 7 jours. |
 
 Le bot a besoin de la permission _Bannir des membres_, et de _Gérer les messages_ dans les salons pièges pour supprimer le message quand il ne peut pas bannir. Signalez clairement le salon piège (nom, sujet, message épinglé) pour que les vrais membres n'y écrivent pas. Le module lit le contenu des messages des salons pièges pour le log : l'intent privilégié _Message Content_ doit être activé sur le bot.
 
@@ -626,8 +631,7 @@ Un message transféré est cité avec son contenu transféré. Un message sans t
 **Ce qui n'est pas cité :**
 
 - Les liens vers un autre serveur
-- Les messages d'un salon que le membre qui poste le lien ne peut pas lire (voir le salon et lire l'historique ; pour un fil privé, en être membre ou pouvoir gérer les fils). Le bot ne révèle jamais un salon auquel le membre n'a pas accès.
-- Les messages qui seraient montrés à un public plus large que celui du salon d'origine : le bot compare, rôle par rôle (chaque rôle avec `@everyone`), qui voit le salon où le lien est posté et qui peut lire l'historique du salon d'origine. Si un rôle voit le premier sans pouvoir lire le second, le message n'est pas cité. Les rôles gérés par une intégration (bots, booster) et les rôles ignorés de la configuration ne sont pas comparés. Un message de `#staff` n'est donc jamais cité dans `#général`, même quand l'accès au serveur passe par un rôle de membre. Un message d'un fil privé n'est cité que dans ce même fil. Limites : les autorisations accordées à un membre précis (et non à un rôle) ne sont pas prises en compte, ni les combinaisons de rôles (un rôle qui retire l'accès au salon d'origine à des membres qui voient la destination grâce à un autre rôle) ; un fil privé de destination est jugé comme son salon parent, ce qui peut refuser une citation légitime. Sur un serveur où l'accès passe par un rôle de membre, un salon ouvert à un rôle optionnel (jeu, notifications) refuse les citations des salons communs tant que ce rôle n'est pas déclaré dans `ignoredRoles`.
+- Les messages d'un salon que le membre qui poste le lien ne peut pas lire (voir le salon et lire l'historique ; pour un fil privé, en être membre ou pouvoir gérer les fils). Dès que le membre peut lire le message, il est cité, quel que soit le salon où le lien est posté : c'est au membre de juger ce qu'il partage.
 - Les citations publiées par le bot lui-même (ses autres messages, comme les annonces, restent citables)
 - Les messages d'un salon NSFW, sauf si le lien est posté dans un salon NSFW
 - Les liens entre chevrons (`<https://…>`), dans du code ou sous spoiler
@@ -642,11 +646,10 @@ Supprime la citation. Il est réservé au membre qui a posté le lien, aux auteu
 
 ### Configuration — `/config message-quote`
 
-| Champ                | Type               | Description                                                                                                                   |
-| -------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
-| `excludedChannels`   | Salons (liste)     | Salons dont les messages ne sont jamais cités, et où les liens postés ne sont pas cités.                                      |
-| `excludedCategories` | Catégories (liste) | Catégories dont les salons sont traités comme des salons exclus.                                                              |
-| `ignoredRoles`       | Rôles (liste)      | Rôles optionnels portés uniquement par des membres qui ont aussi le rôle de membre : ignorés dans la comparaison des publics. |
+| Champ                | Type               | Description                                                                              |
+| -------------------- | ------------------ | ---------------------------------------------------------------------------------------- |
+| `excludedChannels`   | Salons (liste)     | Salons dont les messages ne sont jamais cités, et où les liens postés ne sont pas cités. |
+| `excludedCategories` | Catégories (liste) | Catégories dont les salons sont traités comme des salons exclus.                         |
 
 Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
 
@@ -656,7 +659,14 @@ Le module lit le contenu des messages : l'intent privilégié _Message Content_ 
 
 Affiche des formules mathématiques LaTeX, ou des textes qui en contiennent, sous forme d'image : noir sur blanc par défaut, ou blanc sur gris foncé avec le thème `dark`.
 
-Le rendu passe par MathJax : les commandes de base de LaTeX et les extensions `amsmath`/`amssymb` (environnements `align`, `pmatrix`, `cases`…, `\mathbb`, `\mathfrak`…), `mathtools`, `boldsymbol`, `braket`, `cancel`, `color` et `mhchem` (`\ce{…}`) sont disponibles, ainsi que `\newcommand` et `\def`. Les documents LaTeX complets, `\usepackage` et TikZ ne le sont pas. Le texte est composé sur une largeur de 32 em, mot par mot, et les lignes coupées sont justifiées comme en LaTeX ; une formule centrée trop longue passe à la ligne à cette largeur. Une image qui dépasse encore 2 400 pixels de large ou 4 000 de haut est réduite. Un rendu trop lourd (plus de 1 000 substitutions de macros ou une expansion de plus de 2 048 caractères dans une formule, plus de 5 secondes de calcul, ou un dessin démesuré) est refusé avec une erreur, pour ne pas bloquer le bot.
+Le rendu passe par MathJax : les commandes de base de LaTeX et les extensions `amsmath`/`amssymb` (environnements `align`, `pmatrix`, `cases`…, `\mathbb`, `\mathfrak`…), `mathtools`, `boldsymbol`, `braket`, `cancel`, `color` et `mhchem` (`\ce{…}`) sont disponibles, ainsi que `\newcommand` et `\def`. Des macros courantes sont prédéfinies :
+
+- ensembles de nombres : `\NN`, `\ZZ`, `\QQ`, `\RR`, `\CC`, `\KK`, `\PP`, `\EE`, `\RRp` (ℝ₊) ;
+- ensembles : `\union`, `\sect`, `\bigunion`, `\bigsect`, `\without` (∖), `\symdiff` (△), `\comp{A}` (complémentaire), `\powerset` (𝒫) ; `\emptyset` s'affiche ∅ comme `\varnothing` ;
+- délimiteurs qui s'adaptent avec `*` (`\abs*{\frac{a}{b}}`) ou une taille (`\abs[\big]{x}`) : `\abs`, `\norm`, `\floor`, `\ceil`, `\inner`, et `\set{x \in \RR \given x > 0}`, dont la barre `\given` suit la taille des accolades ;
+- divers : `\card{A}`, `\range{1}{n}` ({1,…,n}), `\indic_A` (indicatrice), `\eps` (ε), `\dd` (le d de `\int f(x) \dd x`).
+
+Un `\newcommand` du message peut les redéfinir. Les documents LaTeX complets, `\usepackage` et TikZ ne le sont pas. Le texte est composé sur une largeur de 32 em, mot par mot, et les lignes coupées sont justifiées comme en LaTeX ; une formule centrée trop longue passe à la ligne à cette largeur. Une image qui dépasse encore 2 400 pixels de large ou 4 000 de haut est réduite. Un rendu trop lourd (plus de 1 000 substitutions de macros ou une expansion de plus de 2 048 caractères dans une formule, plus de 5 secondes de calcul, ou un dessin démesuré) est refusé avec une erreur, pour ne pas bloquer le bot.
 
 ### `/latex <formula>`
 
