@@ -34,8 +34,8 @@ const DATE_MAX_LENGTH = 32;
 type Interaction = ChatInputCommandInteraction<"cached" | "raw">;
 type Config = ConfigProvider<ServerStatsConfigSchema>;
 
-// Ephemeral, like the other admin commands: the report channel already gets
-// the public report every night.
+// The report is public, to be shown to others; what only concerns whoever
+// typed the command (no access, a wrong date, nothing counted) is not.
 const ephemeral = { flags: MessageFlags.Ephemeral } as const;
 
 function longDate(day: Date, locale: string): string {
@@ -183,19 +183,23 @@ export default declareCommand<ServerStatsConfigSchema>({
       return;
     }
 
-    await interaction.deferReply(ephemeral);
+    // Read before deferring, so that the answer saying nothing was counted
+    // can still be ephemeral: a deferred reply keeps the visibility it had.
     const startedAt = await store.startedAt(interaction.guildId);
     const counted = startedAt && countedPart(selected.selection, startedAt);
     if (!counted) {
-      await interaction.editReply({
+      await interaction.reply({
         content: startedAt
           ? config.t("command.beforeStart", {
               date: longDate(dayOf(startedAt), config.locale),
             })
           : config.t("command.notStarted"),
+        ...ephemeral,
       });
       return;
     }
+
+    await interaction.deferReply();
 
     const guild =
       interaction.guild ??
