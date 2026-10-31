@@ -1,4 +1,4 @@
-import { loadImage } from "@napi-rs/canvas";
+import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
 import { describe, expect, it, vi } from "vitest";
 import { tableHeight } from "#lib/table.js";
 import {
@@ -108,6 +108,37 @@ describe("renderReportCard", () => {
       await renderReportCard({ ...data, topMembers: null }, labels)
     );
     expect(image.height).toBe(WITHOUT_FOOTER + 20 + rankingHeight(2) + HOURS);
+  });
+
+  it("draws the look-alikes of | in channel names as a bar the fonts have", async () => {
+    const context = Object.getPrototypeOf(
+      createCanvas(1, 1).getContext("2d")
+    ) as SKRSContext2D;
+    const fillText = vi.spyOn(context, "fillText");
+    try {
+      await renderReportCard(
+        {
+          ...data,
+          topChannels: [
+            { name: "🎪｜le-jeu-des-4h", count: 888 },
+            { name: "💥│général", count: 214 },
+            { name: "🐙ǀcontributeurs-github", count: 12 },
+          ],
+          topMembers: null,
+        },
+        labels
+      );
+      const drawn = fillText.mock.calls.map(([text]) => text);
+      expect(drawn).toEqual(
+        expect.arrayContaining([
+          "# 🎪 | le-jeu-des-4h",
+          "# 💥|général",
+          "# 🐙|contributeurs-github",
+        ])
+      );
+    } finally {
+      fillText.mockRestore();
+    }
   });
 
   it("keeps room for a dash when nothing was counted", async () => {

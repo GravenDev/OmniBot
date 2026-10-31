@@ -6,6 +6,7 @@ import { createCanvas, type SKRSContext2D } from "@napi-rs/canvas";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   createBoard,
+  drawableText,
   drawHighlight,
   drawPortrait,
   loadAsset,
@@ -82,4 +83,19 @@ describe("drawHighlight", () => {
       expect(tint[1]).toBeLessThan(ACCENT[1] / 4);
     }
   );
+});
+
+describe("drawableText", () => {
+  it("swaps the look-alikes of | the fonts lack for a bar they have", () => {
+    expect(drawableText("🎪｜le-jeu-des-4h")).toBe("🎪 | le-jeu-des-4h");
+    expect(drawableText("a ｜ b")).toBe("a | b");
+    expect(drawableText("❔︱c︱cpp︱rust")).toBe("❔ | c | cpp | rust");
+    for (const bar of ["ǀ", "∣", "⏐", "│", "┃"]) {
+      expect(drawableText(`💥${bar}général`)).toBe("💥|général");
+    }
+  });
+
+  it("leaves the other characters alone", () => {
+    expect(drawableText("général | 4h ¦ ✨")).toBe("général | 4h ¦ ✨");
+  });
 });
