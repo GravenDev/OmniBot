@@ -128,9 +128,18 @@ export default {
 } satisfies Previews;
 ```
 
-`pnpm render-preview <file.preview.ts> --out <dir>` draws them as `<name>-after.png`, from the working tree. With `--before <ref>` (for a PR: `$(git merge-base HEAD origin/master)`), it also draws `<name>-before.png` from that commit, in a temporary worktree into which the current preview file is copied: both sides draw the same data, so they differ only by the change. `--only <name>` draws one entry. A renderer that takes a `t` gets one from `await previewT("<module id>", fr)` (`#lib/preview`), with the module's `i18n/fr.json`, as in `src/modules/four-hour-game/rendering/profile-card.preview.ts`. The preview files are type-checked with the rest of `src/`, so a change of data shape shows up at build time. `src/modules/server-stats/rendering/report-card.preview.ts` is an example.
+`pnpm render-preview <file.preview.ts> --out <dir>` draws them as `<name>-after.png`, from the working tree. With `--before <ref>` (for a PR: the hash `git merge-base HEAD origin/master` prints), it also draws `<name>-before.png` from that commit, in a temporary worktree into which the current preview file is copied: both sides draw the same data, so they differ only by the change. `--only <name>` draws one entry. A renderer that takes a `t` gets one from `await previewT("<module id>", fr)` (`#lib/preview`), with the module's `i18n/fr.json`, as in `src/modules/four-hour-game/rendering/profile-card.preview.ts`. The preview files are type-checked with the rest of `src/`, so a change of data shape shows up at build time. `src/modules/server-stats/rendering/report-card.preview.ts` is an example.
 
 Emojis are drawn with the system's emoji font, so they look different from one system to another; text and layout do not.
+
+Getting a pair worth showing:
+
+- **The data.** Copy verbatim the characters the change is about (a channel name with `︱`, say: a look-alike typed by hand is another code point), give names at Discord's 32-character limit, five rows, accents. The file is public: invent the member names and say so in a comment.
+- **Which side.** Nothing changed yet: no `--before`, an identical pair proves nothing. A fix already merged: the working tree holds everything merged since, so draw both sides as "before", `--before <fix>~1 --out <dir>/old` then `--before <fix> --out <dir>/new` (`~1`, as cmd.exe swallows `^`), and compare `old/<name>-before.png` with `new/<name>-before.png`.
+- **The output.** `identical: <name>` means the pair is byte-equal: nothing changed there, or the wrong commit was drawn. An entry the old code cannot draw, or draws as "undefined"/"NaN" (a field the data lacks), fails: show it without a "before". Look at every image before showing it, and give `--out` a new, empty directory.
+- **A stopped run** leaves the worktree it printed on stderr (`worktree: <path>`); `pnpm render-preview --clean <path>` removes it, and refuses anything else.
+
+In a pull request, and only when one is asked for: `gh pr create … --attach "./x-before.png#Before" --attach "./x-after.png#After"` (gh 2.99 or later) uploads the images and rewrites the `![…](./x-before.png)` references of the body in place, so lay the pair out as a two-column table with the local paths. Run it from the images' directory, with `-R <owner>/<repo> --head <branch>` outside the repository; for an existing pull request, `gh pr edit <number> --body-file body.md --attach …`, or the images go to the end of the body. Say which data is made up, and that emojis may look different in production, without naming the system that drew the images.
 
 ## Good Practices
 

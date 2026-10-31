@@ -26,6 +26,8 @@ const labels: ReportCardLabels = {
   messagesHeader: "Messages",
 };
 
+// Made-up data: the channel names reproduce the separators real servers use
+// (U+FE31 "︱"), the members are invented.
 const data: ReportCardData = {
   icon: null,
   memberCount: 13248,
@@ -47,9 +49,14 @@ const data: ReportCardData = {
     { text: "👍", image: null, count: 9 },
   ],
   topMembers: [
-    { rank: 1, name: "Nyitmo", avatar: null, count: 57 },
-    { rank: 2, name: "⚡Godefroy DE BOUILLON⚡", avatar: null, count: 48 },
-    { rank: 3, name: "jérome", avatar: null, count: 42 },
+    { rank: 1, name: "Lolo", avatar: null, count: 57 },
+    {
+      rank: 2,
+      name: "⚡Maximilien-Édouard le Grand⚡",
+      avatar: null,
+      count: 48,
+    },
+    { rank: 3, name: "Toasty Cat", avatar: null, count: 42 },
   ],
   hours: [
     6, 2, 1, 1, 1, 1, 2, 3, 8, 14, 3, 2, 3, 22, 10, 4, 34, 7, 8, 9, 40, 8, 4,
