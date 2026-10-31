@@ -19,17 +19,13 @@ type Config = ConfigProvider<HoneypotConfigSchema>;
 
 const HONEY_COLOR = 0xf5a623;
 
-const REQUIRED_PERMISSIONS = [
-  PermissionFlagsBits.ViewChannel,
-  PermissionFlagsBits.SendMessages,
-  PermissionFlagsBits.EmbedLinks,
-];
-
 const logger = loggerMaker("honeypot");
 
 const queue = new KeyedQueue();
 
 const pending = new Map<string, number>();
+
+const scheduled = new Set<string>();
 
 interface Counter {
   count: number;
@@ -97,28 +93,55 @@ async function saveMessage(
   });
 }
 
+function postableChannel(
+  guild: Guild,
+  config: Config
+): GuildTextBasedChannel | null {
+  const channel = config.get("counterChannel");
+  if (!channel?.isSendable() || channel.isDMBased()) {
+    return null;
+  }
+  const required = [
+    PermissionFlagsBits.ViewChannel,
+    channel.isThread()
+      ? PermissionFlagsBits.SendMessagesInThreads
+      : PermissionFlagsBits.SendMessages,
+    PermissionFlagsBits.EmbedLinks,
+  ];
+  const me = guild.members.me;
+  if (me && !channel.permissionsFor(me).has(required)) {
+    return null;
+  }
+  return channel;
+}
+
 async function flush(guild: Guild, config: Config): Promise<void> {
+  scheduled.delete(guild.id);
   const catches = pending.get(guild.id) ?? 0;
-  pending.delete(guild.id);
+  if (catches === 0) {
+    return;
+  }
   const lastAt = new Date();
   const counter = await prisma.honeypotCounter.upsert({
     where: { guildId: guild.id },
     create: { guildId: guild.id, count: catches, lastAt },
     update: { count: { increment: catches }, lastAt },
   });
-  const channel = config.get("counterChannel");
+  const left = (pending.get(guild.id) ?? 0) - catches;
+  if (left > 0) {
+    pending.set(guild.id, left);
+  } else {
+    pending.delete(guild.id);
+  }
+  const channel = postableChannel(guild, config);
   if (!channel) {
-    if (counter.messageId) {
+    if (
+      counter.messageId &&
+      counter.channelId !== config.get("counterChannel")?.id
+    ) {
       await removeStale(guild, counter);
       await saveMessage(guild, null, null);
     }
-    return;
-  }
-  if (!channel.isSendable() || channel.isDMBased()) {
-    return;
-  }
-  const me = guild.members.me;
-  if (me && !channel.permissionsFor(me).has(REQUIRED_PERMISSIONS)) {
     return;
   }
   const messageId = await postCounter(
@@ -141,11 +164,11 @@ async function flush(guild: Guild, config: Config): Promise<void> {
 }
 
 export function recordCatch(guild: Guild, config: Config): Promise<void> {
-  const waiting = pending.get(guild.id);
-  pending.set(guild.id, (waiting ?? 0) + 1);
-  if (waiting !== undefined) {
+  pending.set(guild.id, (pending.get(guild.id) ?? 0) + 1);
+  if (scheduled.has(guild.id)) {
     return Promise.resolve();
   }
+  scheduled.add(guild.id);
   return queue
     .run(guild.id, () => flush(guild, config))
     .catch((error: unknown) => {

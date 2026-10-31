@@ -7,7 +7,7 @@ export const MACROS: Record<string, string | [string, number]> = {
   KK: "\\mathbb{K}",
   PP: "\\mathbb{P}",
   EE: "\\mathbb{E}",
-  RRp: "\\mathbb{R}_{+}",
+  RRp: "{\\mathbb{R}_{+}}",
 
   union: "\\cup",
   sect: "\\cap",
@@ -15,11 +15,11 @@ export const MACROS: Record<string, string | [string, number]> = {
   bigsect: "\\bigcap",
   without: "\\setminus",
   symdiff: "\\mathbin{\\triangle}",
-  comp: ["{#1}^{\\mathsf{c}}", 1],
+  comp: ["{{#1}^{\\mathsf{c}}}", 1],
   powerset: "\\mathcal{P}",
   emptyset: "\\varnothing",
 
-  given: "",
+  given: "\\mid",
   card: ["\\operatorname{card}\\left(#1\\right)", 1],
   range: ["\\{#1,\\dots,#2\\}", 2],
   indic: "\\mathbf{1}",
@@ -40,7 +40,7 @@ export const PAIRED_DELIMITERS: Record<
   set: [
     "\\lbrace",
     "\\rbrace",
-    "\\renewcommand{\\given}{\\nonscript\\:\\delimsize\\vert\\nonscript\\:\\mathopen{}}#1\\renewcommand{\\given}{}",
+    "\\renewcommand{\\given}{\\nonscript\\:\\delimsize\\vert\\nonscript\\:\\mathopen{}}#1\\renewcommand{\\given}{\\mid}",
     1,
   ],
 };

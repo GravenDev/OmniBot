@@ -82,6 +82,7 @@ function fakeChannel(id: string, options: { allowed?: boolean } = {}) {
     isSendable: () => true,
     isDMBased: () => false,
     isTextBased: () => true,
+    isThread: () => false,
     permissionsFor: () => ({ has: () => options.allowed ?? true }),
     send: vi.fn(async (_payload: any) => ({ id: `m${++nextMessage}` })),
     messages: {
@@ -226,12 +227,33 @@ describe("recordCatch", () => {
     expect(db.state.row!.count).toBe(1);
   });
 
-  it("never throws", async () => {
+  it("removes the counter when its new channel cannot be used", async () => {
+    const before = fakeChannel("before");
+    const after = fakeChannel("after", { allowed: false });
+    const guild = fakeGuild(before, after);
+    await recordCatch(guild, config(before));
+    const oldId = db.state.row!.messageId;
+
+    await recordCatch(guild, config(after));
+    expect(after.send).not.toHaveBeenCalled();
+    expect(before.messages.delete).toHaveBeenCalledWith(oldId);
+    expect(db.state.row).toMatchObject({
+      count: 2,
+      channelId: null,
+      messageId: null,
+    });
+  });
+
+  it("never throws, and keeps the catches it could not store", async () => {
     db.state.fail = true;
     const channel = fakeChannel("counter");
     await expect(
       recordCatch(fakeGuild(channel), config(channel))
     ).resolves.toBeUndefined();
     expect(channel.send).not.toHaveBeenCalled();
+
+    db.state.fail = false;
+    await recordCatch(fakeGuild(channel), config(channel));
+    expect(db.state.row!.count).toBe(2);
   });
 });

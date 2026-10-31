@@ -118,14 +118,14 @@ describe("renderFormula", () => {
       (await renderFormula(macro)).equals(await renderFormula(expanded));
 
     expect(
-      await same(String.raw`\NN \RRp`, String.raw`\mathbb{N} \mathbb{R}_{+}`)
+      await same(String.raw`\NN \RRp`, String.raw`\mathbb{N} {\mathbb{R}_{+}}`)
     ).toBe(true);
     expect(await same(String.raw`\emptyset`, String.raw`\varnothing`)).toBe(
       true
     );
-    expect(await same(String.raw`\comp{A}`, String.raw`{A}^{\mathsf{c}}`)).toBe(
-      true
-    );
+    expect(
+      await same(String.raw`\comp{A}`, String.raw`{{A}^{\mathsf{c}}}`)
+    ).toBe(true);
     expect(
       await same(
         String.raw`\abs*{\frac{a}{b}}`,
@@ -140,11 +140,18 @@ describe("renderFormula", () => {
     ).toBe(true);
   });
 
-  it("keeps \\given empty outside a set", async () => {
+  it("renders \\given as \\mid outside a set", async () => {
+    expect(
+      (await renderFormula(String.raw`P(A \given B)`)).equals(
+        await renderFormula(String.raw`P(A \mid B)`)
+      )
+    ).toBe(true);
     expect(
       (
         await renderFormula(String.raw`\set*{\frac{a}{2} \given b} a \given b`)
-      ).equals(await renderFormula(String.raw`\set*{\frac{a}{2} \given b} a b`))
+      ).equals(
+        await renderFormula(String.raw`\set*{\frac{a}{2} \given b} a \mid b`)
+      )
     ).toBe(true);
     await expect(
       renderText(
@@ -153,11 +160,20 @@ describe("renderFormula", () => {
     ).resolves.toBeInstanceOf(Buffer);
   });
 
+  it("accepts a script after a predefined macro", async () => {
+    await expect(
+      renderFormula(String.raw`\comp{A}^2 + \RRp_n`)
+    ).resolves.toBeInstanceOf(Buffer);
+  });
+
   it("lets a formula redefine a predefined macro", async () => {
-    const png = await renderFormula(
-      String.raw`\newcommand{\NN}{\mathbb{N}} \NN`
+    const redefined = await renderFormula(
+      String.raw`\newcommand{\NN}{\mathbf{N}} \NN`
     );
-    expect(await textPixels(png)).toBeGreaterThan(100);
+    expect(redefined.equals(await renderFormula(String.raw`\mathbf{N}`))).toBe(
+      true
+    );
+    expect(redefined.equals(await renderFormula(String.raw`\NN`))).toBe(false);
   });
 
   it("renders comparisons", async () => {
