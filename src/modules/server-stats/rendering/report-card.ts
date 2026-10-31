@@ -42,6 +42,7 @@ const HOUR_BAR_ALPHA = 0.5;
 const HOUR_BAR_MIN = 2;
 
 export interface ChannelEntry {
+  icon: string;
   name: string;
   count: number;
 }
@@ -286,7 +287,7 @@ export async function renderReportCard(
           entries: data.topChannels,
           locale: labels.locale,
           drawLabel: (entry, labelX, centerY, maxWidth) =>
-            drawCellText(ctx, `# ${entry.name}`, labelX, centerY, {
+            drawCellText(ctx, `${entry.icon} ${entry.name}`, labelX, centerY, {
               size: BAR_FONT,
               fitWidth: maxWidth,
             }),

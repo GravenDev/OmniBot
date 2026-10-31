@@ -1,10 +1,11 @@
-import type { Guild } from "discord.js";
+import { ChannelType, type Guild, type GuildBasedChannel } from "discord.js";
 import { formatPercentage } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
 import { fetchImage } from "#lib/imaging.js";
 import { resolvePlayers } from "#lib/players.js";
 import {
   type BoxNote,
+  type ChannelEntry,
   type MemberEntry,
   type NotedBox,
   type ReactionEntry,
@@ -15,6 +16,28 @@ import type { Insights, Metric } from "./insights.js";
 import type { DailyStats, Ranked } from "./store.js";
 
 const CUSTOM_EMOJI = /^<a?:e:(\d+)>$/;
+
+// The icons Discord shows before each kind of channel; threads are counted in
+// their parent, which is why forums and media channels can rank.
+const CHANNEL_ICONS: Partial<Record<ChannelType, string>> = {
+  [ChannelType.GuildVoice]: "🔊",
+  [ChannelType.GuildStageVoice]: "🎙️",
+  [ChannelType.GuildAnnouncement]: "📢",
+  [ChannelType.GuildForum]: "💬",
+  [ChannelType.GuildMedia]: "🖼️",
+};
+
+function channelEntry(
+  channel: GuildBasedChannel | undefined,
+  count: number,
+  deleted: string
+): ChannelEntry {
+  return {
+    icon: (channel && CHANNEL_ICONS[channel.type]) ?? "#",
+    name: channel?.name ?? deleted,
+    count,
+  };
+}
 
 export interface ReportContext {
   day: Date;
@@ -147,10 +170,13 @@ export async function renderReport(
       activeMembers: stats.activeMembers,
       activeChannels: stats.activeChannels,
       reactions: stats.reactions,
-      topChannels: stats.topChannels.map(({ id, count }) => ({
-        name: guild.channels.cache.get(id)?.name ?? t("report.deletedChannel"),
-        count,
-      })),
+      topChannels: stats.topChannels.map(({ id, count }) =>
+        channelEntry(
+          guild.channels.cache.get(id),
+          count,
+          t("report.deletedChannel")
+        )
+      ),
       topReactions,
       topMembers,
       hours: complete ? stats.hours : stats.hours.map(() => 0),
