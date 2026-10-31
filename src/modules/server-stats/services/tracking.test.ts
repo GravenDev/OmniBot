@@ -2,12 +2,18 @@ import {
   ChannelType,
   PermissionFlagsBits,
   PermissionsBitField,
+  type Guild,
   type GuildBasedChannel,
 } from "discord.js";
 import { describe, expect, it } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
 import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
-import { countedChannelId, isPublic, isTracked } from "./tracking.js";
+import {
+  channelShown,
+  countedChannelId,
+  isPublic,
+  isTracked,
+} from "./tracking.js";
 
 const everyone = { id: "everyone" };
 
@@ -126,5 +132,26 @@ describe("excluded categories", () => {
         config
       )
     ).toBe(false);
+  });
+});
+
+describe("channelShown", () => {
+  it("leaves out a channel excluded or made private since, not a deleted one", () => {
+    const guild = {
+      channels: {
+        cache: new Map([
+          ["10", fakeChannel({ id: "10" })],
+          ["11", fakeChannel({ id: "11", public: false })],
+          ["12", fakeChannel({ id: "12" })],
+        ]),
+      },
+    } as unknown as Guild;
+    const shown = channelShown(guild, fakeConfig({ excluded: ["10"] }));
+    expect(["10", "11", "12", "deleted"].map(shown)).toEqual([
+      false,
+      false,
+      true,
+      true,
+    ]);
   });
 });

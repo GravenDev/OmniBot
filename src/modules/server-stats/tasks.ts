@@ -8,6 +8,7 @@ import { declareTask } from "#lib/task.js";
 import type { ServerStatsConfigSchema } from "./server-stats.config.js";
 import { addDays, dayOf, RETENTION_DAYS, TIMEZONE } from "./services/day.js";
 import store from "./services/store.js";
+import { channelShown } from "./services/tracking.js";
 import { statsReport } from "./services/views.js";
 
 const logger = loggerMaker("server-stats");
@@ -32,6 +33,7 @@ export async function postReport(
     { from: day, to: day },
     {
       now: new Date(),
+      channelShown: channelShown(guild, config),
       showTopMembers: config.get("showTopMembers"),
       t: config.t,
       locale: config.locale,

@@ -176,10 +176,11 @@ async function dailyStats(
         _sum: { messages: true },
         _count: true,
       }),
+      // Every channel, not the top ones: the report hides those excluded
+      // since, then takes its top (a guild has few channels active a day).
       prisma.serverStatsChannel.findMany({
         where,
         orderBy: [{ messages: "desc" }, { channelId: "asc" }],
-        take: TOP_SIZE,
       }),
       prisma.serverStatsMember.count({ where }),
       prisma.serverStatsMember.findMany({
@@ -233,10 +234,21 @@ function ranked<Row>(rows: Row[], entry: (row: Row) => Ranked): Ranked[] {
     .sort((a, b) => b.count - a.count || (a.id < b.id ? -1 : 1));
 }
 
+// Kept once read: the row is never deleted nor changed, and /server-stats reads
+// it before deferring its reply, within Discord's three seconds.
+const startDates = new Map<string, Date>();
+
 async function startedAt(guildId: string): Promise<Date | null> {
+  const known = startDates.get(guildId);
+  if (known) {
+    return known;
+  }
   const guild = await prisma.serverStatsGuild.findUnique({
     where: { guildId },
   });
+  if (guild) {
+    startDates.set(guildId, guild.startedAt);
+  }
   return guild?.startedAt ?? null;
 }
 
@@ -318,7 +330,7 @@ async function periodStats(
     activeChannels: channels.length,
     activeMembers: members.length,
     reactions: total(reactions),
-    topChannels: channels.slice(0, TOP_SIZE),
+    topChannels: channels,
     topMembers: members.slice(0, TOP_SIZE),
     topReactions: reactions.slice(0, TOP_SIZE),
   };
