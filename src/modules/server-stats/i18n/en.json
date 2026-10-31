@@ -48,5 +48,6 @@
   "command.tooOld_other": "Only the last {{count}} days are kept: pick a day from {{date}} on.",
   "command.daysAndDates": "Pick either a number of days or dates, not both.",
   "command.notStarted": "Nothing has been counted on this server yet.",
+  "command.notAllowed": "Only administrators and the roles allowed in `/config server-stats` can see these statistics.",
   "command.beforeStart": "Counting started on {{date}}: nothing was counted before."
 }

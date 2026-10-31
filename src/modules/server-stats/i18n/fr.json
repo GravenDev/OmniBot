@@ -48,5 +48,6 @@
   "command.tooOld_other": "Seuls les {{count}} derniers jours sont conservés : choisissez un jour à partir du {{date}}.",
   "command.daysAndDates": "Choisissez un nombre de jours ou des dates, pas les deux.",
   "command.notStarted": "Rien n'a encore été compté sur ce serveur.",
+  "command.notAllowed": "Seuls les administrateurs et les rôles autorisés dans `/config server-stats` peuvent voir ces statistiques.",
   "command.beforeStart": "Le comptage a commencé le {{date}} : rien n'a été compté avant."
 }

@@ -3,7 +3,6 @@ import {
   escapeMarkdown,
   InteractionContextType,
   MessageFlags,
-  PermissionFlagsBits,
   SlashCommandBuilder,
   type ChatInputCommandInteraction,
   type SlashCommandStringOption,
@@ -12,6 +11,7 @@ import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
+import { canSeeStats } from "#modules/server-stats/services/access.js";
 import { dayOf, RETENTION_DAYS } from "#modules/server-stats/services/day.js";
 import {
   countedPart,
@@ -90,16 +90,15 @@ function dateOption(name: string, description: string, fr: string) {
       .setAutocomplete(true);
 }
 
+// Visible to every member: Discord would otherwise hide it from the
+// `allowedRoles`, which only the bot knows. Access is checked in `execute`.
 export default declareCommand<ServerStatsConfigSchema>({
-  requiresAdmin: true,
-
   data: new SlashCommandBuilder()
     .setName("server-stats")
     .setDescription("Show the server's activity statistics")
     .setDescriptionLocalizations({
       fr: "Afficher les statistiques d'activité du serveur",
     })
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
     .setContexts([InteractionContextType.Guild])
     .addSubcommand((sub) =>
       sub
@@ -166,6 +165,13 @@ export default declareCommand<ServerStatsConfigSchema>({
     if (!interaction.inGuild()) {
       return;
     }
+    if (!canSeeStats(interaction, config)) {
+      await interaction.reply({
+        content: config.t("command.notAllowed"),
+        ...ephemeral,
+      });
+      return;
+    }
     const now = new Date();
     const selected = selection(interaction, now);
     if ("error" in selected) {
@@ -214,6 +220,10 @@ export default declareCommand<ServerStatsConfigSchema>({
   },
 
   async complete(interaction, config) {
+    if (!canSeeStats(interaction, config)) {
+      await interaction.respond([]);
+      return;
+    }
     const now = new Date();
     const focused = interaction.options.getFocused().trim().toLowerCase();
     // A typed "29/10" matches its day too, not only the names containing it.

@@ -24,6 +24,12 @@ export const serverStatsConfigSchema = {
     type: ConfigType.BOOLEAN,
     defaultValue: false,
   },
+  allowedRoles: {
+    name: "Allowed roles",
+    description:
+      "Roles that can use /server-stats, besides administrators. Empty by default: administrators only.",
+    type: [ConfigType.ROLE],
+  },
   showTopMembers: {
     name: "Show most active members",
     description: "Lists the most active members in the report.",

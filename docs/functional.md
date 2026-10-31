@@ -720,9 +720,9 @@ Messages, membres actifs et réactions affichent leur écart avec la moyenne des
 
 ### `/server-stats today`, `/server-stats day <date>` et `/server-stats period [days] [from] [to]`
 
-**Permission requise :** Administrateur
+**Permission requise :** Administrateur, ou un des rôles de `allowedRoles`
 
-Affiche le bilan à la demande, sous la même forme d'image que le bilan quotidien, dans une réponse visible de l'administrateur seul (le bilan public reste celui de minuit). Personne n'est notifié, et le réglage `showTopMembers` s'applique comme pour le bilan quotidien. Le nombre de membres est celui du moment de la commande, même pour un jour passé ou une période.
+La commande est visible de tous les membres, pour que les rôles autorisés la trouvent ; un autre membre reçoit un message qui lui dit qu'il n'y a pas accès, et la liste des jours ne lui propose rien. Affiche le bilan à la demande, sous la même forme d'image que le bilan quotidien, dans une réponse visible de son auteur seul (le bilan public reste celui de minuit). Personne n'est notifié, et le réglage `showTopMembers` s'applique comme pour le bilan quotidien. Le nombre de membres est celui du moment de la commande, même pour un jour passé ou une période.
 
 - `today` : la journée en cours, comptée en direct ; l'heure jusqu'à laquelle elle est comptée (heure de Paris) est indiquée sous la date.
 - `day <date>` : un jour parmi aujourd'hui et les 30 précédents (les jours conservés). La liste proposée donne ces jours, du plus récent au plus ancien ; on peut aussi écrire la date sous la forme `2026-10-29`, `29/10/2026` ou `29/10` (sans année : la dernière fois que ce jour est passé). Aujourd'hui donne le même bilan que `today`.
@@ -740,6 +740,7 @@ Une date illisible, à venir ou plus ancienne que les jours conservés donne un 
 | `excludedChannels`       | Salons (liste)     | Salons dont l'activité n'est pas comptée.                                                                                                                                                                                                                                                                                                          |
 | `excludedCategories`     | Catégories (liste) | Catégories dont l'activité des salons n'est pas comptée.                                                                                                                                                                                                                                                                                           |
 | `includePrivateChannels` | Booléen            | Compte aussi les salons que `@everyone` ne voit pas. À activer quand `@everyone` ne voit aucun salon (accès donné par un rôle de membre), sinon le bilan reste à zéro. Les salons du staff sont alors comptés aussi et peuvent apparaître dans le bilan public : excluez-les avec `excludedChannels` / `excludedCategories`. Désactivé par défaut. |
+| `allowedRoles`           | Rôles (liste)      | Rôles qui peuvent utiliser `/server-stats`, en plus des administrateurs. Vide par défaut : administrateurs seulement.                                                                                                                                                                                                                              |
 | `showTopMembers`         | Booléen            | Affiche les membres les plus actifs. Activé par défaut.                                                                                                                                                                                                                                                                                            |
 
 > [!WARNING]

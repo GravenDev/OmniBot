@@ -1,6 +1,7 @@
 import {
   MessageFlags,
   PermissionFlagsBits,
+  PermissionsBitField,
   type AutocompleteInteraction,
   type ChatInputCommandInteraction,
 } from "discord.js";
@@ -27,19 +28,32 @@ const day = (iso: string) => new Date(`${iso}T00:00:00Z`);
 
 const guild = { id: "guild-1" };
 
+const allowedRoles = [{ id: "role-stats" }];
+
 const config = {
-  get: (key: string) => (key === "showTopMembers" ? false : undefined),
+  get: (key: string) =>
+    key === "showTopMembers"
+      ? false
+      : key === "allowedRoles"
+        ? allowedRoles
+        : undefined,
   t: (key: string, options?: Record<string, unknown>) =>
     options ? `${key} ${JSON.stringify(options)}` : key,
   locale: "fr",
 } as unknown as ConfigProvider<ServerStatsConfigSchema>;
 
+const admin = new PermissionsBitField(PermissionFlagsBits.Administrator);
+const member = new PermissionsBitField(PermissionFlagsBits.SendMessages);
+
 function run(
   subcommand: string,
-  options: Record<string, string | number> = {}
+  options: Record<string, string | number> = {},
+  access: { permissions?: PermissionsBitField; roles?: unknown } = {}
 ) {
   const interaction = {
     inGuild: () => true,
+    memberPermissions: access.permissions ?? admin,
+    member: { roles: access.roles ?? [] },
     guildId: "guild-1",
     guild,
     options: {
@@ -75,11 +89,41 @@ afterEach(() => {
 });
 
 describe("/server-stats access", () => {
-  it("is for administrators, checked by the dispatcher too", () => {
-    expect(command.requiresAdmin).toBe(true);
-    expect(command.data.toJSON()).toMatchObject({
-      default_member_permissions: String(PermissionFlagsBits.Administrator),
+  it("is visible to every member, for the allowed roles to find it", () => {
+    expect(command.requiresAdmin).toBeUndefined();
+    expect(command.data.toJSON().default_member_permissions).toBeUndefined();
+  });
+
+  it("refuses a member with no allowed role, before anything else", async () => {
+    const { interaction, done } = run("today", {}, { permissions: member });
+    await done;
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: "command.notAllowed",
+      flags: MessageFlags.Ephemeral,
     });
+    expect(interaction.deferReply).not.toHaveBeenCalled();
+    expect(mocks.statsReport).not.toHaveBeenCalled();
+  });
+
+  it("answers a member with an allowed role", async () => {
+    const { interaction, done } = run(
+      "today",
+      {},
+      { permissions: member, roles: ["other", "role-stats"] }
+    );
+    await done;
+    expect(interaction.reply).not.toHaveBeenCalled();
+    expect(mocks.statsReport).toHaveBeenCalled();
+  });
+
+  it("reads the roles of a cached member too", async () => {
+    const { done } = run(
+      "today",
+      {},
+      { permissions: member, roles: { cache: new Map([["role-stats", {}]]) } }
+    );
+    await done;
+    expect(mocks.statsReport).toHaveBeenCalled();
   });
 });
 
@@ -175,17 +219,23 @@ describe("/server-stats", () => {
 });
 
 describe("/server-stats autocomplete", () => {
-  async function complete(focused: string) {
+  async function complete(focused: string, permissions = admin) {
     const respond = vi.fn();
     await command.complete!(
       {
         options: { getFocused: () => focused },
+        memberPermissions: permissions,
+        member: { roles: [] },
         respond,
       } as unknown as AutocompleteInteraction,
       config
     );
     return respond.mock.calls[0]![0] as { name: string; value: string }[];
   }
+
+  it("suggests nothing to a member who may not see the statistics", async () => {
+    expect(await complete("", member)).toEqual([]);
+  });
 
   it("lists the kept days, most recent first, within Discord's limit", async () => {
     const choices = await complete("");
