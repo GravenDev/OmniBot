@@ -1,6 +1,5 @@
 import {
   ActionRowBuilder,
-  DiscordAPIError,
   MessageFlags,
   ModalBuilder,
   PermissionFlagsBits,
@@ -11,6 +10,7 @@ import {
   type ModalSubmitInteraction,
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { isApiError } from "#lib/discord-errors.js";
 import { parseDuration } from "#lib/duration.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { loggerMaker } from "#lib/logger.js";
@@ -72,26 +72,25 @@ async function tell(
 
 function discordErrorKey(error: unknown): string {
   if (
-    error instanceof DiscordAPIError &&
-    (error.code === RESTJSONErrorCodes.MissingPermissions ||
-      error.code === RESTJSONErrorCodes.MissingAccess)
+    isApiError(
+      error,
+      RESTJSONErrorCodes.MissingPermissions,
+      RESTJSONErrorCodes.MissingAccess
+    )
   ) {
     return "error.botPermissions";
   }
-  if (
-    error instanceof DiscordAPIError &&
-    error.code === RESTJSONErrorCodes.CannotSendMessagesToThisUser
-  ) {
+  if (isApiError(error, RESTJSONErrorCodes.CannotSendMessagesToThisUser)) {
     return "error.dmClosed";
   }
   return "error.actionFailed";
 }
 
 function isUnknownMessage(error: unknown): boolean {
-  return (
-    error instanceof DiscordAPIError &&
-    (error.code === RESTJSONErrorCodes.UnknownMessage ||
-      error.code === RESTJSONErrorCodes.UnknownChannel)
+  return isApiError(
+    error,
+    RESTJSONErrorCodes.UnknownMessage,
+    RESTJSONErrorCodes.UnknownChannel
   );
 }
 
