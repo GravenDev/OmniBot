@@ -1,5 +1,6 @@
 import {
   ChannelType,
+  type Guild,
   type GuildBasedChannel,
   PermissionFlagsBits,
 } from "discord.js";
@@ -46,4 +47,19 @@ export function isTracked(
 
 export function countedChannelId(channel: GuildBasedChannel): string {
   return channel.isThread() ? (channel.parentId ?? channel.id) : channel.id;
+}
+
+/**
+ * Whether a counted channel may be named in a report, under the rules as they
+ * are now: one excluded, or made private, since its messages were counted is
+ * left out. A deleted channel stays, under no name.
+ */
+export function channelShown(
+  guild: Guild,
+  config: ConfigProvider<ServerStatsConfigSchema>
+): (channelId: string) => boolean {
+  return (channelId) => {
+    const channel = guild.channels.cache.get(channelId);
+    return !channel || isTracked(channel, config);
+  };
 }

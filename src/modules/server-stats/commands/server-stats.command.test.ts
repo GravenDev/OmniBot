@@ -26,7 +26,11 @@ const { default: command } = await import("./server-stats.command.js");
 const now = new Date("2026-10-30T13:32:00Z");
 const day = (iso: string) => new Date(`${iso}T00:00:00Z`);
 
-const guild = { id: "guild-1" };
+const guild = { id: "guild-1", channels: { cache: new Map() } };
+
+const roles = (...ids: string[]) => ({
+  cache: new Map(ids.map((id) => [id, {}])),
+});
 
 const allowedRoles = [{ id: "role-stats" }];
 
@@ -48,12 +52,12 @@ const member = new PermissionsBitField(PermissionFlagsBits.SendMessages);
 function run(
   subcommand: string,
   options: Record<string, string | number> = {},
-  access: { permissions?: PermissionsBitField; roles?: unknown } = {}
+  access: { permissions?: PermissionsBitField; roles?: string[] } = {}
 ) {
   const interaction = {
-    inGuild: () => true,
+    inCachedGuild: () => true,
     memberPermissions: access.permissions ?? admin,
-    member: { roles: access.roles ?? [] },
+    member: { roles: roles(...(access.roles ?? [])) },
     guildId: "guild-1",
     guild,
     options: {
@@ -64,6 +68,7 @@ function run(
     reply: vi.fn(),
     deferReply: vi.fn(),
     editReply: vi.fn(),
+    deleteReply: vi.fn(async () => {}),
   };
   return {
     interaction,
@@ -115,16 +120,6 @@ describe("/server-stats access", () => {
     expect(interaction.reply).not.toHaveBeenCalled();
     expect(mocks.statsReport).toHaveBeenCalled();
   });
-
-  it("reads the roles of a cached member too", async () => {
-    const { done } = run(
-      "today",
-      {},
-      { permissions: member, roles: { cache: new Map([["role-stats", {}]]) } }
-    );
-    await done;
-    expect(mocks.statsReport).toHaveBeenCalled();
-  });
 });
 
 describe("/server-stats", () => {
@@ -137,7 +132,13 @@ describe("/server-stats", () => {
     expect(mocks.statsReport).toHaveBeenCalledWith(
       guild,
       { from: day("2026-10-30"), to: day("2026-10-30") },
-      { now, showTopMembers: false, t: config.t, locale: "fr" }
+      {
+        now,
+        channelShown: expect.any(Function),
+        showTopMembers: false,
+        t: config.t,
+        locale: "fr",
+      }
     );
     const [reply] = interaction.editReply.mock.calls[0]!;
     expect(reply.content).toBe("Server stats");
@@ -209,6 +210,26 @@ describe("/server-stats", () => {
     });
   });
 
+  it("takes its public placeholder back when the report fails", async () => {
+    mocks.statsReport.mockRejectedValue(new Error("render failed"));
+    const { interaction, done } = run("today");
+    await expect(done).rejects.toThrow("render failed");
+    expect(interaction.deleteReply).toHaveBeenCalled();
+    expect(interaction.editReply).not.toHaveBeenCalled();
+  });
+
+  it("answers an admin while no role is allowed", async () => {
+    allowedRoles.length = 0;
+    try {
+      const { interaction, done } = run("today");
+      await done;
+      expect(interaction.reply).not.toHaveBeenCalled();
+      expect(mocks.statsReport).toHaveBeenCalled();
+    } finally {
+      allowedRoles.push({ id: "role-stats" });
+    }
+  });
+
   it("says nothing was counted yet", async () => {
     mocks.startedAt.mockResolvedValue(null);
     const { interaction, done } = run("today");
@@ -227,7 +248,8 @@ describe("/server-stats autocomplete", () => {
       {
         options: { getFocused: () => focused },
         memberPermissions: permissions,
-        member: { roles: [] },
+        inCachedGuild: () => true,
+        member: { roles: roles() },
         respond,
       } as unknown as AutocompleteInteraction,
       config

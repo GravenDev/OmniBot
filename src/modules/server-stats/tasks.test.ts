@@ -23,6 +23,7 @@ vi.mock("#core/services/module.service.js", () => ({
   default: { getActivatedGuildIds: mocks.getActivatedGuildIds },
 }));
 vi.mock("./services/store.js", () => ({
+  TOP_SIZE: 5,
   default: {
     dailyStats: mocks.dailyStats,
     history: mocks.history,
@@ -37,7 +38,7 @@ const { postReport, serverStatsMaintenanceTasks, serverStatsTasks } =
   await import("./tasks.js");
 
 const module = { id: "server-stats" } as Module<ServerStatsConfigSchema>;
-const guild = { id: "guild-1" };
+const guild = { id: "guild-1", channels: { cache: new Map() } };
 const client = {
   guilds: {
     cache: { has: (id: string) => id !== "gone" },

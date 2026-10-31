@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   })),
 }));
 vi.mock("./store.js", () => ({
+  TOP_SIZE: 5,
   default: {
     dailyStats: mocks.dailyStats,
     periodStats: mocks.periodStats,
@@ -29,6 +30,7 @@ const today = new Date("2026-10-30T00:00:00Z");
 const yesterday = new Date("2026-10-29T00:00:00Z");
 const options = {
   now,
+  channelShown: () => true,
   showTopMembers: true,
   t: (key: string) => key,
   locale: "fr",
@@ -130,5 +132,27 @@ describe("statsReport", () => {
       await statsReport(guild, { from: yesterday, to: yesterday }, options)
     ).toBeNull();
     expect(mocks.renderReport).not.toHaveBeenCalled();
+  });
+
+  it("leaves out the channels excluded since, and still shows five", async () => {
+    mocks.dailyStats.mockResolvedValue({
+      ...stats,
+      topChannels: ["a", "staff", "b", "c", "d", "e", "f"].map((id, index) => ({
+        id,
+        count: 10 - index,
+      })),
+    });
+    await statsReport(
+      guild,
+      { from: yesterday, to: yesterday },
+      {
+        ...options,
+        channelShown: (id) => id !== "staff",
+      }
+    );
+    const [, shown] = mocks.renderReport.mock.calls[0]!;
+    expect(
+      shown.topChannels.map((channel: { id: string }) => channel.id)
+    ).toEqual(["a", "b", "c", "d", "e"]);
   });
 });

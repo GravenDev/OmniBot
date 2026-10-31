@@ -26,12 +26,13 @@ import {
   type SelectionResult,
 } from "#modules/server-stats/services/period.js";
 import store from "#modules/server-stats/services/store.js";
+import { channelShown } from "#modules/server-stats/services/tracking.js";
 import { statsReport } from "#modules/server-stats/services/views.js";
 
 const AUTOCOMPLETE_LIMIT = 25;
 const DATE_MAX_LENGTH = 32;
 
-type Interaction = ChatInputCommandInteraction<"cached" | "raw">;
+type Interaction = ChatInputCommandInteraction<"cached">;
 type Config = ConfigProvider<ServerStatsConfigSchema>;
 
 // The report is public, to be shown to others; what only concerns whoever
@@ -162,7 +163,8 @@ export default declareCommand<ServerStatsConfigSchema>({
     ),
 
   async execute(interaction, config) {
-    if (!interaction.inGuild()) {
+    // The dispatcher only runs commands of a guild it has in cache.
+    if (!interaction.inCachedGuild()) {
       return;
     }
     if (!canSeeStats(interaction, config)) {
@@ -200,27 +202,30 @@ export default declareCommand<ServerStatsConfigSchema>({
     }
 
     await interaction.deferReply();
-
-    const guild =
-      interaction.guild ??
-      (await interaction.client.guilds.fetch(interaction.guildId));
-    const report = await statsReport(guild, counted, {
-      now,
-      showTopMembers: config.get("showTopMembers"),
-      t: config.t,
-      locale: config.locale,
-    });
-    await interaction.editReply(
-      report
-        ? {
-            content: report.content,
-            files: [
-              new AttachmentBuilder(report.image, { name: "server-stats.png" }),
-            ],
-            allowedMentions: NO_MENTIONS,
-          }
-        : { content: config.t("command.notStarted") }
-    );
+    try {
+      const report = await statsReport(interaction.guild, counted, {
+        now,
+        channelShown: channelShown(interaction.guild, config),
+        showTopMembers: config.get("showTopMembers"),
+        t: config.t,
+        locale: config.locale,
+      });
+      if (!report) {
+        throw new Error("Nothing counted on this server any more");
+      }
+      await interaction.editReply({
+        content: report.content,
+        files: [
+          new AttachmentBuilder(report.image, { name: "server-stats.png" }),
+        ],
+        allowedMentions: NO_MENTIONS,
+      });
+    } catch (err) {
+      // The public "thinking…" placeholder goes; the dispatcher then tells the
+      // author alone that the command failed.
+      await interaction.deleteReply().catch(() => {});
+      throw err;
+    }
   },
 
   async complete(interaction, config) {

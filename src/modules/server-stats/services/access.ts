@@ -13,8 +13,10 @@ export function canSeeStats(
   const allowed = new Set(
     (config.get("allowedRoles") ?? []).map((role) => role.id)
   );
-  // A cached member holds a role manager, an uncached one the role ids.
-  const roles = interaction.member?.roles;
-  const ids = Array.isArray(roles) ? roles : [...(roles?.cache.keys() ?? [])];
+  // Only a cached member: the dispatcher drops interactions of an uncached
+  // guild.
+  const ids = interaction.inCachedGuild()
+    ? [...interaction.member.roles.cache.keys()]
+    : [];
   return ids.some((id) => allowed.has(id));
 }

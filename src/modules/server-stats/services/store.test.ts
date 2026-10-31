@@ -186,11 +186,14 @@ describe("dailyStats", () => {
 });
 
 describe("startedAt", () => {
-  it("gives when counting started, or null before", async () => {
+  it("gives null before counting started, then the date, read once", async () => {
     const startedAt = new Date("2026-10-01T10:00:00Z");
+    expect(await store.startedAt("guild-started")).toBeNull();
     prisma.serverStatsGuild.findUnique.mockResolvedValueOnce({ startedAt });
-    expect(await store.startedAt("guild-1")).toEqual(startedAt);
-    expect(await store.startedAt("guild-1")).toBeNull();
+    expect(await store.startedAt("guild-started")).toEqual(startedAt);
+    // Kept: the reply is deferred only after it, within three seconds.
+    expect(await store.startedAt("guild-started")).toEqual(startedAt);
+    expect(prisma.serverStatsGuild.findUnique).toHaveBeenCalledTimes(2);
   });
 });
 
