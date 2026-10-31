@@ -1,5 +1,4 @@
 import {
-  DiscordAPIError,
   PermissionFlagsBits,
   RESTJSONErrorCodes,
   type Channel,
@@ -9,6 +8,7 @@ import {
   type SendableChannels,
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { isApiError } from "#lib/discord-errors.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
@@ -95,10 +95,10 @@ export function canPost(
 }
 
 function isMissing(error: unknown): boolean {
-  return (
-    error instanceof DiscordAPIError &&
-    (error.code === RESTJSONErrorCodes.UnknownMessage ||
-      error.code === RESTJSONErrorCodes.UnknownChannel)
+  return isApiError(
+    error,
+    RESTJSONErrorCodes.UnknownMessage,
+    RESTJSONErrorCodes.UnknownChannel
   );
 }
 

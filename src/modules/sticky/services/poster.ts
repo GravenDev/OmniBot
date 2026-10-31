@@ -4,6 +4,7 @@ import {
   RESTJSONErrorCodes,
   type GuildTextBasedChannel,
 } from "discord.js";
+import { isApiError } from "#lib/discord-errors.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
@@ -124,10 +125,7 @@ export class StickyPoster implements Service {
       await channel.messages.delete(messageId);
       return true;
     } catch (err) {
-      if (
-        err instanceof DiscordAPIError &&
-        err.code === RESTJSONErrorCodes.UnknownMessage
-      ) {
+      if (isApiError(err, RESTJSONErrorCodes.UnknownMessage)) {
         return true;
       }
       logger.warn(

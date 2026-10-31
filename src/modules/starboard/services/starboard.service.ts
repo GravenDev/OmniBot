@@ -7,6 +7,7 @@ import {
   RESTJSONErrorCodes,
 } from "discord.js";
 import { type ConfigProvider, matchesEmoji } from "#lib/config.js";
+import { isApiError } from "#lib/discord-errors.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
@@ -25,10 +26,6 @@ const logger = loggerMaker("starboard");
 
 type Config = ConfigProvider<StarboardConfigSchema>;
 type AnyMessage = Message | PartialMessage;
-
-function isApiError(err: unknown, ...codes: number[]): boolean {
-  return err instanceof DiscordAPIError && codes.includes(err.code as number);
-}
 
 const GONE = [
   RESTJSONErrorCodes.UnknownMessage,
