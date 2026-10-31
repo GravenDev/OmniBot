@@ -38,8 +38,8 @@ const data: ReportCardData = {
   activeChannels: 14,
   reactions: 157,
   topChannels: [
-    { name: "le-jeu-des-4h", count: 888 },
-    { name: "général", count: 214 },
+    { icon: "#", name: "le-jeu-des-4h", count: 888 },
+    { icon: "🔊", name: "général", count: 214 },
   ],
   topReactions: [{ text: "🔥", image: null, count: 21 }],
   topMembers: [
@@ -120,9 +120,9 @@ describe("renderReportCard", () => {
         {
           ...data,
           topChannels: [
-            { name: "🎪｜le-jeu-des-4h", count: 888 },
-            { name: "💥│général", count: 214 },
-            { name: "🐙ǀcontributeurs-github", count: 12 },
+            { icon: "#", name: "🎪｜le-jeu-des-4h", count: 888 },
+            { icon: "🔊", name: "💥│général", count: 214 },
+            { icon: "#", name: "🐙ǀcontributeurs-github", count: 12 },
           ],
           topMembers: null,
         },
@@ -132,7 +132,7 @@ describe("renderReportCard", () => {
       expect(drawn).toEqual(
         expect.arrayContaining([
           "# 🎪 | le-jeu-des-4h",
-          "# 💥|général",
+          "🔊 💥|général",
           "# 🐙|contributeurs-github",
         ])
       );

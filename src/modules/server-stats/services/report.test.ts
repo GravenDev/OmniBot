@@ -1,4 +1,4 @@
-import type { Guild } from "discord.js";
+import { ChannelType, type Guild } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReportContext } from "./report.js";
 import type { DailyStats } from "./store.js";
@@ -70,7 +70,9 @@ const guild = {
   memberCount: 13313,
   iconURL: () => "icon.png",
   id: "guild-1",
-  channels: { cache: new Map([["1", { name: "général" }]]) },
+  channels: {
+    cache: new Map([["1", { name: "général", type: ChannelType.GuildText }]]),
+  },
   client: { client: true },
 } as unknown as Guild;
 
@@ -110,9 +112,40 @@ describe("renderReport", () => {
   it("names the channels, a deleted one included", async () => {
     await renderReport(guild, stats, context);
     expect(rendered().data.topChannels).toEqual([
-      { name: "général", count: 567 },
-      { name: "report.deletedChannel", count: 324 },
+      { icon: "#", name: "général", count: 567 },
+      { icon: "#", name: "report.deletedChannel", count: 324 },
     ]);
+  });
+
+  it("marks each kind of channel with the icon Discord shows", async () => {
+    const kinds = [
+      [ChannelType.GuildText, "#"],
+      [ChannelType.GuildVoice, "🔊"],
+      [ChannelType.GuildStageVoice, "🎙️"],
+      [ChannelType.GuildAnnouncement, "📢"],
+      [ChannelType.GuildForum, "💬"],
+      [ChannelType.GuildMedia, "🖼️"],
+    ] as const;
+    await renderReport(
+      {
+        ...guild,
+        channels: {
+          cache: new Map(
+            kinds.map(([type], index) => [String(index), { name: "x", type }])
+          ),
+        },
+      } as unknown as Guild,
+      {
+        ...stats,
+        topChannels: kinds.map((_, index) => ({ id: String(index), count: 1 })),
+      },
+      context
+    );
+    expect(
+      (rendered().data.topChannels as { icon: string }[]).map(
+        (entry) => entry.icon
+      )
+    ).toEqual(kinds.map(([, icon]) => icon));
   });
 
   it("draws custom emojis from their image, wherever they come from", async () => {
