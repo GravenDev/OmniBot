@@ -57,6 +57,10 @@ This copy lets moderators review the message even if its author edits or deletes
 
 The Auto React module stores, for each configured channel, the emoji to add. It stores nothing about members.
 
+### Honeypot
+
+The Honeypot module stores, for each guild, the number of members caught by the trap, the date of the latest catch and the ID of the counter message and of its channel. It does not store who was caught.
+
 ### Sticky Messages
 
 The Sticky Messages module stores, for each configured channel, the text of the sticky message written by an administrator and the ID of its last post. It stores nothing about members and does not read their messages: a new message only triggers the repost.
@@ -101,6 +105,7 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 - **4-hour game**: scores and point history are kept until an administrator deletes the player's score.
 - **Clash of Code**: games, players and their results are kept with no time limit, for the leaderboard's history. The link to a Discord account is removed when the member unlinks with `/coc unlink`, or an administrator unlinks them.
 - **Mention preference and automatic reactions**: kept until the member, or an administrator, removes them.
+- **Honeypot counter**: kept with no time limit, even when the module is disabled or the bot leaves the guild, like the configuration.
 - **Sticky messages**: kept until an administrator removes them in `/config`, or the channel is deleted.
 - **Starboard**: an entry is deleted with the original message, with its repost when it falls below the threshold and the administrators chose to remove it, when the original channel or thread is deleted (the repost is deleted too), or when the starboard channel is deleted. When a moderator deletes a repost, the entry is kept so that the message is never reposted. The bot only sees these deletions while the module is enabled and the bot is online: a message or channel deleted while the module is disabled, or while the bot is offline, leaves its entry and its repost in place. The guild's administrators can then delete the repost by hand.
 - **Temporary voice channels**: a channel's entry is deleted with the channel, when it empties or is deleted; if the bot is offline at that moment, it is deleted when the bot comes back, even if the module was disabled in the meantime. A member's remembered settings are deleted one year after they last changed them or created a channel, even if the module is disabled.

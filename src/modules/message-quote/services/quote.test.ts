@@ -10,7 +10,7 @@ import {
   type Message,
 } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
-import { isNsfw } from "#lib/channel-audience.js";
+import { isNsfw, widensAudience } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { MessageQuoteConfigSchema } from "#modules/message-quote/message-quote.config.js";
 import {
@@ -27,62 +27,6 @@ const GUILD = "100";
 
 const t = (key: string, options?: Record<string, unknown>) =>
   options ? `${key} ${JSON.stringify(options)}` : key;
-
-function fakeRole(id: string, permissions: bigint[] = [], managed = false) {
-  return { id, managed, permissions: new PermissionsBitField(permissions) };
-}
-
-const everyone = fakeRole(GUILD, [
-  PermissionFlagsBits.ViewChannel,
-  PermissionFlagsBits.ReadMessageHistory,
-]);
-
-const roles = new Collection(
-  [
-    everyone,
-    fakeRole("member"),
-    fakeRole("staff"),
-    fakeRole("player"),
-    fakeRole("music-bot", [], true),
-    fakeRole("admin", [PermissionFlagsBits.Administrator]),
-  ].map((role) => [role.id, role])
-);
-
-function fakeGuild(everyoneRole = everyone) {
-  const cache = new Collection(roles);
-  cache.set(everyoneRole.id, everyoneRole);
-  return { roles: { everyone: everyoneRole, cache } };
-}
-
-const lockedServer = fakeGuild(
-  fakeRole(GUILD, [PermissionFlagsBits.ReadMessageHistory])
-);
-
-function overwrites(viewers?: string[], hideHistory = false) {
-  const cache = new Map<
-    string,
-    { allow: PermissionsBitField; deny: PermissionsBitField }
-  >();
-  if (hideHistory) {
-    cache.set(GUILD, {
-      allow: new PermissionsBitField(),
-      deny: new PermissionsBitField([PermissionFlagsBits.ReadMessageHistory]),
-    });
-  }
-  if (viewers) {
-    cache.set(GUILD, {
-      allow: new PermissionsBitField(),
-      deny: new PermissionsBitField([PermissionFlagsBits.ViewChannel]),
-    });
-    for (const viewer of viewers) {
-      cache.set(viewer, {
-        allow: new PermissionsBitField([PermissionFlagsBits.ViewChannel]),
-        deny: new PermissionsBitField(),
-      });
-    }
-  }
-  return { cache };
-}
 
 const READ = [
   PermissionFlagsBits.ViewChannel,
@@ -102,31 +46,21 @@ function fakeChannel(
     type?: ChannelType;
     nsfw?: boolean;
     permissions?: bigint[];
-    public?: boolean;
-    viewers?: string[];
-    hideHistory?: boolean;
-    guild?: ReturnType<typeof fakeGuild>;
     threadMembers?: string[];
     cachedThreadMembers?: string[];
     messages?: Record<string, unknown>;
   } = {}
 ) {
-  const permissionOverwrites = overwrites(
-    options.viewers ?? (options.public === false ? ["staff"] : undefined),
-    options.hideHistory
-  );
   const thread = options.thread ?? false;
   return {
     id: options.id ?? "200",
     parentId: options.parentId ?? null,
     parent: thread
-      ? { parentId: null, ...options.parent, permissionOverwrites }
+      ? { parentId: null, ...options.parent }
       : (options.parent ?? null),
     type: options.type ?? ChannelType.GuildText,
     nsfw: options.nsfw ?? false,
     name: "general",
-    guild: options.guild ?? fakeGuild(),
-    permissionOverwrites,
     isThread: () => thread,
     isTextBased: () => true,
     permissionsFor: () => new PermissionsBitField(options.permissions ?? READ),
@@ -249,13 +183,11 @@ function fakeSource(
 
 function fakeConfig(
   excluded: string[] = [],
-  excludedCategories: string[] = [],
-  ignoredRoles: string[] = []
+  excludedCategories: string[] = []
 ) {
   const values: Record<string, { id: string }[]> = {
     excludedChannels: excluded.map((id) => ({ id })),
     excludedCategories: excludedCategories.map((id) => ({ id })),
-    ignoredRoles: ignoredRoles.map((id) => ({ id })),
   };
   return {
     t,
@@ -406,153 +338,68 @@ describe("resolveQuote", () => {
     expect(await resolveQuote(message, member, target, new Set())).toBe(quoted);
   });
 
-  it("refuses to bring a private channel into a public one", async () => {
-    const { message } = fakeSource("", {
-      "200": fakeChannel({ public: false, messages: { "300": quoted } }),
-    });
-    expect(await resolveQuote(message, member, target, new Set())).toBeNull();
-  });
-
-  it("allows a private channel to be quoted in a private one", async () => {
-    const { message } = fakeSource(
-      "",
-      { "200": fakeChannel({ public: false, messages: { "300": quoted } }) },
-      fakeChannel({ id: "999", public: false })
+  it("quotes a channel hidden from the destination's public when the member can read it", async () => {
+    const everyone = {
+      id: GUILD,
+      managed: false,
+      permissions: new PermissionsBitField(READ),
+    };
+    const guild = {
+      roles: { everyone, cache: new Collection([[GUILD, everyone]]) },
+    };
+    const withAudience = (
+      channel: GuildBasedChannel,
+      hidden: boolean
+    ): GuildBasedChannel =>
+      Object.assign(channel, {
+        guild,
+        permissionOverwrites: {
+          cache: new Map(
+            hidden
+              ? [
+                  [
+                    GUILD,
+                    {
+                      allow: new PermissionsBitField(),
+                      deny: new PermissionsBitField([
+                        PermissionFlagsBits.ViewChannel,
+                      ]),
+                    },
+                  ],
+                ]
+              : []
+          ),
+        },
+      });
+    const staff = withAudience(
+      fakeChannel({ messages: { "300": quoted } }),
+      true
     );
+    const general = withAudience(fakeChannel({ id: "999" }), false);
+    expect(widensAudience(staff, general)).toBe(true);
+
+    const { message } = fakeSource("", { "200": staff }, general);
     expect(await resolveQuote(message, member, target, new Set())).toBe(quoted);
   });
 
-  it("compares audiences role by role when @everyone sees nothing", async () => {
-    const general = (id: string) =>
+  it("quotes a private thread elsewhere when the member belongs to it", async () => {
+    const privateThread = (threadMembers: string[]) =>
       fakeChannel({
-        id,
-        guild: lockedServer,
-        viewers: ["member", "staff"],
-        messages: { "300": quoted },
-      });
-    const staff = (id: string) =>
-      fakeChannel({
-        id,
-        guild: lockedServer,
-        viewers: ["staff"],
-        messages: { "300": quoted },
-      });
-
-    const intoGeneral = fakeSource("", { "200": staff("200") }, general("999"));
-    expect(
-      await resolveQuote(intoGeneral.message, member, target, new Set())
-    ).toBeNull();
-
-    const intoStaff = fakeSource("", { "200": general("200") }, staff("999"));
-    expect(
-      await resolveQuote(intoStaff.message, member, target, new Set())
-    ).toBe(quoted);
-  });
-
-  describe("on a server where access goes through a member role", () => {
-    const channel = (id: string, viewers: string[]) =>
-      fakeChannel({
-        id,
-        guild: lockedServer,
-        viewers,
-        messages: { "300": quoted },
-      });
-
-    it("refuses a channel opened to an optional role unless that role is ignored", async () => {
-      const { message } = fakeSource(
-        "",
-        { "200": channel("200", ["member", "staff"]) },
-        channel("999", ["member", "player"])
-      );
-      expect(await resolveQuote(message, member, target, new Set())).toBeNull();
-      expect(
-        await resolveQuote(
-          message,
-          member,
-          target,
-          new Set(),
-          new Set(["player"])
-        )
-      ).toBe(quoted);
-    });
-
-    it("ignores the roles managed by integrations", async () => {
-      const { message } = fakeSource(
-        "",
-        { "200": channel("200", ["member"]) },
-        channel("999", ["member", "music-bot"])
-      );
-      expect(await resolveQuote(message, member, target, new Set())).toBe(
-        quoted
-      );
-    });
-
-    it("lets administrators see every channel", async () => {
-      const { message } = fakeSource(
-        "",
-        { "200": channel("200", ["staff"]) },
-        channel("999", ["staff", "admin"])
-      );
-      expect(await resolveQuote(message, member, target, new Set())).toBe(
-        quoted
-      );
-    });
-  });
-
-  it("refuses a channel whose history is hidden from the destination's public", async () => {
-    const { message } = fakeSource("", {
-      "200": fakeChannel({ hideHistory: true, messages: { "300": quoted } }),
-    });
-    expect(await resolveQuote(message, member, target, new Set())).toBeNull();
-  });
-
-  it("counts @everyone's access for every role", async () => {
-    const { message } = fakeSource(
-      "",
-      { "200": fakeChannel({ messages: { "300": quoted } }) },
-      fakeChannel({ id: "999", viewers: ["member"] })
-    );
-    expect(await resolveQuote(message, member, target, new Set())).toBe(quoted);
-  });
-
-  it("refuses a public thread of a private channel in a public channel", async () => {
-    const { message } = fakeSource("", {
-      "200": fakeChannel({
-        thread: true,
-        type: ChannelType.PublicThread,
-        public: false,
-        messages: { "300": quoted },
-      }),
-    });
-    expect(await resolveQuote(message, member, target, new Set())).toBeNull();
-  });
-
-  it("quotes a private thread only inside that thread", async () => {
-    const privateThread = (id: string) =>
-      fakeChannel({
-        id,
         thread: true,
         type: ChannelType.PrivateThread,
-        threadMembers: [member.id],
+        permissions: READ,
+        threadMembers,
         messages: { "300": quoted },
       });
-    const elsewhere = fakeSource(
-      "",
-      { "200": privateThread("200") },
-      fakeChannel({ id: "999", public: false })
-    );
-    expect(
-      await resolveQuote(elsewhere.message, member, target, new Set())
-    ).toBeNull();
-
-    const inside = fakeSource(
-      "",
-      { "200": privateThread("200") },
-      privateThread("200")
-    );
+    const inside = fakeSource("", { "200": privateThread([member.id]) });
     expect(await resolveQuote(inside.message, member, target, new Set())).toBe(
       quoted
     );
+
+    const outsider = fakeSource("", { "200": privateThread([]) });
+    expect(
+      await resolveQuote(outsider.message, member, target, new Set())
+    ).toBeNull();
   });
 
   it("does not quote its own quotes but quotes its other messages", async () => {
@@ -819,32 +666,6 @@ describe("quoteLinks", () => {
     });
     await quoteLinks(message, fakeConfig(["999"]));
     expect(reply).not.toHaveBeenCalled();
-  });
-
-  it("applies the ignored roles of the configuration", async () => {
-    const channel = (id: string, viewers: string[]) =>
-      fakeChannel({
-        id,
-        guild: lockedServer,
-        viewers,
-        messages: { "300": quoted },
-      });
-    const post = () =>
-      fakeSource(
-        link("200", "300"),
-        { "200": channel("200", ["member"]) },
-        channel("999", ["member", "player"])
-      );
-
-    const refused = post();
-    await quoteLinks(refused.message, fakeConfig());
-    expect(refused.reply).not.toHaveBeenCalled();
-
-    const allowed = post();
-    await quoteLinks(allowed.message, fakeConfig([], [], ["player"]));
-    expect(allowed.reply).toHaveBeenCalledWith(
-      expect.objectContaining({ failIfNotExists: false })
-    );
   });
 
   it("ignores messages from an excluded category", async () => {

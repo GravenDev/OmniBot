@@ -13,6 +13,12 @@ export const honeypotConfigSchema = {
     description: "Channel where each triggered trap is logged.",
     type: ConfigType.CHANNEL,
   },
+  counterChannel: {
+    name: "Counter channel",
+    description:
+      "Channel where the bot keeps a message counting the members caught by the trap, updated after each catch.",
+    type: ConfigType.CHANNEL,
+  },
   exemptRoles: {
     name: "Exempt roles",
     description:

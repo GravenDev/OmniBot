@@ -3,6 +3,8 @@
   "config.trapChannels.description": "Salons où personne ne doit écrire. Un membre qui y poste est softban. Rien ne se passe tant qu'aucun n'est défini.",
   "config.logChannel.name": "Salon des logs",
   "config.logChannel.description": "Salon où chaque piège déclenché est consigné.",
+  "config.counterChannel.name": "Salon du compteur",
+  "config.counterChannel.description": "Salon où le bot tient un message qui compte les membres pris au piège, mis à jour à chaque prise.",
   "config.exemptRoles.name": "Rôles exemptés",
   "config.exemptRoles.description": "Les membres ayant l'un de ces rôles ne sont jamais sanctionnés, pas plus que ceux qui peuvent gérer les messages dans le salon piège.",
   "config.purgeWindow.name": "Durée de purge",
@@ -19,5 +21,11 @@
   "outcome.softbanned": "✅ Softban : ses messages des dernières {{window}} ont été supprimés.",
   "outcome.notBannable": "⚠️ Aucune sanction : le bot ne peut pas bannir ce membre (rôle trop haut ou permission _Bannir des membres_ manquante).",
   "outcome.failed": "⚠️ Le softban a échoué : vérifiez que le bot a la permission _Bannir des membres_.",
-  "outcome.stillBanned": "⚠️ Le membre a été banni mais n'a pas pu être débanni : débannissez-le à la main."
+  "outcome.stillBanned": "⚠️ Le membre a été banni mais n'a pas pu être débanni : débannissez-le à la main.",
+
+  "counter.title": "🍯 Le pot de miel",
+  "counter.count_one": "🐝 **{{count}}** petite abeille est tombée dans le piège.",
+  "counter.count_other": "🐝 **{{count}}** petites abeilles sont tombées dans le piège.",
+  "counter.last": "Dernière gourmande : {{when}}",
+  "counter.footer": "Bzzz… le miel avait l'air si bon."
 }

@@ -1,0 +1,7 @@
+model HoneypotCounter {
+  guildId   String    @id
+  count     Int       @default(0)
+  lastAt    DateTime?
+  channelId String?
+  messageId String?
+}

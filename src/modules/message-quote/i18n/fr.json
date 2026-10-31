@@ -3,8 +3,6 @@
   "config.excludedChannels.description": "Salons dont les messages ne sont jamais cités, et où les liens postés ne sont pas cités.",
   "config.excludedCategories.name": "Catégories exclues",
   "config.excludedCategories.description": "Catégories dont les salons sont traités comme des salons exclus.",
-  "config.ignoredRoles.name": "Rôles ignorés",
-  "config.ignoredRoles.description": "Rôles optionnels (jeu, notifications…) portés uniquement par des membres qui ont aussi le rôle de membre : ignorés quand le bot compare qui voit le salon cité et le salon de destination.",
   "quote.footer": "Cité par {{quoter}} | dans #{{channel}}",
   "quote.footerForwarded": "Cité par {{quoter}} | transféré dans #{{channel}}",
   "quote.noContent": "*Message sans texte*",
