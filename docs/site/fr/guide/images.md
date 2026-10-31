@@ -113,6 +113,25 @@ La fiche fait 1000 px de large par défaut (`width` pour l'élargir), en paysage
 - **Un panneau latéral** (`{ width, draw(ctx, x, y, width, height) }`) ajoute un panneau personnalisé à droite des cases, de la même hauteur qu'elles. `drawPanel`, `drawPanelTitle`, `drawText`, `drawFittedText` et `measureText` de `#lib/stat-card` le gardent cohérent avec le reste de la fiche ; la répartition par palier de RNGdle est construite ainsi (`src/modules/rngdle/rendering/cards.ts`).
 - **Un pied** (`{ height, draw(ctx, x, y, width) }`) ajoute une section personnalisée sous les cases, sur toute la largeur du contenu, et la fiche grandit d'autant. Les classements y dessinent leurs tableaux (voir plus haut).
 
+## Prévisualiser une image
+
+Un rendu ne se juge qu'en le regardant. À côté de lui, un fichier `<rendu>.preview.ts` exporte des rendus d'exemple, typés `Previews` (`#lib/preview`), qui renvoient chacun un PNG à partir de données écrites dans le fichier (sans réseau : avatars et icônes restent à `null`) :
+
+```typescript
+import type { Previews } from "#lib/preview.js";
+import { renderReportCard } from "./report-card.js";
+
+export default {
+  report: () => renderReportCard(data, labels),
+  "without-members": () =>
+    renderReportCard({ ...data, topMembers: null }, labels),
+} satisfies Previews;
+```
+
+`pnpm render-preview <fichier.preview.ts> --out <dossier>` les dessine en `<nom>-after.png`, depuis l'arbre de travail. Avec `--before <ref>` (pour une PR : `$(git merge-base HEAD origin/master)`), il dessine aussi `<nom>-before.png` depuis ce commit, dans un worktree temporaire où le fichier de prévisualisation actuel est copié : les deux côtés dessinent les mêmes données et ne diffèrent que par le changement. `--only <nom>` dessine une seule entrée. Un rendu qui attend un `t` l'obtient avec `await previewT("<id du module>", fr)` (`#lib/preview`), à partir du `i18n/fr.json` du module, comme dans `src/modules/four-hour-game/rendering/profile-card.preview.ts`. Les fichiers de prévisualisation sont vérifiés par `tsc` avec le reste de `src/` : un changement de forme des données se voit au build. Exemple : `src/modules/server-stats/rendering/report-card.preview.ts`.
+
+Les emojis sont dessinés avec la police emoji du système : leur aspect change d'un système à l'autre, pas le texte ni la mise en page.
+
 ## Bonnes pratiques
 
 - **Traduisez chaque texte** que vous passez (en-têtes, titres, unités) : les générateurs dessinent ce qu'ils reçoivent.

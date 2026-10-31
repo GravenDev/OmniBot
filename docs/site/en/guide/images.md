@@ -113,6 +113,25 @@ The card is 1000 px wide by default (`width` widens it), landscape, so Discord d
 - **An aside** (`{ width, draw(ctx, x, y, width, height) }`) adds a custom panel on the right of the boxes, as tall as them. `drawPanel`, `drawPanelTitle`, `drawText`, `drawFittedText` and `measureText` from `#lib/stat-card` keep it consistent with the rest of the card; the RNGdle tier breakdown is built this way (`src/modules/rngdle/rendering/cards.ts`).
 - **A footer** (`{ height, draw(ctx, x, y, width) }`) adds a custom section below the boxes, across the whole content width, and the card grows by its height. Leaderboards draw their tables there (see above).
 
+## Previewing an Image
+
+A renderer can only be judged by looking at it. Next to it, a `<renderer>.preview.ts` file exports sample renders, typed `Previews` (`#lib/preview`), each returning a PNG from data written in the file (no network: avatars and icons stay `null`):
+
+```typescript
+import type { Previews } from "#lib/preview.js";
+import { renderReportCard } from "./report-card.js";
+
+export default {
+  report: () => renderReportCard(data, labels),
+  "without-members": () =>
+    renderReportCard({ ...data, topMembers: null }, labels),
+} satisfies Previews;
+```
+
+`pnpm render-preview <file.preview.ts> --out <dir>` draws them as `<name>-after.png`, from the working tree. With `--before <ref>` (for a PR: `$(git merge-base HEAD origin/master)`), it also draws `<name>-before.png` from that commit, in a temporary worktree into which the current preview file is copied: both sides draw the same data, so they differ only by the change. `--only <name>` draws one entry. A renderer that takes a `t` gets one from `await previewT("<module id>", fr)` (`#lib/preview`), with the module's `i18n/fr.json`, as in `src/modules/four-hour-game/rendering/profile-card.preview.ts`. The preview files are type-checked with the rest of `src/`, so a change of data shape shows up at build time. `src/modules/server-stats/rendering/report-card.preview.ts` is an example.
+
+Emojis are drawn with the system's emoji font, so they look different from one system to another; text and layout do not.
+
 ## Good Practices
 
 - **Translate every text** you pass in (headers, titles, units): renderers draw what they receive.
