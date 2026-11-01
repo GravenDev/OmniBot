@@ -74,9 +74,13 @@ describe("checkMilestones", () => {
       14
     );
     expect(send).toHaveBeenCalledWith({
-      content: expect.stringContaining("depuis le 14ᵉ inscrit"),
+      embeds: [expect.anything()],
       allowedMentions: { parse: [] },
     });
+    const [{ embeds }] = send.mock.calls[0] as unknown as [
+      { embeds: [{ toJSON(): { description: string } }] },
+    ];
+    expect(embeds[0].toJSON().description).toContain("depuis le 14ᵉ inscrit");
   });
 
   it("records without announcing when the guild turned it off", async () => {

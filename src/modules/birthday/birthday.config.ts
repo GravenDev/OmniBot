@@ -30,7 +30,7 @@ export const birthdayConfigSchema = {
   messages: {
     name: "Birthday messages",
     description:
-      "Messages drawn at random to wish a happy birthday; {user} is replaced by the member. Empty: the built-in messages.",
+      "Messages drawn at random and quoted on the birthday card (keep them short: two lines at most); {user} is replaced by the member. Empty: the built-in messages.",
     type: [ConfigType.STRING],
   },
   paradoxMilestones: {

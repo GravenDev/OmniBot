@@ -498,13 +498,13 @@ Le module a besoin de l'intent privilégié **Server Members** (Developer Portal
 
 ### Annonce quotidienne
 
-Chaque jour, à l'heure et dans le fuseau configurés, le bot souhaite dans le salon des annonces **les anniversaires du jour** des membres qui ont accepté d'être annoncés : un des messages configurés tiré au hasard (ou un message intégré), ou, quand plusieurs membres fêtent le même jour, un seul message qui les réunit. Le 29 février est fêté le 28 les années non bissextiles. Si un rôle d'anniversaire est configuré, il est donné aux membres annoncés et retiré à tous les autres membres qui l'ont, même sans salon des annonces ; un refus de Discord pour un membre (rôle placé au-dessus de celui du bot, par exemple) n'empêche pas les autres. Un membre qui supprime son anniversaire, ou choisit de ne plus être annoncé, perd le rôle aussitôt.
+Chaque jour, à l'heure et dans le fuseau configurés, le bot souhaite dans le salon des annonces **les anniversaires du jour** des membres qui ont accepté d'être annoncés, par une **carte en image** accompagnée d'un court message qui mentionne les membres (une image ne notifie personne). Le cadre de la carte ne change pas, pour qu'on sache toujours qu'elle vient du module : « Anniversaire », « Joyeux anniversaire ! », le pseudo et l'avatar du membre, la date. Quand le serveur a configuré des messages, l'un d'eux, tiré au hasard, est cité entre guillemets sous le titre, `{user}` remplacé par le pseudo ; au-delà de deux lignes (une centaine de caractères), il est coupé par des points de suspension. Les messages intégrés ne sont pas dessinés : le titre le dit déjà. Quand plusieurs membres fêtent le même jour, une seule carte les réunit (« Double anniversaire ! », « Triple anniversaire ! », puis « N anniversaires aujourd'hui »), avec au plus trois avatars puis « +N », sans message du serveur. Le texte alternatif de l'image reprend les pseudos, la date et le message du serveur. Si la carte ne peut pas être dessinée, ou que Discord la refuse (permission de joindre des fichiers manquante, par exemple), le bot publie à la place le message texte : le message configuré tiré au hasard (ou un message intégré), ou celui qui réunit les membres. Le 29 février est fêté le 28 les années non bissextiles. Si un rôle d'anniversaire est configuré, il est donné aux membres annoncés et retiré à tous les autres membres qui l'ont, même sans salon des annonces ; un refus de Discord pour un membre (rôle placé au-dessus de celui du bot, par exemple) n'empêche pas les autres. Un membre qui supprime son anniversaire, ou choisit de ne plus être annoncé, perd le rôle aussitôt.
 
 L'annonce de chaque journée est publiée une seule fois. Si le bot est arrêté à l'heure prévue, elle part à son redémarrage s'il a lieu le même jour ; une journée entièrement manquée n'est pas rattrapée. Si Discord ne fournit pas la liste des membres, rien n'est publié et le bot réessaie l'heure suivante. Changer de fuseau ne fait jamais republier une journée déjà annoncée. Les membres mentionnés sont notifiés, sauf ceux qui ont désactivé leurs mentions avec `/pings`.
 
 ### Paliers du paradoxe des anniversaires
 
-Avec n inscrits, la probabilité qu'au moins deux partagent une date vaut 1 − ∏(365 − k)/365 pour k de 0 à n − 1 : elle dépasse 50 % à 23 inscrits et 99 % à 57. Quand un enregistrement fait franchir un palier, le bot l'annonce une seule fois par serveur :
+Avec n inscrits, la probabilité qu'au moins deux partagent une date vaut 1 − ∏(365 − k)/365 pour k de 0 à n − 1 : elle dépasse 50 % à 23 inscrits et 99 % à 57. Quand un enregistrement fait franchir un palier, le bot l'annonce une seule fois par serveur, dans un embed qui donne aussi la probabilité d'une date partagée et le prochain palier :
 
 - au 23ᵉ anniversaire enregistré ;
 - à la première date partagée, avec le nombre d'inscrits à ce moment-là, comparé à l'espérance théorique (environ 24,6) ;
@@ -536,14 +536,14 @@ Supprime l'anniversaire d'un membre. Il n'existe volontairement aucune commande 
 
 ### Configuration — `/config birthday`
 
-| Champ               | Type             | Description                                                                                                  |
-| ------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------ |
-| `channel`           | Salon            | Salon des annonces. Tant qu'il n'est pas défini, rien n'est annoncé.                                         |
-| `role`              | Rôle             | Rôle donné pour la journée aux membres annoncés. Sans rôle, rien n'est attribué.                             |
-| `timeZone`          | Choix            | Fuseau horaire des journées du serveur (Europe/Paris par défaut).                                            |
-| `hour`              | Nombre           | Heure des annonces, de 0 à 23 (9 par défaut).                                                                |
-| `messages`          | Liste de chaînes | Messages d'anniversaire tirés au hasard ; `{user}` est remplacé par le membre. Vide : les messages intégrés. |
-| `paradoxMilestones` | Booléen          | Annoncer les paliers du paradoxe des anniversaires (activé par défaut).                                      |
+| Champ               | Type             | Description                                                                                                                      |
+| ------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `channel`           | Salon            | Salon des annonces. Tant qu'il n'est pas défini, rien n'est annoncé.                                                             |
+| `role`              | Rôle             | Rôle donné pour la journée aux membres annoncés. Sans rôle, rien n'est attribué.                                                 |
+| `timeZone`          | Choix            | Fuseau horaire des journées du serveur (Europe/Paris par défaut).                                                                |
+| `hour`              | Nombre           | Heure des annonces, de 0 à 23 (9 par défaut).                                                                                    |
+| `messages`          | Liste de chaînes | Messages d'anniversaire tirés au hasard, cités sur la carte ; `{user}` est remplacé par le membre. Vide : les messages intégrés. |
+| `paradoxMilestones` | Booléen          | Annoncer les paliers du paradoxe des anniversaires (activé par défaut).                                                          |
 
 ---
 
