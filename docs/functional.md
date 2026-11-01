@@ -520,6 +520,10 @@ Enregistre ou modifie l'anniversaire du membre. Une date qui n'existe pas (30 f�
 
 Affiche ce que le module conserve sur le membre, ou le supprime. Réponses visibles du membre seul.
 
+### Jumeaux d'anniversaire
+
+La réponse de `/birthday set` et de `/birthday show` indique aussi avec qui le membre partage sa date sur le serveur : « Vous partagez votre date avec @A et @B. », ou rien quand personne ne la partage. Ne sont nommés que les membres qui ont accepté d'être annoncés et qui sont encore sur le serveur ; un membre caché n'est jamais nommé ni compté. Un membre caché voit lui aussi ses jumeaux annoncés, déjà visibles dans `/birthday upcoming`. La date est celle enregistrée : le 29 février n'a pour jumeaux que d'autres 29 février, comme dans `/birthday stats`, même s'il est fêté le 28 les années non bissextiles. Au-delà de dix jumeaux, les suivants sont comptés (« et 3 autres membres »). Personne n'est notifié. Si Discord ne dit pas qui est encore sur le serveur, la ligne est omise.
+
 ### `/birthday upcoming`
 
 Liste les anniversaires des 30 prochains jours, aujourd'hui compris, dans le fuseau du serveur, pour les seuls membres qui ont accepté d'être annoncés. Personne n'est notifié. Si la liste dépasse la taille d'un message Discord, les anniversaires les plus lointains sont omis, et une dernière ligne indique combien.

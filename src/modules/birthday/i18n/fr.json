@@ -20,7 +20,7 @@
   "announce.builtIn.1": "🎂 Joyeux anniversaire {user} !",
   "announce.builtIn.2": "🎉 C'est l'anniversaire de {user} aujourd'hui, bon anniversaire !",
   "announce.builtIn.3": "🥳 Tout le monde, souhaitez un bon anniversaire à {user} !",
-  "announce.twins": "🎂 Aujourd'hui, {{users}} fêtent leur anniversaire ensemble. Bon anniversaire !",
+  "announce.together": "🎂 Aujourd'hui, {{users}} fêtent leur anniversaire ensemble. Bon anniversaire !",
   "announce.card": "🎂 Joyeux anniversaire {{users}} !",
 
   "card.kicker_one": "Anniversaire",
@@ -57,6 +57,10 @@
   "show.announced": "Il est annoncé sur le serveur.",
   "show.private": "Il n'est pas annoncé : il compte seulement dans les statistiques.",
   "show.stored": "C'est tout ce que le module conserve à votre sujet, avec votre identifiant Discord. `/birthday remove` le supprime.",
+
+  "twins.line": "👯 Vous partagez votre date avec {{users}}.",
+  "twins.more_one": "{{count}} autre membre",
+  "twins.more_other": "{{count}} autres membres",
 
   "remove.done": "Votre anniversaire est supprimé.",
   "remove.none": "Vous n'aviez pas d'anniversaire enregistré sur ce serveur.",

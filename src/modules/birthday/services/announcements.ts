@@ -93,7 +93,7 @@ export function birthdayMessage(
   random: () => number = Math.random
 ): string {
   if (userIds.length > 1) {
-    return t("announce.twins", {
+    return t("announce.together", {
       users: formatList(userIds.map(mention), locale),
     });
   }
