@@ -1,0 +1,80 @@
+{
+  "config.channel.name": "Announcement channel",
+  "config.channel.description": "Channel where birthdays are announced. Nothing is announced until it is set.",
+
+  "config.role.name": "Birthday role",
+  "config.role.description": "Role given for the day to members whose birthday is announced. It is removed from everyone else at the next announcement.",
+
+  "config.timeZone.name": "Time zone",
+  "config.timeZone.description": "Time zone the server's days follow.",
+
+  "config.hour.name": "Announcement hour",
+  "config.hour.description": "Hour of the day (0 to 23) when the announcements are posted.",
+
+  "config.messages.name": "Birthday messages",
+  "config.messages.description": "Messages drawn at random to wish a happy birthday; {user} is replaced by the member. Empty: the built-in messages.",
+
+  "config.paradoxMilestones.name": "Birthday paradox milestones",
+  "config.paradoxMilestones.description": "Announce when the registrations reach the birthday paradox milestones (23 members, first shared date, 57 members).",
+
+  "announce.builtIn.1": "🎂 Happy birthday {user}!",
+  "announce.builtIn.2": "🎉 It's {user}'s birthday today, happy birthday!",
+  "announce.builtIn.3": "🥳 Everyone, wish {user} a happy birthday!",
+  "announce.twins": "🎂 Today, {{users}} celebrate their birthday together. Happy birthday!",
+
+  "paradox.milestone.half": "🎲 **{{count}} birthdays registered.** It is now more likely than not that two of you share a birthday. That is the birthday paradox: it only takes 23 people to pass one chance in two.",
+  "paradox.milestone.certain": "🎲 **{{count}} birthdays registered.** The odds that two of you share a birthday now exceed 99%.",
+  "paradox.milestone.firstCollision_ordinal_one": "🎲 **First shared birthday!** Two members share a date since the {{count}}st registration. On average, the theory expects it at around {{expected}} registrations.",
+  "paradox.milestone.firstCollision_ordinal_two": "🎲 **First shared birthday!** Two members share a date since the {{count}}nd registration. On average, the theory expects it at around {{expected}} registrations.",
+  "paradox.milestone.firstCollision_ordinal_few": "🎲 **First shared birthday!** Two members share a date since the {{count}}rd registration. On average, the theory expects it at around {{expected}} registrations.",
+  "paradox.milestone.firstCollision_ordinal_other": "🎲 **First shared birthday!** Two members share a date since the {{count}}th registration. On average, the theory expects it at around {{expected}} registrations.",
+
+  "set.invalid": "This date does not exist.",
+  "set.done": "🎂 Your birthday is registered: **{{date}}**.",
+  "set.announced": "It will be announced in {{channel}}.",
+  "set.announcedLater": "It will be announced once an announcement channel is set.",
+  "set.private": "It will not be announced: it only counts in `/birthday stats`.",
+  "set.data": "Only the day and the month are stored. `/birthday show` shows them, `/birthday remove` deletes them; leaving the server deletes them too.",
+
+  "show.none": "You have not registered your birthday on this server.",
+  "show.entry": "Your birthday: **{{date}}**.",
+  "show.announced": "It is announced on the server.",
+  "show.private": "It is not announced: it only counts in the statistics.",
+  "show.stored": "That is all the module stores about you, with your Discord ID. `/birthday remove` deletes it.",
+
+  "remove.done": "Your birthday is deleted.",
+  "remove.none": "You had no birthday registered on this server.",
+
+  "upcoming.heading": "🎂 **Birthdays of the next {{count}} days**",
+  "upcoming.none": "No birthday in the next {{count}} days.",
+  "upcoming.line": "**{{date}}** · {{user}} · {{when}}",
+  "upcoming.more_one": "… and {{count}} more birthday",
+  "upcoming.more_other": "… and {{count}} more birthdays",
+  "upcoming.today": "today",
+  "upcoming.tomorrow": "tomorrow",
+  "upcoming.inDays_one": "in {{count}} day",
+  "upcoming.inDays_other": "in {{count}} days",
+
+  "stats.title": "🎲 **The birthday paradox, on this server**",
+  "stats.probability_one": "**{{count}} birthday registered** · theoretical odds that two share a date: **{{percent}}**",
+  "stats.probability_other": "**{{count}} birthdays registered** · theoretical odds that two share a date: **{{percent}}**",
+  "stats.noShared": "On the server: no shared date yet.",
+  "stats.shared_one": "On the server: **{{count}} shared date**.",
+  "stats.shared_other": "On the server: **{{count}} shared dates**.",
+  "stats.sharedDates": "Shared: {{dates}}.",
+  "stats.sharedHidden_one": "{{count}} shared date is not shown: one of its members did not want to be announced.",
+  "stats.sharedHidden_other": "{{count}} shared dates are not shown: some of their members did not want to be announced.",
+  "stats.firstCollision_ordinal_one": "The first shared date appeared at the {{count}}st registration; on average, the theory expects it at around {{expected}} registrations.",
+  "stats.firstCollision_ordinal_two": "The first shared date appeared at the {{count}}nd registration; on average, the theory expects it at around {{expected}} registrations.",
+  "stats.firstCollision_ordinal_few": "The first shared date appeared at the {{count}}rd registration; on average, the theory expects it at around {{expected}} registrations.",
+  "stats.firstCollision_ordinal_other": "The first shared date appeared at the {{count}}th registration; on average, the theory expects it at around {{expected}} registrations.",
+  "stats.untilHalf_one": "{{count}} more registration and the odds of a shared date pass one in two.",
+  "stats.untilHalf_other": "{{count}} more registrations and the odds of a shared date pass one in two.",
+  "stats.footnote": "-# Births are not spread evenly over the year, so in practice shared dates are slightly more likely than the formula says.",
+
+  "uninstall.warning_one": "Disabling this module permanently deletes the **birthday** registered on this server. Only its member can register it again, with `/birthday set`.",
+  "uninstall.warning_other": "Disabling this module permanently deletes the **{{count}} birthdays** registered on this server. Only the members can register them again, with `/birthday set`.",
+
+  "admin.remove.done": "{{user}}'s birthday is deleted.",
+  "admin.remove.none": "{{user}} had no birthday registered."
+}

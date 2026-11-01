@@ -45,11 +45,14 @@ export function formatPercentage(
 const DESCRIPTION_LIMIT = 4096;
 const MORE_LINE_RESERVE = 64;
 
+// Lines within an embed description, or a message with a smaller `limit`; a
+// last line from `more` counts the ones left out.
 export function describeLines(
   lines: string[],
-  more: (count: number) => string
+  more: (count: number) => string,
+  limit = DESCRIPTION_LIMIT
 ): string {
-  const budget = DESCRIPTION_LIMIT - MORE_LINE_RESERVE;
+  const budget = limit - MORE_LINE_RESERVE;
   const shown: string[] = [];
   let length = 0;
   for (const line of lines) {

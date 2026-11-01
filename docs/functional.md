@@ -56,6 +56,7 @@ Le bot répond, en message visible du membre seul, par la liste de ce qui sera s
 - au jeu des 4h, son score, son historique de points, ses points du jour, et le dernier message du salon de jeu s'il en est l'auteur ;
 - son compte, ses tirages, son rappel et ses cartes du jour RNGdle ;
 - le lien vers son joueur Clash of Code : le joueur et ses résultats, venus de CodinGame, restent au classement ;
+- son anniversaire ;
 - sa préférence `/pings`.
 
 Les signalements ne sont pas touchés : ils restent aux modérateurs jusqu'à leur purge. Si une suppression échoue, les autres ont quand même lieu et le message invite à réessayer.
@@ -480,6 +481,69 @@ Quand le propriétaire change le nom, la limite ou le mode d'accès de son salon
 | `hubs` | Réglages par salon | Pour chaque salon vocal hub, le nom des salons créés (`{user}` pour le pseudo du membre, 100 caractères au plus) et leur limite de membres (0 à 99, 0 pour aucune). |
 
 Le bot refuse un hub où il lui manque une des permissions nécessaires, ou qui est lui-même un salon temporaire. Retirer un hub ne supprime pas les salons qu'il a déjà créés.
+
+---
+
+## Module Anniversaires
+
+Souhaite les anniversaires des membres qui en ont enregistré un, et confronte le paradoxe des anniversaires aux inscriptions du serveur.
+
+### Données conservées
+
+Seuls le jour et le mois de l'anniversaire sont conservés, avec l'identifiant Discord du membre et son choix d'être annoncé ou non : jamais l'année, qui révélerait l'âge. Seul le membre peut enregistrer son anniversaire ; un administrateur peut le supprimer, pas le saisir. Les anniversaires d'un serveur ne valent que pour lui.
+
+Un anniversaire est supprimé définitivement quand son membre le retire (`/birthday remove` ou `/privacy delete`), quand il quitte le serveur, ou quand le module est désactivé sur le serveur (avec l'état des annonces et des paliers). Désactiver le module depuis `/modules` demande donc une confirmation, qui indique combien d'anniversaires seront supprimés. Les départs survenus pendant un arrêt du bot sont rattrapés à l'annonce quotidienne suivante. Si le bot quitte le serveur, les anniversaires y restent enregistrés, comme la configuration, jusqu'à son retour ; ceux des membres partis entre-temps sont alors supprimés à l'annonce quotidienne suivante.
+
+Le module a besoin de l'intent privilégié **Server Members** (Developer Portal, Bot > Privileged Gateway Intents) pour voir les départs et lister les membres, afin de rattraper ceux survenus pendant un arrêt.
+
+### Annonce quotidienne
+
+Chaque jour, à l'heure et dans le fuseau configurés, le bot souhaite dans le salon des annonces **les anniversaires du jour** des membres qui ont accepté d'être annoncés : un des messages configurés tiré au hasard (ou un message intégré), ou, quand plusieurs membres fêtent le même jour, un seul message qui les réunit. Le 29 février est fêté le 28 les années non bissextiles. Si un rôle d'anniversaire est configuré, il est donné aux membres annoncés et retiré à tous les autres membres qui l'ont, même sans salon des annonces ; un refus de Discord pour un membre (rôle placé au-dessus de celui du bot, par exemple) n'empêche pas les autres. Un membre qui supprime son anniversaire, ou choisit de ne plus être annoncé, perd le rôle aussitôt.
+
+L'annonce de chaque journée est publiée une seule fois. Si le bot est arrêté à l'heure prévue, elle part à son redémarrage s'il a lieu le même jour ; une journée entièrement manquée n'est pas rattrapée. Si Discord ne fournit pas la liste des membres, rien n'est publié et le bot réessaie l'heure suivante. Changer de fuseau ne fait jamais republier une journée déjà annoncée. Les membres mentionnés sont notifiés, sauf ceux qui ont désactivé leurs mentions avec `/pings`.
+
+### Paliers du paradoxe des anniversaires
+
+Avec n inscrits, la probabilité qu'au moins deux partagent une date vaut 1 − ∏(365 − k)/365 pour k de 0 à n − 1 : elle dépasse 50 % à 23 inscrits et 99 % à 57. Quand un enregistrement fait franchir un palier, le bot l'annonce une seule fois par serveur :
+
+- au 23ᵉ anniversaire enregistré ;
+- à la première date partagée, avec le nombre d'inscrits à ce moment-là, comparé à l'espérance théorique (environ 24,6) ;
+- au 57ᵉ anniversaire enregistré.
+
+Ces annonces ne citent que des chiffres : ni membre, ni date. Tous les anniversaires comptent, y compris ceux qui ne sont pas annoncés. Un palier franchi alors que ses annonces sont désactivées, qu'aucun salon des annonces n'est défini ou que la publication échoue est retenu sans être annoncé. Les pourcentages sont arrondis à l'inférieur : 98,8 % s'affiche 98 %, jamais 99 %.
+
+### `/birthday set <day> <month> [announce]`
+
+Enregistre ou modifie l'anniversaire du membre. Une date qui n'existe pas (30 février…) est refusée ; le 29 février est accepté. Avec `announce: False`, l'anniversaire n'est jamais annoncé, ni nommé, ni affiché : il compte seulement dans les statistiques. Ce compte peut laisser deviner qu'une date est prise (en voyant le nombre de dates partagées changer), jamais par qui. La réponse, visible du membre seul, rappelle où il sera annoncé et ce qui est conservé.
+
+### `/birthday show` et `/birthday remove`
+
+Affiche ce que le module conserve sur le membre, ou le supprime. Réponses visibles du membre seul.
+
+### `/birthday upcoming`
+
+Liste les anniversaires des 30 prochains jours, aujourd'hui compris, dans le fuseau du serveur, pour les seuls membres qui ont accepté d'être annoncés. Personne n'est notifié. Si la liste dépasse la taille d'un message Discord, les anniversaires les plus lointains sont omis, et une dernière ligne indique combien.
+
+### `/birthday stats`
+
+Le paradoxe des anniversaires appliqué au serveur : le nombre d'anniversaires enregistrés, la probabilité théorique d'une date partagée, le nombre de dates réellement partagées, le nombre d'inscrits au moment de la première date partagée (ou le nombre d'inscriptions qui manquent pour atteindre une chance sur deux). Une date partagée n'est nommée que si tous les membres qui la partagent ont accepté d'être annoncés ; les autres sont seulement comptées. Personne n'est cité ni notifié.
+
+### `/birthday-admin remove <member>`
+
+**Permission requise :** Administrateur
+
+Supprime l'anniversaire d'un membre. Il n'existe volontairement aucune commande pour enregistrer celui de quelqu'un d'autre. Réponse éphémère.
+
+### Configuration — `/config birthday`
+
+| Champ               | Type             | Description                                                                                                  |
+| ------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------ |
+| `channel`           | Salon            | Salon des annonces. Tant qu'il n'est pas défini, rien n'est annoncé.                                         |
+| `role`              | Rôle             | Rôle donné pour la journée aux membres annoncés. Sans rôle, rien n'est attribué.                             |
+| `timeZone`          | Choix            | Fuseau horaire des journées du serveur (Europe/Paris par défaut).                                            |
+| `hour`              | Nombre           | Heure des annonces, de 0 à 23 (9 par défaut).                                                                |
+| `messages`          | Liste de chaînes | Messages d'anniversaire tirés au hasard ; `{user}` est remplacé par le membre. Vide : les messages intégrés. |
+| `paradoxMilestones` | Booléen          | Annoncer les paliers du paradoxe des anniversaires (activé par défaut).                                      |
 
 ---
 

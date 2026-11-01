@@ -1,0 +1,76 @@
+{
+  "config.channel.name": "Salon des annonces",
+  "config.channel.description": "Salon où sont annoncés les anniversaires. Rien n'est annoncé tant qu'il n'est pas défini.",
+
+  "config.role.name": "Rôle d'anniversaire",
+  "config.role.description": "Rôle donné pour la journée aux membres dont l'anniversaire est annoncé. Il est retiré à tous les autres à l'annonce suivante.",
+
+  "config.timeZone.name": "Fuseau horaire",
+  "config.timeZone.description": "Fuseau horaire que suivent les journées du serveur.",
+
+  "config.hour.name": "Heure des annonces",
+  "config.hour.description": "Heure de la journée (0 à 23) à laquelle les annonces sont publiées.",
+
+  "config.messages.name": "Messages d'anniversaire",
+  "config.messages.description": "Messages tirés au hasard pour souhaiter un anniversaire ; {user} est remplacé par le membre. Vide : les messages intégrés.",
+
+  "config.paradoxMilestones.name": "Paliers du paradoxe des anniversaires",
+  "config.paradoxMilestones.description": "Annoncer quand les inscriptions atteignent les paliers du paradoxe des anniversaires (23 inscrits, première date partagée, 57 inscrits).",
+
+  "announce.builtIn.1": "🎂 Joyeux anniversaire {user} !",
+  "announce.builtIn.2": "🎉 C'est l'anniversaire de {user} aujourd'hui, bon anniversaire !",
+  "announce.builtIn.3": "🥳 Tout le monde, souhaitez un bon anniversaire à {user} !",
+  "announce.twins": "🎂 Aujourd'hui, {{users}} fêtent leur anniversaire ensemble. Bon anniversaire !",
+
+  "paradox.milestone.half": "🎲 **{{count}} anniversaires enregistrés.** Il y a désormais plus d'une chance sur deux que deux d'entre vous aient le même anniversaire. C'est le paradoxe des anniversaires : il suffit de 23 personnes pour passer une chance sur deux.",
+  "paradox.milestone.certain": "🎲 **{{count}} anniversaires enregistrés.** La probabilité que deux d'entre vous partagent leur anniversaire dépasse maintenant 99 %.",
+  "paradox.milestone.firstCollision_ordinal_one": "🎲 **Premier anniversaire partagé !** Deux membres ont la même date depuis le {{count}}ᵉʳ inscrit. En moyenne, la théorie l'attend autour de {{expected}} inscrits.",
+  "paradox.milestone.firstCollision_ordinal_other": "🎲 **Premier anniversaire partagé !** Deux membres ont la même date depuis le {{count}}ᵉ inscrit. En moyenne, la théorie l'attend autour de {{expected}} inscrits.",
+
+  "set.invalid": "Cette date n'existe pas.",
+  "set.done": "🎂 Votre anniversaire est enregistré : **{{date}}**.",
+  "set.announced": "Il sera annoncé dans {{channel}}.",
+  "set.announcedLater": "Il sera annoncé dès qu'un salon d'annonces sera défini.",
+  "set.private": "Il ne sera pas annoncé : il compte seulement dans `/birthday stats`.",
+  "set.data": "Seuls le jour et le mois sont conservés. `/birthday show` les affiche, `/birthday remove` les supprime ; quitter le serveur les supprime aussi.",
+
+  "show.none": "Vous n'avez pas enregistré votre anniversaire sur ce serveur.",
+  "show.entry": "Votre anniversaire : **{{date}}**.",
+  "show.announced": "Il est annoncé sur le serveur.",
+  "show.private": "Il n'est pas annoncé : il compte seulement dans les statistiques.",
+  "show.stored": "C'est tout ce que le module conserve à votre sujet, avec votre identifiant Discord. `/birthday remove` le supprime.",
+
+  "remove.done": "Votre anniversaire est supprimé.",
+  "remove.none": "Vous n'aviez pas d'anniversaire enregistré sur ce serveur.",
+
+  "upcoming.heading": "🎂 **Les anniversaires des {{count}} prochains jours**",
+  "upcoming.none": "Aucun anniversaire dans les {{count}} prochains jours.",
+  "upcoming.line": "**{{date}}** · {{user}} · {{when}}",
+  "upcoming.more_one": "… et {{count}} autre anniversaire",
+  "upcoming.more_other": "… et {{count}} autres anniversaires",
+  "upcoming.today": "aujourd'hui",
+  "upcoming.tomorrow": "demain",
+  "upcoming.inDays_one": "dans {{count}} jour",
+  "upcoming.inDays_other": "dans {{count}} jours",
+
+  "stats.title": "🎲 **Le paradoxe des anniversaires, sur ce serveur**",
+  "stats.probability_one": "**{{count}} anniversaire enregistré** · probabilité théorique que deux partagent une date : **{{percent}}**",
+  "stats.probability_other": "**{{count}} anniversaires enregistrés** · probabilité théorique que deux partagent une date : **{{percent}}**",
+  "stats.noShared": "Sur le serveur : aucune date partagée pour l'instant.",
+  "stats.shared_one": "Sur le serveur : **{{count}} date partagée**.",
+  "stats.shared_other": "Sur le serveur : **{{count}} dates partagées**.",
+  "stats.sharedDates": "Partagées : {{dates}}.",
+  "stats.sharedHidden_one": "{{count}} date partagée n'est pas affichée : un de ses membres n'a pas souhaité être annoncé.",
+  "stats.sharedHidden_other": "{{count}} dates partagées ne sont pas affichées : certains de leurs membres n'ont pas souhaité être annoncés.",
+  "stats.firstCollision_ordinal_one": "La première date partagée est apparue au {{count}}ᵉʳ inscrit ; en moyenne, la théorie l'attend autour de {{expected}} inscrits.",
+  "stats.firstCollision_ordinal_other": "La première date partagée est apparue au {{count}}ᵉ inscrit ; en moyenne, la théorie l'attend autour de {{expected}} inscrits.",
+  "stats.untilHalf_one": "Encore {{count}} inscrit et la probabilité d'une date partagée dépassera une chance sur deux.",
+  "stats.untilHalf_other": "Encore {{count}} inscrits et la probabilité d'une date partagée dépassera une chance sur deux.",
+  "stats.footnote": "-# Les naissances ne sont pas réparties uniformément sur l'année : en pratique, les dates partagées sont un peu plus probables que ne le dit la formule.",
+
+  "uninstall.warning_one": "Désactiver ce module supprime définitivement l'**anniversaire** enregistré sur ce serveur. Seul son membre pourra l'enregistrer à nouveau, avec `/birthday set`.",
+  "uninstall.warning_other": "Désactiver ce module supprime définitivement les **{{count}} anniversaires** enregistrés sur ce serveur. Seuls les membres pourront les enregistrer à nouveau, avec `/birthday set`.",
+
+  "admin.remove.done": "L'anniversaire de {{user}} est supprimé.",
+  "admin.remove.none": "{{user}} n'avait pas d'anniversaire enregistré."
+}

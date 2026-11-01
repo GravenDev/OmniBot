@@ -1,0 +1,22 @@
+// Day and month only: the year would reveal the member's age, and with it who
+// is a minor. A row is created by its member alone (consent) and deleted when
+// they remove it, leave the guild, or the module is uninstalled.
+model Birthday {
+  guildId  String
+  userId   String
+  day      Int
+  month    Int
+  announce Boolean @default(true)
+
+  @@id([guildId, userId])
+}
+
+model BirthdayState {
+  guildId             String   @id
+  // Guild-local day (YYYY-MM-DD) whose announcements already ran.
+  lastDay             String?
+  // Birthday paradox milestones already announced.
+  milestones          String[] @default([])
+  // Number of registered members when two of them first shared a date.
+  firstCollisionCount Int?
+}
