@@ -4,7 +4,8 @@ import { silenceLogs } from "#lib/testing.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
 
 const channel = { id: "game", isTextBased: () => true, isDMBased: () => false };
-const config = { get: (key: string) => (key === "delay" ? 14_400 : channel) };
+let delay = 14_400;
+const config = { get: (key: string) => (key === "delay" ? delay : channel) };
 
 const getConfigForModuleIn = vi.hoisted(() => vi.fn());
 vi.mock("#core/services/config.service.js", () => ({
@@ -14,9 +15,21 @@ const getActivatedGuildIds = vi.hoisted(() => vi.fn());
 vi.mock("#core/services/module.service.js", () => ({
   default: { getActivatedGuildIds },
 }));
+// The service runs `load`, replays (resyncLastMessage stands for it), then
+// hands the points to `announce`, all in the guild's queue.
 const resyncLastMessage = vi.hoisted(() => vi.fn());
+const syncRoundInService = vi.hoisted(() =>
+  vi.fn(async (_guildId: string, load: () => Promise<unknown>) => {
+    const round = (await load()) as {
+      announce: (points: unknown[]) => Promise<void>;
+    } | null;
+    if (round) {
+      await round.announce(await resyncLastMessage(round));
+    }
+  })
+);
 vi.mock("./four-hour-game.service.js", () => ({
-  default: { resyncLastMessage },
+  default: { syncRound: syncRoundInService },
 }));
 const announcePoint = vi.hoisted(() => vi.fn());
 vi.mock("./point-announcement.js", () => ({ announcePoint }));
@@ -37,6 +50,7 @@ const scored = (winnerId: string) => ({
 beforeEach(() => {
   vi.clearAllMocks();
   silenceLogs();
+  delay = 14_400;
   getConfigForModuleIn.mockResolvedValue(config);
   announcePoint.mockResolvedValue(undefined);
 });
@@ -64,6 +78,14 @@ describe("syncRound", () => {
 
     expect(announcePoint).toHaveBeenCalledTimes(2);
   });
+
+  it("replays nothing without a delay, like the live game", async () => {
+    delay = 0;
+
+    await syncRound(module, "guild");
+
+    expect(resyncLastMessage).not.toHaveBeenCalled();
+  });
 });
 
 describe("syncAllRounds", () => {
@@ -73,9 +95,21 @@ describe("syncAllRounds", () => {
       .mockRejectedValueOnce(new Error("Unknown Channel"))
       .mockResolvedValueOnce([scored("alice")]);
 
-    await syncAllRounds(module);
+    await syncAllRounds(module).done;
 
     expect(resyncLastMessage).toHaveBeenCalledTimes(2);
     expect(announcePoint).toHaveBeenCalledTimes(1);
+  });
+
+  it("takes every guild's queue at once, without waiting for the replays", async () => {
+    getActivatedGuildIds.mockResolvedValue(["slow", "guild"]);
+    resyncLastMessage.mockReturnValue(new Promise(() => {}));
+
+    await syncAllRounds(module).reserved;
+
+    expect(syncRoundInService.mock.calls.map((call) => call[0])).toEqual([
+      "slow",
+      "guild",
+    ]);
   });
 });

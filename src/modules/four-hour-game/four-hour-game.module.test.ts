@@ -5,10 +5,12 @@ import type { Registry } from "#lib/registry.js";
 const events = vi.hoisted(() => [] as string[]);
 
 vi.mock("#modules/four-hour-game/services/round-sync.js", () => ({
-  syncAllRounds: vi.fn(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 5));
-    events.push("sync");
-  }),
+  syncAllRounds: vi.fn(() => ({
+    reserved: Promise.resolve(),
+    done: new Promise<void>((resolve) => setTimeout(resolve, 5)).then(() => {
+      events.push("sync");
+    }),
+  })),
 }));
 
 const closeAllDays = vi.hoisted(() =>
@@ -21,8 +23,9 @@ vi.mock("#modules/four-hour-game/tasks.js", () => ({
   fourHourGameTasks: () => [],
 }));
 
+const waitForStartup = vi.hoisted(() => vi.fn());
 vi.mock("#modules/four-hour-game/services/four-hour-game.service.js", () => ({
-  default: {},
+  default: { waitForStartup },
 }));
 
 const { default: fourHourGameModule } =
@@ -38,5 +41,13 @@ describe("fourHourGameModule.onLoad", () => {
 
     expect(events).toEqual(["sync", "close"]);
     expect(closeAllDays).toHaveBeenCalledWith(client, fourHourGameModule);
+  });
+
+  it("holds live messages until every guild's queue is taken", async () => {
+    const registry = { register: vi.fn() } as unknown as Registry;
+
+    await fourHourGameModule.onLoad?.({} as Client, registry);
+
+    expect(waitForStartup).toHaveBeenCalledWith(expect.any(Promise));
   });
 });

@@ -39,7 +39,9 @@ const fourHourGameModule = defineModule({
       registry.register(task);
     }
 
-    syncAllRounds(fourHourGameModule)
+    const { reserved, done } = syncAllRounds(fourHourGameModule);
+    fourHourGameService.waitForStartup(reserved);
+    done
       .then(() => closeAllDays(client, fourHourGameModule))
       .catch((err: unknown) =>
         logger.error({ err }, "Failed to sync rounds and close days at startup")
