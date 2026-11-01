@@ -74,6 +74,9 @@ export default declareCommand<FourHourGameConfigSchema>({
       return;
     }
 
+    // Writes wait in the guild's queue, which the replay of a long downtime
+    // can hold past Discord's 3 seconds at startup.
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const member = interaction.options.getUser("member", true);
     const mention = `<@${member.id}>`;
 
@@ -88,13 +91,9 @@ export default declareCommand<FourHourGameConfigSchema>({
         logger.info(
           `Score ${result} | guildId = ${interaction.guildId} | userId = ${member.id} | score = ${score} | by = ${interaction.user.id}`
         );
-        await interaction.reply({
-          content: config.t(SET_SCORE_MESSAGES[result], {
-            user: mention,
-            score,
-          }),
-          flags: MessageFlags.Ephemeral,
-        });
+        await interaction.editReply(
+          config.t(SET_SCORE_MESSAGES[result], { user: mention, score })
+        );
         break;
       }
       case "unset": {
@@ -107,12 +106,11 @@ export default declareCommand<FourHourGameConfigSchema>({
             `Score removed | guildId = ${interaction.guildId} | userId = ${member.id} | by = ${interaction.user.id}`
           );
         }
-        await interaction.reply({
-          content: config.t(deleted ? "admin.unset.done" : "admin.unset.none", {
+        await interaction.editReply(
+          config.t(deleted ? "admin.unset.done" : "admin.unset.none", {
             user: mention,
-          }),
-          flags: MessageFlags.Ephemeral,
-        });
+          })
+        );
         break;
       }
     }
