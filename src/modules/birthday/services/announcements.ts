@@ -233,7 +233,7 @@ export function milestoneEmbed(
 export function formatPercent(probability: number, locale: string): string {
   return probability.toLocaleString(locale, {
     style: "percent",
-    maximumFractionDigits: probability > 0.99 && probability < 1 ? 1 : 0,
+    maximumFractionDigits: 1,
     roundingMode: "trunc",
   });
 }
