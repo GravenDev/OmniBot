@@ -60,6 +60,8 @@
   "show.private": "It is not announced: it only counts in the statistics.",
   "show.stored": "That is all the module stores about you, with your Discord ID. `/birthday remove` deletes it.",
 
+  "announce.hide": "Stop announcing my birthday",
+  "announce.show": "Announce my birthday",
   "twins.line": "👯 You share your birthday with {{users}}.",
   "twins.more_one": "{{count}} other member",
   "twins.more_other": "{{count}} other members",

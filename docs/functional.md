@@ -518,7 +518,7 @@ Enregistre ou modifie l'anniversaire du membre. Une date qui n'existe pas (30 f�
 
 ### `/birthday show` et `/birthday remove`
 
-Affiche ce que le module conserve sur le membre, ou le supprime. Réponses visibles du membre seul.
+Affiche ce que le module conserve sur le membre, ou le supprime. Réponses visibles du membre seul. Sous la réponse de `/birthday set` et de `/birthday show`, un bouton **Ne plus annoncer mon anniversaire** (ou **Annoncer mon anniversaire**) change ce choix sans retaper la date ; il agit toujours sur l'anniversaire de qui clique, et retire aussitôt le rôle d'anniversaire quand l'anniversaire n'est plus annoncé.
 
 ### Jumeaux d'anniversaire
 
