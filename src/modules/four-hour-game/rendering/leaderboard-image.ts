@@ -21,6 +21,10 @@ export interface LeaderboardRow extends RankedPlayer {
 export interface LeaderboardData {
   icon: Image | null;
   rows: LeaderboardRow[];
+  // The member who asked: highlighted on the page, or drawn under the table
+  // when they are not on it.
+  callerRank?: number | undefined;
+  caller?: LeaderboardRow | undefined;
 }
 
 export interface LeaderboardLabels {
@@ -46,10 +50,14 @@ export async function renderLeaderboard(
     subtitle: labels.subtitle,
     rows: [],
     footer: {
-      height: tableHeight(data.rows.length),
+      height: tableHeight(data.rows.length, data.caller !== undefined),
       draw(ctx, x, y, width) {
         drawTable<LeaderboardRow>(ctx, x, y, width, {
           rows: data.rows,
+          extra: data.caller,
+          extraAccent: ACCENT,
+          highlight: (row) =>
+            row.rank === data.callerRank ? ACCENT : undefined,
           columns: [
             ...playerColumn(
               { rank: labels.rank, player: labels.player },

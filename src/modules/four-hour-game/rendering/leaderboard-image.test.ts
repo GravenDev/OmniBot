@@ -26,4 +26,30 @@ describe("renderLeaderboard", () => {
     // Header (160) + table (52 + 10 × 58 + 12) + bottom margin (30).
     expect(png.readUInt32BE(20)).toBe(160 + 52 + 10 * 58 + 12 + 30);
   });
+
+  it("adds the caller's row under the table when they are not on it", async () => {
+    const rows = Array.from({ length: 10 }, (_, i) => ({
+      rank: i + 1,
+      name: `player${i}`,
+      score: 100 - i,
+      avatar: null,
+    }));
+    const caller = { rank: 17, name: "me", score: 3, avatar: null };
+
+    const onPage = await renderLeaderboard(
+      { icon: null, rows, callerRank: 2 },
+      labels
+    );
+    const below = await renderLeaderboard(
+      { icon: null, rows, callerRank: 17, caller },
+      labels
+    );
+
+    // Highlighting a row on the card does not change its size; the row
+    // under the table adds a gap and one row.
+    expect(onPage.readUInt32BE(20)).toBe(160 + 52 + 10 * 58 + 12 + 30);
+    expect(below.readUInt32BE(20)).toBeGreaterThan(
+      onPage.readUInt32BE(20) + 58
+    );
+  });
 });
