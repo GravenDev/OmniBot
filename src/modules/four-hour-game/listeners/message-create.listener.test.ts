@@ -15,8 +15,9 @@ vi.mock("#modules/four-hour-game/services/four-hour-game.service.js", () => ({
   default: { handleMessage, getRank },
 }));
 
-const { default: listener, buildPointEmbed } =
-  await import("./message-create.listener.js");
+const { default: listener } = await import("./message-create.listener.js");
+const { announcePoint, buildPointEmbed } =
+  await import("#modules/four-hour-game/services/point-announcement.js");
 
 beforeAll(async () => {
   silenceLogs();
@@ -39,11 +40,12 @@ const memberFetch = vi.fn();
 const userFetch = vi.fn();
 
 function fakeMessage(overrides: Record<string, unknown> = {}) {
+  const guild = {
+    members: { fetch: memberFetch },
+    client: { users: { fetch: userFetch } },
+  };
   return {
-    guild: {
-      members: { fetch: memberFetch },
-      client: { users: { fetch: userFetch } },
-    },
+    guild,
     id: "message-1",
     guildId: "guild-1",
     channelId: GAME_CHANNEL,
@@ -51,7 +53,7 @@ function fakeMessage(overrides: Record<string, unknown> = {}) {
     author: { id: "alice", bot: false },
     system: false,
     inGuild: () => true,
-    channel: { send: vi.fn() },
+    channel: { send: vi.fn(), guild, guildId: "guild-1" },
     ...overrides,
   } as unknown as Message;
 }
@@ -217,6 +219,18 @@ describe("buildPointEmbed", () => {
     );
   });
 
+  it("says when a point is caught up on restart", () => {
+    const embed = buildPointEmbed(
+      { ...announcement, rank: null },
+      config("fr"),
+      { caughtUp: true }
+    ).toJSON();
+
+    expect(embed.footer?.text).toBe("Rattrapé au redémarrage · Message posté");
+    expect(embed.timestamp).toBe(heldSince.toISOString());
+    expect(embed.description).toMatch(/\nTotal : \*\*42 points\*\*$/);
+  });
+
   it("leaves out the rank and thumbnail when they are unknown", () => {
     const embed = buildPointEmbed(
       { ...announcement, rank: null, avatarUrl: null },
@@ -225,5 +239,33 @@ describe("buildPointEmbed", () => {
 
     expect(embed.description).toMatch(/\nTotal : \*\*42 points\*\*$/);
     expect(embed.thumbnail).toBeUndefined();
+  });
+});
+
+describe("announcePoint", () => {
+  it("leaves out the rank of a caught-up point, and says it is one", async () => {
+    const send = vi.fn(async () => ({}));
+    const channel = {
+      guildId: "guild-1",
+      guild: {
+        members: { fetch: memberFetch },
+        client: { users: { fetch: userFetch } },
+      },
+      send,
+    };
+    await announcePoint(
+      channel as never,
+      { winnerId: "bob", score: 2, heldSeconds: 5 * 3600, heldSince },
+      makeTestConfig("four-hour-game", fourHourGameConfigSchema, {}, "en"),
+      { caughtUp: true }
+    );
+
+    expect(getRank).not.toHaveBeenCalled();
+    const [{ embeds }] = send.mock.calls[0] as unknown as [
+      { embeds: EmbedBuilder[] },
+    ];
+    expect(embeds[0]!.toJSON().footer?.text).toBe(
+      "Caught up on restart · Message posted"
+    );
   });
 });

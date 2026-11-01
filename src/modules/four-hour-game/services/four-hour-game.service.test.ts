@@ -1,4 +1,5 @@
 import { setTimeout as sleep } from "node:timers/promises";
+import type { TextBasedChannel } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 interface LastMessageRow {
@@ -306,12 +307,21 @@ vi.mock("#lib/database.js", () => ({
         return { count: closedDays.delete(where.guildId) ? 1 : 0 };
       },
     },
-    $transaction: (operations: Promise<unknown>[]) => Promise.all(operations),
+    $transaction(
+      this: unknown,
+      operations: Promise<unknown>[] | ((tx: unknown) => Promise<unknown>)
+    ) {
+      return typeof operations === "function"
+        ? operations(this)
+        : Promise.all(operations);
+    },
   },
 }));
 
 const { default: prisma } = await import("#lib/database.js");
 const { default: service } = await import("./four-hour-game.service.js");
+const { fetchPlayerMessages, fetchPlayerMessagesSince } =
+  await import("./channel-history.js");
 
 const DELAY = 4 * 60 * 60;
 const start = new Date("2026-10-02T10:00:00Z");
@@ -556,15 +566,26 @@ describe("FourHourGameService.setScore", () => {
     expect(scores.get(key("guild", "alice"))).toBe(7);
   });
 
+  it("refuses a score below 1, unset being the way to remove one", async () => {
+    await expect(service.setScore("guild", "alice", 0)).rejects.toThrow(
+      RangeError
+    );
+    expect(scores.has(key("guild", "alice"))).toBe(false);
+  });
+
   it("waits for the other writes of the server", async () => {
     let release!: () => void;
     const busy = service.resyncLastMessage(
       "guild",
       "game",
-      () =>
-        new Promise((resolve) => {
-          release = () => resolve([]);
-        })
+      {
+        latest: () =>
+          new Promise((resolve) => {
+            release = () => resolve([]);
+          }),
+        since: async () => [],
+      },
+      DELAY
     );
 
     const set = service.setScore("guild", "alice", 3);
@@ -778,14 +799,16 @@ describe("FourHourGameService deletions and resync", () => {
     authorId,
     sentAt,
   });
-  const history =
-    (...entries: [authorId: string, sentAt: Date][]) =>
-    async () =>
-      entries.map(([authorId, sentAt]) => ({
-        messageId: `${authorId}-${sentAt.getTime()}`,
-        authorId,
-        sentAt,
-      }));
+  const messagesOf = (entries: [authorId: string, sentAt: Date][]) =>
+    entries.map(([authorId, sentAt]) => ({
+      messageId: `${authorId}-${sentAt.getTime()}`,
+      authorId,
+      sentAt,
+    }));
+  const history = (...entries: [authorId: string, sentAt: Date][]) => {
+    const read = async () => messagesOf(entries);
+    return { latest: vi.fn(read), since: vi.fn(read) };
+  };
   const paris = (iso: string) => new Date(`${iso}+02:00`);
 
   it("falls back to the channel's real last message when the stored one is deleted", async () => {
@@ -868,7 +891,8 @@ describe("FourHourGameService deletions and resync", () => {
         ["zed", paris("2026-10-14T08:00:00")],
         ["alice", paris("2026-10-14T09:00:00")],
         ["bob", paris("2026-10-14T22:00:00")]
-      )
+      ),
+      DELAY
     );
     const closed = await service.closeDays(
       "guild",
@@ -879,6 +903,80 @@ describe("FourHourGameService deletions and resync", () => {
     expect(closed).toEqual([
       { day: "2026-10-14", userId: "alice", heldSeconds: 13 * 3600 },
     ]);
+  });
+
+  it("counts the hold from a stored message older than the open days, across its author's series", async () => {
+    closedDays.set("guild", "2026-10-14");
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T23:00:00")),
+      DELAY
+    );
+    // The reading starts at midnight and stops on alice's repost of 23:30,
+    // in the same series: the series still started at 23:00.
+    const points = await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(
+        ["alice", paris("2026-10-14T23:30:00")],
+        ["bob", paris("2026-10-15T03:10:00")]
+      ),
+      DELAY,
+      paris("2026-10-15T09:00:00")
+    );
+
+    expect(points).toEqual([
+      expect.objectContaining({
+        winnerId: "alice",
+        heldSeconds: 4 * 3600 + 10 * 60,
+      }),
+    ]);
+  });
+
+  it("pages back through a long downtime to the stored message", async () => {
+    const stored = paris("2026-10-14T08:00:00");
+    await service.handleMessage(message("alice", stored), DELAY);
+    // 150 messages from bob after alice's, beyond Discord's 100 per page.
+    const all = [
+      { author: "alice", at: stored.getTime() },
+      ...Array.from({ length: 150 }, (_, i) => ({
+        author: "bob",
+        at: stored.getTime() + 5 * 3600 * 1000 + i * 1000,
+      })),
+    ].map(({ author, at: when }) => ({
+      id: `${author}-${when}`,
+      author: { id: author, bot: false },
+      system: false,
+      createdTimestamp: when,
+      createdAt: new Date(when),
+    }));
+    const fetch = vi.fn(
+      async ({ limit, before }: { limit: number; before?: string }) => {
+        const beforeAt = all.find((m) => m.id === before)?.createdTimestamp;
+        const older = all.filter(
+          (m) => beforeAt === undefined || m.createdTimestamp < beforeAt
+        );
+        const page = older.slice(-limit).reverse();
+        return new Map(page.map((m) => [m.id, m]));
+      }
+    );
+    const channel = { messages: { fetch } } as unknown as TextBasedChannel;
+
+    const points = await service.resyncLastMessage(
+      "guild",
+      "game",
+      {
+        latest: () => fetchPlayerMessages(channel),
+        since: (since) => fetchPlayerMessagesSince(channel, since),
+      },
+      DELAY,
+      paris("2026-10-14T20:00:00")
+    );
+
+    expect(fetch.mock.calls.length).toBeGreaterThan(1);
+    expect(points).toEqual([
+      expect.objectContaining({ winnerId: "alice", heldSeconds: 5 * 3600 }),
+    ]);
+    expect(lastMessages.get("guild")?.authorId).toBe("bob");
   });
 
   it("keeps the stored message on resync when only its author posted since", async () => {
@@ -898,7 +996,8 @@ describe("FourHourGameService deletions and resync", () => {
         ["zed", paris("2026-10-14T08:00:00")],
         ["alice", paris("2026-10-14T09:00:00")],
         ["alice", paris("2026-10-14T09:30:00")]
-      )
+      ),
+      DELAY
     );
     const closed = await service.closeDays(
       "guild",
@@ -939,7 +1038,8 @@ describe("FourHourGameService deletions and resync", () => {
         ["zed", paris("2026-10-14T07:00:00")],
         ["alice", paris("2026-10-14T08:00:00")],
         ["alice", paris("2026-10-14T10:00:00")]
-      )
+      ),
+      DELAY
     );
     const result = await service.handleMessage(
       message("carol", paris("2026-10-14T12:30:00")),
@@ -948,6 +1048,112 @@ describe("FourHourGameService deletions and resync", () => {
 
     expect(result.kind).not.toBe("point");
     expect(scores.size).toBe(0);
+  });
+
+  it("credits nobody for a period the reading could not reach", async () => {
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+
+    // The page limit stopped the reading at 12:00: alice's message was not
+    // read, and who held between 08:00 and 12:00 is unknown.
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(
+        ["bob", paris("2026-10-14T12:00:00")],
+        ["carol", paris("2026-10-14T13:00:00")]
+      ),
+      DELAY
+    );
+
+    expect(dailyBests.get(key("guild", "2026-10-14"))).toMatchObject({
+      userId: "bob",
+      heldSeconds: 3600,
+    });
+    expect(lastMessages.get("guild")?.authorId).toBe("carol");
+  });
+
+  it("stores the standing message after an unread period even without a hand-over", async () => {
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(
+        ["bob", paris("2026-10-14T12:00:00")],
+        ["bob", paris("2026-10-14T12:30:00")]
+      ),
+      DELAY
+    );
+
+    expect(dailyBests.size).toBe(0);
+    expect(lastMessages.get("guild")).toMatchObject({
+      authorId: "bob",
+      sentAt: paris("2026-10-14T12:00:00"),
+    });
+  });
+
+  it("reads back to the stored message, however many were posted since", async () => {
+    await service.handleMessage(
+      message("alice", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+    const fetchHistory = history(
+      ["alice", paris("2026-10-14T08:00:00")],
+      ["bob", paris("2026-10-14T09:00:00")],
+      ["carol", paris("2026-10-14T13:00:00")]
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      fetchHistory,
+      DELAY,
+      paris("2026-10-14T14:00:00")
+    );
+
+    expect(fetchHistory.since).toHaveBeenCalledWith(
+      paris("2026-10-14T08:00:00")
+    );
+    expect(dailyBests.get(key("guild", "2026-10-14"))).toMatchObject({
+      userId: "bob",
+      heldSeconds: 4 * 3600,
+    });
+    expect(lastMessages.get("guild")?.authorId).toBe("carol");
+  });
+
+  it("reads back no further than the start of the oldest open day", async () => {
+    closedDays.set("guild", "2026-10-13");
+    await service.handleMessage(
+      message("alice", paris("2026-10-12T20:00:00")),
+      DELAY
+    );
+    const fetchHistory = history(
+      ["bob", paris("2026-10-13T23:00:00")],
+      ["carol", paris("2026-10-14T02:00:00")]
+    );
+
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      fetchHistory,
+      DELAY,
+      paris("2026-10-14T10:00:00")
+    );
+
+    expect(fetchHistory.since).toHaveBeenCalledWith(
+      paris("2026-10-14T00:00:00")
+    );
+    expect(dailyBests.get(key("guild", "2026-10-14"))).toMatchObject({
+      userId: "bob",
+      heldSeconds: 2 * 3600,
+    });
+    expect(lastMessages.get("guild")?.authorId).toBe("carol");
   });
 
   it("replays every hand-over missed while down", async () => {
@@ -968,7 +1174,8 @@ describe("FourHourGameService deletions and resync", () => {
         ["alice", paris("2026-10-14T10:00:00")],
         ["bob", paris("2026-10-14T10:30:00")],
         ["alice", paris("2026-10-14T11:30:00")]
-      )
+      ),
+      DELAY
     );
     expect(dailyBests.get(key("guild", "2026-10-14"))?.userId).toBe("zed");
     const result = await service.handleMessage(
@@ -1000,7 +1207,8 @@ describe("FourHourGameService deletions and resync", () => {
         ["bob", paris("2026-10-14T15:00:00")],
         ["alice", paris("2026-10-14T15:00:30")],
         ["carol", paris("2026-10-14T20:00:00")]
-      )
+      ),
+      DELAY
     );
     const closed = await service.closeDays(
       "guild",
@@ -1017,12 +1225,122 @@ describe("FourHourGameService deletions and resync", () => {
     await service.handleMessage(message("zed", start), DELAY);
     await service.handleMessage(message("alice", at(60)), DELAY);
 
-    await service.resyncLastMessage("guild", "game", history(["zed", start]));
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["zed", start]),
+      DELAY
+    );
 
     expect(lastMessages.get("guild")).toMatchObject({
       authorId: "zed",
       sentAt: start,
     });
+  });
+
+  it("scores the 4h points of the replies seen while down, and returns them", async () => {
+    await service.handleMessage(message("zed", start), DELAY);
+
+    // zed held 5h before alice replied, alice 1h before bob: one point.
+    const caughtUp = await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["zed", start], ["alice", at(5 * 3600)], ["bob", at(6 * 3600)]),
+      DELAY
+    );
+
+    expect(caughtUp).toEqual([
+      { winnerId: "zed", score: 1, heldSeconds: 5 * 3600, heldSince: start },
+    ]);
+    expect(scores.get(key("guild", "zed"))).toBe(1);
+    expect(points).toEqual([
+      expect.objectContaining({
+        userId: "zed",
+        heldSeconds: 5 * 3600,
+        awardedAt: at(5 * 3600),
+      }),
+    ]);
+  });
+
+  it("writes the caught-up points and the new last message in one transaction", async () => {
+    await service.handleMessage(message("zed", start), DELAY);
+    const transaction = vi.spyOn(prisma, "$transaction");
+
+    // Two points: zed held 5h, then alice 5h, before bob.
+    const caughtUp = await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["zed", start], ["alice", at(5 * 3600)], ["bob", at(10 * 3600)]),
+      DELAY
+    );
+
+    expect(caughtUp.map(({ winnerId, score }) => [winnerId, score])).toEqual([
+      ["zed", 1],
+      ["alice", 1],
+    ]);
+    // Score and point for each, then the last message: all or nothing.
+    expect(transaction).toHaveBeenCalledOnce();
+    expect(lastMessages.get("guild")?.authorId).toBe("bob");
+    transaction.mockRestore();
+  });
+
+  it("writes the best hold of each replayed day once, the first to reach it", async () => {
+    closedDays.set("guild", "2026-10-13");
+    await service.handleMessage(
+      message("zed", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+    const upsert = vi.spyOn(prisma.fourHourGameDailyBest, "upsert");
+
+    // zed 1h, alice 3h, bob 3h too: alice reached it first.
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(
+        ["zed", paris("2026-10-14T08:00:00")],
+        ["alice", paris("2026-10-14T09:00:00")],
+        ["bob", paris("2026-10-14T12:00:00")],
+        ["carol", paris("2026-10-14T15:00:00")]
+      ),
+      DELAY,
+      paris("2026-10-14T16:00:00")
+    );
+
+    expect(upsert).toHaveBeenCalledOnce();
+    expect(dailyBests.get(key("guild", "2026-10-14"))).toMatchObject({
+      userId: "alice",
+      heldSeconds: 3 * 3600,
+    });
+    upsert.mockRestore();
+  });
+
+  it("forgets the stored message when no player message is left after a restart", async () => {
+    await service.handleMessage(message("alice", start), DELAY);
+
+    // Every player message was deleted while down: none can hold the
+    // channel, as after a live deletion of the last one.
+    await service.resyncLastMessage("guild", "game", history(), DELAY);
+
+    expect(lastMessages.has("guild")).toBe(false);
+  });
+
+  it("replays the replies that followed a message deleted while down", async () => {
+    await service.handleMessage(message("zed", start), DELAY);
+    await service.handleMessage(message("alice", at(60)), DELAY);
+
+    // alice's message is deleted while down: like a live deletion, zed's
+    // message is back in place, and bob then carol replied to it.
+    await service.resyncLastMessage(
+      "guild",
+      "game",
+      history(["zed", start], ["bob", at(7200)], ["carol", at(10800)]),
+      DELAY
+    );
+
+    expect([...dailyBests.values()]).toEqual([
+      expect.objectContaining({ userId: "zed", heldSeconds: 7200 }),
+    ]);
+    expect(lastMessages.get("guild")?.authorId).toBe("carol");
   });
 
   it("credits nothing on resync for a message stored in another channel", async () => {
@@ -1034,7 +1352,8 @@ describe("FourHourGameService deletions and resync", () => {
     await service.resyncLastMessage(
       "guild",
       "game",
-      history(["bob", at(3600)])
+      history(["bob", at(3600)]),
+      DELAY
     );
 
     expect(dailyBests.size).toBe(0);
@@ -1054,6 +1373,7 @@ describe("FourHourGameService deletions and resync", () => {
       "guild",
       "game",
       history(["bob", paris("2026-10-11T09:00:00")]),
+      DELAY,
       paris("2026-10-14T10:00:00")
     );
 
@@ -1067,7 +1387,8 @@ describe("FourHourGameService deletions and resync", () => {
     await service.resyncLastMessage(
       "guild",
       "game",
-      history(["dave", at(3600)])
+      history(["dave", at(3600)]),
+      DELAY
     );
 
     expect(lastMessages.get("guild")).toMatchObject({

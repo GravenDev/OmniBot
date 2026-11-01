@@ -1,4 +1,4 @@
-import prisma from "#lib/database.js";
+import prisma, { type Prisma } from "#lib/database.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { RevisionCounter } from "#lib/revision-cache.js";
@@ -6,27 +6,76 @@ import { declareService, type Service } from "#lib/service.js";
 import { standingOf } from "./channel-history.js";
 import {
   dayOf,
+  nextDay,
   previousDay,
   splitHold,
   startOfDay,
   type DayHold,
 } from "./daily.js";
-import { evaluateMessage, type MessageOutcome } from "./game-rules.js";
+import {
+  evaluateMessage,
+  type MessageOutcome,
+  replayMessages,
+} from "./game-rules.js";
 import { computeProfileStats, type ProfileStats } from "./profile.js";
 import type {
   ChannelMessage,
   GameMessage,
-  HistoryFetcher,
+  HistoryReader,
   LatestMessageFetcher,
 } from "./types.js";
 
 const logger = loggerMaker("four-hour-game");
+
+// The write of the last message, or its removal when none is left.
+function lastMessageWrite(
+  guildId: string,
+  channelId: string,
+  latest: ChannelMessage | null,
+  db: Prisma.TransactionClient = prisma
+) {
+  return latest
+    ? db.fourHourGameLastMessage.upsert({
+        where: { guildId },
+        create: { guildId, channelId, ...latest },
+        update: { channelId, ...latest },
+      })
+    : db.fourHourGameLastMessage.deleteMany({ where: { guildId } });
+}
+
+// The writes of a 4h point: the winner's score, and the point itself.
+function pointWrites(
+  guildId: string,
+  winnerId: string,
+  heldSeconds: number,
+  awardedAt: Date,
+  db: Prisma.TransactionClient = prisma
+) {
+  return [
+    db.fourHourGameScore.upsert({
+      where: { guildId_userId: { guildId, userId: winnerId } },
+      create: { guildId, userId: winnerId, score: 1 },
+      update: { score: { increment: 1 } },
+    }),
+    db.fourHourGamePoint.create({
+      data: { guildId, userId: winnerId, heldSeconds, awardedAt },
+    }),
+  ] as const;
+}
 
 export type MessageResult =
   | Exclude<MessageOutcome, { kind: "point" }>
   | (Extract<MessageOutcome, { kind: "point" }> & { score: number });
 
 export type SetScoreResult = "created" | "updated";
+
+/** A 4h point, with its winner's new score: for its announcement. */
+export interface ScoredPoint {
+  winnerId: string;
+  score: number;
+  heldSeconds: number;
+  heldSince: Date;
+}
 
 export interface PlayerRank {
   rank: number;
@@ -105,26 +154,17 @@ class FourHourGameService implements Service {
       return outcome;
     }
 
-    const [winner] = await prisma.$transaction([
-      prisma.fourHourGameScore.upsert({
-        where: { guildId_userId: { guildId, userId: outcome.winnerId } },
-        create: { guildId, userId: outcome.winnerId, score: 1 },
-        update: { score: { increment: 1 } },
-      }),
-      recordMessage,
-      prisma.fourHourGamePoint.create({
-        data: {
-          guildId,
-          userId: outcome.winnerId,
-          heldSeconds: outcome.heldSeconds,
-          awardedAt: sentAt,
-        },
-      }),
-    ]);
+    const [winner, point] = pointWrites(
+      guildId,
+      outcome.winnerId,
+      outcome.heldSeconds,
+      sentAt
+    );
+    const [score] = await prisma.$transaction([winner, recordMessage, point]);
 
     await this.recordDailyHold(guildId, held, sentAt);
     this.bumpRevision(guildId);
-    return { ...outcome, score: winner.score };
+    return { ...outcome, score: score.score };
   }
 
   private async getClosedDay(guildId: string, now: Date): Promise<string> {
@@ -297,57 +337,120 @@ class FourHourGameService implements Service {
   resyncLastMessage(
     guildId: string,
     channelId: string,
-    fetchHistory: HistoryFetcher,
+    history: HistoryReader,
+    delaySeconds: number,
     now: Date = new Date()
-  ): Promise<void> {
-    return this.queue.run(guildId, async () => {
-      const last = await prisma.fourHourGameLastMessage.findUnique({
-        where: { guildId },
-      });
-      const history = await fetchHistory();
-      if (!last || last.channelId !== channelId) {
-        await this.storeLastMessage(guildId, channelId, standingOf(history));
-        return;
-      }
+  ): Promise<ScoredPoint[]> {
+    return this.queue.run(guildId, () =>
+      this.replayDowntime(guildId, channelId, history, delaySeconds, now)
+    );
+  }
 
-      const oldest = history[0];
-      const deleted =
-        !history.some((message) => message.messageId === last.messageId) &&
-        (!oldest || oldest.sentAt <= last.sentAt);
-      if (deleted) {
-        await this.storeLastMessage(guildId, channelId, standingOf(history));
-        return;
-      }
+  /**
+   * Replays the messages posted while the bot was down, as if they had been
+   * seen live: the holds count for the point of the day, and a reply after
+   * `delaySeconds` scores the 4h point. Returns those points, oldest first.
+   * Runs within the guild's queue.
+   */
+  private async replayDowntime(
+    guildId: string,
+    channelId: string,
+    history: HistoryReader,
+    delaySeconds: number,
+    now: Date
+  ): Promise<ScoredPoint[]> {
+    const last = await prisma.fourHourGameLastMessage.findUnique({
+      where: { guildId },
+    });
+    if (!last || last.channelId !== channelId) {
+      const latest = await history.latest();
+      await lastMessageWrite(guildId, channelId, standingOf(latest));
+      return [];
+    }
 
-      const holds: { authorId: string; from: Date; to: Date }[] = [];
-      let current: ChannelMessage = last;
-      for (const message of history) {
-        if (
-          message.sentAt > last.sentAt &&
-          message.authorId !== current.authorId
-        ) {
-          holds.push({
-            authorId: current.authorId,
-            from: current.sentAt,
-            to: message.sentAt,
-          });
-          current = message;
+    // Only the days not closed yet can be credited: reading further back
+    // than their start would be useless.
+    const closedDay = await this.getClosedDay(guildId, now);
+    const openSince = startOfDay(nextDay(closedDay));
+    const since = last.sentAt < openSince ? openSince : last.sentAt;
+    const read = await history.since(since);
+    const found = read.some((message) => message.messageId === last.messageId);
+
+    // When the stored message was not read, the replay starts at the one in
+    // place at its time: the stored one was deleted while down (the
+    // previous message is back in place, as with a live deletion), or it is
+    // older than the open days. If the page limit stopped the reading
+    // first, it starts at the oldest message read, and the period it could
+    // not reach is credited to nobody.
+    let start: ChannelMessage | null = found
+      ? last
+      : (standingOf(read.filter((message) => message.sentAt <= since)) ??
+        read[0] ??
+        null);
+    // A stored message older than the open days is never read. When the
+    // reading stopped inside its author's later series, the series still
+    // started with it: the hold counts from it, as it would have live.
+    if (
+      start &&
+      !found &&
+      last.sentAt < since &&
+      start.authorId === last.authorId &&
+      start.sentAt >= last.sentAt
+    ) {
+      start = last;
+    }
+    if (!start) {
+      // No player message is left: none holds the channel, as after a live
+      // deletion of the last one.
+      await lastMessageWrite(guildId, channelId, null);
+      return [];
+    }
+    const {
+      holds,
+      points,
+      last: current,
+    } = replayMessages(start, read, delaySeconds);
+    if (holds.length === 0 && found) {
+      return [];
+    }
+
+    // Only the longest hold of each day counts: keep it (the first to reach
+    // it on a tie, as live), then write each day once. Replaying the daily
+    // holds again changes nothing, unlike the 4h points: those are written
+    // in one transaction with the new last message, so a replay cut short
+    // scores none of them and the next start replays it whole.
+    const bestOfDay = new Map<string, { userId: string; seconds: number }>();
+    for (const hold of holds) {
+      for (const { day, seconds } of splitHold(hold.from, hold.to, closedDay)) {
+        if (seconds > (bestOfDay.get(day)?.seconds ?? 0)) {
+          bestOfDay.set(day, { userId: hold.authorId, seconds });
         }
       }
-      if (holds.length === 0) {
-        return;
-      }
-
-      const closedDay = await this.getClosedDay(guildId, now);
-      for (const hold of holds) {
-        await this.creditHolds(
+    }
+    for (const [day, { userId, seconds }] of bestOfDay) {
+      await this.creditHolds(guildId, userId, [{ day, seconds }]);
+    }
+    const scored = await prisma.$transaction(async (tx) => {
+      const written: ScoredPoint[] = [];
+      for (const { winnerId, heldSeconds, heldSince, awardedAt } of points) {
+        const [winner, point] = pointWrites(
           guildId,
-          hold.authorId,
-          splitHold(hold.from, hold.to, closedDay)
+          winnerId,
+          heldSeconds,
+          awardedAt,
+          tx
         );
+        const { score } = await winner;
+        await point;
+        written.push({ winnerId, score, heldSeconds, heldSince });
       }
-      await this.storeLastMessage(guildId, channelId, current);
+      await lastMessageWrite(guildId, channelId, current, tx);
+      return written;
     });
+    if (scored.length > 0) {
+      this.bumpRevision(guildId);
+    }
+    return scored;
   }
 
   handleDeletion(
@@ -367,24 +470,8 @@ class FourHourGameService implements Service {
       ) {
         return false;
       }
-      await this.storeLastMessage(guildId, channelId, await fetchLatest());
+      await lastMessageWrite(guildId, channelId, await fetchLatest());
       return true;
-    });
-  }
-
-  private async storeLastMessage(
-    guildId: string,
-    channelId: string,
-    latest: ChannelMessage | null
-  ): Promise<void> {
-    if (!latest) {
-      await prisma.fourHourGameLastMessage.deleteMany({ where: { guildId } });
-      return;
-    }
-    await prisma.fourHourGameLastMessage.upsert({
-      where: { guildId },
-      create: { guildId, channelId, ...latest },
-      update: { channelId, ...latest },
     });
   }
 
@@ -400,6 +487,10 @@ class FourHourGameService implements Service {
     userId: string,
     score: number
   ): Promise<SetScoreResult> {
+    // /jd4h-admin set asks for 1 at least: unset removes a score.
+    if (!Number.isInteger(score) || score < 1) {
+      throw new RangeError(`Invalid score: ${score}`);
+    }
     return this.queue.run(guildId, async () => {
       const existing = await this.getScore(guildId, userId);
       await prisma.fourHourGameScore.upsert({

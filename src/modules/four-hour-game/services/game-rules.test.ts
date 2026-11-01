@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { evaluateMessage } from "./game-rules.js";
+import { evaluateMessage, replayMessages } from "./game-rules.js";
 
 const FOUR_HOURS = 4 * 60 * 60;
 const start = new Date("2026-10-02T10:00:00Z");
@@ -95,5 +95,63 @@ describe("evaluateMessage", () => {
         FOUR_HOURS
       )
     ).toEqual({ kind: "first" });
+  });
+});
+
+describe("replayMessages", () => {
+  const hour = 3600 * 1000;
+  const base = new Date("2026-10-14T08:00:00Z").getTime();
+  const msg = (authorId: string, hours: number) => ({
+    messageId: `${authorId}-${hours}`,
+    authorId,
+    sentAt: new Date(base + hours * hour),
+  });
+  const delay = 4 * 3600;
+
+  it("scores like a live reply, and moves the message in place", () => {
+    const start = msg("zed", 0);
+    const replay = replayMessages(
+      start,
+      [start, msg("alice", 5), msg("alice", 6), msg("bob", 7)],
+      delay
+    );
+
+    expect(replay.holds).toEqual([
+      { authorId: "zed", from: start.sentAt, to: msg("alice", 5).sentAt },
+      {
+        authorId: "alice",
+        from: msg("alice", 5).sentAt,
+        to: msg("bob", 7).sentAt,
+      },
+    ]);
+    expect(replay.points).toEqual([
+      {
+        winnerId: "zed",
+        heldSeconds: 5 * 3600,
+        heldSince: start.sentAt,
+        awardedAt: msg("alice", 5).sentAt,
+      },
+    ]);
+    expect(replay.last).toEqual(msg("bob", 7));
+  });
+
+  it("follows evaluateMessage on the delay", () => {
+    const start = msg("zed", 0);
+    const reply = msg("alice", 4);
+    const live = evaluateMessage(
+      { channelId: "c", ...start },
+      { channelId: "c", ...reply },
+      delay
+    );
+
+    expect(live.kind).toBe("point");
+    expect(replayMessages(start, [reply], delay).points).toHaveLength(1);
+  });
+
+  it("ignores the messages read up to the one in place", () => {
+    const start = msg("zed", 2);
+    expect(
+      replayMessages(start, [msg("alice", 1), start], delay).holds
+    ).toEqual([]);
   });
 });
