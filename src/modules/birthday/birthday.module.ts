@@ -7,6 +7,7 @@ import birthdayCommand from "./commands/birthday.command.js";
 import guildMemberRemoveListener from "./listeners/guild-member-remove.listener.js";
 import birthdayService from "./services/birthday.service.js";
 import { uninstallWarning } from "./services/uninstall.js";
+import { birthdayTasks } from "./tasks.js";
 
 const logger = loggerMaker("birthday");
 
@@ -31,6 +32,9 @@ const birthdayModule = defineModule({
     registry.register(birthdayCommand);
     registry.register(birthdayAdminCommand);
     registry.register(guildMemberRemoveListener);
+    for (const task of birthdayTasks(birthdayModule)) {
+      registry.register(task);
+    }
   },
 
   onInstall(_client, guild) {
