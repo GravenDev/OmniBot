@@ -4,9 +4,11 @@ import type { Registry } from "#lib/registry.js";
 
 const events = vi.hoisted(() => [] as string[]);
 
+// Settled as soon as every guild's queue is taken; `done` comes later.
+const reserved = vi.hoisted(() => Promise.resolve());
 vi.mock("#modules/four-hour-game/services/round-sync.js", () => ({
   syncAllRounds: vi.fn(() => ({
-    reserved: Promise.resolve(),
+    reserved,
     done: new Promise<void>((resolve) => setTimeout(resolve, 5)).then(() => {
       events.push("sync");
     }),
@@ -48,6 +50,7 @@ describe("fourHourGameModule.onLoad", () => {
 
     await fourHourGameModule.onLoad?.({} as Client, registry);
 
-    expect(waitForStartup).toHaveBeenCalledWith(expect.any(Promise));
+    // Not `done`: a guild would otherwise wait for the slowest replay.
+    expect(waitForStartup.mock.calls.at(-1)![0]).toBe(reserved);
   });
 });

@@ -387,18 +387,6 @@ class FourHourGameService implements Service {
     });
   }
 
-  resyncLastMessage(
-    guildId: string,
-    channelId: string,
-    history: HistoryReader,
-    delaySeconds: number,
-    now: Date = new Date()
-  ): Promise<ScoredPoint[]> {
-    return this.queue.run(guildId, () =>
-      this.replayDowntime(guildId, channelId, history, delaySeconds, now)
-    );
-  }
-
   /**
    * Replays the messages posted while the bot was down, as if they had been
    * seen live: the holds count for the point of the day, and a reply after
@@ -443,12 +431,15 @@ class FourHourGameService implements Service {
         read[0] ??
         null);
     // A stored message older than the open days is never read. When the
-    // reading stopped inside its author's later series, the series still
-    // started with it: the hold counts from it, as it would have live.
+    // reading reached their start inside its author's later series, the
+    // series still started with it: the hold counts from it, as it would
+    // have live. Not when the page limit stopped the reading first: the
+    // period it could not reach is credited to nobody.
     if (
       start &&
       !found &&
       last.sentAt < since &&
+      read.some((message) => message.sentAt <= since) &&
       start.authorId === last.authorId &&
       start.sentAt >= last.sentAt
     ) {
