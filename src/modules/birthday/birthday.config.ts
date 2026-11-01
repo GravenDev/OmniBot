@@ -40,6 +40,13 @@ export const birthdayConfigSchema = {
     type: ConfigType.BOOLEAN,
     defaultValue: true,
   },
+  monthlyCalendar: {
+    name: "Monthly calendar",
+    description:
+      "On the 1st of each month, post a calendar of the month's birthdays (members who chose to be announced only).",
+    type: ConfigType.BOOLEAN,
+    defaultValue: true,
+  },
 } satisfies ConfigSchema;
 
 export type BirthdayConfigSchema = typeof birthdayConfigSchema;

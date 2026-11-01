@@ -33,6 +33,7 @@ import {
   pickGuildMessage,
 } from "./announcements.js";
 import birthdayService, { type BirthdayEntry } from "./birthday.service.js";
+import { postMonthlyCalendar } from "./calendar.js";
 import { logFailure } from "./failures.js";
 
 const logger = loggerMaker("birthday");
@@ -221,13 +222,17 @@ export async function runGuildDay(
   if (!(await birthdayService.claimDay(guildId, day))) {
     return;
   }
-  await announceBirthdays(
-    guild,
-    config,
-    members,
-    localTime(now, config.get("timeZone"))
-  ).catch((err: unknown) =>
+  const today = localTime(now, config.get("timeZone"));
+  await announceBirthdays(guild, config, members, today).catch((err: unknown) =>
     logFailure(err, `Failed to announce the birthdays | guildId = ${guildId}`)
+  );
+  // After the wishes, and on its own: a calendar is not worth losing them.
+  await postMonthlyCalendar(guildId, config, members, today).catch(
+    (err: unknown) =>
+      logFailure(
+        err,
+        `Failed to post the birthday calendar | guildId = ${guildId}`
+      )
   );
   logger.info(`Day announced | guildId = ${guildId} | day = ${day}`);
 }
