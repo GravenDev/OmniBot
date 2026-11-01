@@ -111,6 +111,25 @@ docker compose --env-file .env.prod -f compose.prod.yaml logs -f bot
 Updating is then the same two commands: `pull`, then `up -d` — compose recreates
 only what changed.
 
+The containers log to the host's journal (`journald` driver), so the logs
+survive a deploy, which recreates the bot's container: with Docker's default
+`json-file` driver, they would be deleted with it. The host must run
+systemd-journald. `docker compose logs` keeps working, and the journal reads
+further back, across deploys:
+
+```bash
+journalctl CONTAINER_NAME=omnibot-bot-1 --since "2 days ago"   # one container
+journalctl -t omnibot-bot-1 -f                                 # follow it
+```
+
+`omnibot-bot-1` is the name compose gives the bot's container; a Portainer
+stack may name it after the stack instead — `docker ps` shows the real name.
+On Ubuntu, the journal is kept on disk (`/var/log/journal`), so the logs also
+survive a reboot of the host.
+
+How long they are kept is the journal's setting (`SystemMaxUse`,
+`MaxRetentionSec` in `/etc/systemd/journald.conf`), not the stack's.
+
 The images come from the multi-stage `Dockerfile` (Node 24 on Alpine, non-root
 user, `tini` as PID 1), built by CI on every pull request and published on tag.
 
