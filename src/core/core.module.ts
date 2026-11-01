@@ -11,6 +11,10 @@ import type { CoreConfig } from "./core.config.js";
 import { coreConfigSchema } from "./core.config.js";
 import configPageButton from "./interactions/config-page.button.js";
 import configureModuleButton from "./interactions/configure-module.button.js";
+import {
+  disableModuleCancelButton,
+  disableModuleConfirmButton,
+} from "./interactions/disable-module-confirm.button.js";
 import disableModuleButton from "./interactions/disable-module.button.js";
 import enableModuleButton from "./interactions/enable-module.button.js";
 import modulesPageButton from "./interactions/modules-page.button.js";
@@ -47,6 +51,8 @@ export default defineModule({
 
     registry.register(enableModuleButton);
     registry.register(disableModuleButton);
+    registry.register(disableModuleConfirmButton);
+    registry.register(disableModuleCancelButton);
     registry.register(modulesPageButton);
 
     registry.register(configureModuleButton);

@@ -129,6 +129,7 @@ interface ModuleDeclaration {
   onUninstall: (client: Client, guild: Guild, registry: Registry) => void;
   maintenanceTasks?: () => ScheduledTask[];
   deleteMemberData?: (guildId: string, userId: string) => Promise<void>;
+  uninstallWarning?: (guildId: string, t: TFunction) => Promise<string | null>;
 }
 ```
 
@@ -140,8 +141,11 @@ interface ModuleDeclaration {
 | `onInstall`        | Module enabled on a guild                  | Create roles, send welcome messages, initialize data                 |
 | `onUninstall`      | Module disabled on a guild                 | Clean up data, remove roles, delete configurations                   |
 | `deleteMemberData` | A member runs `/privacy delete` on a guild | Delete every row the module keeps about that member on that guild    |
+| `uninstallWarning` | An admin clicks **Disable** in `/modules`  | Say what disabling would delete on the guild, before it happens      |
 
 A module that stores anything tied to a member's ID must implement `deleteMemberData`, and say what it stores in the privacy policy (`docs/site/*/legal/privacy.md`). It runs whether or not the module is enabled on the guild, and also for a module skipped because Discord has not granted its privileged intent.
+
+A module whose `onUninstall` deletes data an administrator cannot restore (data each member entered themselves, say) should implement `uninstallWarning`. It returns the text to show, written with the module's own `t` in the guild's locale, such as how many entries would go, or `null` when nothing would be lost. `/modules` then replaces its panel with that warning and a **Disable and delete** button, and only disables the module once it is pressed; **Cancel** brings the panel back. If the hook throws, the panel still asks for confirmation, with a generic text.
 
 Purges of stored data belong in `maintenanceTasks`, not in tasks registered from `onLoad`: they are scheduled for every discovered module, including one skipped because Discord has not granted its privileged intent, so the retention periods of the privacy policy hold in every case.
 

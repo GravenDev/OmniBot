@@ -127,19 +127,23 @@ interface ModuleDeclaration {
   onUninstall: (client: Client, guild: Guild, registry: Registry) => void;
   maintenanceTasks?: () => ScheduledTask[];
   deleteMemberData?: (guildId: string, userId: string) => Promise<void>;
+  uninstallWarning?: (guildId: string, t: TFunction) => Promise<string | null>;
 }
 ```
 
 ### Cycles de vie
 
-| Hook               | Quand                                            | Utilisation typique                                                         |
-| ------------------ | ------------------------------------------------ | --------------------------------------------------------------------------- |
-| `onLoad`           | Démarrage du bot                                 | Enregistrer commandes, écouteurs, interactions via `registry.register()`    |
-| `onInstall`        | Module activé sur un serveur                     | Créer des rôles, envoyer des messages de bienvenue, initialiser des données |
-| `onUninstall`      | Module désactivé sur un serveur                  | Nettoyer les données, supprimer les rôles, effacer les configurations       |
-| `deleteMemberData` | Un membre lance `/privacy delete` sur un serveur | Supprimer tout ce que le module garde sur ce membre sur ce serveur          |
+| Hook               | Quand                                              | Utilisation typique                                                              |
+| ------------------ | -------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `onLoad`           | Démarrage du bot                                   | Enregistrer commandes, écouteurs, interactions via `registry.register()`         |
+| `onInstall`        | Module activé sur un serveur                       | Créer des rôles, envoyer des messages de bienvenue, initialiser des données      |
+| `onUninstall`      | Module désactivé sur un serveur                    | Nettoyer les données, supprimer les rôles, effacer les configurations            |
+| `deleteMemberData` | Un membre lance `/privacy delete` sur un serveur   | Supprimer tout ce que le module garde sur ce membre sur ce serveur               |
+| `uninstallWarning` | Un admin clique sur **Désactiver** dans `/modules` | Dire ce que la désactivation supprimerait sur ce serveur, avant qu'elle ait lieu |
 
 Un module qui enregistre quoi que ce soit lié à l'ID d'un membre doit implémenter `deleteMemberData`, et décrire ce qu'il enregistre dans la politique de confidentialité (`docs/site/*/legal/privacy.md`). Il est appelé que le module soit activé ou non sur le serveur, et aussi pour un module écarté parce que Discord n'a pas accordé son intention privilégiée.
+
+Un module dont `onUninstall` supprime des données qu'un administrateur ne peut pas restaurer (des données saisies par chaque membre, par exemple) doit implémenter `uninstallWarning`. Il renvoie le texte à afficher, écrit avec le `t` du module dans la langue du serveur, par exemple le nombre d'entrées qui disparaîtraient, ou `null` quand rien ne serait perdu. `/modules` remplace alors son panneau par cet avertissement et un bouton **Désactiver et supprimer**, et ne désactive le module qu'une fois ce bouton pressé ; **Annuler** ramène le panneau. Si le hook lève une erreur, le panneau demande quand même confirmation, avec un texte générique.
 
 Les purges de données stockées vont dans `maintenanceTasks`, pas dans des tâches enregistrées depuis `onLoad` : elles sont planifiées pour chaque module découvert, y compris un module écarté parce que Discord n'a pas accordé son intention privilégiée, pour que les durées de conservation de la politique de confidentialité tiennent dans tous les cas.
 
