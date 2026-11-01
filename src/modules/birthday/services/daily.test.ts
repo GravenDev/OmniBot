@@ -1,4 +1,9 @@
-import { Collection, type Client, type GuildMember } from "discord.js";
+import {
+  Collection,
+  DiscordAPIError,
+  type Client,
+  type GuildMember,
+} from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConfigData } from "#lib/config.js";
 import type { Module } from "#lib/module.js";
@@ -32,6 +37,13 @@ vi.mock("#core/services/mention.service.js", () => ({
   },
 }));
 
+const renderBirthdayCard = vi.hoisted(() => vi.fn());
+vi.mock("../rendering/birthday-card.js", () => ({
+  renderBirthdayCard,
+  SHOWN_AVATARS: 3,
+}));
+vi.mock("#lib/imaging.js", () => ({ fetchAvatar: async () => null }));
+
 const { announcedCelebrants, runGuildDay } = await import("./daily.js");
 
 const module = { id: "birthday" } as unknown as Module<BirthdayConfigSchema>;
@@ -39,6 +51,7 @@ const module = { id: "birthday" } as unknown as Module<BirthdayConfigSchema>;
 function member(id: string, joinedAt: string, bot = false) {
   return {
     id,
+    displayName: id,
     joinedAt: new Date(joinedAt),
     user: { bot },
     roles: {
@@ -90,6 +103,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  renderBirthdayCard.mockReturnValue(Buffer.from("png"));
   service.claimDay.mockResolvedValue(true);
   service.getState.mockResolvedValue({
     lastDay: "2026-10-15",
@@ -136,17 +150,54 @@ describe("runGuildDay", () => {
   });
 
   it("purges departed members, then wishes today's birthdays", async () => {
-    const { client, send } = setup();
+    const { client, send } = setup({ messages: ["Bravo {user} !"] });
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
 
     expect(service.removeMany).toHaveBeenCalledWith("guild-1", ["gone"]);
-    const contents = send.mock.calls.map(
-      (call) => (call as unknown as [{ content: string }])[0].content
+    expect(send).toHaveBeenCalledTimes(1);
+    const [{ content, files }] = send.mock.calls[0] as unknown as [
+      { content: string; files: { description: string }[] },
+    ];
+    expect(content).toBe("🎂 Joyeux anniversaire <@alice> !");
+    expect(renderBirthdayCard).toHaveBeenCalledWith(
+      [{ name: "alice", avatar: null }],
+      expect.objectContaining({
+        message: expect.objectContaining({ text: "Bravo alice !" }),
+      })
     );
-    expect(contents).toHaveLength(1);
-    expect(contents[0]).toContain("<@alice>");
-    expect(contents[0]).not.toContain("quiet");
-    expect(contents[0]).not.toContain("gone");
+    expect(files[0]!.description).toContain("« Bravo alice ! »");
+  });
+
+  it("falls back to the text wish when the card cannot be drawn", async () => {
+    renderBirthdayCard.mockImplementation(() => {
+      throw new Error("no canvas");
+    });
+    const { client, send } = setup({ messages: ["Bravo {user} !"] });
+    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    expect(send).toHaveBeenCalledWith({
+      content: "Bravo <@alice> !",
+      allowedMentions: { users: ["alice"] },
+    });
+  });
+
+  it("falls back to the text wish when Discord refuses the card", async () => {
+    const { client, send } = setup();
+    send.mockRejectedValueOnce(
+      new DiscordAPIError(
+        { code: 50013, message: "Missing Permissions" },
+        50013,
+        403,
+        "POST",
+        "/channels/chan/messages",
+        {}
+      )
+    );
+    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send).toHaveBeenLastCalledWith({
+      content: expect.stringContaining("<@alice>"),
+      allowedMentions: { users: ["alice"] },
+    });
   });
 
   it("only mentions the members who accept it", async () => {
