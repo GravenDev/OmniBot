@@ -11,6 +11,8 @@
   "point.total_other": "Total: **{{count}} points**",
   "point.postedAt": "Message posted",
   "point.caughtUpPostedAt": "Caught up on restart · Message posted",
+  "point.countedFrom": "Counted since",
+  "point.caughtUpCountedFrom": "Caught up on restart · Counted since",
 
   "daily.title": "Daily point",
   "daily.description": "{{user}} wins the point for {{date}}: their message went unanswered for **{{duration}}**, longer than any other that day.",

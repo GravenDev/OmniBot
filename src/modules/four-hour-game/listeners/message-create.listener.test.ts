@@ -175,6 +175,7 @@ describe("buildPointEmbed", () => {
     score: 42,
     heldSeconds: 4 * 3600 + 12 * 60 + 5,
     heldSince,
+    countedFrom: heldSince,
     rank: { rank: 3, total: 17 },
     avatarUrl: "https://cdn/bob.png",
   };
@@ -229,6 +230,26 @@ describe("buildPointEmbed", () => {
     expect(embed.footer?.text).toBe("Rattrapé au redémarrage · Message posté");
     expect(embed.timestamp).toBe(heldSince.toISOString());
     expect(embed.description).toMatch(/\nTotal : \*\*42 points\*\*$/);
+  });
+
+  it("gives the time the duration counts from, for a message back in place", () => {
+    const countedFrom = new Date(heldSince.getTime() + 5 * 3600 * 1000);
+    const live = buildPointEmbed(
+      { ...announcement, countedFrom },
+      config("fr")
+    ).toJSON();
+    const caughtUp = buildPointEmbed(
+      { ...announcement, rank: null, countedFrom },
+      config("fr"),
+      { caughtUp: true }
+    ).toJSON();
+
+    expect(live.footer?.text).toBe("Compté depuis");
+    expect(live.timestamp).toBe(countedFrom.toISOString());
+    expect(caughtUp.footer?.text).toBe(
+      "Rattrapé au redémarrage · Compté depuis"
+    );
+    expect(caughtUp.timestamp).toBe(countedFrom.toISOString());
   });
 
   it("leaves out the rank and thumbnail when they are unknown", () => {
