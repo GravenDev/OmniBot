@@ -10,7 +10,48 @@ import {
   formatPercent,
   milestoneEmbed,
   pickGuildMessage,
+  plainMessage,
 } from "./announcements.js";
+
+describe("plainMessage", () => {
+  const names = {
+    user: (id: string) => ({ "1": "Camille" })[id],
+    role: (id: string) => ({ "2": "Modération" })[id],
+    channel: (id: string) => ({ "3": "général" })[id],
+  };
+
+  it("turns mentions into names and drops unknown ones", () => {
+    expect(
+      plainMessage("Bravo <@1>, <@!1> et <@9> ! <@&2> <#3>", names, "fr")
+    ).toBe("Bravo @Camille, @Camille et ! @Modération #général");
+  });
+
+  it("keeps emojis, commands and dates readable", () => {
+    expect(
+      plainMessage(
+        "<:gateau:123> <a:fete:456> </birthday set:789> <t:1793534400:D>",
+        names,
+        "fr"
+      )
+    ).toBe(":gateau: :fete: /birthday set 1 novembre 2026");
+  });
+
+  it("removes the formatting marks", () => {
+    expect(
+      plainMessage(
+        "# Bravo\n> **toi** et *vous* ~~pas~~ __lui__ ||secret|| `code` [lien](https://example.com) \\*",
+        names,
+        "fr"
+      )
+    ).toBe("Bravo toi et vous pas lui secret code lien *");
+  });
+
+  it("leaves plain text and {user} untouched", () => {
+    expect(plainMessage("Joyeux anniversaire {user} !", names, "fr")).toBe(
+      "Joyeux anniversaire {user} !"
+    );
+  });
+});
 
 beforeAll(async () => {
   await initTestI18n("birthday", { en, fr });
