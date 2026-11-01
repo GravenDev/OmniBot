@@ -1,4 +1,9 @@
-import { Collection, type Client, type GuildMember } from "discord.js";
+import {
+  Collection,
+  DiscordAPIError,
+  type Client,
+  type GuildMember,
+} from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConfigData } from "#lib/config.js";
 import type { Module } from "#lib/module.js";
@@ -27,7 +32,16 @@ vi.mock("#core/services/mention.service.js", () => ({
   },
 }));
 
-const { memberAnniversaries, runGuildDay } = await import("./daily.js");
+const cards = vi.hoisted(() => ({
+  seniorityCard: vi.fn(),
+  serverCard: vi.fn(),
+}));
+vi.mock("./cards.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./cards.js")>()),
+  ...cards,
+}));
+
+const { runGuildDay } = await import("./daily.js");
 
 const module = { id: "seniority" } as unknown as Module<SeniorityConfigSchema>;
 
@@ -73,7 +87,12 @@ function sent(send: ReturnType<typeof vi.fn>) {
     (call) =>
       (
         call as unknown as [
-          { content: string; allowedMentions: { users: string[] } },
+          {
+            content: string;
+            files?: unknown[];
+            components?: unknown[];
+            allowedMentions: { users: string[] };
+          },
         ]
       )[0]
   );
@@ -91,23 +110,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.lastDay.mockResolvedValue("2026-10-15");
   state.claimDay.mockResolvedValue(undefined);
-});
-
-describe("memberAnniversaries", () => {
-  it("skips bots and members of less than a year", () => {
-    const { members } = setup();
-    expect(
-      memberAnniversaries(
-        members.values(),
-        { year: 2026, month: 10, day: 16 },
-        "Europe/Paris"
-      )
-    ).toEqual([
-      { userId: "alice", years: 3 },
-      { userId: "bob", years: 1 },
-      { userId: "quiet", years: 1 },
-    ]);
-  });
+  cards.seniorityCard.mockResolvedValue("members.png");
+  cards.serverCard.mockResolvedValue("server.png");
 });
 
 describe("runGuildDay", () => {
@@ -116,23 +120,92 @@ describe("runGuildDay", () => {
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
 
     const messages = sent(send);
-    expect(messages).toHaveLength(2);
-    expect(messages[0]!.content).toContain(
-      "<@alice> est parmi nous depuis **3 ans**"
-    );
-    expect(messages[0]!.content).not.toContain("recent");
-    expect(messages[0]!.allowedMentions.users).toEqual(["alice", "bob"]);
-    expect(messages[1]!.content).toContain("Le serveur fête ses 5 ans");
+    expect(messages).toEqual([
+      {
+        content: "🎉 **Ancienneté sur le serveur**\n<@alice> <@bob> <@quiet>",
+        files: ["members.png"],
+        allowedMentions: { users: ["alice", "bob"] },
+      },
+      {
+        content: "🎂 Le serveur fête ses 5 ans !",
+        files: ["server.png"],
+        allowedMentions: { users: [] },
+      },
+    ]);
+    // The members celebrated today, longest-standing first.
+    const [, celebrated, day] = cards.seniorityCard.mock.calls[0]!;
+    expect(
+      (celebrated as { member: GuildMember }[]).map(({ member }) => member.id)
+    ).toEqual(["alice", "bob", "quiet"]);
+    expect(day).toMatchObject({ year: 2026, month: 10, day: 16 });
     expect(state.claimDay).toHaveBeenCalledWith("guild-1", "2026-10-16");
   });
 
-  it("can announce one without the other", async () => {
-    const { client, send, guild } = setup({ memberAnniversaries: false });
+  it("falls back to the text announcements when a card cannot be drawn", async () => {
+    const { client, send } = setup();
+    cards.seniorityCard.mockRejectedValue(new Error("canvas"));
+    cards.serverCard.mockRejectedValue(new Error("canvas"));
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
-    expect(guild.members.fetch).not.toHaveBeenCalled();
+
+    expect(sent(send)).toEqual([
+      {
+        content:
+          "🎉 **Ancienneté sur le serveur**\n<@alice> est parmi nous depuis **3 ans** aujourd'hui\n<@bob> est parmi nous depuis **1 an** aujourd'hui\n<@quiet> est parmi nous depuis **1 an** aujourd'hui",
+        allowedMentions: { users: ["alice", "bob"] },
+      },
+      {
+        content: "🎂 **Le serveur fête ses 5 ans aujourd'hui !**\n5 membres",
+        allowedMentions: { users: [] },
+      },
+    ]);
+  });
+
+  it("falls back to the text announcements when Discord refuses the images", async () => {
+    const { client, send } = setup();
+    const refused = new DiscordAPIError(
+      { code: 50013, message: "Missing Permissions" },
+      50013,
+      403,
+      "POST",
+      "/channels/chan/messages",
+      {}
+    );
+    // Refuses every message with an image, as without Attach Files.
+    send.mockImplementation(async (message: { files?: unknown[] }) => {
+      if (message.files) {
+        throw refused;
+      }
+      return {};
+    });
+    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+
     expect(sent(send).map(({ content }) => content)).toEqual([
+      "🎉 **Ancienneté sur le serveur**\n<@alice> <@bob> <@quiet>",
+      "🎉 **Ancienneté sur le serveur**\n<@alice> est parmi nous depuis **3 ans** aujourd'hui\n<@bob> est parmi nous depuis **1 an** aujourd'hui\n<@quiet> est parmi nous depuis **1 an** aujourd'hui",
+      "🎂 Le serveur fête ses 5 ans !",
       "🎂 **Le serveur fête ses 5 ans aujourd'hui !**\n5 membres",
     ]);
+  });
+
+  it("can announce one without the other", async () => {
+    const { client, send } = setup({ memberAnniversaries: false });
+    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    expect(sent(send).map(({ content }) => content)).toEqual([
+      "🎂 Le serveur fête ses 5 ans !",
+    ]);
+  });
+
+  it("fetches no members when there is nothing to announce", async () => {
+    const { client, send, guild } = setup({ memberAnniversaries: false });
+    await runGuildDay(
+      client,
+      module,
+      "guild-1",
+      new Date("2026-10-17T07:00:00Z")
+    );
+    expect(guild.members.fetch).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+    expect(state.claimDay).toHaveBeenCalledWith("guild-1", "2026-10-17");
   });
 
   it("runs once per local day", async () => {
@@ -178,6 +251,9 @@ describe("runGuildDay", () => {
 
     const messages = sent(send);
     expect(messages.length).toBeGreaterThan(1);
+    // The image goes with the first message only.
+    expect(messages.filter(({ files }) => files)).toHaveLength(1);
+    expect(messages[0]!.files).toBeDefined();
     for (const { content, allowedMentions } of messages) {
       expect(allowedMentions.users.length).toBeLessThanOrEqual(100);
       for (const id of allowedMentions.users) {

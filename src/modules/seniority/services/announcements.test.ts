@@ -6,6 +6,7 @@ import fr from "../i18n/fr.json" with { type: "json" };
 import {
   chunkLines,
   memberAnniversaryMessages,
+  memberMentionMessages,
   serverAnniversaryMessage,
 } from "./announcements.js";
 
@@ -22,6 +23,50 @@ describe("chunkLines", () => {
     expect(messages.length).toBe(2);
     expect(messages.every((message) => message.length <= 2000)).toBe(true);
     expect(messages.join("\n").split("\n")).toEqual(["heading", ...lines]);
+  });
+
+  it("joins with the separator, the heading on its own line", () => {
+    expect(chunkLines("heading", ["a", "b"], " ")).toEqual(["heading\na b"]);
+  });
+
+  it("puts at most maxLines lines in a message", () => {
+    expect(chunkLines("heading", ["a", "b", "c"], " ", 2)).toEqual([
+      "heading\na b",
+      "c",
+    ]);
+  });
+});
+
+describe("memberMentionMessages", () => {
+  it("names the members under the heading, in their order", () => {
+    expect(memberMentionMessages(t(), ["2", "1"])).toEqual([
+      {
+        content: "🎉 **Ancienneté sur le serveur**\n<@2> <@1>",
+        userIds: ["2", "1"],
+      },
+    ]);
+  });
+
+  it("allows at most 100 mentions per message", () => {
+    const ids = Array.from({ length: 250 }, (_, index) => String(index));
+    const messages = memberMentionMessages(t(), ids);
+    expect(messages.map(({ userIds }) => userIds.length)).toEqual([
+      100, 100, 50,
+    ]);
+    expect(messages.flatMap(({ userIds }) => userIds)).toEqual(ids);
+  });
+
+  it("stays under Discord's length limit with real ids", () => {
+    const ids = Array.from({ length: 200 }, (_, index) =>
+      String(10n ** 19n + BigInt(index))
+    );
+    const messages = memberMentionMessages(t(), ids);
+    expect(messages.every(({ content }) => content.length <= 2000)).toBe(true);
+    expect(messages.flatMap(({ userIds }) => userIds)).toEqual(ids);
+  });
+
+  it("says nothing without anniversaries", () => {
+    expect(memberMentionMessages(t(), [])).toEqual([]);
   });
 });
 

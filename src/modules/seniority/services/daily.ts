@@ -1,4 +1,10 @@
-import type { Client, Collection, Guild, GuildMember } from "discord.js";
+import type {
+  Client,
+  Collection,
+  Guild,
+  GuildMember,
+  MessageCreateOptions,
+} from "discord.js";
 import configService from "#core/services/config.service.js";
 import mentionService from "#core/services/mention.service.js";
 import moduleService from "#core/services/module.service.js";
@@ -12,40 +18,24 @@ import type { ConfigProvider } from "#lib/config.js";
 import { isGuildSetupError } from "#lib/discord-errors.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
+import { postCard } from "#lib/post-card.js";
 import type { SeniorityConfigSchema } from "../seniority.config.js";
 import {
   memberAnniversaryMessages,
+  memberMentionMessages,
   serverAnniversaryMessage,
-  type MemberAnniversary,
 } from "./announcements.js";
+import { celebratedMembers, seniorityCard, serverCard } from "./cards.js";
 import * as state from "./state.js";
 
 const logger = loggerMaker("seniority");
 
 type Config = ConfigProvider<SeniorityConfigSchema>;
 
-export function memberAnniversaries(
-  members: Iterable<GuildMember>,
-  today: CalendarDay,
-  timeZone: string
-): MemberAnniversary[] {
-  const anniversaries: MemberAnniversary[] = [];
-  for (const member of members) {
-    if (member.user.bot || !member.joinedAt) {
-      continue;
-    }
-    const years = anniversaryYears(member.joinedAt, today, timeZone);
-    if (years !== null) {
-      anniversaries.push({ userId: member.id, years });
-    }
-  }
-  return anniversaries;
-}
-
 async function send(
   config: Config,
   guildId: string,
-  content: string,
+  message: MessageCreateOptions,
   userIds: string[]
 ): Promise<void> {
   const channel = config.get("channel");
@@ -53,7 +43,7 @@ async function send(
     return;
   }
   await channel.send({
-    content,
+    ...message,
     allowedMentions: {
       users: await mentionService.mentionable(guildId, userIds),
     },
@@ -66,41 +56,77 @@ async function announceMembers(
   members: Collection<string, GuildMember>,
   today: CalendarDay
 ): Promise<void> {
-  const anniversaries = memberAnniversaries(
+  const celebrated = celebratedMembers(
     members.values(),
     today,
     config.get("timeZone")
   );
-  for (const { content, userIds } of memberAnniversaryMessages(
+  if (celebrated.length === 0) {
+    return;
+  }
+  // Images never notify: the text names everyone, the image only the first
+  // ones, and only the first message carries it.
+  const [first, ...others] = memberMentionMessages(
     config.t,
-    anniversaries
-  )) {
-    await send(config, guild.id, content, userIds);
+    celebrated.map(({ member }) => member.id)
+  );
+  const posted = await postCard(
+    logger,
+    `the member anniversaries | guildId = ${guild.id}`,
+    () => seniorityCard(config, celebrated, today),
+    (card) =>
+      send(
+        config,
+        guild.id,
+        { content: first!.content, files: [card] },
+        first!.userIds
+      )
+  );
+  const messages = posted
+    ? others
+    : memberAnniversaryMessages(
+        config.t,
+        celebrated.map(({ member, years }) => ({ userId: member.id, years }))
+      );
+  for (const { content, userIds } of messages) {
+    await send(config, guild.id, { content }, userIds);
   }
 }
 
 async function announceServer(
   guild: Guild,
   config: Config,
-  today: CalendarDay
+  members: Collection<string, GuildMember> | null,
+  years: number
 ): Promise<void> {
-  const years = anniversaryYears(
-    guild.createdAt,
-    today,
-    config.get("timeZone")
+  const posted = await postCard(
+    logger,
+    `the server anniversary | guildId = ${guild.id}`,
+    () => serverCard(guild, config, members?.values() ?? [], years),
+    (card) =>
+      send(
+        config,
+        guild.id,
+        {
+          content: config.t("serverCard.content", { count: years }),
+          files: [card],
+        },
+        []
+      )
   );
-  if (years === null) {
-    return;
+  if (!posted) {
+    await send(
+      config,
+      guild.id,
+      {
+        content: serverAnniversaryMessage(config.t, {
+          years,
+          members: guild.memberCount,
+        }),
+      },
+      []
+    );
   }
-  await send(
-    config,
-    guild.id,
-    serverAnniversaryMessage(config.t, {
-      years,
-      members: guild.memberCount,
-    }),
-    []
-  );
 }
 
 /** Each announcement is attempted even when another one failed. */
@@ -146,21 +172,26 @@ export async function runGuildDay(
   }
 
   // Members fetched before the day is claimed: when Discord does not answer,
-  // the next hour tries again instead of losing the day.
+  // the next hour tries again instead of losing the day. The server's card
+  // needs them too, for its longest-standing member.
   const guild = await client.guilds.fetch(guildId);
   const today = localTime(now, timeZone);
-  const members = config.get("memberAnniversaries")
-    ? await guild.members.fetch()
+  const serverYears = config.get("serverAnniversary")
+    ? anniversaryYears(guild.createdAt, today, timeZone)
     : null;
+  const members =
+    config.get("memberAnniversaries") || serverYears !== null
+      ? await guild.members.fetch()
+      : null;
   await state.claimDay(guildId, day);
-  if (members) {
+  if (members && config.get("memberAnniversaries")) {
     await attempt(guildId, "member anniversaries", () =>
       announceMembers(guild, config, members, today)
     );
   }
-  if (config.get("serverAnniversary")) {
+  if (serverYears !== null) {
     await attempt(guildId, "the server anniversary", () =>
-      announceServer(guild, config, today)
+      announceServer(guild, config, members, serverYears)
     );
   }
   logger.info(`Day announced | guildId = ${guildId} | day = ${day}`);

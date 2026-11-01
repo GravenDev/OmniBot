@@ -21,5 +21,26 @@
   "server.headline_one": "🎂 **Le serveur fête ses {{count}} an aujourd'hui !**",
   "server.headline_other": "🎂 **Le serveur fête ses {{count}} ans aujourd'hui !**",
   "server.members_one": "{{count}} membre",
-  "server.members_other": "{{count}} membres"
+  "server.members_other": "{{count}} membres",
+
+  "membersCard.kicker": "Ancienneté",
+  "membersCard.title_one": "Joyeux anniversaire d'arrivée !",
+  "membersCard.title_other": "{{count}} anniversaires d'arrivée !",
+  "membersCard.entry": "{{name}} ({{years}})",
+  "membersCard.years_one": "{{count}} an",
+  "membersCard.years_other": "{{count}} ans",
+  "membersCard.alt": "Ancienneté du jour : {{names}}",
+
+  "serverCard.content_one": "🎂 Le serveur fête son premier anniversaire !",
+  "serverCard.content_other": "🎂 Le serveur fête ses {{count}} ans !",
+  "serverCard.kicker": "Anniversaire du serveur",
+  "serverCard.title_one": "Le serveur fête son premier anniversaire !",
+  "serverCard.title_other": "Le serveur fête ses {{count}} ans !",
+  "serverCard.subtitle": "Merci d'en faire partie 🎉",
+  "serverCard.created": "Créé le {{date}}",
+  "serverCard.members_one": "{{formatted}} membre",
+  "serverCard.members_other": "{{formatted}} membres",
+  "serverCard.eldest": "Plus ancienne présence : {{name}}, depuis le {{date}}",
+  "serverCard.alt_one": "Le serveur fête son premier anniversaire. Créé le {{created}}, {{memberCount}}.",
+  "serverCard.alt_other": "Le serveur fête ses {{count}} ans. Créé le {{created}}, {{memberCount}}."
 }
