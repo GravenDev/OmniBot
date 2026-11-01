@@ -81,6 +81,10 @@ Quand le module Server Stats est activé sur un serveur, le bot compte chaque jo
 
 Le module Anniversaires enregistre, pour les seuls membres qui l'enregistrent eux-mêmes avec `/birthday set`, le jour et le mois de leur anniversaire (jamais l'année, pour ne pas révéler l'âge) et leur choix d'être annoncé ou non sur le serveur. Finalité : souhaiter l'anniversaire du membre et calculer des statistiques agrégées (paradoxe des anniversaires). Base légale : le consentement du membre, qui peut le retirer à tout moment. Le module conserve aussi, par serveur, le dernier jour annoncé, les paliers du paradoxe déjà franchis (annoncés ou non) et le nombre d'inscrits au moment de la première date partagée, sans donnée personnelle.
 
+### Ancienneté
+
+Le module Ancienneté n'enregistre, pour chaque serveur, que le dernier jour annoncé. Il lit la date d'arrivée des membres et la date de création du serveur, fournies par Discord, sans les stocker.
+
 ## Contenu des messages lu sans être stocké
 
 Certains modules lisent le contenu des messages pour fonctionner, sans l'enregistrer en base de données :

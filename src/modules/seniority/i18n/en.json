@@ -1,0 +1,25 @@
+{
+  "config.channel.name": "Announcement channel",
+  "config.channel.description": "Channel where member anniversaries and the server's anniversary are announced. Nothing is announced until it is set.",
+
+  "config.timeZone.name": "Time zone",
+  "config.timeZone.description": "Time zone the server's days follow.",
+
+  "config.hour.name": "Announcement hour",
+  "config.hour.description": "Hour of the day (0 to 23) when the announcements are posted.",
+
+  "config.memberAnniversaries.name": "Member anniversaries",
+  "config.memberAnniversaries.description": "Announce the members who have been on the server for another full year.",
+
+  "config.serverAnniversary.name": "Server anniversary",
+  "config.serverAnniversary.description": "Announce the anniversary of the server's creation.",
+
+  "members.heading": "🎉 **Anniversaries on the server**",
+  "members.line_one": "{{user}} has been with us for **{{count}} year** today",
+  "members.line_other": "{{user}} has been with us for **{{count}} years** today",
+
+  "server.headline_one": "🎂 **The server is {{count}} year old today!**",
+  "server.headline_other": "🎂 **The server is {{count}} years old today!**",
+  "server.members_one": "{{count}} member",
+  "server.members_other": "{{count}} members"
+}

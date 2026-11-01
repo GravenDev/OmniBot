@@ -122,6 +122,9 @@
   "modules.birthday.name": "Anniversaires",
   "modules.birthday.description": "Souhaite les anniversaires des membres et met le paradoxe des anniversaires à l'épreuve.",
 
+  "modules.seniority.name": "Ancienneté",
+  "modules.seniority.description": "Fête l'ancienneté des membres sur le serveur, et l'anniversaire du serveur.",
+
   "modules.rngdle.name": "RNGdle",
   "modules.rngdle.description": "Suit les tirages rngdle.com des membres : classements, profils, statistiques du serveur et classement quotidien.",
 

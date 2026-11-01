@@ -1,0 +1,7 @@
+// Only the guild-local day already announced: member anniversaries and the
+// server's come from the join and creation dates Discord provides.
+model SeniorityState {
+  guildId String  @id
+  // Guild-local day (YYYY-MM-DD) whose announcements already ran.
+  lastDay String?
+}
