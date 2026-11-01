@@ -1,3 +1,5 @@
+import type { ScoredPoint } from "./four-hour-game.service.js";
+
 // A message of the game channel, as the game remembers it.
 export interface ChannelMessage {
   messageId: string;
@@ -21,4 +23,14 @@ export interface HistoryReader {
    * reading stopped before reaching it.
    */
   since: (since: Date) => Promise<ChannelMessage[]>;
+}
+
+// What syncRound needs to replay a guild's downtime, read once its queue is
+// taken.
+export interface RoundSync {
+  channelId: string;
+  history: HistoryReader;
+  delaySeconds: number;
+  /** Announces the points caught up, oldest first. */
+  announce: (points: ScoredPoint[]) => Promise<void>;
 }

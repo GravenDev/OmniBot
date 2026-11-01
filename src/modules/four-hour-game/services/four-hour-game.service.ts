@@ -23,6 +23,7 @@ import type {
   GameMessage,
   HistoryReader,
   LatestMessageFetcher,
+  RoundSync,
 } from "./types.js";
 
 const logger = loggerMaker("four-hour-game");
@@ -105,6 +106,7 @@ export interface LeaderboardEntry {
 class FourHourGameService implements Service {
   private readonly queue = new KeyedQueue();
   private readonly revisions = new RevisionCounter();
+  private startup: Promise<unknown> = Promise.resolve();
 
   getRevision(guildId: string): number {
     return this.revisions.get(guildId);
@@ -114,10 +116,21 @@ class FourHourGameService implements Service {
     this.revisions.bump(guildId);
   }
 
-  handleMessage(
+  /**
+   * Holds live messages and deletions until `reserved` settles, once every
+   * guild's replay has taken its queue (syncRound): one coming earlier could
+   * score against the message in place before the downtime, and lose the
+   * points caught up. Called before the listeners are attached.
+   */
+  waitForStartup(reserved: Promise<unknown>): void {
+    this.startup = reserved.catch(() => undefined);
+  }
+
+  async handleMessage(
     message: GameMessage,
     delaySeconds: number
   ): Promise<MessageResult> {
+    await this.startup;
     return this.queue.run(message.guildId, () =>
       this.processMessage(message, delaySeconds)
     );
@@ -334,6 +347,34 @@ class FourHourGameService implements Service {
     });
   }
 
+  /**
+   * Replays the guild's downtime at startup. Its queue is taken at once,
+   * before `load` reads the configuration, so that no live message of the
+   * guild comes before the replay; the points caught up are announced from
+   * within it, before the next live one.
+   */
+  syncRound(
+    guildId: string,
+    load: () => Promise<RoundSync | null>,
+    now: Date = new Date()
+  ): Promise<void> {
+    return this.queue.run(guildId, async () => {
+      const round = await load();
+      if (!round) {
+        return;
+      }
+      await round.announce(
+        await this.replayDowntime(
+          guildId,
+          round.channelId,
+          round.history,
+          round.delaySeconds,
+          now
+        )
+      );
+    });
+  }
+
   resyncLastMessage(
     guildId: string,
     channelId: string,
@@ -453,12 +494,13 @@ class FourHourGameService implements Service {
     return scored;
   }
 
-  handleDeletion(
+  async handleDeletion(
     guildId: string,
     channelId: string,
     messageIds: readonly string[],
     fetchLatest: LatestMessageFetcher
   ): Promise<boolean> {
+    await this.startup;
     return this.queue.run(guildId, async () => {
       const last = await prisma.fourHourGameLastMessage.findUnique({
         where: { guildId },

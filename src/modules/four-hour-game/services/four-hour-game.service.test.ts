@@ -357,6 +357,67 @@ beforeEach(() => {
 });
 
 describe("FourHourGameService.handleMessage", () => {
+  it("waits for the startup replay before scoring a live message", async () => {
+    await service.handleMessage(message("alice", start), DELAY);
+    let finishReplay = () => {};
+    service.waitForStartup(
+      new Promise<void>((resolve) => {
+        finishReplay = resolve;
+      })
+    );
+
+    const live = service.handleMessage(message("bob", at(DELAY)), DELAY);
+    await sleep(10);
+    expect(lastMessages.get("guild")?.authorId).toBe("alice");
+
+    finishReplay();
+    expect(await live).toEqual(point(1));
+    service.waitForStartup(Promise.resolve());
+  });
+
+  it("queues a live message behind the replay that took its guild first", async () => {
+    await service.handleMessage(message("alice", start), DELAY);
+    let loadRound = () => {};
+    const loaded = new Promise<void>((resolve) => {
+      loadRound = resolve;
+    });
+    const replay = service.syncRound("guild", async () => {
+      await loaded;
+      // bob replied while the bot was down: the replay scores alice's point.
+      return {
+        channelId: "game",
+        history: {
+          latest: async () => [],
+          since: async () => [
+            {
+              messageId: `alice-${start.getTime()}`,
+              authorId: "alice",
+              sentAt: start,
+            },
+            { messageId: "bob", authorId: "bob", sentAt: at(DELAY) },
+          ],
+        },
+        delaySeconds: DELAY,
+        announce: async () => undefined,
+      };
+    });
+
+    // carol posts live before the replay could even read its configuration.
+    const live = service.handleMessage(message("carol", at(DELAY + 60)), DELAY);
+    loadRound();
+    await replay;
+
+    expect(scores.get(key("guild", "alice"))).toBe(1);
+    expect(await live).toEqual({ kind: "tooSoon" });
+  });
+
+  it("does not stay blocked when the startup replay fails", async () => {
+    service.waitForStartup(Promise.reject(new Error("discord is down")));
+    await service.handleMessage(message("alice", start), DELAY);
+    expect(lastMessages.get("guild")?.authorId).toBe("alice");
+    service.waitForStartup(Promise.resolve());
+  });
+
   it("awards the previous author and reports their new score", async () => {
     await service.handleMessage(message("alice", start), DELAY);
     const result = await service.handleMessage(
