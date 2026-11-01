@@ -1,4 +1,8 @@
-import { MessageFlags, type ChatInputCommandInteraction } from "discord.js";
+import {
+  Collection,
+  MessageFlags,
+  type ChatInputCommandInteraction,
+} from "discord.js";
 import {
   afterEach,
   beforeAll,
@@ -44,30 +48,92 @@ interface Options {
   subcommand: string;
   integers?: Record<string, number>;
   booleans?: Record<string, boolean>;
+  roles?: Record<string, { id: string }>;
+  channels?: Record<string, { id: string }>;
+  guild?: unknown;
 }
 
-function interaction({ subcommand, integers = {}, booleans = {} }: Options) {
+function interaction({
+  subcommand,
+  integers = {},
+  booleans = {},
+  roles = {},
+  channels = {},
+  guild = null,
+}: Options) {
   const reply = vi.fn(async () => ({}));
-  const deferReply = vi.fn(async () => ({}));
   const editReply = vi.fn(async () => ({}));
+  const i = {
+    inGuild: () => true,
+    guildId: "guild",
+    guild,
+    user: { id: "me" },
+    deferred: false,
+    reply,
+    editReply,
+    deferReply: vi.fn(async () => {
+      i.deferred = true;
+    }),
+    options: {
+      getSubcommand: () => subcommand,
+      getInteger: (name: string) => integers[name] ?? null,
+      getBoolean: (name: string) => booleans[name] ?? null,
+      getRole: (name: string) => roles[name] ?? null,
+      getChannel: (name: string) => channels[name] ?? null,
+    },
+  };
   return {
     reply,
-    deferReply,
+    deferReply: i.deferReply,
     editReply,
-    interaction: {
-      inGuild: () => true,
-      guildId: "guild",
-      guild: null,
-      user: { id: "me" },
-      reply,
-      deferReply,
-      editReply,
-      options: {
-        getSubcommand: () => subcommand,
-        getInteger: (name: string) => integers[name] ?? null,
-        getBoolean: (name: string) => booleans[name] ?? null,
-      },
-    } as unknown as ChatInputCommandInteraction,
+    interaction: i as unknown as ChatInputCommandInteraction,
+  };
+}
+
+function members(...ids: string[]) {
+  return new Collection(
+    ids.map((id) => [id, { id, user: { bot: id.startsWith("bot") } }] as const)
+  );
+}
+
+/** A server whose member cache holds `cached` of its `memberCount` members. */
+function guild({
+  role = members(),
+  voice = members(),
+  cached = 50,
+  memberCount = 50,
+}: {
+  role?: ReturnType<typeof members>;
+  voice?: ReturnType<typeof members>;
+  cached?: number;
+  memberCount?: number;
+} = {}) {
+  const cache = { size: cached };
+  return {
+    memberCount,
+    iconURL: () => null,
+    members: {
+      cache,
+      fetch: vi.fn(async () => {
+        cache.size = memberCount;
+      }),
+    },
+    roles: {
+      cache: new Map([["mods", { id: "mods", name: "mods", members: role }]]),
+    },
+    channels: {
+      cache: new Map([
+        [
+          "voice",
+          {
+            id: "voice",
+            name: "voice",
+            isVoiceBased: () => true,
+            members: voice,
+          },
+        ],
+      ]),
+    },
   };
 }
 
@@ -229,6 +295,133 @@ describe("/birthday stats", () => {
     expect(files).toEqual([]);
     expect(text).toContain("**5 anniversaires enregistrés**");
     expect(text).toContain("Partagées : 14 mars.");
+  });
+
+  const registered = [
+    { userId: "a", day: 14, month: 3, announce: true },
+    { userId: "b", day: 14, month: 3, announce: true },
+    { userId: "c", day: 2, month: 11, announce: true },
+    { userId: "d", day: 2, month: 11, announce: false },
+    { userId: "e", day: 5, month: 5, announce: false },
+  ];
+
+  it("computes the paradox for a role's registered members only", async () => {
+    service.list.mockResolvedValue(registered);
+    const server = guild({
+      role: members("a", "b", "e", "x", "bot-1"),
+      cached: 10,
+      memberCount: 50,
+    });
+    const {
+      interaction: i,
+      reply,
+      editReply,
+    } = interaction({
+      subcommand: "stats",
+      roles: { role: { id: "mods" } },
+      guild: server,
+    });
+    await command.execute(i, config());
+
+    // The cache is incomplete: the members are fetched behind a defer.
+    expect(server.members.fetch).toHaveBeenCalled();
+    expect(reply).not.toHaveBeenCalled();
+    const text = content(editReply);
+    expect(text).toContain("parmi les membres de <@&mods>");
+    expect(text).toContain(
+      "3 anniversaires enregistrés sur 4 membres du rôle."
+    );
+    expect(text).toContain("**3 anniversaires enregistrés**");
+    expect(text).toContain("Dans ce groupe : **1 date partagée**.");
+    expect(text).toContain("Partagées : 14 mars.");
+    // The countdown is the group's; the first shared date, the server's only.
+    expect(text).toContain("Encore 20 inscriptions");
+    expect(text).not.toContain("première date partagée");
+    expect(service.getState).not.toHaveBeenCalled();
+    // The card names the role in plain text: it cannot show a mention.
+    expect(renderStatsCard).toHaveBeenCalledWith(
+      expect.objectContaining({ group: "@mods", count: 3 }),
+      expect.anything(),
+      null
+    );
+    expect(editReply).toHaveBeenCalledWith(
+      expect.objectContaining({ allowedMentions: { parse: [] } })
+    );
+  });
+
+  it("computes the paradox for the people in a voice channel", async () => {
+    service.list.mockResolvedValue(registered);
+    const server = guild({ voice: members("a", "c", "y") });
+    const { interaction: i, editReply } = interaction({
+      subcommand: "stats",
+      channels: { channel: { id: "voice" } },
+      guild: server,
+    });
+    await command.execute(i, config());
+
+    expect(server.members.fetch).not.toHaveBeenCalled();
+    const text = content(editReply);
+    expect(text).toContain("dans le salon <#voice>");
+    expect(text).toContain(
+      "2 anniversaires enregistrés sur 3 personnes dans le salon."
+    );
+    expect(text).toContain("Dans ce groupe : aucune date partagée");
+  });
+
+  it("refuses a role and a channel together", async () => {
+    const { interaction: i, reply } = interaction({
+      subcommand: "stats",
+      roles: { role: { id: "mods" } },
+      channels: { channel: { id: "voice" } },
+      guild: guild(),
+    });
+    await command.execute(i, config());
+
+    expect(service.list).not.toHaveBeenCalled();
+    expect(reply).toHaveBeenCalledWith(
+      expect.objectContaining({ flags: MessageFlags.Ephemeral })
+    );
+    expect(content(reply)).toBe(
+      "Choisissez un rôle ou un salon vocal, pas les deux."
+    );
+  });
+
+  it.each([
+    [members("x", "y"), "0 anniversaire enregistré", "Aucun anniversaire"],
+    [members("a", "y"), "1 anniversaire enregistré", "Un seul anniversaire"],
+  ])(
+    "explains a group with fewer than two birthdays",
+    async (voice, count, why) => {
+      service.list.mockResolvedValue(registered);
+      const { interaction: i, editReply } = interaction({
+        subcommand: "stats",
+        channels: { channel: { id: "voice" } },
+        guild: guild({ voice }),
+      });
+      await command.execute(i, config());
+
+      const text = content(editReply);
+      expect(text).toContain(`${count} sur 2 personnes dans le salon.`);
+      expect(text).toContain(why);
+      expect(text).not.toContain("probabilité");
+    }
+  );
+
+  it("does not name a date a hidden member shares within the group", async () => {
+    service.list.mockResolvedValue(registered);
+    const { interaction: i, editReply } = interaction({
+      subcommand: "stats",
+      roles: { role: { id: "mods" } },
+      guild: guild({ role: members("a", "b", "c", "d") }),
+    });
+    await command.execute(i, config());
+
+    const text = content(editReply);
+    expect(text).toContain("Dans ce groupe : **2 dates partagées**.");
+    expect(text).toContain("Partagées : 14 mars.");
+    expect(text).not.toContain("novembre");
+    expect(text).toContain("1 date partagée n'est pas affichée");
+    expect(text).not.toMatch(/<@[^&]/);
   });
 });
 

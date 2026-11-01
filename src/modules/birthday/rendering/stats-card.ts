@@ -239,7 +239,10 @@ export function renderStatsCard(
     subtitle: labels.subtitle,
     rows: [
       [box(labels.probability, ACCENT), box(labels.shared)],
-      [box(labels.firstCollision), box(labels.untilHalf)],
+      // A group's first shared date is not tracked: only the server's is.
+      stats.group === undefined
+        ? [box(labels.firstCollision), box(labels.untilHalf)]
+        : [box(labels.untilHalf)],
     ],
     aside: {
       width: CURVE_WIDTH,
