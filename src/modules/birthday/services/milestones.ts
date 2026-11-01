@@ -2,7 +2,7 @@ import type { ConfigProvider } from "#lib/config.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { BirthdayConfigSchema } from "../birthday.config.js";
-import { milestoneMessage } from "./announcements.js";
+import { milestoneEmbed } from "./announcements.js";
 import birthdayService from "./birthday.service.js";
 import { logFailure } from "./failures.js";
 import {
@@ -46,11 +46,13 @@ export function checkMilestones(
     for (const milestone of reached) {
       await channel
         .send({
-          content: milestoneMessage(config.t, milestone, {
-            count: entries.length,
-            expectedFirstCollision: expectedFirstCollision(),
-            locale: config.locale,
-          }),
+          embeds: [
+            milestoneEmbed(config.t, milestone, {
+              count: entries.length,
+              expectedFirstCollision: expectedFirstCollision(),
+              locale: config.locale,
+            }),
+          ],
           allowedMentions: NO_MENTIONS,
         })
         .catch((err: unknown) =>

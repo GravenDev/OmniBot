@@ -1,4 +1,12 @@
-import type { Client, Collection, Guild, GuildMember } from "discord.js";
+import {
+  AttachmentBuilder,
+  type Client,
+  type Collection,
+  type Guild,
+  DiscordAPIError,
+  type GuildMember,
+  type SendableChannels,
+} from "discord.js";
 import configService from "#core/services/config.service.js";
 import mentionService from "#core/services/mention.service.js";
 import moduleService from "#core/services/module.service.js";
@@ -9,10 +17,20 @@ import {
   type CalendarDay,
 } from "#lib/calendar.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { fetchAvatar } from "#lib/imaging.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import type { BirthdayConfigSchema } from "../birthday.config.js";
-import { birthdayMessage } from "./announcements.js";
+import {
+  renderBirthdayCard,
+  SHOWN_AVATARS,
+} from "../rendering/birthday-card.js";
+import {
+  birthdayCard,
+  birthdayMessage,
+  cardContent,
+  pickGuildMessage,
+} from "./announcements.js";
 import birthdayService, { type BirthdayEntry } from "./birthday.service.js";
 import { logFailure } from "./failures.js";
 
@@ -30,21 +48,78 @@ export function announcedCelebrants(
     .map((entry) => entry.userId);
 }
 
-async function send(
+/** Today's card, or `null` when it cannot be drawn. */
+async function drawCard(
+  config: Config,
+  celebrants: GuildMember[],
+  template: string | null,
+  today: CalendarDay
+): Promise<AttachmentBuilder | null> {
+  try {
+    const card = birthdayCard(
+      config.t,
+      config.locale,
+      celebrants.map((member) => member.displayName),
+      template,
+      today
+    );
+    const png = renderBirthdayCard(
+      await Promise.all(
+        celebrants.map(async (member, index) => ({
+          name: member.displayName,
+          // Only the first ones are drawn.
+          avatar: index < SHOWN_AVATARS ? await fetchAvatar(member, 256) : null,
+        }))
+      ),
+      card.labels
+    );
+    return new AttachmentBuilder(png, {
+      name: "birthday.png",
+      description: card.alt,
+    });
+  } catch (err) {
+    logger.error({ err }, "Failed to draw the birthday card");
+    return null;
+  }
+}
+
+/**
+ * Posts today's card, with the mentions in its text. The plain text wish
+ * goes instead when the card cannot be drawn or Discord refuses it (no
+ * permission to attach files, say), so that the birthdays are still wished.
+ */
+async function sendWishes(
   config: Config,
   guildId: string,
-  content: string,
-  userIds: string[]
+  channel: SendableChannels,
+  celebrants: GuildMember[],
+  today: CalendarDay
 ): Promise<void> {
-  const channel = config.get("channel");
-  if (!channel?.isSendable()) {
-    return;
+  const userIds = celebrants.map((member) => member.id);
+  const template = pickGuildMessage(config.get("messages") ?? []);
+  const allowedMentions = {
+    users: await mentionService.mentionable(guildId, userIds),
+  };
+  const card = await drawCard(config, celebrants, template, today);
+  if (card) {
+    try {
+      await channel.send({
+        content: cardContent(config.t, config.locale, userIds),
+        files: [card],
+        allowedMentions,
+      });
+      return;
+    } catch (err) {
+      // Any other error may come after Discord posted the card.
+      if (!(err instanceof DiscordAPIError)) {
+        throw err;
+      }
+      logger.warn({ err }, "Birthday card refused, sending text");
+    }
   }
   await channel.send({
-    content,
-    allowedMentions: {
-      users: await mentionService.mentionable(guildId, userIds),
-    },
+    content: birthdayMessage(config.t, config.locale, template, userIds),
+    allowedMentions,
   });
 }
 
@@ -105,19 +180,17 @@ async function announceBirthdays(
     today
   );
   await updateRole(guild.id, config, members, announced);
-  if (announced.length > 0) {
-    await send(
-      config,
-      guild.id,
-      birthdayMessage(
-        config.t,
-        config.locale,
-        config.get("messages") ?? [],
-        announced
-      ),
-      announced
-    );
+  const channel = config.get("channel");
+  if (announced.length === 0 || !channel?.isSendable()) {
+    return;
   }
+  await sendWishes(
+    config,
+    guild.id,
+    channel,
+    announced.map((userId) => members.get(userId)!),
+    today
+  );
 }
 
 /**
