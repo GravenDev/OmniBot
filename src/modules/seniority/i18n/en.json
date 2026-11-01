@@ -21,5 +21,26 @@
   "server.headline_one": "🎂 **The server is {{count}} year old today!**",
   "server.headline_other": "🎂 **The server is {{count}} years old today!**",
   "server.members_one": "{{count}} member",
-  "server.members_other": "{{count}} members"
+  "server.members_other": "{{count}} members",
+
+  "membersCard.kicker": "Member anniversaries",
+  "membersCard.title_one": "Happy join anniversary!",
+  "membersCard.title_other": "{{count}} join anniversaries!",
+  "membersCard.entry": "{{name}} ({{years}})",
+  "membersCard.years_one": "{{count}} year",
+  "membersCard.years_other": "{{count}} years",
+  "membersCard.alt": "Today's member anniversaries: {{names}}",
+
+  "serverCard.content_one": "🎂 The server turns {{count}}!",
+  "serverCard.content_other": "🎂 The server turns {{count}}!",
+  "serverCard.kicker": "Server anniversary",
+  "serverCard.title_one": "The server turns {{count}}!",
+  "serverCard.title_other": "The server turns {{count}}!",
+  "serverCard.subtitle": "Thank you for being part of it 🎉",
+  "serverCard.created": "Created on {{date}}",
+  "serverCard.members_one": "{{formatted}} member",
+  "serverCard.members_other": "{{formatted}} members",
+  "serverCard.eldest": "Longest-standing member: {{name}}, since {{date}}",
+  "serverCard.alt_one": "The server turns {{count}}. Created on {{created}}, {{memberCount}}.",
+  "serverCard.alt_other": "The server turns {{count}}. Created on {{created}}, {{memberCount}}."
 }

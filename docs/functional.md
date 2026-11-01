@@ -561,8 +561,10 @@ Fête l'ancienneté des membres sur le serveur et l'anniversaire du serveur. Le 
 
 Chaque jour, à l'heure et dans le fuseau configurés, le bot publie dans le salon des annonces :
 
-1. **L'ancienneté** : les membres arrivés sur le serveur un jour comme aujourd'hui il y a une année pleine ou plus, du plus ancien au plus récent, en un ou plusieurs messages. Les bots n'y figurent pas. Discord remet la date d'arrivée à zéro quand un membre quitte puis revient. Une arrivée un 29 février est fêtée le 28 les années non bissextiles.
-2. **L'anniversaire du serveur**, le jour anniversaire de sa création : son âge et son nombre de membres.
+1. **L'ancienneté** : les membres arrivés sur le serveur un jour comme aujourd'hui il y a une année pleine ou plus, du plus ancien au plus récent. Une carte de fête montre les avatars des trois premiers, leur pseudo et leur nombre d'années, puis « +N » pour les autres ; le texte qui l'accompagne mentionne tous les membres fêtés, en plusieurs messages s'il le faut (2000 caractères et 100 mentions au plus par message), et seul le premier porte l'image. Son texte alternatif nomme tout le monde. Les bots n'y figurent pas. Discord remet la date d'arrivée à zéro quand un membre quitte puis revient. Une arrivée un 29 février est fêtée le 28 les années non bissextiles.
+2. **L'anniversaire du serveur**, le jour anniversaire de sa création : une carte de fête avec l'icône du serveur, sa date de création, son nombre de membres et la plus ancienne présence parmi les membres (bots exclus), sous une ligne de texte sans mention.
+
+Si une image ne peut pas être dessinée, ou si Discord la refuse (permission d'envoyer des fichiers retirée), l'annonce part en texte seul, avec les mêmes informations. Chaque image a un texte alternatif.
 
 Chacune des deux annonces peut être désactivée. Les annonces de chaque journée sont publiées une seule fois. Si le bot est arrêté à l'heure prévue, elles partent à son redémarrage s'il a lieu le même jour ; une journée entièrement manquée n'est pas rattrapée. Si Discord ne fournit pas la liste des membres, rien n'est publié et le bot réessaie l'heure suivante. Changer de fuseau ne fait jamais republier une journée déjà annoncée. Une annonce qui échoue (salon supprimé, permission retirée) n'empêche pas l'autre. Les membres mentionnés sont notifiés, sauf ceux qui ont désactivé leurs mentions avec `/pings`.
 
