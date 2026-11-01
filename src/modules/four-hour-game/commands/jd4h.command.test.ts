@@ -21,6 +21,7 @@ const getLeaderboard = vi.hoisted(() => vi.fn());
 const getDailyStandings = vi.hoisted(() => vi.fn());
 const getRank = vi.hoisted(() => vi.fn());
 const getScore = vi.hoisted(() => vi.fn());
+const countPlayers = vi.hoisted(() => vi.fn());
 vi.mock("#modules/four-hour-game/services/four-hour-game.service.js", () => ({
   default: {
     getProfile,
@@ -29,6 +30,7 @@ vi.mock("#modules/four-hour-game/services/four-hour-game.service.js", () => ({
     getDailyStandings,
     getRank,
     getScore,
+    countPlayers,
   },
 }));
 
@@ -117,6 +119,7 @@ describe("/jd4h leaderboard", () => {
     renderLeaderboard.mockClear();
     getRank.mockReset().mockResolvedValue(null);
     getScore.mockReset().mockResolvedValue(null);
+    countPlayers.mockReset().mockResolvedValue(3);
   });
 
   const drawn = () =>
@@ -271,7 +274,9 @@ describe("/jd4h leaderboard", () => {
     await command.execute(interaction, keyConfig);
 
     expect(renderLeaderboard).not.toHaveBeenCalled();
-    expect(interaction.editReply).toHaveBeenCalledWith("leaderboard.empty");
+    expect(interaction.editReply).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "leaderboard.empty", files: [] })
+    );
   });
 
   it("ranks the top ten by daily points on request", async () => {
@@ -331,7 +336,7 @@ describe("/jd4h leaderboard", () => {
     await command.execute(interaction, keyConfig);
 
     expect(interaction.editReply).toHaveBeenCalledWith(
-      "leaderboard.daily.empty"
+      expect.objectContaining({ content: "leaderboard.daily.empty" })
     );
   });
 });

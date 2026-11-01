@@ -48,6 +48,7 @@
   "leaderboard.header.rank": "Rank",
   "leaderboard.header.player": "Player",
   "leaderboard.header.score": "Points",
+  "leaderboard.page": "Page {{current}}/{{total}}",
 
   "admin.set.created": "{{user}}'s score set to **{{score}}**.",
   "admin.set.updated": "{{user}}'s score updated to **{{score}}**.",

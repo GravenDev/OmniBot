@@ -8,6 +8,7 @@ import {
 } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
+import { pageRow } from "#lib/pagination.js";
 import { DAY_MS } from "#modules/rngdle/services/days.js";
 import store, { type Account } from "#modules/rngdle/services/store.js";
 import sync from "#modules/rngdle/services/sync.js";
@@ -19,11 +20,7 @@ import {
   trendCard,
   type ViewContext,
 } from "#modules/rngdle/services/views.js";
-import {
-  overallPageMessage,
-  pageRow,
-  type Visibility,
-} from "./overall-page.button.js";
+import { overallPageMessage, type Visibility } from "./overall-page.button.js";
 
 const CUSTOM_ID = "rngdle-nav";
 export const HISTORY_PAGE_ID = "rngdle-history";
@@ -111,7 +108,15 @@ export async function historyMessage(
     ],
     components: [
       ...(result.pageCount > 1
-        ? [pageRow(context.t, id, result.page, result.pageCount)]
+        ? [
+            pageRow(
+              context.t,
+              id,
+              result.page,
+              result.pageCount,
+              "overall.page"
+            ),
+          ]
         : []),
       navigationRow(context.t, ["profile", "trend", "timeline", "overall"]),
     ],

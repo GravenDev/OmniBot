@@ -7,27 +7,20 @@ import {
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
-import { fetchAvatar, fetchImage } from "#lib/imaging.js";
+import { fetchAvatar } from "#lib/imaging.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
-import { resolvePlayers } from "#lib/players.js";
 import { RevisionCache } from "#lib/revision-cache.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
 import {
-  renderLeaderboard,
-  type LeaderboardRow,
-} from "#modules/four-hour-game/rendering/leaderboard-image.js";
+  leaderboardMessage,
+  type Board,
+} from "#modules/four-hour-game/interactions/leaderboard-page.button.js";
 import { renderProfileCard } from "#modules/four-hour-game/rendering/profile-card.js";
-import fourHourGameService, {
-  type LeaderboardEntry,
-} from "#modules/four-hour-game/services/four-hour-game.service.js";
+import fourHourGameService from "#modules/four-hour-game/services/four-hour-game.service.js";
 
-const LEADERBOARD_SIZE = 10;
-
-const leaderboardCache = new RevisionCache(15_000);
 const profileCache = new RevisionCache(15_000);
 
 type Config = ConfigProvider<FourHourGameConfigSchema>;
-type Board = "hold" | "daily";
 
 async function showScore(
   interaction: ChatInputCommandInteraction<"cached" | "raw">,
@@ -76,97 +69,6 @@ async function showScore(
   });
 }
 
-// The shown entries, and the caller's own entry when they are ranked.
-async function standings(
-  guildId: string,
-  board: Board,
-  callerId: string
-): Promise<{ entries: LeaderboardEntry[]; caller: LeaderboardEntry | null }> {
-  if (board === "daily") {
-    const all = await fourHourGameService.getDailyStandings(guildId);
-    return {
-      entries: all.slice(0, LEADERBOARD_SIZE),
-      caller: all.find((entry) => entry.userId === callerId) ?? null,
-    };
-  }
-  const [entries, rank, score] = await Promise.all([
-    fourHourGameService.getLeaderboard(guildId, LEADERBOARD_SIZE),
-    fourHourGameService.getRank(guildId, callerId),
-    fourHourGameService.getScore(guildId, callerId),
-  ]);
-  return {
-    entries,
-    caller: rank && score ? { userId: callerId, score, rank: rank.rank } : null,
-  };
-}
-
-async function buildLeaderboardImage(
-  interaction: ChatInputCommandInteraction<"cached" | "raw">,
-  config: Config,
-  board: Board
-): Promise<Buffer | null> {
-  const { entries, caller } = await standings(
-    interaction.guildId,
-    board,
-    interaction.user.id
-  );
-  // Like /rngdle leaderboard-all: highlighted on the card, or drawn under the
-  // table when the caller is not among the shown entries.
-  const callerOffPage =
-    caller !== null && !entries.some((entry) => entry.userId === caller.userId);
-
-  const players = await resolvePlayers(
-    interaction.client,
-    interaction.guildId,
-    [...entries, ...(callerOffPage ? [caller] : [])].map(
-      (entry) => entry.userId
-    )
-  );
-  const toRow = (entry: LeaderboardEntry): LeaderboardRow[] => {
-    const player = players.get(entry.userId);
-    return player
-      ? [
-          {
-            rank: entry.rank,
-            name: player.name,
-            score: entry.score,
-            avatar: player.avatar,
-          },
-        ]
-      : [];
-  };
-  const rows = entries.flatMap(toRow);
-  const callerRow = callerOffPage ? toRow(caller)[0] : undefined;
-
-  if (rows.length === 0) {
-    return null;
-  }
-
-  const guild =
-    interaction.guild ??
-    (await interaction.client.guilds
-      .fetch(interaction.guildId)
-      .catch(() => null));
-  const icon = await fetchImage(
-    guild?.iconURL({ extension: "png", size: 128 }) ?? null
-  );
-  return renderLeaderboard(
-    { icon, rows, callerRank: caller?.rank, caller: callerRow },
-    {
-      locale: config.locale,
-      title: config.t("leaderboard.title"),
-      subtitle: config.t(
-        board === "daily"
-          ? "leaderboard.daily.subtitle"
-          : "leaderboard.subtitle"
-      ),
-      rank: config.t("leaderboard.header.rank"),
-      player: config.t("leaderboard.header.player"),
-      score: config.t("leaderboard.header.score"),
-    }
-  );
-}
-
 async function showLeaderboard(
   interaction: ChatInputCommandInteraction<"cached" | "raw">,
   config: Config
@@ -174,26 +76,20 @@ async function showLeaderboard(
   const board: Board =
     interaction.options.getString("type") === "daily" ? "daily" : "hold";
   await interaction.deferReply();
-
-  const image = await leaderboardCache.get(
-    `${interaction.guildId}:${config.locale}:${board}:${interaction.user.id}`,
-    fourHourGameService.getRevision(interaction.guildId),
-    () => buildLeaderboardImage(interaction, config, board)
+  await interaction.editReply(
+    await leaderboardMessage(
+      {
+        client: interaction.client,
+        guildId: interaction.guildId,
+        guild: interaction.guild,
+        config,
+      },
+      board,
+      1,
+      interaction.user.id,
+      "public"
+    )
   );
-
-  if (!image) {
-    await interaction.editReply(
-      config.t(
-        board === "daily" ? "leaderboard.daily.empty" : "leaderboard.empty"
-      )
-    );
-    return;
-  }
-
-  await interaction.editReply({
-    ...(board === "daily" && { content: config.t("leaderboard.daily.title") }),
-    files: [new AttachmentBuilder(image, { name: "leaderboard.png" })],
-  });
 }
 
 export default declareCommand<FourHourGameConfigSchema>({
