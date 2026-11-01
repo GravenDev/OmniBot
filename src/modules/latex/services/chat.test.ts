@@ -1,6 +1,7 @@
 import {
   DiscordAPIError,
   type Message,
+  MessageFlags,
   type PartialMessage,
   PermissionFlagsBits,
   PermissionsBitField,
@@ -168,7 +169,7 @@ describe("looksLikeLatex", () => {
 });
 
 describe("renderPosted", () => {
-  it("replies with the image, the text as its alt text, without pinging the author", async () => {
+  it("replies with the image, the text as its alt text, without pinging nor notifying", async () => {
     const message = makeMessage("Soit $x$.");
     await renderPosted(asMessage(message), makeConfig());
 
@@ -177,6 +178,7 @@ describe("renderPosted", () => {
     expect(payload).toMatchObject({
       content: "",
       allowedMentions: { parse: [], repliedUser: false },
+      flags: MessageFlags.SuppressNotifications,
     });
     const [file] = (payload as { files: { description: string }[] }).files;
     expect(file!.description).toBe("Soit $x$.");

@@ -2,6 +2,7 @@ import {
   AttachmentBuilder,
   DiscordAPIError,
   type Message,
+  MessageFlags,
   type PartialMessage,
   RESTJSONErrorCodes,
 } from "discord.js";
@@ -179,6 +180,9 @@ async function reply(
     .reply({
       ...(await payloadFor(text, config)),
       allowedMentions: NO_MENTIONS_REPLY,
+      // The message with the formula already notified the channel: no
+      // second push.
+      flags: MessageFlags.SuppressNotifications,
     })
     .catch(ignoreGone);
   if (sent) {

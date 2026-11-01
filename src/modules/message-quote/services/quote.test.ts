@@ -2,6 +2,7 @@ import {
   ButtonStyle,
   ChannelType,
   Collection,
+  MessageFlags,
   PermissionFlagsBits,
   PermissionsBitField,
   type ButtonComponent,
@@ -647,9 +648,12 @@ describe("quoteLinks", () => {
     );
     await quoteLinks(message, fakeConfig());
     expect(reply).toHaveBeenCalledOnce();
-    expect(
-      (reply.mock.calls[0] as unknown as [{ embeds: unknown[] }])[0].embeds
-    ).toHaveLength(1);
+    const [payload] = reply.mock.calls[0] as unknown as [
+      { embeds: unknown[]; flags: number },
+    ];
+    expect(payload.embeds).toHaveLength(1);
+    // The message with the link already notified the channel.
+    expect(payload.flags).toBe(MessageFlags.SuppressNotifications);
   });
 
   it("stays silent when nothing can be quoted", async () => {

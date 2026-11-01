@@ -1,4 +1,9 @@
-import { AttachmentBuilder, type Client, type Message } from "discord.js";
+import {
+  AttachmentBuilder,
+  MessageFlags,
+  type Client,
+  type Message,
+} from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { formatInteger, formatPercentage } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
@@ -355,6 +360,8 @@ export async function answerShare(
     await message.reply({
       files: [new AttachmentBuilder(image, { name: CARD_NAME })],
       allowedMentions: NO_MENTIONS_REPLY,
+      // The pasted result already notified the channel: no second push.
+      flags: MessageFlags.SuppressNotifications,
     });
   } catch (err) {
     if (claimed) {
