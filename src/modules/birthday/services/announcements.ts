@@ -25,6 +25,49 @@ function formatList(items: string[], locale: string): string {
   return new Intl.ListFormat(locale, { type: "conjunction" }).format(items);
 }
 
+/** Names of the guild's members, roles and channels, by ID. */
+export interface MentionNames {
+  user: (id: string) => string | undefined;
+  role: (id: string) => string | undefined;
+  channel: (id: string) => string | undefined;
+}
+
+const LINE_PREFIX = /^\s*(?:#{1,3}|-#|>{1,3})\s+/gm;
+const PAIRED_MARKS = /\*\*|__|~~|\|\||`/g;
+const EMPHASIS = /([*_])(\S(?:.*?\S)?)\1/g;
+
+/**
+ * The guild's message as plain text, for the card: an image would show Discord
+ * markup as typed (`<@123>`, `**`). Mentions become names, custom emojis their
+ * `:name:`, timestamps a date; unknown mentions are dropped.
+ */
+export function plainMessage(
+  text: string,
+  names: MentionNames,
+  locale: string
+): string {
+  const named = (prefix: string, name: string | undefined) =>
+    name === undefined ? "" : prefix + name;
+  return text
+    .replace(/<@!?(\d+)>/g, (_, id: string) => named("@", names.user(id)))
+    .replace(/<@&(\d+)>/g, (_, id: string) => named("@", names.role(id)))
+    .replace(/<#(\d+)>/g, (_, id: string) => named("#", names.channel(id)))
+    .replace(/<\/([\w -]+):\d+>/g, "/$1")
+    .replace(/<a?:(\w+):\d+>/g, ":$1:")
+    .replace(/<t:(-?\d+)(?::[tTdDfFR])?>/g, (_, seconds: string) =>
+      new Intl.DateTimeFormat(locale, { dateStyle: "long" }).format(
+        new Date(Number(seconds) * 1000)
+      )
+    )
+    .replace(/\[([^\]]+)\]\(<?[^)\s]+>?\)/g, "$1")
+    .replace(LINE_PREFIX, "")
+    .replace(PAIRED_MARKS, "")
+    .replace(EMPHASIS, "$2")
+    .replace(/\\([*_~|`>#\\[\]()-])/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** One of the guild's messages at random, `null` when it has none. */
 export function pickGuildMessage(
   templates: readonly string[],
