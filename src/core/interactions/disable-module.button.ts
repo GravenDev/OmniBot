@@ -1,9 +1,11 @@
 import { MessageFlags } from "discord.js";
-import { uninstallModule } from "#core/loaders/module-installer.js";
 import { modules } from "#core/runtime.js";
 import { getCoreT } from "#core/utils/core-config.js";
-import { errorMessageKey } from "#core/utils/error-message.js";
-import { modulesPanel } from "#core/utils/modules-panel.js";
+import { disableConfirmationMessage } from "#core/utils/core-messages.js";
+import {
+  disableAndRefresh,
+  uninstallWarningOf,
+} from "#core/utils/disable-module.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 
 export default declareInteractionHandler({
@@ -31,21 +33,26 @@ export default declareInteractionHandler({
       return;
     }
 
-    const defer = await interaction.deferUpdate();
-
-    try {
-      await uninstallModule(module, interaction.guild!);
-    } catch (err) {
-      await interaction.followUp({
-        content: coreT(errorMessageKey(err, "interaction.failedDisable")),
-        flags: MessageFlags.Ephemeral,
+    // A module that would delete data asks first: the panel gives way to the
+    // warning, in the same ephemeral message.
+    const warning = await uninstallWarningOf(
+      module,
+      interaction.guildId!,
+      coreT
+    );
+    if (warning !== null) {
+      const moduleName = coreT("modules." + module.id + ".name", {
+        defaultValue: module.name,
+      });
+      await interaction.update({
+        components: [
+          disableConfirmationMessage(module.id, moduleName, warning, coreT),
+        ],
+        flags: MessageFlags.IsComponentsV2,
       });
       return;
     }
 
-    await defer.edit({
-      components: [await modulesPanel(interaction.guildId!, coreT, module.id)],
-      flags: MessageFlags.IsComponentsV2,
-    });
+    await disableAndRefresh(interaction, module, coreT);
   },
 });

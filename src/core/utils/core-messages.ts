@@ -21,6 +21,37 @@ import type { TFunction } from "#lib/i18n.js";
 import type { Module } from "#lib/module.js";
 import { Colors } from "#utils/colors.js";
 
+/**
+ * Replaces the `/modules` panel while an administrator confirms disabling a
+ * module that deletes data: the warning, then confirm or cancel.
+ */
+export function disableConfirmationMessage(
+  moduleId: string,
+  moduleName: string,
+  warning: string,
+  t: TFunction
+): ContainerBuilder {
+  return new ContainerBuilder()
+    .setAccentColor(Colors.Red)
+    .addTextDisplayComponents(
+      (text) =>
+        text.setContent(t("modules.confirmDisableTitle", { moduleName })),
+      (text) => text.setContent(warning)
+    )
+    .addActionRowComponents(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        new ButtonBuilder()
+          .setCustomId("disable-module-confirm:" + moduleId)
+          .setLabel(t("modules.confirmDisable"))
+          .setStyle(ButtonStyle.Danger),
+        new ButtonBuilder()
+          .setCustomId("disable-module-cancel:" + moduleId)
+          .setLabel(t("modules.cancelDisable"))
+          .setStyle(ButtonStyle.Secondary)
+      )
+    );
+}
+
 type ModulesState = Awaited<
   ReturnType<typeof moduleService.getAllModulesStateIn>
 >;

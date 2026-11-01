@@ -6,6 +6,7 @@ import {
 } from "discord.js";
 import type { ConfigSchema } from "./config.js";
 import { DeclarationType, type Declared } from "./declared.js";
+import type { TFunction } from "./i18n.js";
 import { Registry } from "./registry.js";
 import type { ScheduledTask } from "./task.js";
 import type { Version } from "./version.js";
@@ -87,6 +88,17 @@ export interface ModuleDeclaration<ConfigType extends ConfigSchema = {}> {
    */
   maintenanceTasks?: () => ScheduledTask[];
   deleteMemberData?: (guildId: string, userId: string) => Promise<void>;
+
+  /**
+   * What disabling the module would delete on the guild, for a module whose
+   * `onUninstall` deletes data an administrator cannot restore. `/modules`
+   * then asks for confirmation with this text before disabling it; null when
+   * nothing would be lost.
+   *
+   * @param guildId The guild where the module is about to be disabled.
+   * @param t The module's translator, in the guild's locale.
+   */
+  uninstallWarning?: (guildId: string, t: TFunction) => Promise<string | null>;
 }
 
 /**
