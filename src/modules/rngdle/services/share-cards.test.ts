@@ -1,3 +1,4 @@
+import { MessageFlags } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { StoredRoll } from "./store.js";
 
@@ -142,7 +143,7 @@ describe("computeHighlights", () => {
 });
 
 describe("answerShare", () => {
-  it("replies to a shared result with a card, without pinging", async () => {
+  it("replies to a shared result with a card, without pinging nor notifying", async () => {
     mocks.fetchBadges.mockResolvedValue(CALCULATOR);
     const message = shareMessage();
     await answerShare(message as never, configWith(SHARING) as never);
@@ -151,6 +152,7 @@ describe("answerShare", () => {
     expect(message.reply).toHaveBeenCalledWith({
       files: [expect.objectContaining({ name: "rngdle-roll.png" })],
       allowedMentions: { parse: [], repliedUser: false },
+      flags: MessageFlags.SuppressNotifications,
     });
   });
 

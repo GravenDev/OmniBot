@@ -8,6 +8,7 @@ import {
   type GuildBasedChannel,
   type GuildMember,
   type Message,
+  MessageFlags,
   PermissionFlagsBits,
 } from "discord.js";
 import {
@@ -261,5 +262,7 @@ export async function quoteLinks(
   await message.reply({
     ...quoteReply(quotes, member, config.t),
     failIfNotExists: false,
+    // The message with the link already notified the channel: no second push.
+    flags: MessageFlags.SuppressNotifications,
   });
 }
