@@ -108,9 +108,11 @@ vi.mock("#lib/database.js", () => ({
       },
       async findMany({
         where,
+        skip = 0,
         take,
       }: {
         where: { guildId: string; score?: { gt: number } };
+        skip?: number;
         take: number;
       }) {
         return [...scores]
@@ -124,7 +126,7 @@ vi.mock("#lib/database.js", () => ({
               (where.score === undefined || row.score > where.score.gt)
           )
           .sort((a, b) => b.score - a.score || a.userId.localeCompare(b.userId))
-          .slice(0, take);
+          .slice(skip, skip + take);
       },
       async upsert({
         create,
@@ -491,6 +493,22 @@ describe("FourHourGameService.getLeaderboard", () => {
       { userId: "carol", score: 5, rank: 1 },
       { userId: "alice", score: 2, rank: 2 },
     ]);
+  });
+
+  it("gives a later page its ranks, and counts the ranked players", async () => {
+    for (let index = 1; index <= 12; index++) {
+      scores.set(
+        key("guild", `p${String(index).padStart(2, "0")}`),
+        100 - index
+      );
+    }
+    scores.set(key("guild", "zero"), 0);
+
+    expect(await service.getLeaderboard("guild", 10, 10)).toEqual([
+      { userId: "p11", score: 89, rank: 11 },
+      { userId: "p12", score: 88, rank: 12 },
+    ]);
+    expect(await service.countPlayers("guild")).toBe(12);
   });
 });
 

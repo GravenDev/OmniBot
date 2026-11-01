@@ -498,18 +498,27 @@ class FourHourGameService implements Service {
 
   async getLeaderboard(
     guildId: string,
-    limit: number
+    limit: number,
+    offset = 0
   ): Promise<LeaderboardEntry[]> {
     const rows = await prisma.fourHourGameScore.findMany({
       where: { guildId, score: { gt: 0 } },
       orderBy: [{ score: "desc" }, { userId: "asc" }],
+      skip: offset,
       take: limit,
     });
     return rows.map((row, index) => ({
       userId: row.userId,
       score: row.score,
-      rank: index + 1,
+      rank: offset + index + 1,
     }));
+  }
+
+  /** Players with at least one 4h point, the length of the leaderboard. */
+  countPlayers(guildId: string): Promise<number> {
+    return prisma.fourHourGameScore.count({
+      where: { guildId, score: { gt: 0 } },
+    });
   }
 }
 

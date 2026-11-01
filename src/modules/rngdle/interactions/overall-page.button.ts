@@ -1,13 +1,10 @@
 import {
-  ActionRowBuilder,
   AttachmentBuilder,
-  ButtonBuilder,
-  ButtonStyle,
   MessageFlags,
   type ButtonInteraction,
 } from "discord.js";
-import type { TFunction } from "#lib/i18n.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
+import { pageRow } from "#lib/pagination.js";
 import { DAY_MS } from "#modules/rngdle/services/days.js";
 import {
   overallPage,
@@ -20,31 +17,6 @@ import {
 const CUSTOM_ID = "rngdle-overall";
 
 export type Visibility = "public" | "private";
-
-function pageButton(customId: string, label: string, disabled: boolean) {
-  return new ButtonBuilder()
-    .setCustomId(customId)
-    .setLabel(label)
-    .setStyle(ButtonStyle.Primary)
-    .setDisabled(disabled);
-}
-
-export function pageRow(
-  t: TFunction,
-  id: (target: number | string) => string,
-  page: number,
-  pageCount: number
-) {
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    pageButton(id(page - 1), t("config.previous"), page <= 1),
-    pageButton(
-      id("indicator"),
-      t("overall.page", { current: page, total: pageCount }),
-      true
-    ).setStyle(ButtonStyle.Success),
-    pageButton(id(page + 1), t("config.next"), page >= pageCount)
-  );
-}
 
 export async function overallPageMessage(
   context: ViewContext,
@@ -74,7 +46,9 @@ export async function overallPageMessage(
     content: periodText(context, period, now),
     files: [new AttachmentBuilder(result.image, { name: "leaderboard.png" })],
     attachments: [],
-    components: [pageRow(context.t, id, result.page, result.pageCount)],
+    components: [
+      pageRow(context.t, id, result.page, result.pageCount, "overall.page"),
+    ],
   };
 }
 

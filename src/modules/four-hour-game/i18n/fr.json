@@ -46,6 +46,7 @@
   "leaderboard.header.rank": "Rang",
   "leaderboard.header.player": "Pseudo",
   "leaderboard.header.score": "Points",
+  "leaderboard.page": "Page {{current}}/{{total}}",
 
   "admin.set.created": "Score de {{user}} fixé à **{{score}}**.",
   "admin.set.updated": "Score de {{user}} mis à jour : **{{score}}**.",
