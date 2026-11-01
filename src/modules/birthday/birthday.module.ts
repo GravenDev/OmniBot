@@ -21,9 +21,15 @@ const birthdayModule = defineModule({
 
   config: birthdayConfigSchema,
 
-  // GuildMembers (privileged) to see departures, and to list the members to
-  // catch up on those missed while the bot was down.
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+  // GuildMembers (privileged) to see departures, to list the members to catch
+  // up on those missed while the bot was down, and those of a role for
+  // `/birthday stats`. GuildVoiceStates (not privileged) for the people in a
+  // voice channel, in `/birthday stats` too.
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildVoiceStates,
+  ],
 
   // Departures of members missing from the cache are still delivered.
   partials: [Partials.GuildMember],

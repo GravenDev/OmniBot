@@ -89,23 +89,33 @@ function formatExpected(stats: BirthdayStats, locale: string): string {
   });
 }
 
-/** The message's text: a summary of the card, and the dates it can name. */
+/**
+ * The message's text: a summary of the card, and the dates it can name. A
+ * group's stats open with `heading` instead of the server's title, and leave
+ * out the first shared date, which belongs to the whole server.
+ */
 export function statsText(
   t: TFunction,
   locale: string,
-  stats: BirthdayStats
+  stats: BirthdayStats,
+  heading?: readonly string[]
 ): string {
+  const group = heading !== undefined;
   const lines = [
-    t("stats.title"),
+    ...(heading ?? [t("stats.title")]),
     t("stats.probability", {
       count: stats.count,
       percent: formatPercent(stats.probability, locale),
     }),
   ];
   if (stats.sharedCount === 0) {
-    lines.push(t("stats.noShared"));
+    lines.push(t(group ? "stats.group.noShared" : "stats.noShared"));
   } else {
-    lines.push(t("stats.shared", { count: stats.sharedCount }));
+    lines.push(
+      t(group ? "stats.group.shared" : "stats.shared", {
+        count: stats.sharedCount,
+      })
+    );
     if (stats.namedShared.length > 0) {
       lines.push(
         t("stats.sharedDates", {
@@ -119,7 +129,8 @@ export function statsText(
       lines.push(t("stats.sharedHidden", { count: stats.hiddenShared }));
     }
   }
-  if (stats.firstCollisionCount !== null) {
+  // The first shared date is only tracked for the whole server.
+  if (!group && stats.firstCollisionCount !== null) {
     lines.push(
       t("stats.firstCollision", {
         count: stats.firstCollisionCount,
@@ -222,10 +233,14 @@ export function statsCardLabels(
     item(labels.title, labels.subtitle),
     item(labels.probability.title, labels.probability.value),
     item(labels.shared.title, labels.shared.value),
-    item(
-      labels.firstCollision.title,
-      `${firstCollision} (${labels.firstCollision.subtext})`
-    ),
+    ...(stats.group === undefined
+      ? [
+          item(
+            labels.firstCollision.title,
+            `${firstCollision} (${labels.firstCollision.subtext})`
+          ),
+        ]
+      : []),
     item(labels.untilHalf.title, untilHalf),
     item(
       labels.months.title,

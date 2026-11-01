@@ -1,5 +1,6 @@
 import {
   AttachmentBuilder,
+  ChannelType,
   InteractionContextType,
   MessageFlags,
   SlashCommandBuilder,
@@ -23,6 +24,11 @@ import { MESSAGE_LIMIT } from "#modules/birthday/services/announcements.js";
 import birthdayService, {
   type BirthdayEntry,
 } from "#modules/birthday/services/birthday.service.js";
+import {
+  resolveGroup,
+  type BirthdayGroup,
+  type GroupSelection,
+} from "#modules/birthday/services/group.js";
 import { checkMilestones } from "#modules/birthday/services/milestones.js";
 import { dropBirthdayRole } from "#modules/birthday/services/role.js";
 import {
@@ -208,19 +214,100 @@ async function drawStatsCard(
   }
 }
 
+type StatsGroup = Pick<BirthdayGroup, "kind" | "mention" | "name"> & {
+  /** Members of the role or channel, registered or not. */
+  members: number;
+};
+
+function groupHeading(config: Config, group: StatsGroup, registered: number) {
+  return [
+    config.t(`stats.group.title.${group.kind}`, { group: group.mention }),
+    config.t("stats.group.registered", {
+      count: registered,
+      members: config.t(`stats.group.members.${group.kind}`, {
+        count: group.members,
+      }),
+    }),
+  ];
+}
+
+/** The role or voice channel chosen, if any; "both" is refused. */
+function groupSelection(
+  interaction: GuildInteraction
+): GroupSelection | null | "both" {
+  const role = interaction.options.getRole("role");
+  const channel = interaction.options.getChannel("channel");
+  if (role && channel) {
+    return "both";
+  }
+  if (role) {
+    return { kind: "role", id: role.id };
+  }
+  return channel ? { kind: "channel", id: channel.id } : null;
+}
+
 async function showStats(interaction: GuildInteraction, config: Config) {
-  // Drawing the card takes longer than Discord's 3 seconds.
+  const selection = groupSelection(interaction);
+  if (selection === "both") {
+    await replyPrivately(interaction, config.t("stats.group.both"));
+    return;
+  }
+  // Drawing the card, like listing a large server's members, takes longer
+  // than Discord's 3 seconds.
   await interaction.deferReply();
-  const entries = await birthdayService.list(interaction.guildId);
-  const state = await birthdayService.getState(interaction.guildId);
+  const reply = (content: string) =>
+    interaction.editReply({ content, allowedMentions: NO_MENTIONS });
+
+  let group: StatsGroup | null = null;
+  let entries = await birthdayService.list(interaction.guildId);
+  if (selection) {
+    const guild =
+      interaction.guild ??
+      (await interaction.client.guilds.fetch(interaction.guildId));
+    const resolved = await resolveGroup(guild, selection);
+    if (!resolved) {
+      await reply(config.t("stats.group.missing"));
+      return;
+    }
+    group = {
+      kind: resolved.kind,
+      mention: resolved.mention,
+      name: resolved.name,
+      members: resolved.memberIds.size,
+    };
+    entries = entries.filter((entry) => resolved.memberIds.has(entry.userId));
+    // Below two birthdays, odds and shared dates mean nothing.
+    if (entries.length < 2) {
+      await reply(
+        [
+          ...groupHeading(config, group, entries.length),
+          config.t(
+            entries.length === 0 ? "stats.group.none" : "stats.group.single"
+          ),
+        ].join("\n")
+      );
+      return;
+    }
+  }
+
+  // The first collision belongs to the whole server, not to a group.
+  const firstCollisionCount = group
+    ? null
+    : (await birthdayService.getState(interaction.guildId)).firstCollisionCount;
   const stats = birthdayStats(entries, {
-    firstCollisionCount: state.firstCollisionCount,
+    firstCollisionCount,
+    ...(group && { group: group.name }),
   });
   // The text stays with the image, for screen readers and search; alone, it
   // is the reply when the card cannot be drawn.
   const card = await drawStatsCard(interaction, config, stats);
   await interaction.editReply({
-    content: statsText(config.t, config.locale, stats),
+    content: statsText(
+      config.t,
+      config.locale,
+      stats,
+      group ? groupHeading(config, group, stats.count) : undefined
+    ),
     files: card ? [card] : [],
     allowedMentions: NO_MENTIONS,
   });
@@ -302,6 +389,26 @@ export default declareCommand<BirthdayConfigSchema>({
         .setDescriptionLocalizations({
           fr: "Le paradoxe des anniversaires, sur ce serveur",
         })
+        .addRoleOption((option) =>
+          option
+            .setName("role")
+            .setDescription("Only among the members of this role")
+            .setDescriptionLocalizations({
+              fr: "Seulement parmi les membres de ce rôle",
+            })
+        )
+        .addChannelOption((option) =>
+          option
+            .setName("channel")
+            .setDescription("Only among the people in this voice channel")
+            .setDescriptionLocalizations({
+              fr: "Seulement parmi les personnes de ce salon vocal",
+            })
+            .addChannelTypes(
+              ChannelType.GuildVoice,
+              ChannelType.GuildStageVoice
+            )
+        )
     ),
 
   async execute(interaction, config) {

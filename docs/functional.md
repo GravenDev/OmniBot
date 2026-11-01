@@ -494,7 +494,7 @@ Seuls le jour et le mois de l'anniversaire sont conservés, avec l'identifiant D
 
 Un anniversaire est supprimé définitivement quand son membre le retire (`/birthday remove` ou `/privacy delete`), quand il quitte le serveur, ou quand le module est désactivé sur le serveur (avec l'état des annonces et des paliers). Désactiver le module depuis `/modules` demande donc une confirmation, qui indique combien d'anniversaires seront supprimés. Les départs survenus pendant un arrêt du bot sont rattrapés à l'annonce quotidienne suivante. Si le bot quitte le serveur, les anniversaires y restent enregistrés, comme la configuration, jusqu'à son retour ; ceux des membres partis entre-temps sont alors supprimés à l'annonce quotidienne suivante.
 
-Le module a besoin de l'intent privilégié **Server Members** (Developer Portal, Bot > Privileged Gateway Intents) pour voir les départs et lister les membres, afin de rattraper ceux survenus pendant un arrêt.
+Le module a besoin de l'intent privilégié **Server Members** (Developer Portal, Bot > Privileged Gateway Intents) pour voir les départs et lister les membres, afin de rattraper ceux survenus pendant un arrêt, et pour connaître les membres d'un rôle dans `/birthday stats`. Il déclare aussi l'intent _Guild Voice States_, non privilégié (rien à activer), pour connaître les personnes d'un salon vocal dans `/birthday stats`.
 
 ### Annonce quotidienne
 
@@ -524,9 +524,11 @@ Affiche ce que le module conserve sur le membre, ou le supprime. Réponses visib
 
 Liste les anniversaires des 30 prochains jours, aujourd'hui compris, dans le fuseau du serveur, pour les seuls membres qui ont accepté d'être annoncés. Personne n'est notifié. Si la liste dépasse la taille d'un message Discord, les anniversaires les plus lointains sont omis, et une dernière ligne indique combien.
 
-### `/birthday stats`
+### `/birthday stats [role | channel]`
 
 Le paradoxe des anniversaires appliqué au serveur, en **image** : l'icône du serveur, le nombre d'anniversaires enregistrés, la probabilité théorique d'une date partagée, le nombre de dates réellement partagées, le nombre d'inscriptions au moment de la première date partagée (face aux 24,6 qu'attend la théorie en moyenne), le nombre d'inscriptions qui manquent pour atteindre une chance sur deux (ou « Seuil dépassé »), la courbe de la probabilité selon le nombre d'inscriptions (de 0 à 70, au-delà si le serveur en compte plus), avec ses seuils de 50 % et 99 % et un point « vous êtes ici », et la répartition des anniversaires **par mois**. Jamais par jour : le compte d'un jour pourrait trahir la date d'un membre qui a choisi de ne pas être annoncé. Le message garde un résumé en texte, pour les lecteurs d'écran et la recherche, avec la note sur les naissances inégalement réparties dans l'année ; l'image a un texte alternatif qui reprend les chiffres et les mois. Une date partagée n'est nommée, dans le texte, que si tous les membres qui la partagent ont accepté d'être annoncés ; les autres sont seulement comptées, et l'image n'en nomme aucune. Personne n'est cité ni notifié. Si l'image ne peut pas être dessinée, le bot répond par le texte seul.
+
+Avec `role` (un rôle) ou `channel` (un salon vocal ou de conférence), le calcul porte sur les seuls anniversaires des membres de ce rôle, ou des personnes connectées à ce salon au moment de la commande : une soirée en vocal, une équipe. La réponse le précise (« 14 anniversaires enregistrés sur 31 membres du rôle » ; les bots ne sont pas comptés) et donne la probabilité théorique et les dates partagées du groupe, avec les mêmes règles que pour le serveur entier, ainsi que le nombre d'inscriptions qui manquent au groupe pour dépasser une chance sur deux ; la première date partagée, suivie pour le serveur seulement, n'y figure pas, ni dans le texte ni sur la carte. Avec moins de deux anniversaires dans le groupe, la réponse le dit au lieu de donner des chiffres. Les deux options ensemble sont refusées, en message visible de soi seul. Sur un grand serveur, lister les membres du rôle peut prendre quelques secondes.
 
 ### `/birthday-admin remove <member>`
 
