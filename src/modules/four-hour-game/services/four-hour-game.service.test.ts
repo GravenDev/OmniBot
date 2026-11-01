@@ -556,13 +556,24 @@ describe("FourHourGameService.setScore", () => {
     expect(scores.get(key("guild", "alice"))).toBe(7);
   });
 
-  it("treats a score of zero as removing it", async () => {
-    scores.set(key("guild", "alice"), 4);
+  it("waits for the other writes of the server", async () => {
+    let release!: () => void;
+    const busy = service.resyncLastMessage(
+      "guild",
+      "game",
+      () =>
+        new Promise((resolve) => {
+          release = () => resolve([]);
+        })
+    );
 
-    expect(await service.setScore("guild", "alice", 0)).toBe("removed");
+    const set = service.setScore("guild", "alice", 3);
+    await sleep(10);
     expect(scores.has(key("guild", "alice"))).toBe(false);
-    expect(await service.setScore("guild", "alice", 0)).toBe("absent");
-    expect(scores.has(key("guild", "alice"))).toBe(false);
+
+    release();
+    await Promise.all([busy, set]);
+    expect(scores.get(key("guild", "alice"))).toBe(3);
   });
 });
 
@@ -592,8 +603,8 @@ describe("FourHourGameService history removal", () => {
     ]);
   });
 
-  it("deletes the history when the score is set to zero", async () => {
-    expect(await service.setScore("guild", "alice", 0)).toBe("removed");
+  it("deletes the history when the score is removed", async () => {
+    expect(await service.deleteScore("guild", "alice")).toBe(true);
 
     expect(
       points.some((row) => row.guildId === "guild" && row.userId === "alice")
