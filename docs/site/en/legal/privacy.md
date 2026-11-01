@@ -77,6 +77,10 @@ The Temporary Voice Channels module stores, for each open temporary channel, the
 
 When the Server Stats module is enabled on a guild, the bot counts every day, per guild, the messages per channel, per member and per hour, the reactions per emoji, the members joining and leaving, and how many of the day's newcomers posted a message. Only counters are stored, along with the date tracking started on the guild, never message content nor who joined or left. These counters, totals and per-member message counts, never the identity of who joins or leaves, are deleted after a year. The daily report posted on the guild, and the report administrators, and the roles they allow, can display with `/server-stats`, may list the most active members; administrators can turn this off.
 
+### Birthdays
+
+The Birthdays module stores, only for the members who register it themselves with `/birthday set`, the day and month of their birthday (never the year, so the age is not revealed) and whether they want to be announced on the server. Purpose: wishing the member a happy birthday and computing aggregate statistics (the birthday paradox). Legal basis: the member's consent, which they can withdraw at any time. The module also keeps, per guild, the last day announced, the birthday paradox milestones already reached (announced or not) and the number of registrations when a date was first shared, with no personal data.
+
 ## Message Content Read Without Being Stored
 
 Some modules read message content to work, without saving it to the database:
@@ -109,8 +113,9 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 - **Sticky messages**: kept until an administrator removes them in `/config`, or the channel is deleted.
 - **Starboard**: an entry is deleted with the original message, with its repost when it falls below the threshold and the administrators chose to remove it, when the original channel or thread is deleted (the repost is deleted too), or when the starboard channel is deleted. When a moderator deletes a repost, the entry is kept so that the message is never reposted. The bot only sees these deletions while the module is enabled and the bot is online: a message or channel deleted while the module is disabled, or while the bot is offline, leaves its entry and its repost in place. The guild's administrators can then delete the repost by hand.
 - **Temporary voice channels**: a channel's entry is deleted with the channel, when it empties or is deleted; if the bot is offline at that moment, it is deleted when the bot comes back, even if the module was disabled in the meantime. A member's remembered settings are deleted one year after they last changed them or created a channel, even if the module is disabled.
+- **Birthdays**: permanently deleted when the member removes them (`/birthday remove` or `/privacy delete`), leaves the guild, or when the module is disabled on the guild, unlike the data of other modules. If the bot leaves the guild, they stay stored, like the configuration, until it comes back. `/birthday show` shows what is kept.
 
-Any member can delete the data the bot keeps about them on a guild themselves, at any time, with the `/privacy delete` command: their activity statistics, their game data (4-hour game, RNGdle, Clash of Code link) and their mention preference. Reports are not part of it: they stay with the moderators until they are deleted automatically. For any other deletion request, contact the instance operator.
+Any member can delete the data the bot keeps about them on a guild themselves, at any time, with the `/privacy delete` command: their activity statistics, their game data (4-hour game, RNGdle, Clash of Code link), their birthday and their mention preference. Reports are not part of it: they stay with the moderators until they are deleted automatically. For any other deletion request, contact the instance operator.
 
 ## Data Sharing
 
