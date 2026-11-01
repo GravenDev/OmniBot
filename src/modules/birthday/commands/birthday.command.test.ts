@@ -51,6 +51,8 @@ interface Options {
   roles?: Record<string, { id: string }>;
   channels?: Record<string, { id: string }>;
   guild?: unknown;
+  // Members still on the guild; everyone by default.
+  present?: (userId: string) => boolean;
 }
 
 function interaction({
@@ -59,14 +61,21 @@ function interaction({
   booleans = {},
   roles = {},
   channels = {},
-  guild = null,
+  present = () => true,
+  guild,
 }: Options) {
   const reply = vi.fn(async () => ({}));
   const editReply = vi.fn(async () => ({}));
+  const fetch = vi.fn(async ({ user }: { user: string[] }) => {
+    return new Map(
+      user.filter(present).map((userId) => [userId, { id: userId }])
+    );
+  });
   const i = {
     inGuild: () => true,
+    inCachedGuild: () => true,
     guildId: "guild",
-    guild,
+    guild: guild ?? { iconURL: () => null, members: { fetch } },
     user: { id: "me" },
     deferred: false,
     reply,
@@ -84,6 +93,7 @@ function interaction({
   };
   return {
     reply,
+    fetch,
     deferReply: i.deferReply,
     editReply,
     interaction: i as unknown as ChatInputCommandInteraction,
@@ -157,6 +167,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  service.list.mockResolvedValue([]);
   checkMilestones.mockResolvedValue(undefined);
   service.getState.mockResolvedValue({
     lastDay: null,
@@ -212,6 +223,162 @@ describe("/birthday set", () => {
       expect.objectContaining({ announce: false })
     );
     expect(content(reply)).toContain("Il ne sera pas annoncé");
+  });
+});
+
+const entry = (
+  userId: string,
+  day: number,
+  month: number,
+  announce = true
+) => ({ userId, day, month, announce });
+
+describe("birthday twins in /birthday set and show", () => {
+  it("says nothing when nobody shares the date", async () => {
+    service.list.mockResolvedValue([entry("me", 14, 3), entry("a", 15, 3)]);
+    const {
+      interaction: i,
+      reply,
+      fetch,
+    } = interaction({
+      subcommand: "show",
+    });
+    await command.execute(i, config());
+    expect(content(reply)).toContain("**14 mars**");
+    expect(content(reply)).not.toContain("partagez");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("names a twin, without pinging", async () => {
+    service.list.mockResolvedValue([entry("me", 14, 3), entry("a", 14, 3)]);
+    const { interaction: i, reply } = interaction({ subcommand: "show" });
+    await command.execute(i, config());
+    expect(content(reply)).toContain("👯 Vous partagez votre date avec <@a>.");
+    expect(reply).toHaveBeenCalledWith(
+      expect.objectContaining({
+        flags: MessageFlags.Ephemeral,
+        allowedMentions: { parse: [] },
+      })
+    );
+    expect(service.get).not.toHaveBeenCalled();
+  });
+
+  it("names the twins of a date just set", async () => {
+    service.list.mockResolvedValue([
+      entry("me", 14, 3),
+      entry("a", 14, 3),
+      entry("b", 14, 3),
+    ]);
+    const { interaction: i, reply } = interaction({
+      subcommand: "set",
+      integers: { day: 14, month: 3 },
+    });
+    await command.execute(i, config());
+    expect(content(reply)).toContain(
+      "👯 Vous partagez votre date avec <@a> et <@b>."
+    );
+  });
+
+  it("names ten twins, then counts the others", async () => {
+    service.list.mockResolvedValue([
+      entry("me", 14, 3),
+      ...Array.from({ length: 13 }, (_, index) =>
+        entry(`m${String(index).padStart(2, "0")}`, 14, 3)
+      ),
+    ]);
+    const { interaction: i, reply } = interaction({ subcommand: "show" });
+    await command.execute(i, config());
+    const text = content(reply);
+    expect((text.match(/<@/g) ?? []).length).toBe(10);
+    expect(text).toContain("<@m09> et 3 autres membres.");
+    expect(text).not.toContain("<@m10>");
+  });
+
+  it("never reveals nor counts a hidden twin", async () => {
+    service.list.mockResolvedValue([
+      entry("me", 14, 3),
+      entry("a", 14, 3),
+      entry("hidden", 14, 3, false),
+    ]);
+    const {
+      interaction: i,
+      reply,
+      fetch,
+    } = interaction({
+      subcommand: "show",
+    });
+    await command.execute(i, config());
+    expect(content(reply)).toContain("avec <@a>.");
+    expect(content(reply)).not.toContain("hidden");
+    expect(content(reply)).not.toContain("autre");
+    expect(fetch).toHaveBeenCalledWith({ user: ["a"] });
+  });
+
+  it("leaves out a twin who left the server", async () => {
+    service.list.mockResolvedValue([
+      entry("me", 14, 3),
+      entry("a", 14, 3),
+      entry("gone", 14, 3),
+    ]);
+    const { interaction: i, reply } = interaction({
+      subcommand: "show",
+      present: (userId) => userId !== "gone",
+    });
+    await command.execute(i, config());
+    expect(content(reply)).toContain("avec <@a>.");
+    expect(content(reply)).not.toContain("gone");
+  });
+
+  it("says nothing when every twin left the server", async () => {
+    service.list.mockResolvedValue([entry("me", 14, 3), entry("gone", 14, 3)]);
+    const { interaction: i, reply } = interaction({
+      subcommand: "show",
+      present: () => false,
+    });
+    await command.execute(i, config());
+    expect(content(reply)).not.toContain("partagez");
+  });
+
+  it("shows a hidden member their announced twins", async () => {
+    service.list.mockResolvedValue([
+      entry("me", 14, 3, false),
+      entry("a", 14, 3),
+    ]);
+    const { interaction: i, reply } = interaction({
+      subcommand: "set",
+      integers: { day: 14, month: 3 },
+      booleans: { announce: false },
+    });
+    await command.execute(i, config());
+    expect(content(reply)).toContain("Il ne sera pas annoncé");
+    expect(content(reply)).toContain("avec <@a>.");
+  });
+
+  it("pairs 29 February with 29 February only, not the 28th", async () => {
+    service.list.mockResolvedValue([
+      entry("me", 29, 2),
+      entry("leap", 29, 2),
+      entry("eve", 28, 2),
+    ]);
+    const { interaction: i, reply } = interaction({ subcommand: "show" });
+    await command.execute(i, config());
+    expect(content(reply)).toContain("avec <@leap>.");
+    expect(content(reply)).not.toContain("eve");
+  });
+
+  it("says nothing when the members cannot be fetched", async () => {
+    service.list.mockResolvedValue([entry("me", 14, 3), entry("a", 14, 3)]);
+    const {
+      interaction: i,
+      reply,
+      fetch,
+    } = interaction({
+      subcommand: "show",
+    });
+    fetch.mockRejectedValue(new Error("timeout"));
+    await command.execute(i, config());
+    expect(content(reply)).toContain("**14 mars**");
+    expect(content(reply)).not.toContain("<@a>");
   });
 });
 

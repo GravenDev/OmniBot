@@ -39,6 +39,10 @@ import {
 } from "#modules/birthday/services/stats.js";
 
 const UPCOMING_DAYS = 30;
+// Twins named in the reply to /birthday set and show; the rest are counted.
+const SHOWN_TWINS = 10;
+// Discord answers a member request for 100 users at most.
+const MEMBER_FETCH_LIMIT = 100;
 
 const logger = loggerMaker("birthday");
 
@@ -68,6 +72,78 @@ async function replyPrivately(interaction: GuildInteraction, content: string) {
   });
 }
 
+/** Ids, among `userIds`, of the members still on the guild. */
+async function stillOnGuild(
+  interaction: GuildInteraction,
+  userIds: string[]
+): Promise<Set<string>> {
+  const present = new Set<string>();
+  if (!interaction.inCachedGuild()) {
+    return present;
+  }
+  for (let start = 0; start < userIds.length; start += MEMBER_FETCH_LIMIT) {
+    const members = await interaction.guild.members.fetch({
+      user: userIds.slice(start, start + MEMBER_FETCH_LIMIT),
+    });
+    for (const userId of members.keys()) {
+      present.add(userId);
+    }
+  }
+  return present;
+}
+
+/**
+ * The line naming the members who share `own`'s date, or null when nobody
+ * does. Only announced members still on the guild are named or counted: a
+ * hidden one is never revealed, even to a hidden asker. The same registered
+ * date, 29 February included: it is not 28 February's twin, as in the
+ * statistics.
+ */
+async function twinsLine(
+  interaction: GuildInteraction,
+  config: Config,
+  own: BirthdayEntry,
+  entries: readonly BirthdayEntry[]
+): Promise<string | null> {
+  const candidates = entries
+    .filter(
+      (entry) =>
+        entry.announce &&
+        entry.userId !== own.userId &&
+        entry.day === own.day &&
+        entry.month === own.month
+    )
+    .map((entry) => entry.userId);
+  if (candidates.length === 0) {
+    return null;
+  }
+
+  let twins: string[];
+  try {
+    const present = await stillOnGuild(interaction, candidates);
+    twins = candidates.filter((userId) => present.has(userId)).sort();
+  } catch (err) {
+    // Better no twins than a departed member named.
+    logger.error(
+      { err },
+      `Failed to fetch the birthday twins | guildId = ${interaction.guildId}`
+    );
+    return null;
+  }
+  if (twins.length === 0) {
+    return null;
+  }
+
+  // Ten names, then « N other members »: the reply stays short.
+  const names = twins.slice(0, SHOWN_TWINS).map((userId) => `<@${userId}>`);
+  if (twins.length > SHOWN_TWINS) {
+    names.push(config.t("twins.more", { count: twins.length - SHOWN_TWINS }));
+  }
+  return config.t("twins.line", {
+    users: new Intl.ListFormat(config.locale).format(names),
+  });
+}
+
 async function setBirthday(interaction: GuildInteraction, config: Config) {
   const entry: BirthdayEntry = {
     userId: interaction.user.id,
@@ -94,11 +170,18 @@ async function setBirthday(interaction: GuildInteraction, config: Config) {
       ? config.t("set.announced", { channel: `<#${channel.id}>` })
       : config.t("set.announcedLater")
     : config.t("set.private");
+  const twins = await twinsLine(
+    interaction,
+    config,
+    entry,
+    await birthdayService.list(interaction.guildId)
+  );
   await replyPrivately(
     interaction,
     [
       config.t("set.done", { date: formatDayOfYear(entry, config.locale) }),
       visibility,
+      ...(twins ? [twins] : []),
       config.t("set.data"),
     ].join("\n")
   );
@@ -112,19 +195,20 @@ async function setBirthday(interaction: GuildInteraction, config: Config) {
 }
 
 async function showBirthday(interaction: GuildInteraction, config: Config) {
-  const entry = await birthdayService.get(
-    interaction.guildId,
-    interaction.user.id
-  );
+  // One query for the member's own entry and their twins.
+  const entries = await birthdayService.list(interaction.guildId);
+  const entry = entries.find(({ userId }) => userId === interaction.user.id);
   if (!entry) {
     await replyPrivately(interaction, config.t("show.none"));
     return;
   }
+  const twins = await twinsLine(interaction, config, entry, entries);
   await replyPrivately(
     interaction,
     [
       config.t("show.entry", { date: formatDayOfYear(entry, config.locale) }),
       config.t(entry.announce ? "show.announced" : "show.private"),
+      ...(twins ? [twins] : []),
       config.t("show.stored"),
     ].join("\n")
   );

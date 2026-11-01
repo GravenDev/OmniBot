@@ -20,7 +20,7 @@
   "announce.builtIn.1": "🎂 Happy birthday {user}!",
   "announce.builtIn.2": "🎉 It's {user}'s birthday today, happy birthday!",
   "announce.builtIn.3": "🥳 Everyone, wish {user} a happy birthday!",
-  "announce.twins": "🎂 Today, {{users}} celebrate their birthday together. Happy birthday!",
+  "announce.together": "🎂 Today, {{users}} celebrate their birthday together. Happy birthday!",
   "announce.card": "🎂 Happy birthday {{users}}!",
 
   "card.kicker_one": "Birthday",
@@ -59,6 +59,10 @@
   "show.announced": "It is announced on the server.",
   "show.private": "It is not announced: it only counts in the statistics.",
   "show.stored": "That is all the module stores about you, with your Discord ID. `/birthday remove` deletes it.",
+
+  "twins.line": "👯 You share your birthday with {{users}}.",
+  "twins.more_one": "{{count}} other member",
+  "twins.more_other": "{{count}} other members",
 
   "remove.done": "Your birthday is deleted.",
   "remove.none": "You had no birthday registered on this server.",
