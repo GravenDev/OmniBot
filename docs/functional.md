@@ -510,7 +510,7 @@ Avec n inscrits, la probabilité qu'au moins deux partagent une date vaut 1 − 
 - à la première date partagée, avec le nombre d'inscrits à ce moment-là, comparé à l'espérance théorique (environ 24,6) ;
 - au 57ᵉ anniversaire enregistré.
 
-Ces annonces ne citent que des chiffres : ni membre, ni date. Tous les anniversaires comptent, y compris ceux qui ne sont pas annoncés. Un palier franchi alors que ses annonces sont désactivées, qu'aucun salon des annonces n'est défini ou que la publication échoue est retenu sans être annoncé. Les pourcentages sont arrondis à l'inférieur : 98,8 % s'affiche 98 %, jamais 99 %.
+Ces annonces ne citent que des chiffres : ni membre, ni date. Tous les anniversaires comptent, y compris ceux qui ne sont pas annoncés. Un palier franchi alors que ses annonces sont désactivées, qu'aucun salon des annonces n'est défini ou que la publication échoue est retenu sans être annoncé. Les pourcentages ont une décimale, tronquée et jamais arrondie au-dessus : 98,88 % s'affiche 98,8 %, jamais 99 %.
 
 ### `/birthday set <day> <month> [announce]`
 

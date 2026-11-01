@@ -167,8 +167,8 @@ describe("milestoneEmbed", () => {
     );
     expect(embed.fields?.map((field) => field.value)).toEqual([
       // Intl's space before "%" depends on the ICU version.
-      expect.stringMatching(/^22\s%$/),
-      expect.stringMatching(/^23 inscrits · 50\s%$/),
+      expect.stringMatching(/^22,3\s%$/),
+      expect.stringMatching(/^23 inscrits · 50,7\s%$/),
     ]);
     expect(
       milestoneEmbed(createT("en", "birthday"), "first-collision", {
@@ -196,8 +196,8 @@ describe("formatPercent", () => {
   });
 
   it("never rounds up to a milestone or to certainty", () => {
-    expect(formatPercent(0.5073, "en")).toBe("50%");
-    expect(formatPercent(0.988, "en")).toBe("98%");
+    expect(formatPercent(0.5073, "en")).toBe("50.7%");
+    expect(formatPercent(0.988, "en")).toBe("98.8%");
     expect(formatPercent(0.99977, "en")).toBe("99.9%");
   });
 });

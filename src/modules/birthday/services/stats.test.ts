@@ -125,7 +125,7 @@ describe("statsCardLabels", () => {
     const labels = fr();
     // French puts a no-break space before the sign.
     expect(labels.probability.value).toMatch(/^4\s%$/);
-    expect(labels.curve.half).toMatch(/^50\s%$/);
+    expect(labels.curve.half).toMatch(/^50,7\s%$/);
     expect(labels.curve.certain).toMatch(/^99\s%$/);
     const en = statsCardLabels(
       createT("en", "birthday"),
