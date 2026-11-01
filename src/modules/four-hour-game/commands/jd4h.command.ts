@@ -12,9 +12,14 @@ import { NO_MENTIONS } from "#lib/mentions.js";
 import { resolvePlayers } from "#lib/players.js";
 import { RevisionCache } from "#lib/revision-cache.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
-import { renderLeaderboard } from "#modules/four-hour-game/rendering/leaderboard-image.js";
+import {
+  renderLeaderboard,
+  type LeaderboardRow,
+} from "#modules/four-hour-game/rendering/leaderboard-image.js";
 import { renderProfileCard } from "#modules/four-hour-game/rendering/profile-card.js";
-import fourHourGameService from "#modules/four-hour-game/services/four-hour-game.service.js";
+import fourHourGameService, {
+  type LeaderboardEntry,
+} from "#modules/four-hour-game/services/four-hour-game.service.js";
 
 const LEADERBOARD_SIZE = 10;
 
@@ -71,27 +76,53 @@ async function showScore(
   });
 }
 
+// The shown entries, and the caller's own entry when they are ranked.
+async function standings(
+  guildId: string,
+  board: Board,
+  callerId: string
+): Promise<{ entries: LeaderboardEntry[]; caller: LeaderboardEntry | null }> {
+  if (board === "daily") {
+    const all = await fourHourGameService.getDailyStandings(guildId);
+    return {
+      entries: all.slice(0, LEADERBOARD_SIZE),
+      caller: all.find((entry) => entry.userId === callerId) ?? null,
+    };
+  }
+  const [entries, rank, score] = await Promise.all([
+    fourHourGameService.getLeaderboard(guildId, LEADERBOARD_SIZE),
+    fourHourGameService.getRank(guildId, callerId),
+    fourHourGameService.getScore(guildId, callerId),
+  ]);
+  return {
+    entries,
+    caller: rank && score ? { userId: callerId, score, rank: rank.rank } : null,
+  };
+}
+
 async function buildLeaderboardImage(
   interaction: ChatInputCommandInteraction<"cached" | "raw">,
   config: Config,
   board: Board
 ): Promise<Buffer | null> {
-  const entries =
-    board === "daily"
-      ? (
-          await fourHourGameService.getDailyStandings(interaction.guildId)
-        ).slice(0, LEADERBOARD_SIZE)
-      : await fourHourGameService.getLeaderboard(
-          interaction.guildId,
-          LEADERBOARD_SIZE
-        );
+  const { entries, caller } = await standings(
+    interaction.guildId,
+    board,
+    interaction.user.id
+  );
+  // Like /rngdle leaderboard-all: highlighted on the card, or drawn under the
+  // table when the caller is not among the shown entries.
+  const callerOffPage =
+    caller !== null && !entries.some((entry) => entry.userId === caller.userId);
 
   const players = await resolvePlayers(
     interaction.client,
     interaction.guildId,
-    entries.map((entry) => entry.userId)
+    [...entries, ...(callerOffPage ? [caller] : [])].map(
+      (entry) => entry.userId
+    )
   );
-  const rows = entries.flatMap((entry) => {
+  const toRow = (entry: LeaderboardEntry): LeaderboardRow[] => {
     const player = players.get(entry.userId);
     return player
       ? [
@@ -103,7 +134,9 @@ async function buildLeaderboardImage(
           },
         ]
       : [];
-  });
+  };
+  const rows = entries.flatMap(toRow);
+  const callerRow = callerOffPage ? toRow(caller)[0] : undefined;
 
   if (rows.length === 0) {
     return null;
@@ -118,7 +151,7 @@ async function buildLeaderboardImage(
     guild?.iconURL({ extension: "png", size: 128 }) ?? null
   );
   return renderLeaderboard(
-    { icon, rows },
+    { icon, rows, callerRank: caller?.rank, caller: callerRow },
     {
       locale: config.locale,
       title: config.t("leaderboard.title"),
@@ -143,7 +176,7 @@ async function showLeaderboard(
   await interaction.deferReply();
 
   const image = await leaderboardCache.get(
-    `${interaction.guildId}:${config.locale}:${board}`,
+    `${interaction.guildId}:${config.locale}:${board}:${interaction.user.id}`,
     fourHourGameService.getRevision(interaction.guildId),
     () => buildLeaderboardImage(interaction, config, board)
   );

@@ -19,8 +19,17 @@ const getProfile = vi.hoisted(() => vi.fn());
 const getRevision = vi.hoisted(() => vi.fn());
 const getLeaderboard = vi.hoisted(() => vi.fn());
 const getDailyStandings = vi.hoisted(() => vi.fn());
+const getRank = vi.hoisted(() => vi.fn());
+const getScore = vi.hoisted(() => vi.fn());
 vi.mock("#modules/four-hour-game/services/four-hour-game.service.js", () => ({
-  default: { getProfile, getRevision, getLeaderboard, getDailyStandings },
+  default: {
+    getProfile,
+    getRevision,
+    getLeaderboard,
+    getDailyStandings,
+    getRank,
+    getScore,
+  },
 }));
 
 const resolvePlayers = vi.hoisted(() => vi.fn());
@@ -93,6 +102,7 @@ function leaderboardInteraction(type: string | null = null) {
     guildId: `guild-${++guild}`,
     guild: { iconURL: () => "https://cdn/icon.png" },
     client: { id: "client" },
+    user: { id: "caller" },
     inGuild: () => true,
     options: { getSubcommand: () => "leaderboard", getString: () => type },
     deferReply: vi.fn(async () => {}),
@@ -105,6 +115,97 @@ function leaderboardInteraction(type: string | null = null) {
 describe("/jd4h leaderboard", () => {
   beforeEach(() => {
     renderLeaderboard.mockClear();
+    getRank.mockReset().mockResolvedValue(null);
+    getScore.mockReset().mockResolvedValue(null);
+  });
+
+  const drawn = () =>
+    renderLeaderboard.mock.calls[0]![0] as {
+      rows: unknown[];
+      callerRank?: number;
+      caller?: unknown;
+    };
+
+  it("highlights the caller's row when they are on the card", async () => {
+    getLeaderboard.mockResolvedValue([
+      { rank: 1, userId: "alice", score: 12 },
+      { rank: 2, userId: "caller", score: 8 },
+    ]);
+    getRank.mockResolvedValue({ rank: 2, total: 2 });
+    getScore.mockResolvedValue(8);
+    resolvePlayers.mockResolvedValue(
+      new Map([
+        ["alice", { name: "Alice", avatar: null }],
+        ["caller", { name: "Me", avatar: null }],
+      ])
+    );
+
+    await command.execute(leaderboardInteraction(), keyConfig);
+
+    expect(drawn().callerRank).toBe(2);
+    expect(drawn().caller).toBeUndefined();
+  });
+
+  it("draws the caller under the table when they are further down", async () => {
+    getLeaderboard.mockResolvedValue([{ rank: 1, userId: "alice", score: 12 }]);
+    getRank.mockResolvedValue({ rank: 17, total: 20 });
+    getScore.mockResolvedValue(3);
+    resolvePlayers.mockResolvedValue(
+      new Map([
+        ["alice", { name: "Alice", avatar: null }],
+        ["caller", { name: "Me", avatar: null }],
+      ])
+    );
+    const interaction = leaderboardInteraction();
+
+    await command.execute(interaction, keyConfig);
+
+    expect(resolvePlayers.mock.calls.at(-1)![2]).toEqual(["alice", "caller"]);
+    expect(drawn().caller).toEqual({
+      rank: 17,
+      name: "Me",
+      score: 3,
+      avatar: null,
+    });
+  });
+
+  it("finds the caller further down the daily standings", async () => {
+    getDailyStandings.mockResolvedValue(
+      Array.from({ length: 12 }, (_, index) => ({
+        rank: index + 1,
+        userId: index === 11 ? "caller" : `player-${index + 1}`,
+        score: 20 - index,
+      }))
+    );
+    resolvePlayers.mockResolvedValue(
+      new Map([
+        ["player-1", { name: "One", avatar: null }],
+        ["caller", { name: "Me", avatar: null }],
+      ])
+    );
+
+    await command.execute(leaderboardInteraction("daily"), keyConfig);
+
+    expect(getRank).not.toHaveBeenCalled();
+    expect(drawn().caller).toEqual({
+      rank: 12,
+      name: "Me",
+      score: 9,
+      avatar: null,
+    });
+  });
+
+  it("adds no row for a caller without points", async () => {
+    getLeaderboard.mockResolvedValue([{ rank: 1, userId: "alice", score: 12 }]);
+    resolvePlayers.mockResolvedValue(
+      new Map([["alice", { name: "Alice", avatar: null }]])
+    );
+
+    await command.execute(leaderboardInteraction(), keyConfig);
+
+    expect(resolvePlayers.mock.calls.at(-1)![2]).toEqual(["alice"]);
+    expect(drawn().callerRank).toBeUndefined();
+    expect(drawn().caller).toBeUndefined();
   });
 
   it("names players after their server nickname and drops the ones nobody can find", async () => {
