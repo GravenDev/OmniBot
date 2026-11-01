@@ -15,11 +15,15 @@
 
 name: omnibot
 
+# journald, not json-file: every deploy recreates the bot's container, and
+# json-file deletes the logs with the container they belong to. The journal
+# keeps them on the host across deploys, within its own retention
+# (SystemMaxUse, MaxRetentionSec in journald.conf). The host must run
+# systemd-journald, or the containers do not start.
 x-logging: &default-logging
-  driver: json-file
+  driver: journald
   options:
-    max-size: "10m"
-    max-file: "3"
+    tag: "{{.Name}}"
 
 services:
   # PostgreSQL is reachable only from the internal network: no published port.
