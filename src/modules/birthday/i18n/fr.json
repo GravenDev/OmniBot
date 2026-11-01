@@ -58,6 +58,8 @@
   "show.private": "Il n'est pas annoncé : il compte seulement dans les statistiques.",
   "show.stored": "C'est tout ce que le module conserve à votre sujet, avec votre identifiant Discord. `/birthday remove` le supprime.",
 
+  "announce.hide": "Ne plus annoncer mon anniversaire",
+  "announce.show": "Annoncer mon anniversaire",
   "twins.line": "👯 Vous partagez votre date avec {{users}}.",
   "twins.more_one": "{{count}} autre membre",
   "twins.more_other": "{{count}} autres membres",

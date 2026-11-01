@@ -4,6 +4,7 @@ import { defineModule } from "#lib/module.js";
 import { birthdayConfigSchema } from "./birthday.config.js";
 import birthdayAdminCommand from "./commands/birthday-admin.command.js";
 import birthdayCommand from "./commands/birthday.command.js";
+import announceButton from "./interactions/announce.button.js";
 import guildMemberRemoveListener from "./listeners/guild-member-remove.listener.js";
 import birthdayService from "./services/birthday.service.js";
 import { uninstallWarning } from "./services/uninstall.js";
@@ -37,6 +38,7 @@ const birthdayModule = defineModule({
   onLoad(_client, registry) {
     registry.register(birthdayCommand);
     registry.register(birthdayAdminCommand);
+    registry.register(announceButton);
     registry.register(guildMemberRemoveListener);
     for (const task of birthdayTasks(birthdayModule)) {
       registry.register(task);

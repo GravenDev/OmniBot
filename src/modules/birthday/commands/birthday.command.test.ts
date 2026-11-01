@@ -64,8 +64,9 @@ function interaction({
   present = () => true,
   guild,
 }: Options) {
-  const reply = vi.fn(async () => ({}));
-  const editReply = vi.fn(async () => ({}));
+  const reply = vi.fn(async (_options: unknown) => ({}));
+  // A deferred reply is then edited: edits also land in `reply`.
+  const editReply = vi.fn(async (options: unknown) => reply(options));
   const fetch = vi.fn(async ({ user }: { user: string[] }) => {
     return new Map(
       user.filter(present).map((userId) => [userId, { id: userId }])
@@ -188,7 +189,11 @@ describe("/birthday set", () => {
   });
 
   it("stores the day and the month, privately confirmed", async () => {
-    const { interaction: i, reply } = interaction({
+    const {
+      interaction: i,
+      reply,
+      deferReply,
+    } = interaction({
       subcommand: "set",
       integers: { day: 14, month: 3 },
     });
@@ -203,9 +208,7 @@ describe("/birthday set", () => {
       month: 3,
       announce: true,
     });
-    expect(reply).toHaveBeenCalledWith(
-      expect.objectContaining({ flags: MessageFlags.Ephemeral })
-    );
+    expect(deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     expect(content(reply)).toContain("**14 mars**");
     expect(content(reply)).toContain("Il sera annoncé dans <#chan>.");
     expect(checkMilestones).toHaveBeenCalledWith("guild", provider);
@@ -251,14 +254,16 @@ describe("birthday twins in /birthday set and show", () => {
 
   it("names a twin, without pinging", async () => {
     service.list.mockResolvedValue([entry("me", 14, 3), entry("a", 14, 3)]);
-    const { interaction: i, reply } = interaction({ subcommand: "show" });
+    const {
+      interaction: i,
+      reply,
+      deferReply,
+    } = interaction({ subcommand: "show" });
     await command.execute(i, config());
     expect(content(reply)).toContain("👯 Vous partagez votre date avec <@a>.");
+    expect(deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     expect(reply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        flags: MessageFlags.Ephemeral,
-        allowedMentions: { parse: [] },
-      })
+      expect.objectContaining({ allowedMentions: { parse: [] } })
     );
     expect(service.get).not.toHaveBeenCalled();
   });
@@ -479,20 +484,15 @@ describe("/birthday stats", () => {
       cached: 10,
       memberCount: 50,
     });
-    const {
-      interaction: i,
-      reply,
-      editReply,
-    } = interaction({
+    const { interaction: i, editReply } = interaction({
       subcommand: "stats",
       roles: { role: { id: "mods" } },
       guild: server,
     });
     await command.execute(i, config());
 
-    // The cache is incomplete: the members are fetched behind a defer.
+    // The cache is incomplete: the members are fetched first.
     expect(server.members.fetch).toHaveBeenCalled();
-    expect(reply).not.toHaveBeenCalled();
     const text = content(editReply);
     expect(text).toContain("parmi les membres de <@&mods>");
     expect(text).toContain(
