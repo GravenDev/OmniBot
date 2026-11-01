@@ -20,12 +20,24 @@ export interface PointAnnouncement extends ScoredPoint {
   avatarUrl: string | null;
 }
 
-/** `caughtUp`: scored while the bot was down, announced when it restarts. */
+function footerKey(caughtUp: boolean, counted: boolean): string {
+  if (counted) {
+    return caughtUp ? "point.caughtUpCountedFrom" : "point.countedFrom";
+  }
+  return caughtUp ? "point.caughtUpPostedAt" : "point.postedAt";
+}
+
+/**
+ * `caughtUp`: scored while the bot was down, announced when it restarts. The
+ * footer gives the time the duration counts from: the message's own, or for a
+ * message back in place, the later one its delay restarted at.
+ */
 export function buildPointEmbed(
   announcement: PointAnnouncement,
   config: ConfigProvider<FourHourGameConfigSchema>,
   { caughtUp = false }: { caughtUp?: boolean } = {}
 ): EmbedBuilder {
+  const counted = announcement.countedFrom > announcement.heldSince;
   return buildAnnouncementEmbed(
     {
       title: config.t("point.title"),
@@ -39,10 +51,8 @@ export function buildPointEmbed(
     },
     config.t
   )
-    .setFooter({
-      text: config.t(caughtUp ? "point.caughtUpPostedAt" : "point.postedAt"),
-    })
-    .setTimestamp(announcement.heldSince);
+    .setFooter({ text: config.t(footerKey(caughtUp, counted)) })
+    .setTimestamp(counted ? announcement.countedFrom : announcement.heldSince);
 }
 
 async function fetchRank(

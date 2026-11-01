@@ -373,6 +373,7 @@ const point = (score: number) => ({
   score,
   heldSeconds: DELAY,
   heldSince: start,
+  countedFrom: start,
 });
 
 function message(
@@ -1369,7 +1370,13 @@ describe("FourHourGameService deletions and resync", () => {
     );
 
     expect(caughtUp).toEqual([
-      { winnerId: "zed", score: 1, heldSeconds: 5 * 3600, heldSince: start },
+      {
+        winnerId: "zed",
+        score: 1,
+        heldSeconds: 5 * 3600,
+        heldSince: start,
+        countedFrom: start,
+      },
     ]);
     expect(scores.get(key("guild", "zed"))).toBe(1);
     expect(points).toEqual([
@@ -1428,6 +1435,9 @@ describe("FourHourGameService deletions and resync", () => {
       ["last", true],
     ]);
     expect(lastMessages.get("guild")?.authorId).toBe("bob");
+    // alice's point restarted the count: deleting bob's reply live would put
+    // her message back with it, not with zed's, already paid for.
+    expect(lastMessages.get("guild")?.scoringFrom).toEqual(at(10 * 3600));
     spy.mockRestore();
     for (const write of writeSpies) {
       write.mockRestore();

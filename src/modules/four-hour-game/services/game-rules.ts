@@ -15,6 +15,8 @@ export type MessageOutcome =
       winnerId: string;
       heldSeconds: number;
       heldSince: Date;
+      /** When `heldSeconds` counts from: later than `heldSince` for a message back in place. */
+      countedFrom: Date;
     };
 
 /**
@@ -64,6 +66,7 @@ function evaluateReply(
       winnerId: last.authorId,
       heldSeconds: Math.floor((incoming.sentAt.getTime() - from) / 1000),
       heldSince: last.sentAt,
+      countedFrom: new Date(from),
     };
   }
   return { kind: "tooSoon" };
@@ -79,6 +82,7 @@ export interface ReplayedPoint {
   winnerId: string;
   heldSeconds: number;
   heldSince: Date;
+  countedFrom: Date;
   awardedAt: Date;
 }
 
@@ -125,12 +129,13 @@ export function replayMessages<M extends ChannelMessage>(
       to: message.sentAt,
     });
     if (outcome.kind === "point") {
-      const { winnerId, heldSeconds, heldSince } = outcome;
+      const { winnerId, heldSeconds, heldSince, countedFrom } = outcome;
       scoringFrom = message.sentAt;
       points.push({
         winnerId,
         heldSeconds,
         heldSince,
+        countedFrom,
         awardedAt: message.sentAt,
       });
     }

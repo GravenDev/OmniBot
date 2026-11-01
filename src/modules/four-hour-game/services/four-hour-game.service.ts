@@ -84,6 +84,8 @@ export interface ScoredPoint {
   score: number;
   heldSeconds: number;
   heldSince: Date;
+  /** When `heldSeconds` counts from: later than `heldSince` for a message back in place. */
+  countedFrom: Date;
 }
 
 export interface PlayerRank {
@@ -479,7 +481,13 @@ class FourHourGameService implements Service {
     }
     const scored = await prisma.$transaction(async (tx) => {
       const written: ScoredPoint[] = [];
-      for (const { winnerId, heldSeconds, heldSince, awardedAt } of points) {
+      for (const {
+        winnerId,
+        heldSeconds,
+        heldSince,
+        countedFrom,
+        awardedAt,
+      } of points) {
         const [winner, point] = pointWrites(
           guildId,
           winnerId,
@@ -489,7 +497,7 @@ class FourHourGameService implements Service {
         );
         const { score } = await winner;
         await point;
-        written.push({ winnerId, score, heldSeconds, heldSince });
+        written.push({ winnerId, score, heldSeconds, heldSince, countedFrom });
       }
       await lastMessageWrite(guildId, channelId, current, scoringFrom, tx);
       return written;

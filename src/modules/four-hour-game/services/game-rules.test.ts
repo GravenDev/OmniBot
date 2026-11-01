@@ -39,6 +39,7 @@ describe("evaluateMessage", () => {
       winnerId: "alice",
       heldSeconds: FOUR_HOURS + 1,
       heldSince: start,
+      countedFrom: start,
     });
   });
 
@@ -54,6 +55,7 @@ describe("evaluateMessage", () => {
       winnerId: "alice",
       heldSeconds: FOUR_HOURS,
       heldSince: start,
+      countedFrom: start,
     });
   });
 
@@ -99,6 +101,7 @@ describe("evaluateMessage", () => {
       winnerId: "alice",
       heldSeconds: FOUR_HOURS,
       heldSince: start,
+      countedFrom: after(3600),
     });
   });
 
@@ -151,6 +154,7 @@ describe("replayMessages", () => {
         winnerId: "zed",
         heldSeconds: 5 * 3600,
         heldSince: start.sentAt,
+        countedFrom: start.sentAt,
         awardedAt: msg("alice", 5).sentAt,
       },
     ]);
