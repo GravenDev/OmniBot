@@ -27,6 +27,7 @@ import {
 } from "../rendering/birthday-card.js";
 import {
   birthdayCard,
+  plainMessage,
   birthdayMessage,
   cardContent,
   pickGuildMessage,
@@ -56,11 +57,21 @@ async function drawCard(
   today: CalendarDay
 ): Promise<AttachmentBuilder | null> {
   try {
+    const guild = celebrants[0]!.guild;
     const card = birthdayCard(
       config.t,
       config.locale,
       celebrants.map((member) => member.displayName),
-      template,
+      template &&
+        plainMessage(
+          template,
+          {
+            user: (id) => guild.members.cache.get(id)?.displayName,
+            role: (id) => guild.roles.cache.get(id)?.name,
+            channel: (id) => guild.channels.cache.get(id)?.name,
+          },
+          config.locale
+        ),
       today
     );
     const png = renderBirthdayCard(
