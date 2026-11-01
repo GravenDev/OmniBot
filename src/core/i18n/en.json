@@ -122,6 +122,9 @@
   "modules.birthday.name": "Birthdays",
   "modules.birthday.description": "Wishes the members' birthdays, and puts the birthday paradox to the test.",
 
+  "modules.seniority.name": "Member anniversaries",
+  "modules.seniority.description": "Celebrates the members' anniversaries on the server, and the server's own.",
+
   "modules.rngdle.name": "RNGdle",
   "modules.rngdle.description": "Tracks the members' rngdle.com rolls: leaderboards, profiles, server statistics and a daily leaderboard.",
 

@@ -81,6 +81,10 @@ When the Server Stats module is enabled on a guild, the bot counts every day, pe
 
 The Birthdays module stores, only for the members who register it themselves with `/birthday set`, the day and month of their birthday (never the year, so the age is not revealed) and whether they want to be announced on the server. Purpose: wishing the member a happy birthday and computing aggregate statistics (the birthday paradox). Legal basis: the member's consent, which they can withdraw at any time. The module also keeps, per guild, the last day announced, the birthday paradox milestones already reached (announced or not) and the number of registrations when a date was first shared, with no personal data.
 
+### Member anniversaries
+
+The Member anniversaries module only stores, for each guild, the last day announced. It reads the members' join dates and the guild's creation date, provided by Discord, without storing them.
+
 ## Message Content Read Without Being Stored
 
 Some modules read message content to work, without saving it to the database:

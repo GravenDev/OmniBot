@@ -547,6 +547,31 @@ Supprime l'anniversaire d'un membre. Il n'existe volontairement aucune commande 
 
 ---
 
+## Module Ancienneté
+
+Fête l'ancienneté des membres sur le serveur et l'anniversaire du serveur. Le module n'enregistre que le dernier jour annoncé de chaque serveur : la date d'arrivée d'un membre et la date de création du serveur viennent de Discord. Il a besoin de l'intent privilégié **Server Members** pour lister les membres et leur date d'arrivée.
+
+### Annonces quotidiennes
+
+Chaque jour, à l'heure et dans le fuseau configurés, le bot publie dans le salon des annonces :
+
+1. **L'ancienneté** : les membres arrivés sur le serveur un jour comme aujourd'hui il y a une année pleine ou plus, du plus ancien au plus récent, en un ou plusieurs messages. Les bots n'y figurent pas. Discord remet la date d'arrivée à zéro quand un membre quitte puis revient. Une arrivée un 29 février est fêtée le 28 les années non bissextiles.
+2. **L'anniversaire du serveur**, le jour anniversaire de sa création : son âge et son nombre de membres.
+
+Chacune des deux annonces peut être désactivée. Les annonces de chaque journée sont publiées une seule fois. Si le bot est arrêté à l'heure prévue, elles partent à son redémarrage s'il a lieu le même jour ; une journée entièrement manquée n'est pas rattrapée. Si Discord ne fournit pas la liste des membres, rien n'est publié et le bot réessaie l'heure suivante. Changer de fuseau ne fait jamais republier une journée déjà annoncée. Une annonce qui échoue (salon supprimé, permission retirée) n'empêche pas l'autre. Les membres mentionnés sont notifiés, sauf ceux qui ont désactivé leurs mentions avec `/pings`.
+
+### Configuration — `/config seniority`
+
+| Champ                 | Type    | Description                                                          |
+| --------------------- | ------- | -------------------------------------------------------------------- |
+| `channel`             | Salon   | Salon des annonces. Tant qu'il n'est pas défini, rien n'est annoncé. |
+| `timeZone`            | Choix   | Fuseau horaire des journées du serveur (Europe/Paris par défaut).    |
+| `hour`                | Nombre  | Heure des annonces, de 0 à 23 (9 par défaut).                        |
+| `memberAnniversaries` | Booléen | Annoncer l'ancienneté des membres (activé par défaut).               |
+| `serverAnniversary`   | Booléen | Annoncer l'anniversaire du serveur (activé par défaut).              |
+
+---
+
 ## Module Thread Creator
 
 Crée automatiquement un fil de discussion sous chaque nouveau message dans un salon configuré.

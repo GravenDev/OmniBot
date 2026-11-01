@@ -1,0 +1,25 @@
+{
+  "config.channel.name": "Salon des annonces",
+  "config.channel.description": "Salon où sont annoncés l'ancienneté des membres et l'anniversaire du serveur. Rien n'est annoncé tant qu'il n'est pas défini.",
+
+  "config.timeZone.name": "Fuseau horaire",
+  "config.timeZone.description": "Fuseau horaire que suivent les journées du serveur.",
+
+  "config.hour.name": "Heure des annonces",
+  "config.hour.description": "Heure de la journée (0 à 23) à laquelle les annonces sont publiées.",
+
+  "config.memberAnniversaries.name": "Ancienneté des membres",
+  "config.memberAnniversaries.description": "Annoncer les membres présents sur le serveur depuis une année pleine de plus.",
+
+  "config.serverAnniversary.name": "Anniversaire du serveur",
+  "config.serverAnniversary.description": "Annoncer l'anniversaire de la création du serveur.",
+
+  "members.heading": "🎉 **Ancienneté sur le serveur**",
+  "members.line_one": "{{user}} est parmi nous depuis **{{count}} an** aujourd'hui",
+  "members.line_other": "{{user}} est parmi nous depuis **{{count}} ans** aujourd'hui",
+
+  "server.headline_one": "🎂 **Le serveur fête ses {{count}} an aujourd'hui !**",
+  "server.headline_other": "🎂 **Le serveur fête ses {{count}} ans aujourd'hui !**",
+  "server.members_one": "{{count}} membre",
+  "server.members_other": "{{count}} membres"
+}
