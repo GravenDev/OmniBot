@@ -33,6 +33,11 @@ vi.mock("#modules/birthday/services/milestones.js", () => ({
   checkMilestones,
 }));
 
+const renderStatsCard = vi.hoisted(() => vi.fn());
+vi.mock("#modules/birthday/rendering/stats-card.js", () => ({
+  renderStatsCard,
+}));
+
 const { default: command } = await import("./birthday.command.js");
 
 interface Options {
@@ -43,13 +48,20 @@ interface Options {
 
 function interaction({ subcommand, integers = {}, booleans = {} }: Options) {
   const reply = vi.fn(async () => ({}));
+  const deferReply = vi.fn(async () => ({}));
+  const editReply = vi.fn(async () => ({}));
   return {
     reply,
+    deferReply,
+    editReply,
     interaction: {
       inGuild: () => true,
       guildId: "guild",
+      guild: null,
       user: { id: "me" },
       reply,
+      deferReply,
+      editReply,
       options: {
         getSubcommand: () => subcommand,
         getInteger: (name: string) => integers[name] ?? null,
@@ -163,18 +175,38 @@ describe("/birthday remove", () => {
 });
 
 describe("/birthday stats", () => {
-  it("names a shared date only when all its members are announced", async () => {
-    service.list.mockResolvedValue([
-      { userId: "a", day: 14, month: 3, announce: true },
-      { userId: "b", day: 14, month: 3, announce: true },
-      { userId: "c", day: 2, month: 11, announce: true },
-      { userId: "d", day: 2, month: 11, announce: false },
-      { userId: "e", day: 5, month: 5, announce: false },
-    ]);
-    const { interaction: i, reply } = interaction({ subcommand: "stats" });
+  const ENTRIES = [
+    { userId: "a", day: 14, month: 3, announce: true },
+    { userId: "b", day: 14, month: 3, announce: true },
+    { userId: "c", day: 2, month: 11, announce: true },
+    { userId: "d", day: 2, month: 11, announce: false },
+    { userId: "e", day: 5, month: 5, announce: false },
+  ];
+
+  interface Edit {
+    content: string;
+    files: { name: string; description: string }[];
+  }
+  const edit = (editReply: ReturnType<typeof vi.fn>) =>
+    (editReply.mock.calls[0] as [Edit])[0];
+
+  it("replies with the card and its summary in the text", async () => {
+    service.list.mockResolvedValue(ENTRIES);
+    renderStatsCard.mockResolvedValue(Buffer.from("png"));
+    const {
+      interaction: i,
+      deferReply,
+      editReply,
+    } = interaction({
+      subcommand: "stats",
+    });
     await command.execute(i, config());
 
-    const text = content(reply);
+    expect(deferReply).toHaveBeenCalled();
+    const { content: text, files } = edit(editReply);
+    expect(files).toHaveLength(1);
+    expect(files[0]!.name).toBe("birthday-stats.png");
+    expect(files[0]!.description).toContain("Le paradoxe des anniversaires");
     expect(text).toContain("**5 anniversaires enregistrés**");
     expect(text).toContain("**2 dates partagées**");
     expect(text).toContain("Partagées : 14 mars.");
@@ -182,6 +214,21 @@ describe("/birthday stats", () => {
     expect(text).toContain("1 date partagée n'est pas affichée");
     expect(text).toContain("Encore 18 inscrits");
     expect(text).not.toMatch(/<@/);
+    expect(editReply).toHaveBeenCalledWith(
+      expect.objectContaining({ allowedMentions: { parse: [] } })
+    );
+  });
+
+  it("falls back to the text when the card cannot be drawn", async () => {
+    service.list.mockResolvedValue(ENTRIES);
+    renderStatsCard.mockRejectedValue(new Error("no canvas"));
+    const { interaction: i, editReply } = interaction({ subcommand: "stats" });
+    await command.execute(i, config());
+
+    const { content: text, files } = edit(editReply);
+    expect(files).toEqual([]);
+    expect(text).toContain("**5 anniversaires enregistrés**");
+    expect(text).toContain("Partagées : 14 mars.");
   });
 });
 

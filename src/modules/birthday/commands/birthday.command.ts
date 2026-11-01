@@ -1,4 +1,5 @@
 import {
+  AttachmentBuilder,
   InteractionContextType,
   MessageFlags,
   SlashCommandBuilder,
@@ -13,24 +14,23 @@ import {
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { describeLines } from "#lib/format.js";
+import { fetchImage } from "#lib/imaging.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { BirthdayConfigSchema } from "#modules/birthday/birthday.config.js";
-import {
-  formatPercent,
-  MESSAGE_LIMIT,
-} from "#modules/birthday/services/announcements.js";
+import { renderStatsCard } from "#modules/birthday/rendering/stats-card.js";
+import { MESSAGE_LIMIT } from "#modules/birthday/services/announcements.js";
 import birthdayService, {
   type BirthdayEntry,
 } from "#modules/birthday/services/birthday.service.js";
 import { checkMilestones } from "#modules/birthday/services/milestones.js";
-import {
-  collisionProbability,
-  expectedFirstCollision,
-  HALF_GROUP_SIZE,
-  sharedDates,
-} from "#modules/birthday/services/paradox.js";
 import { dropBirthdayRole } from "#modules/birthday/services/role.js";
+import {
+  birthdayStats,
+  statsCardLabels,
+  statsText,
+  type BirthdayStats,
+} from "#modules/birthday/services/stats.js";
 
 const UPCOMING_DAYS = 30;
 
@@ -183,59 +183,45 @@ async function showUpcoming(interaction: GuildInteraction, config: Config) {
   await interaction.reply({ content, allowedMentions: NO_MENTIONS });
 }
 
+/** The stats card, or `null` when it cannot be drawn. */
+async function drawStatsCard(
+  interaction: GuildInteraction,
+  config: Config,
+  stats: BirthdayStats
+): Promise<AttachmentBuilder | null> {
+  try {
+    const labels = statsCardLabels(config.t, config.locale, stats);
+    const icon = await fetchImage(
+      interaction.guild?.iconURL({ extension: "png" }) ?? null
+    );
+    const png = await renderStatsCard(stats, labels, icon);
+    return new AttachmentBuilder(png, {
+      name: "birthday-stats.png",
+      description: labels.alt,
+    });
+  } catch (err) {
+    logger.error(
+      { err },
+      `Failed to draw the birthday stats card | guildId = ${interaction.guildId}`
+    );
+    return null;
+  }
+}
+
 async function showStats(interaction: GuildInteraction, config: Config) {
+  // Drawing the card takes longer than Discord's 3 seconds.
+  await interaction.deferReply();
   const entries = await birthdayService.list(interaction.guildId);
   const state = await birthdayService.getState(interaction.guildId);
-  const count = entries.length;
-  const shared = sharedDates(entries);
-  // A shared date is only named when everyone on it agreed to be announced.
-  const named = shared
-    .filter((date) => date.entries.every((entry) => entry.announce))
-    .map((date) => formatDayOfYear(date, config.locale));
-
-  const lines = [
-    config.t("stats.title"),
-    config.t("stats.probability", {
-      count,
-      percent: formatPercent(collisionProbability(count), config.locale),
-    }),
-  ];
-  if (shared.length === 0) {
-    lines.push(config.t("stats.noShared"));
-  } else {
-    lines.push(config.t("stats.shared", { count: shared.length }));
-    if (named.length > 0) {
-      lines.push(
-        config.t("stats.sharedDates", {
-          dates: new Intl.ListFormat(config.locale).format(named),
-        })
-      );
-    }
-    if (named.length < shared.length) {
-      lines.push(
-        config.t("stats.sharedHidden", { count: shared.length - named.length })
-      );
-    }
-  }
-
-  const expected = expectedFirstCollision().toLocaleString(config.locale, {
-    maximumFractionDigits: 1,
+  const stats = birthdayStats(entries, {
+    firstCollisionCount: state.firstCollisionCount,
   });
-  if (state.firstCollisionCount !== null) {
-    lines.push(
-      config.t("stats.firstCollision", {
-        count: state.firstCollisionCount,
-        ordinal: true,
-        expected,
-      })
-    );
-  } else if (count < HALF_GROUP_SIZE) {
-    lines.push(config.t("stats.untilHalf", { count: HALF_GROUP_SIZE - count }));
-  }
-  lines.push(config.t("stats.footnote"));
-
-  await interaction.reply({
-    content: lines.join("\n"),
+  // The text stays with the image, for screen readers and search; alone, it
+  // is the reply when the card cannot be drawn.
+  const card = await drawStatsCard(interaction, config, stats);
+  await interaction.editReply({
+    content: statsText(config.t, config.locale, stats),
+    files: card ? [card] : [],
     allowedMentions: NO_MENTIONS,
   });
 }
