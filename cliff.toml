@@ -1,0 +1,65 @@
+# git-cliff — the technical changelog of a GitHub Release.
+#
+# scripts/release-notes.ts runs `git cliff <previous tag>..<tag>` and wraps the
+# output with the image references and, when an API key is set, a summary for
+# server admins. git-cliff only turns the commits of that range into a list
+# grouped by conventional-commit type: the range is chosen by the script, so
+# every tag is ignored here and the range always comes out as one section.
+#
+# Reference: https://git-cliff.org/docs/configuration
+
+[changelog]
+header = ""
+# The `<!-- n -->` prefix of a group only orders the groups; striptags drops it.
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}
+### {{ group | striptags | trim }}
+{% for commit in commits %}
+- {% if commit.scope %}**{{ commit.scope }}** : {% endif %}\
+{{ commit.message | split(pat="\n") | first | trim | upper_first }} \
+([`{{ commit.id | truncate(length=7, end="") }}`](https://github.com/GravenDev/OmniBot/commit/{{ commit.id }}))\
+{% endfor %}
+{% endfor %}
+"""
+footer = ""
+trim = true
+
+[git]
+conventional_commits = true
+# Commits from before commitlint keep a line, under "Autres".
+filter_unconventional = false
+split_commits = false
+protect_breaking_commits = true
+filter_commits = false
+# The script picks the range; within it, no tag starts a new section.
+ignore_tags = ".*"
+topo_order = false
+sort_commits = "oldest"
+
+# A commit message is untrusted text that ends up in a public release: an
+# `@name` would notify that GitHub user (a fix title mentions `@silent`).
+# Inside a code span it is plain text.
+commit_preprocessors = [
+  { pattern = '(^|[\s(])(@[A-Za-z0-9][\w-]*(?:[./][\w-]+)*)', replace = '${1}`${2}`' },
+]
+
+# First match wins. Dependency updates (Renovate) get their own group, below
+# the code changes, whatever their type — and before the breaking-change
+# check: their body quotes the upstream release notes, "BREAKING CHANGE"
+# included.
+commit_parsers = [
+  { message = "^Merge ", skip = true },
+  { message = '^[a-z]+\(deps\)', group = "<!-- 90 -->Dépendances" },
+  { message = '^[a-z]+(\(.*\))?!:', group = "<!-- 00 -->Changements incompatibles" },
+  { body = "BREAKING[ -]CHANGE", group = "<!-- 00 -->Changements incompatibles" },
+  { message = "^feat", group = "<!-- 10 -->Nouveautés" },
+  { message = "^fix", group = "<!-- 20 -->Corrections" },
+  { message = "^perf", group = "<!-- 30 -->Performances" },
+  { message = "^refactor", group = "<!-- 40 -->Refactorisation" },
+  { message = "^docs", group = "<!-- 50 -->Documentation" },
+  { message = "^test", group = "<!-- 60 -->Tests" },
+  { message = "^(build|ci)", group = "<!-- 70 -->Build et CI" },
+  { message = "^(chore|style)", group = "<!-- 80 -->Maintenance" },
+  { message = "^revert", group = "<!-- 85 -->Retours en arrière" },
+  { message = ".*", group = "<!-- 99 -->Autres" },
+]
