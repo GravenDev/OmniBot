@@ -27,8 +27,6 @@
 // Needs git and git-cliff (pinned in .mise.toml) on the PATH, and nothing
 // from node_modules. Prints the notes on stdout unless --out is given;
 // diagnostics go to stderr.
-//
-// The backfill (scripts/backfill-releases.ts) uses the same functions.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -112,15 +110,6 @@ export function listTags(): string[] {
 
 function git(args: string[]): string {
   return execFileSync("git", args, { encoding: "utf8" }).trim();
-}
-
-/** When the tag was made: its own date when annotated, its commit's otherwise. */
-export function tagDate(tag: string): string {
-  return git([
-    "for-each-ref",
-    "--format=%(creatordate:short)",
-    `refs/tags/${tag}`,
-  ]);
 }
 
 // ---------------------------------------------------------------------------
@@ -724,17 +713,10 @@ export interface NotesParts {
   technical: string;
   images: ImageRef[];
   summary?: Summary | null;
-  /** Set by the backfill: the release is created long after its tag. */
-  taggedOn?: string | null;
 }
 
 export function assembleNotes(parts: NotesParts): string {
   const sections: string[] = [];
-  if (parts.taggedOn) {
-    sections.push(
-      `_Version taguée le ${parts.taggedOn}, release créée a posteriori._`
-    );
-  }
   // Nothing a server sees: no section that says so.
   if (parts.summary?.visible) sections.push(summarySection(parts.summary));
   sections.push(imagesSection(parts.githubRepository, parts.images));
@@ -763,16 +745,10 @@ export interface BuildOptions {
   tags: string[];
   tag: string;
   ai: AiSettings | null;
-  taggedOn?: string | null;
   fetchImpl?: Fetch;
 }
 
-export async function buildNotes(options: BuildOptions): Promise<{
-  notes: string;
-  previous: string | null;
-  images: ImageRef[];
-  summarized: boolean;
-}> {
+export async function buildNotes(options: BuildOptions): Promise<string> {
   const previous = previousTag(options.tags, options.tag);
   const technical = technicalChangelog(previous, options.tag);
   const images = await imageRefs(
@@ -796,16 +772,14 @@ export async function buildNotes(options: BuildOptions): Promise<{
         }
       )
     : null;
-  const notes = assembleNotes({
+  return assembleNotes({
     githubRepository: options.githubRepository,
     tag: options.tag,
     previous,
     technical,
     images,
     summary,
-    taggedOn: options.taggedOn ?? null,
   });
-  return { notes, previous, images, summarized: summary !== null };
 }
 
 /** The provider settings, or why the summary is skipped. */
@@ -873,7 +847,7 @@ async function main(): Promise<void> {
   const settings = aiSettings(process.env, !options.ai);
   if ("skipped" in settings) warn(`summary skipped: ${settings.skipped}`);
   const ai = "ai" in settings ? settings.ai : null;
-  const { notes } = await buildNotes({
+  const notes = await buildNotes({
     githubRepository: process.env["GITHUB_REPOSITORY"] || DEFAULT_REPOSITORY,
     tags,
     tag: options.tag,
