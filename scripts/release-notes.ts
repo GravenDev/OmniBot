@@ -271,6 +271,7 @@ Le message de l'utilisateur contient le changelog technique de la version, entre
 
 Lecture du changelog :
 - Le nom en gras en début de ligne (**four-hour-game**, **jd4h**…) est l'identifiant technique du module concerné. Ne l'écris jamais tel quel : le module s'appelle par le nom que donne <modules>. Un identifiant absent de <modules> (core, config, i18n…) concerne le bot en général.
+- <modules> dit aussi ce que fait chaque module, pour comprendre un titre bref, et lequel est nouveau dans cette version : celui-là n'existait pas avant, ses lecteurs le découvrent.
 - Dans un titre, « sa », « son » ou « ses » désigne en général le membre qui utilise la commande : « sa place dans /jd4h leaderboard » veut dire que le membre voit sa propre place.
 - Quand un commit a une explication, appuie-toi dessus pour comprendre son titre, sans en reprendre les détails techniques (fichiers, fonctions, cache, tests).
 
@@ -278,7 +279,8 @@ Règles :
 - N'écris que ce que le changelog et les explications disent. N'invente aucune fonctionnalité, commande, option, chiffre ni comportement.
 - Un titre de nouveauté vague (« cartes des tirages ») annonce quand même une fonctionnalité ajoutée : garde-le, avec ses mots, sans deviner ce qu'il ne dit pas.
 - Un correctif dont le titre dit seulement qu'il suit une revue (« suite de la revue », « retours de la revue ») n'apprend rien au lecteur : sans explication, laisse-le de côté ; avec une explication, garde seulement les effets visibles qu'elle décrit.
-- Décris l'état à la fin de la version : quand un commit en change un autre de la même version (un bilan d'abord éphémère, puis publié dans le salon), ne garde que le résultat final, sans l'état intermédiaire.
+- Décris l'état à la fin de la version : quand un commit en change un autre de la même version (un bilan d'abord éphémère, puis publié dans le salon), ne garde que le résultat final, sans l'état intermédiaire. Ce qui est ajouté puis retiré dans la même version n'a jamais existé pour les lecteurs : n'en parle pas.
+- Un module nouveau dans cette version tient en une seule puce ✨ qui dit ce qu'il fait, d'après sa description et ses commits : ses retouches et corrections dans la même version en font partie, jamais des 🔧 ou des 🐛 à part. Jamais une puce vide comme « Ajout du module ».
 - Garde ce qu'un administrateur ou un membre peut remarquer : nouveautés, commandes, réglages, corrections visibles. Laisse de côté l'outillage (CI, build, refactorisation, tests, documentation, dépendances, conteneurs), sauf effet visible énoncé par le titre.
 - Écris les commandes Discord exactement comme dans le changelog, entre accents graves (\`/jd4h leaderboard\`).
 
@@ -393,14 +395,18 @@ const NOT_MODULES = new Set(["core", "test-config"]);
 export type Catalog = Record<string, string>;
 
 /**
- * The display name, in French and English, of each module the changelog
- * scopes a line to, so that the summary names a module the way /modules does.
- * Read from the core catalogs (`modules.<id>.name`).
+ * For each module the changelog scopes a line to: its display name in French
+ * and English, so that the summary names it the way /modules does; what it
+ * does, so that a terse commit title can be explained; and whether it is new
+ * in the version, so that its first steps read as one feature. Read from the
+ * core catalogs (`modules.<id>.name`, `modules.<id>.description`); `previous`
+ * is the French catalog of the previous tag, null when there is none.
  */
 export function moduleGlossary(
   technical: string,
   fr: Catalog,
-  en: Catalog
+  en: Catalog,
+  previous: Catalog | null = null
 ): string {
   const scopes = new Set(
     [...technical.matchAll(/^- \*\*([\w-]+)\*\* :/gm)].map((match) => match[1]!)
@@ -415,10 +421,17 @@ export function moduleGlossary(
         (alias) => SCOPE_ALIASES[alias] === id
       ),
     ].filter((scope) => scopes.has(scope));
-    if (named.length > 0)
-      lines.push(
-        `- ${named.join(", ")} : ${name} (en anglais : ${en[key] ?? name})`
-      );
+    if (named.length === 0) continue;
+    const description = fr[`modules.${id}.description`];
+    lines.push(
+      [
+        `- ${named.join(", ")} : ${name} (en anglais : ${en[key] ?? name})`,
+        ...(previous && !(key in previous)
+          ? ["nouveau dans cette version"]
+          : []),
+        ...(description ? [`ce qu'il fait : ${description}`] : []),
+      ].join(" ; ")
+    );
   }
   return lines.join("\n");
 }
@@ -670,11 +683,12 @@ export async function writeSummary(
       warn(`summary dropped: finish reason ${choice?.finish_reason ?? "none"}`);
       return null;
     }
-    // A command the explanations name is no invention either; the links of
-    // the changelog are no source (`/commit` is in every one of them).
+    // A command the explanations or a module description name is no
+    // invention either; the links of the changelog are no source (`/commit`
+    // is in every one of them).
     const summary = parseSummary(
       choice.message?.content ?? "",
-      `${summaryInput(technical)}\n${context.details ?? ""}`
+      [summaryInput(technical), context.details, context.modules].join("\n")
     );
     if (!summary) warn("summary dropped: the answer is not a valid summary");
     return summary;
@@ -766,7 +780,8 @@ export async function buildNotes(options: BuildOptions): Promise<string> {
           modules: moduleGlossary(
             summaryInput(technical),
             catalogAt(options.tag, "fr"),
-            catalogAt(options.tag, "en")
+            catalogAt(options.tag, "en"),
+            previous ? catalogAt(previous, "fr") : null
           ),
           details: commitDetails(previous, options.tag),
         }

@@ -549,9 +549,23 @@ describe("module names", () => {
       ].join("\n")
     );
     expect(moduleGlossary("- **rngdle** : Cartes", fr, en)).toBe(
-      "- rngdle : RNGdle (en anglais : RNGdle)"
+      "- rngdle : RNGdle (en anglais : RNGdle) ; ce qu'il fait : Le jeu"
     );
     expect(moduleGlossary("- Sans scope", fr, en)).toBe("");
+  });
+
+  it("says which module is new since the previous tag", () => {
+    const technical = "- **rngdle** : Cartes\n- **server-stats** : Bilan";
+    expect(
+      moduleGlossary(technical, fr, en, {
+        "modules.server-stats.name": "Statistiques du serveur",
+      })
+    ).toBe(
+      [
+        "- server-stats : Statistiques du serveur (en anglais : Server Stats)",
+        "- rngdle : RNGdle (en anglais : RNGdle) ; nouveau dans cette version ; ce qu'il fait : Le jeu",
+      ].join("\n")
+    );
   });
 });
 
