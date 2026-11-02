@@ -195,22 +195,6 @@ To preview the notes of a tag locally (`mise install` provides git-cliff):
 node scripts/release-notes.ts --tag v0.22.0 --no-ai
 ```
 
-The tags from before this job get their releases from a backfill, run by hand.
-It is a dry run unless given `--apply`: the notes land in files, and GitHub is
-only read.
-
-```bash
-node scripts/backfill-releases.ts                            # dry run: read the files in the folder it prints
-node scripts/backfill-releases.ts --apply --draft            # create the missing ones as drafts
-```
-
-`--update` also fills the releases whose notes are empty (one with any text,
-such as those of the release job, is never touched), `--only v0.1.0,v0.2.0`
-limits the run, and `--ai` adds the summary (needs `AI_API_KEY` and `AI_MODEL`).
-
-GitHub ignores `--latest` on a draft: when publishing the drafts by hand,
-untick "Set as the latest release" on all but the highest version.
-
 ## Project layout
 
 ```

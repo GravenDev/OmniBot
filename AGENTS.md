@@ -55,7 +55,6 @@ The docs are also published as a VitePress site (sources in `docs/site/`) — ru
 - Prisma reads every `*.prisma` file under `src/` (multi-file schema): models live in the module's own `*.prisma` file, and model names must be unique across modules.
 - Run `pnpm prisma:generate` before building after any schema change.
 - Import across directories with `#…` subpath imports (e.g. `#lib/config.js`, `#core/…`), not deep relative paths (`../../…`); keep same-directory imports relative (`./x.js`). Always keep the `.js` extension (NodeNext).
-  Exception: a script under `scripts/` run with plain `node` (type stripping, no tsx) imports another script as `./x.ts`, since Node does not map `.js` to `.ts`.
 
 ## Environment
 

@@ -474,14 +474,12 @@ describe("assembleNotes", () => {
       previous: null,
       technical: "",
       images,
-      taggedOn: "2026-10-01",
       summary: { visible: false, fr: "Rien ne change.", en: "Nothing." },
     });
     expect(notes).not.toContain("Quoi de neuf");
     expect(notes).not.toContain("compare/");
     expect(notes).toContain("depuis le début du projet");
     expect(notes).toContain("_Aucun commit._");
-    expect(notes.startsWith("_Version taguée le 2026-10-01")).toBe(true);
   });
 });
 
