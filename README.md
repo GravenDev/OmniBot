@@ -160,6 +160,41 @@ Building the image alone:
 docker build -t omnibot .
 ```
 
+### Releases
+
+Once the images of a tag are published, CI creates its GitHub Release
+(`release-notes` and `release` jobs of `ci.yml`). The notes hold, in order:
+
+1. **Quoi de neuf** — a summary for server admins and members, in French then
+   English (folded), written by an AI model from the technical changelog and
+   the explaining paragraph of each feature, fix and performance commit (the
+   first prose paragraph of its body, trailers left out, cut at 500 characters),
+   through any OpenAI-compatible Chat Completions API (OpenAI, Mistral, Groq,
+   OpenRouter, Ollama, Anthropic…). It needs the `AI_API_KEY` secret of the
+   `release` environment (deployment rule: tags `v*`) and the `AI_MODEL`
+   repository variable, which has no default (for instance
+   `gpt-5.6-luna`; pick a current, inexpensive model). `AI_BASE_URL` points
+   to another provider than OpenAI (default `https://api.openai.com/v1`).
+   Without the key or the model, or when the call fails, the answer is not
+   valid JSON or names a command the changelog does not, the release goes out
+   without it. Each call is capped at 8000 output tokens.
+2. **Images Docker** — `ghcr.io/gravendev/omnibot` and `omnibot-migrator` at the
+   version's tag, pinned by digest.
+3. **Changelog technique** — the commits since the previous release, grouped
+   by conventional-commit type by [git-cliff](https://git-cliff.org)
+   (`cliff.toml`, version pinned in `.mise.toml`). A release counts from the
+   previous release, a prerelease from the previous tag of any kind.
+
+A tag with a `-` gets a prerelease. Re-running the workflow on a tag replaces
+the notes of its release; nothing ever creates or moves a tag (`gh release
+create --verify-tag`).
+
+To preview the notes of a tag locally (`mise install` provides git-cliff):
+
+```bash
+node scripts/release-notes.ts --tag v0.22.0 --no-ai
+```
+
 ## Project layout
 
 ```

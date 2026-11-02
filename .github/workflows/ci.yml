@@ -221,3 +221,77 @@ jobs:
         run: gh workflow run trivy.yml --repo "$GITHUB_REPOSITORY" --ref master
         env:
           GH_TOKEN: ${{ github.token }}
+
+  # The notes of the GitHub Release: the image references by digest, the
+  # changelog since the previous release (git-cliff, cliff.toml) and, above it,
+  # a summary for server admins written by an AI model, through any
+  # OpenAI-compatible Chat Completions API: the AI_API_KEY secret, the AI_MODEL
+  # variable and, for another provider than OpenAI, the AI_BASE_URL variable.
+  # Without the key or the model, or when the call fails, the notes go out
+  # without the summary. See scripts/release-notes.ts.
+  #
+  # Kept apart from the job that writes the release: the API key never shares
+  # a job with a token that can write to the repository. The commit titles fed
+  # to the model only travel through files and the API request, never through
+  # a `run:` line. No dependency is installed and no cache restored: a job
+  # holding a secret on a tag run runs nothing a branch could have written.
+  release-notes:
+    needs: publish
+    runs-on: ubuntu-24.04
+    # The AI_API_KEY secret lives in this environment, which only `v*` tags may
+    # use: a workflow edited on a branch cannot read it.
+    environment: release
+    permissions: *read-only
+
+    steps:
+      # The whole history and the tags: the range starts at the previous one.
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js and git-cliff
+        uses: jdx/mise-action@2d8d4cafcbd33be2ea37d2b6f5ad595363d1f1ca # v5.1.1
+        with:
+          install_args: node git-cliff
+          cache: false
+
+      - name: Write the release notes
+        run: node scripts/release-notes.ts --tag "$GITHUB_REF_NAME" --out release-notes.md
+        env:
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_MODEL: ${{ vars.AI_MODEL }}
+          AI_BASE_URL: ${{ vars.AI_BASE_URL }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-notes
+          path: release-notes.md
+          retention-days: 1
+
+  # Creates the release of the tag, or replaces its notes when it exists — a
+  # re-run from the tag. `--verify-tag` makes gh fail rather than create a tag.
+  # A tag with a `-` is a prerelease, like the images: `latest` does not move.
+  release:
+    needs: release-notes
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # creates the release, or edits its notes
+
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: release-notes
+
+      - name: Create or update the GitHub Release
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --notes-file release-notes.md
+          else
+            prerelease=()
+            [[ "$GITHUB_REF_NAME" == *-* ]] && prerelease=(--prerelease)
+            gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
+              --title "$GITHUB_REF_NAME" --notes-file release-notes.md "${prerelease[@]}"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
