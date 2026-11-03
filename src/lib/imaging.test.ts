@@ -9,6 +9,7 @@ import {
   drawableText,
   drawHighlight,
   drawPortrait,
+  drawPortraitStack,
   loadAsset,
   PALETTE,
   type Rgb,
@@ -63,6 +64,37 @@ describe("drawPortrait", () => {
 
     expect(pixel(ctx, 20, 8)).toEqual([...ACCENT]);
     expect(pixel(ctx, 20, 20)).toEqual([...PALETTE.placeholder]);
+  });
+});
+
+describe("drawPortraitStack", () => {
+  // Three slots of 40px side by side, centred: 40-80, 80-120, 120-160.
+  const stack = {
+    centerX: 100,
+    centerY: 30,
+    size: 40,
+    step: 40,
+    ring: ACCENT,
+    countSize: 10,
+  };
+
+  it("counts the members past the shown ones in a bubble", () => {
+    const ctx = createCanvas(200, 60).getContext("2d");
+
+    drawPortraitStack(ctx, [null, null, null, null], { ...stack, shown: 2 });
+
+    expect(pixel(ctx, 60, 30)).toEqual([...PALETTE.placeholder]);
+    expect(pixel(ctx, 100, 30)).toEqual([...PALETTE.placeholder]);
+    // Below the "+2", the bubble is darker than a missing avatar.
+    expect(pixel(ctx, 140, 44)).toEqual([...PALETTE.header]);
+  });
+
+  it("draws no bubble when every member is shown", () => {
+    const ctx = createCanvas(200, 60).getContext("2d");
+
+    drawPortraitStack(ctx, [null, null, null], { ...stack, shown: 3 });
+
+    expect(pixel(ctx, 140, 44)).toEqual([...PALETTE.placeholder]);
   });
 });
 

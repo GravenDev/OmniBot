@@ -157,13 +157,31 @@ export function upcoming<T extends DayOfYear>(
   return result;
 }
 
-/** "14 March" / "14 mars", without a year. */
+// French writes the first of the month "1er": the images' font has no
+// superscript letters for "1ᵉʳ", and the text says it the same way.
+function firstOfMonth(text: string, locale: string): string {
+  return locale.startsWith("fr") ? text.replace(/^1 /, "1er ") : text;
+}
+
+/** "14 March" / "14 mars", "1er mars", without a year. */
 export function formatDayOfYear({ day, month }: DayOfYear, locale: string) {
-  return new Intl.DateTimeFormat(locale, {
+  const text = new Intl.DateTimeFormat(locale, {
     day: "numeric",
     month: "long",
     timeZone: "UTC",
   }).format(new Date(Date.UTC(2000, month - 1, day)));
+  return firstOfMonth(text, locale);
+}
+
+/** "November 1, 2021" / "1er novembre 2021": `date` as a day in `timeZone`. */
+export function formatDate(date: Date, locale: string, timeZone: string) {
+  const text = new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone,
+  }).format(date);
+  return firstOfMonth(text, locale);
 }
 
 /** A configured announcement hour, kept within 0-23 whatever was typed. */
