@@ -536,14 +536,14 @@ Supprime l'anniversaire d'un membre. Il n'existe volontairement aucune commande 
 
 ### Configuration — `/config birthday`
 
-| Champ               | Type             | Description                                                                                                                      |
-| ------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `channel`           | Salon            | Salon des annonces. Tant qu'il n'est pas défini, rien n'est annoncé.                                                             |
-| `role`              | Rôle             | Rôle donné pour la journée aux membres annoncés. Sans rôle, rien n'est attribué.                                                 |
-| `timeZone`          | Choix            | Fuseau horaire des journées du serveur (Europe/Paris par défaut).                                                                |
-| `hour`              | Nombre           | Heure des annonces, de 0 à 23 (9 par défaut).                                                                                    |
-| `messages`          | Liste de chaînes | Messages d'anniversaire tirés au hasard, cités sur la carte ; `{user}` est remplacé par le membre. Vide : les messages intégrés. |
-| `paradoxMilestones` | Booléen          | Annoncer les paliers du paradoxe des anniversaires (activé par défaut).                                                          |
+| Champ               | Type             | Description                                                                                                                                                                                                                                                   |
+| ------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `channel`           | Salon            | Salon des annonces. Tant qu'il n'est pas défini, rien n'est annoncé.                                                                                                                                                                                          |
+| `role`              | Rôle             | Rôle donné pour la journée aux membres annoncés. Sans rôle, rien n'est attribué.                                                                                                                                                                              |
+| `timeZone`          | Choix            | Fuseau horaire des journées du serveur (Europe/Paris par défaut).                                                                                                                                                                                             |
+| `hour`              | Nombre           | Heure des annonces, de 0 à 23 (9 par défaut).                                                                                                                                                                                                                 |
+| `messages`          | Liste de chaînes | Messages d'anniversaire tirés au hasard, cités sur la carte quand un seul membre est fêté ; `{user}` est remplacé par le membre. Vide : la carte n'en cite aucun. Le message choisi sert aussi à l'annonce en texte seul, qui prend sinon un message intégré. |
+| `paradoxMilestones` | Booléen          | Annoncer les paliers du paradoxe des anniversaires (activé par défaut).                                                                                                                                                                                       |
 
 ---
 

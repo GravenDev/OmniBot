@@ -12,7 +12,7 @@
   "config.hour.description": "Heure de la journée (0 à 23) à laquelle les annonces sont publiées.",
 
   "config.messages.name": "Messages d'anniversaire",
-  "config.messages.description": "Messages tirés au hasard et cités sur la carte d'anniversaire (restez bref : deux lignes au plus) ; {user} est remplacé par le membre. Vide : les messages intégrés.",
+  "config.messages.description": "Messages tirés au hasard et cités sur la carte quand un seul membre est fêté (restez bref : deux lignes au plus) ; {user} est remplacé par le membre. Vide : la carte n'en cite aucun.",
 
   "config.paradoxMilestones.name": "Paliers du paradoxe des anniversaires",
   "config.paradoxMilestones.description": "Annoncer quand les inscriptions atteignent les paliers du paradoxe des anniversaires (23 inscrits, première date partagée, 57 inscrits).",

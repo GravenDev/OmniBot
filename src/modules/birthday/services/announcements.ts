@@ -1,9 +1,12 @@
 import { EmbedBuilder } from "discord.js";
 import { formatDayOfYear, type DayOfYear } from "#lib/calendar.js";
+import {
+  SHOWN_PORTRAITS,
+  type CelebrationCard,
+} from "#lib/celebration-card.js";
 import type { TFunction } from "#lib/i18n.js";
 import { truncate } from "#lib/text.js";
-import type { BirthdayCardLabels } from "../rendering/birthday-card.js";
-import { ACCENT } from "../rendering/theme.js";
+import { ACCENT, CONFETTI } from "../rendering/theme.js";
 import {
   CERTAIN_GROUP_SIZE,
   collisionProbability,
@@ -118,7 +121,8 @@ export function cardContent(
 const ALT_LIMIT = 1024;
 
 export interface BirthdayCard {
-  labels: BirthdayCardLabels;
+  /** What the card says, its portraits aside. */
+  card: Omit<CelebrationCard, "avatars">;
   /** Alternative text of the image, with the guild's message. */
   alt: string;
 }
@@ -138,26 +142,31 @@ export function birthdayCard(
   const count = names.length;
   const message =
     count === 1 && template ? template.replaceAll("{user}", names[0]!) : null;
-  // Outfit has no superscript letters: "1er", not "1ᵉʳ".
-  const day = formatDayOfYear(today, locale);
-  const date = locale.startsWith("fr") ? day.replace(/^1 /, "1er ") : day;
+  const date = formatDayOfYear(today, locale);
+  const others = count - SHOWN_PORTRAITS;
   const alt = [
     t("card.alt", { names: formatList(names, locale), date }),
     message ? t("card.altMessage", { message }) : "",
   ].join(" ");
   return {
-    labels: {
+    card: {
+      accent: ACCENT,
+      confetti: CONFETTI,
       kicker: t("card.kicker", { count }),
       title:
         count <= 3 ? t(`card.title.${count}`) : t("card.title.many", { count }),
-      date,
+      names: names
+        .slice(0, SHOWN_PORTRAITS)
+        .concat(others > 0 ? [`+${others}`] : [])
+        .join(" · "),
       ...(message && {
-        message: {
+        quote: {
           text: message,
           open: t("card.quoteOpen"),
           close: t("card.quoteClose"),
         },
       }),
+      footer: `🎂  ${date}`,
     },
     alt: truncate(alt.trim(), ALT_LIMIT),
   };
