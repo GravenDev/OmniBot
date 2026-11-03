@@ -13,7 +13,9 @@
   },
   "lockFileMaintenance": {
     "enabled": true,
-    "schedule": ["before 9am on the first day of the month"]
+    "schedule": ["before 9am on the first day of the month"],
+    "description": "No Renovate release age here: pnpm's own minimumReleaseAge (pnpm-workspace.yaml) holds every resolution back 7 days, transitive ones included, while Renovate cannot date a whole-lockfile refresh and would leave its stability-days check pending forever",
+    "minimumReleaseAge": null
   },
   "packageRules": [
     {
