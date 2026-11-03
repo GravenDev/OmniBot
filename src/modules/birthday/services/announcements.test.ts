@@ -109,11 +109,12 @@ describe("birthdayCard", () => {
 
   it("quotes the guild's message under the fixed title", () => {
     const card = birthdayCard(t(), "fr", ["Camille"], "Bravo {user} !", today);
-    expect(card.labels).toEqual({
+    expect(card.card).toMatchObject({
       kicker: "Anniversaire",
       title: "Joyeux anniversaire !",
-      date: "1er novembre",
-      message: { text: "Bravo Camille !", open: "« ", close: " »" },
+      names: "Camille",
+      quote: { text: "Bravo Camille !", open: "« ", close: " »" },
+      footer: "🎂  1er novembre",
     });
     expect(card.alt).toBe(
       "Carte d'anniversaire : Camille, 1er novembre. Message du serveur : « Bravo Camille ! »"
@@ -122,7 +123,7 @@ describe("birthdayCard", () => {
 
   it("draws no built-in message: the title already says it", () => {
     expect(
-      birthdayCard(t(), "fr", ["Camille"], null, today).labels.message
+      birthdayCard(t(), "fr", ["Camille"], null, today).card.quote
     ).toBeUndefined();
   });
 
@@ -130,21 +131,25 @@ describe("birthdayCard", () => {
     const names = ["A", "B", "C", "D", "E"];
     const title = (count: number) =>
       birthdayCard(t(), "fr", names.slice(0, count), "Bravo {user}", today)
-        .labels;
+        .card;
     expect(title(3)).toMatchObject({
       kicker: "Anniversaires",
       title: "Triple anniversaire !",
     });
-    expect(title(5).title).toBe("5 anniversaires aujourd'hui");
+    expect(title(5)).toMatchObject({
+      title: "5 anniversaires aujourd'hui",
+      // The first three, then the others counted.
+      names: "A · B · C · +2",
+    });
     // The guild's message is written for one member.
-    expect(title(2).message).toBeUndefined();
+    expect(title(2).quote).toBeUndefined();
   });
 
-  it("writes the date without superscript letters", () => {
+  it("writes the date in the server's language", () => {
     expect(
-      birthdayCard(createT("en", "birthday"), "en", ["A"], null, today).labels
-        .date
-    ).toBe("November 1");
+      birthdayCard(createT("en", "birthday"), "en", ["A"], null, today).card
+        .footer
+    ).toBe("🎂  November 1");
   });
 });
 

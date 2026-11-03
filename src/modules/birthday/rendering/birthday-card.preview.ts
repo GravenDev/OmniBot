@@ -1,9 +1,14 @@
 import { createCanvas, loadImage, type Image } from "@napi-rs/canvas";
+import { renderCelebrationCard } from "#lib/celebration-card.js";
 import type { Previews } from "#lib/preview.js";
 import { previewT } from "#lib/preview.js";
 import fr from "../i18n/fr.json" with { type: "json" };
 import { birthdayCard } from "../services/announcements.js";
-import { renderBirthdayCard, type Celebrant } from "./birthday-card.js";
+
+interface Celebrant {
+  name: string;
+  avatar: Image | null;
+}
 
 // Made-up members; their avatars are plain gradients drawn here (no network).
 async function avatar(from: string, to: string): Promise<Image> {
@@ -40,7 +45,12 @@ function render(celebrants: Celebrant[], template: string | null = null) {
     template,
     today
   );
-  return Promise.resolve(renderBirthdayCard(celebrants, card.labels));
+  return Promise.resolve(
+    renderCelebrationCard({
+      ...card.card,
+      avatars: celebrants.map((celebrant) => celebrant.avatar),
+    })
+  );
 }
 
 export default {

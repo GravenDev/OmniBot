@@ -12,7 +12,7 @@
   "config.hour.description": "Hour of the day (0 to 23) when the announcements are posted.",
 
   "config.messages.name": "Birthday messages",
-  "config.messages.description": "Messages drawn at random and quoted on the birthday card (keep them short: two lines at most); {user} is replaced by the member. Empty: the built-in messages.",
+  "config.messages.description": "Messages drawn at random and quoted on the card when a single member celebrates (keep them short: two lines at most); {user} is replaced by the member. Empty: the card quotes none.",
 
   "config.paradoxMilestones.name": "Birthday paradox milestones",
   "config.paradoxMilestones.description": "Announce when the registrations reach the birthday paradox milestones (23 members, first shared date, 57 members).",
