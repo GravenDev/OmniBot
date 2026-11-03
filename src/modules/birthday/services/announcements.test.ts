@@ -163,12 +163,12 @@ describe("milestoneEmbed", () => {
     expect(embed.author?.name).toBe("🎲 Paradoxe des anniversaires");
     expect(embed.title).toBe("Premier anniversaire partagé !");
     expect(embed.description).toBe(
-      "Deux membres ont la même date depuis le 14ᵉ inscrit. En moyenne, la théorie l'attend autour de 24,6 inscrits."
+      "Deux membres ont la même date depuis la 14ᵉ inscription. En moyenne, la théorie l'attend autour de 24,6 inscriptions."
     );
     expect(embed.fields?.map((field) => field.value)).toEqual([
       // Intl's space before "%" depends on the ICU version.
       expect.stringMatching(/^22,3\s%$/),
-      expect.stringMatching(/^23 inscrits · 50,7\s%$/),
+      expect.stringMatching(/^23 inscriptions · 50,7\s%$/),
     ]);
     expect(
       milestoneEmbed(createT("en", "birthday"), "first-collision", {

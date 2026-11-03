@@ -15,7 +15,7 @@
   "config.messages.description": "Messages tirés au hasard et cités sur la carte quand un seul membre est fêté (restez bref : deux lignes au plus) ; {user} est remplacé par le membre. Vide : la carte n'en cite aucun.",
 
   "config.paradoxMilestones.name": "Paliers du paradoxe des anniversaires",
-  "config.paradoxMilestones.description": "Annoncer quand les inscriptions atteignent les paliers du paradoxe des anniversaires (23 inscrits, première date partagée, 57 inscrits).",
+  "config.paradoxMilestones.description": "Annoncer quand les inscriptions atteignent les paliers du paradoxe des anniversaires (23 inscriptions, première date partagée, 57 inscriptions).",
 
   "announce.builtIn.1": "🎂 Joyeux anniversaire {user} !",
   "announce.builtIn.2": "🎉 C'est l'anniversaire de {user} aujourd'hui, bon anniversaire !",
@@ -39,11 +39,11 @@
   "paradox.milestone.half": "Il y a désormais plus d'une chance sur deux que deux d'entre vous aient le même anniversaire. C'est le paradoxe des anniversaires : il suffit de 23 personnes pour passer une chance sur deux.",
   "paradox.milestone.certain": "La probabilité que deux d'entre vous partagent leur anniversaire dépasse maintenant 99 %.",
   "paradox.milestone.firstCollision.title": "Premier anniversaire partagé !",
-  "paradox.milestone.firstCollision.description_ordinal_one": "Deux membres ont la même date depuis le {{count}}ᵉʳ inscrit. En moyenne, la théorie l'attend autour de {{expected}} inscrits.",
-  "paradox.milestone.firstCollision.description_ordinal_other": "Deux membres ont la même date depuis le {{count}}ᵉ inscrit. En moyenne, la théorie l'attend autour de {{expected}} inscrits.",
+  "paradox.milestone.firstCollision.description_ordinal_one": "Deux membres ont la même date depuis la {{count}}ʳᵉ inscription. En moyenne, la théorie l'attend autour de {{expected}} inscriptions.",
+  "paradox.milestone.firstCollision.description_ordinal_other": "Deux membres ont la même date depuis la {{count}}ᵉ inscription. En moyenne, la théorie l'attend autour de {{expected}} inscriptions.",
   "paradox.field.probability": "Probabilité d'une date partagée",
   "paradox.field.next": "Prochain palier",
-  "paradox.field.nextValue": "{{count}} inscrits · {{percent}}",
+  "paradox.field.nextValue": "{{count}} inscriptions · {{percent}}",
 
   "set.invalid": "Cette date n'existe pas.",
   "set.done": "🎂 Votre anniversaire est enregistré : **{{date}}**.",
@@ -80,10 +80,10 @@
   "stats.sharedDates": "Partagées : {{dates}}.",
   "stats.sharedHidden_one": "{{count}} date partagée n'est pas affichée : un de ses membres n'a pas souhaité être annoncé.",
   "stats.sharedHidden_other": "{{count}} dates partagées ne sont pas affichées : certains de leurs membres n'ont pas souhaité être annoncés.",
-  "stats.firstCollision_ordinal_one": "La première date partagée est apparue au {{count}}ᵉʳ inscrit ; en moyenne, la théorie l'attend autour de {{expected}} inscrits.",
-  "stats.firstCollision_ordinal_other": "La première date partagée est apparue au {{count}}ᵉ inscrit ; en moyenne, la théorie l'attend autour de {{expected}} inscrits.",
-  "stats.untilHalf_one": "Encore {{count}} inscrit et la probabilité d'une date partagée dépassera une chance sur deux.",
-  "stats.untilHalf_other": "Encore {{count}} inscrits et la probabilité d'une date partagée dépassera une chance sur deux.",
+  "stats.firstCollision_ordinal_one": "La première date partagée est apparue à la {{count}}ʳᵉ inscription ; en moyenne, la théorie l'attend autour de {{expected}} inscriptions.",
+  "stats.firstCollision_ordinal_other": "La première date partagée est apparue à la {{count}}ᵉ inscription ; en moyenne, la théorie l'attend autour de {{expected}} inscriptions.",
+  "stats.untilHalf_one": "Encore {{count}} inscription et la probabilité d'une date partagée dépassera une chance sur deux.",
+  "stats.untilHalf_other": "Encore {{count}} inscriptions et la probabilité d'une date partagée dépassera une chance sur deux.",
   "stats.footnote": "-# Les naissances ne sont pas réparties uniformément sur l'année : en pratique, les dates partagées sont un peu plus probables que ne le dit la formule.",
 
   "statsCard.title": "Le paradoxe des anniversaires",

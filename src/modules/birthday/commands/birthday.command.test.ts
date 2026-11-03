@@ -212,7 +212,7 @@ describe("/birthday stats", () => {
     expect(text).toContain("Partagées : 14 mars.");
     expect(text).not.toContain("novembre");
     expect(text).toContain("1 date partagée n'est pas affichée");
-    expect(text).toContain("Encore 18 inscrits");
+    expect(text).toContain("Encore 18 inscriptions");
     expect(text).not.toMatch(/<@/);
     expect(editReply).toHaveBeenCalledWith(
       expect.objectContaining({ allowedMentions: { parse: [] } })
