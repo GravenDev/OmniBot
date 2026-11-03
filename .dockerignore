@@ -49,7 +49,6 @@ vitest.config.ts
 coverage
 AUDIT.md
 AGENTS.md
-CLAUDE.md
 README.md
 LICENSE
 

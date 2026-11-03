@@ -1,18 +1,18 @@
 <h3 align="center">
   <img src="https://avatars.githubusercontent.com/u/78621926?s=200&v=4" width="75"><br/>
-  Async - Community<br/>
+  Graven - Développement<br/>
   This project is under the <a href="LICENSE">GNU GPL v3 or later</a> license<br/><br/>
 </h3>
 
 # <p align="center">`OmniBot`</p>
 
-All the projects in the <code>AsyncCommunityDiscord</code> organisation are used by the discord server <code>discord.gg/graven</code> both by the moderators and the members.
-Most of the contributors are part of the staff but the members are also allowed to contribute.
+The projects of the <code>GravenDev</code> organisation are used by the Discord server <code>discord.gg/graven</code>, by its moderators and members alike.
+Most contributors are part of the staff, but members are welcome to contribute too.
 
 <p align="center">
   <img src="https://img.shields.io/badge/State-In_development-orange?style=for-the-badge">
-  <img src="https://img.shields.io/github/issues/AsyncCommunityDiscord/OmniBot?style=for-the-badge">
-  <img src="https://img.shields.io/github/issues-pr/AsyncCommunityDiscord/OmniBot?style=for-the-badge">
+  <img src="https://img.shields.io/github/issues/GravenDev/OmniBot?style=for-the-badge">
+  <img src="https://img.shields.io/github/issues-pr/GravenDev/OmniBot?style=for-the-badge">
 </p>
 
 ---
@@ -43,7 +43,7 @@ feature never means touching the bootstrap.
 
 ### Prerequisites
 
-- [mise](https://mise.jdx.dev/) — pins Node.js, pnpm and pitchfork (`mise install`).
+- [mise](https://mise.jdx.dev/) — pins Node.js, pnpm, pitchfork, gh and git-cliff (`mise install`).
   Without mise, install Node.js 24 and pnpm manually (versions are in `.mise.toml`).
 - Docker (for the PostgreSQL container).
 - A Discord bot token — from the [Discord Developer Portal](https://discord.com/developers/applications).
@@ -51,7 +51,7 @@ feature never means touching the bootstrap.
 ### Setup
 
 ```bash
-mise install            # installs Node, pnpm, pitchfork from .mise.toml
+mise install            # installs the tools pinned in .mise.toml
 pnpm install            # installs dependencies and git hooks (lefthook)
 cp .env.example .env    # then fill in the values (see Environment below)
 ```
@@ -79,8 +79,12 @@ Copy `.env.example` to `.env`:
 
 - `DISCORD_TOKEN` — bot token from the Discord Developer Portal.
 - `DATABASE_URL` — PostgreSQL connection string (default matches `compose.yaml`).
-- `DEV_GUILD_ID` — **dev only**: guild where slash commands are registered
-  instantly (global commands take ~1h to propagate). Required by `pnpm dev`.
+- `DEV_GUILD_ID` — **dev only**: guild where the core commands, and those of the
+  modules enabled there, are registered instantly (global commands take ~1h to
+  propagate). Required by `pnpm dev`.
+- `LOG_LEVEL` — optional: `fatal`, `error`, `warn`, `info`, `debug`, `trace` or
+  `silent` (default `debug` in development, `info` otherwise). Logs are
+  pretty-printed in development and JSON otherwise.
 
 ## Deployment
 
@@ -133,13 +137,16 @@ How long they are kept is the journal's setting (`SystemMaxUse`,
 The images come from the multi-stage `Dockerfile` (Node 24 on Alpine, non-root
 user, `tini` as PID 1), built by CI on every pull request and published on tag.
 
-Variables to provide (all required, none has a default) — in the Portainer
-stack configuration, or in `.env.prod` when running the stack by hand:
+Variables to provide — in the Portainer stack configuration, or in `.env.prod`
+when running the stack by hand:
 
 - `DISCORD_TOKEN` — bot token from the Discord Developer Portal.
 - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` — database credentials.
   `DATABASE_URL` is assembled from them by the compose file; PostgreSQL sits on
   an internal network and publishes no port.
+- `LOG_LEVEL` — optional, `info` by default.
+
+All but `LOG_LEVEL` are required and have no default.
 
 What the stack does:
 
@@ -201,8 +208,9 @@ node scripts/release-notes.ts --tag v0.22.0 --no-ai
 src/
 ├── core/      # framework: module loader, /config & /modules, command/event/interaction loaders
 ├── modules/   # one folder per feature module (commands/, listeners/, services/, *.config.ts, *.module.ts)
-├── lib/       # shared contracts (module, config, registry, listener, …)
-└── prisma/    # generator + datasource (dbinfo.prisma) and migrations; models live in each module
+├── lib/       # shared contracts and helpers (module, config, registry, imaging, calendar, …)
+├── prisma/    # generator + datasource (dbinfo.prisma) and migrations; models live in each module
+└── utils/     # colors
 ```
 
 Each module is a plugin: drop a folder under `src/modules/` and it is discovered
@@ -214,25 +222,31 @@ automatically — **no registration anywhere else**.
 pnpm dev                 # run with tsx
 pnpm build               # prisma:generate + tsc → dist/
 pnpm test                # run the full test suite (unit + integration)
+pnpm test:unit           # unit tests only (also test:integration)
 pnpm format              # oxfmt + oxlint --fix
+pnpm new-module          # scaffold a module
+pnpm render-preview <file.preview.ts> [--before <ref>]   # draw sample images, before and after a change
+pnpm prisma:generate     # generate the Prisma client (needed before build)
 pnpm prisma:migrate      # create & apply a migration
 pnpm prisma:studio       # open Prisma Studio
+pnpm --filter omnibot-docs dev   # preview the documentation site
 ```
 
 ## Contributing
 
 Contributions are welcome — staff and members alike.
 
-- **Start with the developer guide in [`docs/`](docs/README.md)**: how to create a
-  module, slash commands, listeners, interactions, services, the Prisma schema,
-  and the user-facing behaviour.
+- **Start with the developer guide in [`docs/site/`](docs/site/README.md)**, in
+  English and French: how to create a module, slash commands, listeners,
+  interactions, services, images, the Prisma schema. The user-facing behaviour
+  is in [`docs/functional.md`](docs/functional.md).
 - **Conventional Commits** are enforced (commitlint, via a lefthook `commit-msg`
   hook). A lefthook `pre-commit` hook runs oxfmt + oxlint on staged files —
   `pnpm install` sets the hooks up for you.
 - **Before opening a PR**, make sure `pnpm build`, `pnpm test`, `pnpm exec oxlint
   --deny-warnings` and `pnpm exec oxfmt --check` all pass (CI runs the same).
-- **Agent instructions** live in [`AGENTS.md`](AGENTS.md) (also symlinked as
-  `CLAUDE.md`) — a concise orientation that is handy for humans too.
+- **Agent instructions** live in [`AGENTS.md`](AGENTS.md), which coding agents
+  read on their own — a concise orientation that is handy for humans too.
 - **Known tech-debt and follow-ups** are tracked in [`AUDIT.md`](AUDIT.md).
 
 ## License
