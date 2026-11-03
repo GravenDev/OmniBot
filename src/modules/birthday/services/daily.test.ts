@@ -37,10 +37,10 @@ vi.mock("#core/services/mention.service.js", () => ({
   },
 }));
 
-const renderBirthdayCard = vi.hoisted(() => vi.fn());
-vi.mock("../rendering/birthday-card.js", () => ({
-  renderBirthdayCard,
-  SHOWN_AVATARS: 3,
+const renderCelebrationCard = vi.hoisted(() => vi.fn());
+vi.mock("#lib/celebration-card.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("#lib/celebration-card.js")>()),
+  renderCelebrationCard,
 }));
 vi.mock("#lib/imaging.js", () => ({ fetchAvatar: async () => null }));
 
@@ -103,7 +103,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  renderBirthdayCard.mockReturnValue(Buffer.from("png"));
+  renderCelebrationCard.mockReturnValue(Buffer.from("png"));
   service.claimDay.mockResolvedValue(true);
   service.getState.mockResolvedValue({
     lastDay: "2026-10-15",
@@ -159,17 +159,18 @@ describe("runGuildDay", () => {
       { content: string; files: { description: string }[] },
     ];
     expect(content).toBe("🎂 Joyeux anniversaire <@alice> !");
-    expect(renderBirthdayCard).toHaveBeenCalledWith(
-      [{ name: "alice", avatar: null }],
+    expect(renderCelebrationCard).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.objectContaining({ text: "Bravo alice !" }),
+        names: "alice",
+        avatars: [null],
+        quote: expect.objectContaining({ text: "Bravo alice !" }),
       })
     );
     expect(files[0]!.description).toContain("« Bravo alice ! »");
   });
 
   it("falls back to the text wish when the card cannot be drawn", async () => {
-    renderBirthdayCard.mockImplementation(() => {
+    renderCelebrationCard.mockImplementation(() => {
       throw new Error("no canvas");
     });
     const { client, send } = setup({ messages: ["Bravo {user} !"] });

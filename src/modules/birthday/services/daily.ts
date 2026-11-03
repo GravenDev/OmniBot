@@ -3,7 +3,6 @@ import {
   type Client,
   type Collection,
   type Guild,
-  DiscordAPIError,
   type GuildMember,
   type SendableChannels,
 } from "discord.js";
@@ -16,15 +15,16 @@ import {
   localTime,
   type CalendarDay,
 } from "#lib/calendar.js";
+import {
+  renderCelebrationCard,
+  SHOWN_PORTRAITS,
+} from "#lib/celebration-card.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { fetchAvatar } from "#lib/imaging.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
+import { postCard } from "#lib/post-card.js";
 import type { BirthdayConfigSchema } from "../birthday.config.js";
-import {
-  renderBirthdayCard,
-  SHOWN_AVATARS,
-} from "../rendering/birthday-card.js";
 import {
   birthdayCard,
   plainMessage,
@@ -49,49 +49,40 @@ export function announcedCelebrants(
     .map((entry) => entry.userId);
 }
 
-/** Today's card, or `null` when it cannot be drawn. */
+/** Today's card. */
 async function drawCard(
   config: Config,
   celebrants: GuildMember[],
   template: string | null,
   today: CalendarDay
-): Promise<AttachmentBuilder | null> {
-  try {
-    const guild = celebrants[0]!.guild;
-    const card = birthdayCard(
-      config.t,
-      config.locale,
-      celebrants.map((member) => member.displayName),
-      template &&
-        plainMessage(
-          template,
-          {
-            user: (id) => guild.members.cache.get(id)?.displayName,
-            role: (id) => guild.roles.cache.get(id)?.name,
-            channel: (id) => guild.channels.cache.get(id)?.name,
-          },
-          config.locale
-        ),
-      today
-    );
-    const png = renderBirthdayCard(
-      await Promise.all(
-        celebrants.map(async (member, index) => ({
-          name: member.displayName,
-          // Only the first ones are drawn.
-          avatar: index < SHOWN_AVATARS ? await fetchAvatar(member, 256) : null,
-        }))
+): Promise<AttachmentBuilder> {
+  const guild = celebrants[0]!.guild;
+  const { card, alt } = birthdayCard(
+    config.t,
+    config.locale,
+    celebrants.map((member) => member.displayName),
+    template &&
+      plainMessage(
+        template,
+        {
+          user: (id) => guild.members.cache.get(id)?.displayName,
+          role: (id) => guild.roles.cache.get(id)?.name,
+          channel: (id) => guild.channels.cache.get(id)?.name,
+        },
+        config.locale
       ),
-      card.labels
-    );
-    return new AttachmentBuilder(png, {
-      name: "birthday.png",
-      description: card.alt,
-    });
-  } catch (err) {
-    logger.error({ err }, "Failed to draw the birthday card");
-    return null;
-  }
+    today
+  );
+  const avatars = await Promise.all(
+    celebrants.map((member, index) =>
+      // Only the first ones are drawn.
+      index < SHOWN_PORTRAITS ? fetchAvatar(member, 256) : null
+    )
+  );
+  return new AttachmentBuilder(renderCelebrationCard({ ...card, avatars }), {
+    name: "birthday.png",
+    description: alt,
+  });
 }
 
 /**
@@ -111,27 +102,23 @@ async function sendWishes(
   const allowedMentions = {
     users: await mentionService.mentionable(guildId, userIds),
   };
-  const card = await drawCard(config, celebrants, template, today);
-  if (card) {
-    try {
-      await channel.send({
+  const posted = await postCard(
+    logger,
+    `the birthdays | guildId = ${guildId}`,
+    () => drawCard(config, celebrants, template, today),
+    (card) =>
+      channel.send({
         content: cardContent(config.t, config.locale, userIds),
         files: [card],
         allowedMentions,
-      });
-      return;
-    } catch (err) {
-      // Any other error may come after Discord posted the card.
-      if (!(err instanceof DiscordAPIError)) {
-        throw err;
-      }
-      logger.warn({ err }, "Birthday card refused, sending text");
-    }
+      })
+  );
+  if (!posted) {
+    await channel.send({
+      content: birthdayMessage(config.t, config.locale, template, userIds),
+      allowedMentions,
+    });
   }
-  await channel.send({
-    content: birthdayMessage(config.t, config.locale, template, userIds),
-    allowedMentions,
-  });
 }
 
 /**
