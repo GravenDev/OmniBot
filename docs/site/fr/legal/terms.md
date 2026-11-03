@@ -1,6 +1,6 @@
 # Conditions générales d'utilisation
 
-Dernière mise à jour : juin 2026
+Dernière mise à jour : novembre 2026
 
 ## 1. Acceptation
 
@@ -8,7 +8,7 @@ En invitant OmniBot sur votre serveur Discord ou en utilisant le bot, vous accep
 
 ## 2. Description du service
 
-OmniBot est un bot Discord modulaire qui fournit diverses fonctionnalités via des modules installables. Les fonctionnalités spécifiques disponibles dépendent des modules activés sur votre serveur. Le bot est fourni en tant que logiciel open-source sous licence GNU GPL v3.
+OmniBot est un bot Discord modulaire qui fournit diverses fonctionnalités via des modules installables. Les fonctionnalités spécifiques disponibles dépendent des modules activés sur votre serveur. Le bot est fourni en tant que logiciel open-source sous licence GNU GPL v3 ou ultérieure.
 
 ## 3. Obligations de l'utilisateur
 
@@ -46,7 +46,7 @@ Dans toute la mesure permise par la loi applicable, les mainteneurs et contribut
 
 ## 6. Licence open-source
 
-OmniBot est sous licence GNU GPL v3. Vous pouvez :
+OmniBot est sous licence GNU GPL v3 ou ultérieure (`GPL-3.0-or-later`). Vous pouvez :
 
 - Utiliser le bot à n'importe quelle fin
 - Étudier le fonctionnement du bot
