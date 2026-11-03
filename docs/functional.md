@@ -504,10 +504,10 @@ L'annonce de chaque journée est publiée une seule fois. Si le bot est arrêté
 
 ### Paliers du paradoxe des anniversaires
 
-Avec n inscrits, la probabilité qu'au moins deux partagent une date vaut 1 − ∏(365 − k)/365 pour k de 0 à n − 1 : elle dépasse 50 % à 23 inscrits et 99 % à 57. Quand un enregistrement fait franchir un palier, le bot l'annonce une seule fois par serveur, dans un embed qui donne aussi la probabilité d'une date partagée et le prochain palier :
+Avec n inscriptions, la probabilité qu'au moins deux partagent une date vaut 1 − ∏(365 − k)/365 pour k de 0 à n − 1 : elle dépasse 50 % à 23 inscriptions et 99 % à 57. Quand un enregistrement fait franchir un palier, le bot l'annonce une seule fois par serveur, dans un embed qui donne aussi la probabilité d'une date partagée et le prochain palier :
 
 - au 23ᵉ anniversaire enregistré ;
-- à la première date partagée, avec le nombre d'inscrits à ce moment-là, comparé à l'espérance théorique (environ 24,6) ;
+- à la première date partagée, avec le nombre d'inscriptions à ce moment-là, comparé à l'espérance théorique (environ 24,6) ;
 - au 57ᵉ anniversaire enregistré.
 
 Ces annonces ne citent que des chiffres : ni membre, ni date. Tous les anniversaires comptent, y compris ceux qui ne sont pas annoncés. Un palier franchi alors que ses annonces sont désactivées, qu'aucun salon des annonces n'est défini ou que la publication échoue est retenu sans être annoncé. Les pourcentages ont une décimale, tronquée et jamais arrondie au-dessus : 98,88 % s'affiche 98,8 %, jamais 99 %.

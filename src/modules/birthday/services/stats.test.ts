@@ -95,7 +95,7 @@ describe("statsText", () => {
     expect(text).toContain("Partagées : 14 mars.");
     expect(text).not.toContain("novembre");
     expect(text).toContain("1 date partagée n'est pas affichée");
-    expect(text).toContain("Encore 17 inscrits");
+    expect(text).toContain("Encore 17 inscriptions");
     expect(text).toContain("-# Les naissances");
   });
 });

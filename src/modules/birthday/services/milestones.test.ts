@@ -80,7 +80,9 @@ describe("checkMilestones", () => {
     const [{ embeds }] = send.mock.calls[0] as unknown as [
       { embeds: [{ toJSON(): { description: string } }] },
     ];
-    expect(embeds[0].toJSON().description).toContain("depuis le 14ᵉ inscrit");
+    expect(embeds[0].toJSON().description).toContain(
+      "depuis la 14ᵉ inscription"
+    );
   });
 
   it("records without announcing when the guild turned it off", async () => {
