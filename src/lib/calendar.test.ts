@@ -6,6 +6,7 @@ import {
   celebratesOn,
   dayKey,
   dueDay,
+  formatDate,
   formatDayOfYear,
   isValidDayOfYear,
   localTime,
@@ -149,6 +150,21 @@ describe("formatDayOfYear", () => {
   it("formats without a year", () => {
     expect(formatDayOfYear({ day: 14, month: 3 }, "fr")).toBe("14 mars");
     expect(formatDayOfYear({ day: 29, month: 2 }, "en")).toBe("February 29");
+  });
+
+  it("writes the first of the month 1er in French only", () => {
+    expect(formatDayOfYear({ day: 1, month: 11 }, "fr")).toBe("1er novembre");
+    expect(formatDayOfYear({ day: 11, month: 11 }, "fr")).toBe("11 novembre");
+    expect(formatDayOfYear({ day: 1, month: 11 }, "en")).toBe("November 1");
+  });
+});
+
+describe("formatDate", () => {
+  it("formats the day in the time zone, with its year", () => {
+    // 23:30 UTC on 31 October is already 1 November in Paris.
+    const date = new Date("2021-10-31T23:30:00Z");
+    expect(formatDate(date, "fr", "Europe/Paris")).toBe("1er novembre 2021");
+    expect(formatDate(date, "en", "UTC")).toBe("October 31, 2021");
   });
 });
 
