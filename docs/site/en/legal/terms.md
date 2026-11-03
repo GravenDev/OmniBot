@@ -1,6 +1,6 @@
 # Terms of Service
 
-Last updated: June 2026
+Last updated: November 2026
 
 ## 1. Acceptance
 
@@ -8,7 +8,7 @@ By inviting OmniBot to your Discord server or using the bot, you agree to these 
 
 ## 2. Description of Service
 
-OmniBot is a modular Discord bot that provides various features through installable modules. The specific features available depend on which modules are enabled on your server. The bot is provided as open-source software under the GNU GPL v3 license.
+OmniBot is a modular Discord bot that provides various features through installable modules. The specific features available depend on which modules are enabled on your server. The bot is provided as open-source software under the GNU GPL v3 or later license.
 
 ## 3. User Obligations
 
@@ -46,7 +46,7 @@ To the maximum extent permitted by applicable law, the maintainers and contribut
 
 ## 6. Open Source License
 
-OmniBot is licensed under the GNU GPL v3. You may:
+OmniBot is licensed under the GNU GPL v3 or later (`GPL-3.0-or-later`). You may:
 
 - Use the bot for any purpose
 - Study how the bot works

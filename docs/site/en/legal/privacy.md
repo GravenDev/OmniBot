@@ -8,7 +8,7 @@ OmniBot is an open-source project developed by the Graven - Développement commu
 
 The official instance, the OmniBot application provided by Graven - Développement, is operated by the Graven - Développement team. To reach it, join the [Graven - Développement](https://discord.gg/graven) Discord server or open an issue on the [GitHub repository](https://github.com/GravenDev/OmniBot/issues).
 
-The source code is available at [github.com/GravenDev/OmniBot](https://github.com/GravenDev/OmniBot) under the GNU GPL v3 license.
+The source code is available at [github.com/GravenDev/OmniBot](https://github.com/GravenDev/OmniBot) under the GNU GPL v3 or later license.
 
 ## Data Collected
 

@@ -1,7 +1,7 @@
 <h3 align="center">
   <img src="https://avatars.githubusercontent.com/u/78621926?s=200&v=4" width="75"><br/>
   Async - Community<br/>
-  This project is under the <a href="https://choosealicense.com/licenses/gpl-3.0/">GNU GPL v3</a> license<br/><br/>
+  This project is under the <a href="LICENSE">GNU GPL v3 or later</a> license<br/><br/>
 </h3>
 
 # <p align="center">`OmniBot`</p>
@@ -237,4 +237,12 @@ Contributions are welcome — staff and members alike.
 
 ## License
 
-[GNU GPL v3](https://choosealicense.com/licenses/gpl-3.0/).
+<!-- Logo copied from https://www.gnu.org/graphics/gplv3-or-later.png, so that it shows even when gnu.org does not answer. -->
+
+<a href="LICENSE"><img src=".github/assets/gplv3-or-later.png" alt="GNU GPL v3 or later"></a>
+
+OmniBot is free software: you can redistribute it and/or modify it under the
+terms of the [GNU General Public License](https://www.gnu.org/licenses/gpl-3.0.html)
+as published by the Free Software Foundation, either version 3 of the License,
+or (at your option) any later version (`GPL-3.0-or-later`). The full text is in
+[`LICENSE`](LICENSE).
