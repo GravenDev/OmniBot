@@ -229,6 +229,49 @@ export function drawCircularImage(
   ctx.restore();
 }
 
+export interface PortraitStack {
+  /** Portraits drawn before the "+N" bubble, which counts the others. */
+  shown: number;
+  centerX: number;
+  centerY: number;
+  size: number;
+  /** From one portrait's left edge to the next: less than `size` overlaps them. */
+  step: number;
+  ring: Rgb;
+  /** Font size of the "+N". */
+  countSize: number;
+}
+
+/** Overlapping portraits, centred on a point, then a "+N" bubble for the others. */
+export function drawPortraitStack(
+  ctx: SKRSContext2D,
+  avatars: readonly (Image | null)[],
+  { shown, centerX, centerY, size, step, ring, countSize }: PortraitStack
+): void {
+  const drawn = avatars.slice(0, shown);
+  const others = avatars.length - drawn.length;
+  const count = drawn.length + (others > 0 ? 1 : 0);
+  const left = centerX - (size + step * (count - 1)) / 2;
+  const top = centerY - size / 2;
+  drawn.forEach((avatar, index) =>
+    drawPortrait(ctx, avatar, left + index * step, top, size, ring)
+  );
+  if (others > 0) {
+    const x = left + drawn.length * step;
+    // Darker than a missing avatar, so that it does not read as a member.
+    drawPortrait(ctx, null, x, top, size, ring);
+    ctx.beginPath();
+    ctx.arc(x + size / 2, centerY, size / 2, 0, Math.PI * 2);
+    ctx.fillStyle = rgb(PALETTE.header);
+    ctx.fill();
+    ctx.font = font(countSize);
+    ctx.fillStyle = rgb(ring);
+    ctx.textAlign = "center";
+    fillTextCentered(ctx, `+${others}`, x + size / 2, centerY);
+    ctx.textAlign = "left";
+  }
+}
+
 export function fillTextCentered(
   ctx: SKRSContext2D,
   text: string,
