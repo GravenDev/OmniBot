@@ -13,7 +13,11 @@ export default defineConfig({
         test: {
           name: "unit",
           environment: "node",
-          include: ["src/**/*.test.ts", "scripts/**/*.test.ts"],
+          include: [
+            "src/**/*.test.ts",
+            "scripts/**/*.test.ts",
+            "lint/**/*.test.ts",
+          ],
           exclude: [...configDefaults.exclude, integrationGlob],
         },
       },
