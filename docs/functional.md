@@ -502,6 +502,10 @@ Chaque jour, à l'heure et dans le fuseau configurés, le bot souhaite dans le s
 
 L'annonce de chaque journée est publiée une seule fois. Si le bot est arrêté à l'heure prévue, elle part à son redémarrage s'il a lieu le même jour ; une journée entièrement manquée n'est pas rattrapée. Si Discord ne fournit pas la liste des membres, rien n'est publié et le bot réessaie l'heure suivante. Changer de fuseau ne fait jamais republier une journée déjà annoncée. Les membres mentionnés sont notifiés, sauf ceux qui ont désactivé leurs mentions avec `/pings`.
 
+### Calendrier du mois
+
+Le 1er de chaque mois, avec l'annonce de la journée et juste après elle, le bot publie dans le salon des annonces le **calendrier du mois** en image : la grille des jours (semaines commençant le lundi en français, le dimanche en anglais), titrée « Les anniversaires de novembre », avec sur chaque jour l'avatar des membres qui le fêtent. Un seul membre : son pseudo sous l'avatar ; plusieurs : trois avatars au plus (au-delà de trois membres, deux avatars puis « +N ») et « N anniversaires ». N'y figurent que les membres qui ont accepté d'être annoncés et sont encore sur le serveur : les autres n'apparaissent nulle part, ni dans les avatars, ni dans les nombres, ni dans le texte alternatif. Le 29 février figure le 28 les années non bissextiles. Le court message qui accompagne l'image ne mentionne personne : c'est un calendrier, pas un souhait. Le texte alternatif de l'image liste chaque jour avec les pseudos. Un mois sans aucun anniversaire à montrer ne publie rien : un calendrier vide n'apprend rien et ferait un message de plus chaque mois sur un petit serveur. Le calendrier suit la garantie de l'annonce quotidienne (une seule fois par journée, pas de rattrapage d'un 1er manqué). S'il ne peut pas être dessiné ou que Discord le refuse, il est abandonné pour le mois, sans rien changer aux souhaits du jour. Il se désactive avec `monthlyCalendar`.
+
 ### Paliers du paradoxe des anniversaires
 
 Avec n inscriptions, la probabilité qu'au moins deux partagent une date vaut 1 − ∏(365 − k)/365 pour k de 0 à n − 1 : elle dépasse 50 % à 23 inscriptions et 99 % à 57. Quand un enregistrement fait franchir un palier, le bot l'annonce une seule fois par serveur, dans un embed qui donne aussi la probabilité d'une date partagée et le prochain palier :
@@ -550,6 +554,7 @@ Supprime l'anniversaire d'un membre. Il n'existe volontairement aucune commande 
 | `hour`              | Nombre           | Heure des annonces, de 0 à 23 (9 par défaut).                                                                                                                                                                                                                 |
 | `messages`          | Liste de chaînes | Messages d'anniversaire tirés au hasard, cités sur la carte quand un seul membre est fêté ; `{user}` est remplacé par le membre. Vide : la carte n'en cite aucun. Le message choisi sert aussi à l'annonce en texte seul, qui prend sinon un message intégré. |
 | `paradoxMilestones` | Booléen          | Annoncer les paliers du paradoxe des anniversaires (activé par défaut).                                                                                                                                                                                       |
+| `monthlyCalendar`   | Booléen          | Publier le calendrier des anniversaires du mois, le 1er de chaque mois (activé par défaut).                                                                                                                                                                   |
 
 ---
 

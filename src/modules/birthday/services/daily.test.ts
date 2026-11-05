@@ -42,6 +42,11 @@ vi.mock("#lib/celebration-card.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("#lib/celebration-card.js")>()),
   renderCelebrationCard,
 }));
+const renderBirthdayCalendar = vi.hoisted(() => vi.fn());
+vi.mock("../rendering/birthday-calendar.js", () => ({
+  renderBirthdayCalendar,
+  shownAvatars: (count: number) => count,
+}));
 vi.mock("#lib/imaging.js", () => ({ fetchAvatar: async () => null }));
 
 const { announcedCelebrants, runGuildDay } = await import("./daily.js");
@@ -104,6 +109,7 @@ beforeAll(async () => {
 beforeEach(() => {
   vi.clearAllMocks();
   renderCelebrationCard.mockReturnValue(Buffer.from("png"));
+  renderBirthdayCalendar.mockReturnValue(Buffer.from("calendar"));
   service.claimDay.mockResolvedValue(true);
   service.getState.mockResolvedValue({
     lastDay: "2026-10-15",
@@ -286,5 +292,106 @@ describe("runGuildDay", () => {
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(getConfigForModuleIn).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe("monthly calendar", () => {
+  // 1 November 2026, 09:00 in Paris.
+  const FIRST_IN_PARIS = new Date("2026-11-01T08:00:00Z");
+
+  beforeEach(() => {
+    service.getState.mockResolvedValue({
+      lastDay: "2026-10-31",
+      milestones: [],
+      firstCollisionCount: null,
+    });
+    service.list.mockResolvedValue([
+      { userId: "alice", day: 1, month: 11, announce: true },
+      { userId: "quiet", day: 1, month: 11, announce: false },
+      { userId: "bob", day: 20, month: 11, announce: true },
+      { userId: "gone", day: 5, month: 11, announce: true },
+    ]);
+  });
+
+  type Sent = {
+    content: string;
+    files: { name: string; description: string }[];
+    allowedMentions: unknown;
+  };
+  const calendarPost = (send: ReturnType<typeof setup>["send"]) =>
+    (send.mock.calls as unknown as [Sent][])
+      .map(([options]) => options)
+      .find((options) => options.files?.[0]?.name === "birthday-calendar.png");
+
+  it("is posted on the 1st after the wishes, without hidden or departed members", async () => {
+    const { client, send } = setup();
+    await runGuildDay(client, module, "guild-1", FIRST_IN_PARIS);
+
+    expect(send).toHaveBeenCalledTimes(2);
+    const [{ days }] = renderBirthdayCalendar.mock.calls[0] as [
+      { days: { name: string }[][] },
+    ];
+    expect(days).toHaveLength(30);
+    expect(days[0]).toEqual([{ name: "alice", avatar: null }]);
+    expect(days[19]).toEqual([{ name: "bob", avatar: null }]);
+    expect(days.flat()).toHaveLength(2);
+    const post = calendarPost(send)!;
+    expect(send.mock.calls.at(-1)![0]).toBe(post);
+    expect(post.content).not.toMatch(/<@/);
+    expect(post.allowedMentions).toEqual({ parse: [] });
+    expect(post.files[0]!.description).not.toMatch(/quiet|gone/);
+  });
+
+  it("is only posted on the 1st", async () => {
+    const { client, send } = setup();
+    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    expect(renderBirthdayCalendar).not.toHaveBeenCalled();
+    expect(calendarPost(send)).toBeUndefined();
+  });
+
+  it("is not posted when disabled, nor when nobody is shown", async () => {
+    const { client, send } = setup({ monthlyCalendar: false });
+    await runGuildDay(client, module, "guild-1", FIRST_IN_PARIS);
+    expect(calendarPost(send)).toBeUndefined();
+
+    service.list.mockResolvedValue([
+      { userId: "quiet", day: 3, month: 11, announce: false },
+      { userId: "gone", day: 5, month: 11, announce: true },
+    ]);
+    const other = setup();
+    await runGuildDay(other.client, module, "guild-1", FIRST_IN_PARIS);
+    expect(other.send).not.toHaveBeenCalled();
+  });
+
+  it("does not disturb the wishes when it cannot be drawn or sent", async () => {
+    renderBirthdayCalendar.mockImplementation(() => {
+      throw new Error("no canvas");
+    });
+    const { client, send } = setup();
+    await expect(
+      runGuildDay(client, module, "guild-1", FIRST_IN_PARIS)
+    ).resolves.toBeUndefined();
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({ content: "🎂 Joyeux anniversaire <@alice> !" })
+    );
+
+    renderBirthdayCalendar.mockReturnValue(Buffer.from("calendar"));
+    const other = setup();
+    other.send
+      .mockResolvedValueOnce({})
+      .mockRejectedValueOnce(new Error("refused"));
+    await expect(
+      runGuildDay(other.client, module, "guild-1", FIRST_IN_PARIS)
+    ).resolves.toBeUndefined();
+    expect(other.send).toHaveBeenCalledTimes(2);
+  });
+
+  it("is still posted when the wishes fail", async () => {
+    renderCelebrationCard.mockReturnValue(Buffer.from("png"));
+    const { client, send } = setup();
+    send.mockRejectedValueOnce(new Error("network"));
+    await runGuildDay(client, module, "guild-1", FIRST_IN_PARIS);
+    expect(calendarPost(send)).toBeDefined();
   });
 });
