@@ -1,4 +1,5 @@
 import type { Collection, Guild, GuildMember } from "discord.js";
+import { loadAllMembers } from "#lib/guild-members.js";
 
 /** Part of the server the paradox can be computed for, instead of all of it. */
 export type GroupSelection =
@@ -37,7 +38,7 @@ export async function resolveGroup(
 ): Promise<BirthdayGroup | null> {
   if (selection.kind === "role") {
     if (!membersCacheComplete(guild)) {
-      await guild.members.fetch();
+      await loadAllMembers(guild);
     }
     const role = guild.roles.cache.get(selection.id);
     return role

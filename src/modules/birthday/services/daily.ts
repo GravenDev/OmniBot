@@ -20,6 +20,7 @@ import {
   SHOWN_PORTRAITS,
 } from "#lib/celebration-card.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { allMembers } from "#lib/guild-members.js";
 import { fetchAvatar } from "#lib/imaging.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
@@ -218,7 +219,7 @@ export async function runGuildDay(
   // Fetched before the day is claimed: when Discord does not answer, the
   // next hour tries again instead of losing the day.
   const guild = await client.guilds.fetch(guildId);
-  const members = await guild.members.fetch();
+  const members = await allMembers(guild);
   if (!(await birthdayService.claimDay(guildId, day))) {
     return;
   }

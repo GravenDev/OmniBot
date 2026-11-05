@@ -16,6 +16,7 @@ import {
 } from "#lib/calendar.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { isGuildSetupError } from "#lib/discord-errors.js";
+import { allMembers } from "#lib/guild-members.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { postCard } from "#lib/post-card.js";
@@ -181,7 +182,7 @@ export async function runGuildDay(
     : null;
   const members =
     config.get("memberAnniversaries") || serverYears !== null
-      ? await guild.members.fetch()
+      ? await allMembers(guild)
       : null;
   await state.claimDay(guildId, day);
   if (members && config.get("memberAnniversaries")) {

@@ -119,7 +119,7 @@ function guild({
   cached?: number;
   memberCount?: number;
 } = {}) {
-  const cache = { size: cached };
+  const cache = { size: cached, sweep: () => 0 };
   return {
     memberCount,
     iconURL: () => null,
@@ -127,6 +127,7 @@ function guild({
       cache,
       fetch: vi.fn(async () => {
         cache.size = memberCount;
+        return new Collection();
       }),
     },
     roles: {
