@@ -1,6 +1,7 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": ["unicorn", "typescript", "oxc"],
+  "jsPlugins": ["./lint/omnibot.js"],
   "categories": {},
   "rules": {
     "for-direction": "warn",
@@ -135,5 +136,19 @@
     "builtin": true
   },
   "globals": {},
-  "ignorePatterns": []
+  "ignorePatterns": [],
+  "overrides": [
+    {
+      "files": ["src/**/*.ts"],
+      "rules": {
+        "omnibot/no-whole-guild-member-fetch": "error"
+      }
+    },
+    {
+      "files": ["src/lib/guild-members.ts"],
+      "rules": {
+        "omnibot/no-whole-guild-member-fetch": "off"
+      }
+    }
+  ]
 }
