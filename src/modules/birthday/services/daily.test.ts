@@ -87,7 +87,7 @@ function setup(values: Partial<ConfigData<BirthdayConfigSchema>> = {}) {
     id: "guild-1",
     createdAt: new Date("2021-10-16T10:00:00Z"),
     memberCount: 4,
-    members: { fetch: vi.fn(async () => members) },
+    members: { cache: members, fetch: vi.fn(async () => members) },
   };
   const client = {
     guilds: {
