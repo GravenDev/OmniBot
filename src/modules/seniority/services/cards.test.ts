@@ -6,7 +6,10 @@ import fr from "../i18n/fr.json" with { type: "json" };
 import { seniorityConfigSchema } from "../seniority.config.js";
 
 const rendering = vi.hoisted(() => ({
-  renderCelebrationCard: vi.fn((..._args: unknown[]) => Buffer.from("png")),
+  renderCelebrationImage: vi.fn(async (..._args: unknown[]) => ({
+    data: Buffer.from("webp"),
+    extension: "webp" as "webp" | "png",
+  })),
 }));
 vi.mock("#lib/celebration-card.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("#lib/celebration-card.js")>()),
@@ -82,7 +85,7 @@ describe("seniorityCard", () => {
       NOV_1
     );
 
-    const [drawn] = rendering.renderCelebrationCard.mock.calls[0]! as [
+    const [drawn] = rendering.renderCelebrationImage.mock.calls[0]! as [
       Record<string, unknown>,
     ];
     expect(drawn).toMatchObject({
@@ -98,9 +101,22 @@ describe("seniorityCard", () => {
     );
   });
 
+  it("names the file after the image it got, animated or still", async () => {
+    expect((await seniorityCard(config(), celebrated, NOV_1)).name).toBe(
+      "seniority.webp"
+    );
+    rendering.renderCelebrationImage.mockResolvedValueOnce({
+      data: Buffer.from("png"),
+      extension: "png",
+    });
+    expect((await seniorityCard(config(), celebrated, NOV_1)).name).toBe(
+      "seniority.png"
+    );
+  });
+
   it("wishes a single member on their own", async () => {
     await seniorityCard(config(), celebrated.slice(4), NOV_1);
-    expect(rendering.renderCelebrationCard.mock.calls[0]![0]).toMatchObject({
+    expect(rendering.renderCelebrationImage.mock.calls[0]![0]).toMatchObject({
       title: "Joyeux anniversaire d'arrivée !",
       names: "m4 (7 ans)",
     });
@@ -120,7 +136,7 @@ describe("serverCard", () => {
       10
     );
 
-    expect(rendering.renderCelebrationCard.mock.calls[0]![0]).toMatchObject({
+    expect(rendering.renderCelebrationImage.mock.calls[0]![0]).toMatchObject({
       title: "Le serveur fête ses 10 ans !",
       details: [
         "12 480 membres",
@@ -132,6 +148,7 @@ describe("serverCard", () => {
     expect(card.description).toBe(
       "Le serveur fête ses 10 ans. Créé le 1er novembre 2016, 12 480 membres. Plus ancienne présence : nora, depuis le 3 mars 2017."
     );
+    expect(card.name).toBe("server-anniversary.webp");
   });
 
   it("leaves the longest-standing member out on a server of bots only", async () => {
@@ -141,7 +158,7 @@ describe("serverCard", () => {
       [member("bot", "2016-11-01T11:00:00Z", true)],
       1
     );
-    expect(rendering.renderCelebrationCard.mock.calls[0]![0]).toMatchObject({
+    expect(rendering.renderCelebrationImage.mock.calls[0]![0]).toMatchObject({
       title: "Le serveur fête son premier anniversaire !",
       details: ["12 480 membres"],
     });

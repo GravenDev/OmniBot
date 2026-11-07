@@ -37,10 +37,10 @@ vi.mock("#core/services/mention.service.js", () => ({
   },
 }));
 
-const renderCelebrationCard = vi.hoisted(() => vi.fn());
+const renderCelebrationImage = vi.hoisted(() => vi.fn());
 vi.mock("#lib/celebration-card.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("#lib/celebration-card.js")>()),
-  renderCelebrationCard,
+  renderCelebrationImage,
 }));
 const renderBirthdayCalendar = vi.hoisted(() => vi.fn());
 vi.mock("../rendering/birthday-calendar.js", () => ({
@@ -108,7 +108,10 @@ beforeAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  renderCelebrationCard.mockReturnValue(Buffer.from("png"));
+  renderCelebrationImage.mockResolvedValue({
+    data: Buffer.from("webp"),
+    extension: "webp",
+  });
   renderBirthdayCalendar.mockReturnValue(Buffer.from("calendar"));
   service.claimDay.mockResolvedValue(true);
   service.getState.mockResolvedValue({
@@ -162,10 +165,11 @@ describe("runGuildDay", () => {
     expect(service.removeMany).toHaveBeenCalledWith("guild-1", ["gone"]);
     expect(send).toHaveBeenCalledTimes(1);
     const [{ content, files }] = send.mock.calls[0] as unknown as [
-      { content: string; files: { description: string }[] },
+      { content: string; files: { name: string; description: string }[] },
     ];
+    expect(files[0]!.name).toBe("birthday.webp");
     expect(content).toBe("🎂 Joyeux anniversaire <@alice> !");
-    expect(renderCelebrationCard).toHaveBeenCalledWith(
+    expect(renderCelebrationImage).toHaveBeenCalledWith(
       expect.objectContaining({
         names: "alice",
         avatars: [null],
@@ -175,10 +179,21 @@ describe("runGuildDay", () => {
     expect(files[0]!.description).toContain("« Bravo alice ! »");
   });
 
-  it("falls back to the text wish when the card cannot be drawn", async () => {
-    renderCelebrationCard.mockImplementation(() => {
-      throw new Error("no canvas");
+  it("names the file after the image it got: the still card is a PNG", async () => {
+    renderCelebrationImage.mockResolvedValue({
+      data: Buffer.from("png"),
+      extension: "png",
     });
+    const { client, send } = setup();
+    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    const [{ files }] = send.mock.calls[0] as unknown as [
+      { files: { name: string }[] },
+    ];
+    expect(files[0]!.name).toBe("birthday.png");
+  });
+
+  it("falls back to the text wish when the card cannot be drawn", async () => {
+    renderCelebrationImage.mockRejectedValue(new Error("no canvas"));
     const { client, send } = setup({ messages: ["Bravo {user} !"] });
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(send).toHaveBeenCalledWith({
@@ -388,7 +403,10 @@ describe("monthly calendar", () => {
   });
 
   it("is still posted when the wishes fail", async () => {
-    renderCelebrationCard.mockReturnValue(Buffer.from("png"));
+    renderCelebrationImage.mockResolvedValue({
+      data: Buffer.from("webp"),
+      extension: "webp",
+    });
     const { client, send } = setup();
     send.mockRejectedValueOnce(new Error("network"));
     await runGuildDay(client, module, "guild-1", FIRST_IN_PARIS);

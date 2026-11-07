@@ -16,7 +16,7 @@ import {
   type CalendarDay,
 } from "#lib/calendar.js";
 import {
-  renderCelebrationCard,
+  renderCelebrationImage,
   SHOWN_PORTRAITS,
 } from "#lib/celebration-card.js";
 import type { ConfigProvider } from "#lib/config.js";
@@ -81,8 +81,9 @@ async function drawCard(
       index < SHOWN_PORTRAITS ? fetchAvatar(member, 256) : null
     )
   );
-  return new AttachmentBuilder(renderCelebrationCard({ ...card, avatars }), {
-    name: "birthday.png",
+  const image = await renderCelebrationImage({ ...card, avatars });
+  return new AttachmentBuilder(image.data, {
+    name: `birthday.${image.extension}`,
     description: alt,
   });
 }
