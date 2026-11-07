@@ -24,3 +24,12 @@ export async function previewT(
   addTranslations(locale, namespace, bundle);
   return createT(locale, namespace);
 }
+
+/**
+ * The still image Discord shows of an animated one, its first frame, as a PNG
+ * to compare: an animated card's preview returns `firstFrame(image.data)`.
+ */
+export async function firstFrame(image: Buffer): Promise<Buffer> {
+  const { default: sharp } = await import("sharp");
+  return sharp(image, { page: 0 }).png().toBuffer();
+}
