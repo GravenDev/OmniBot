@@ -13,6 +13,7 @@ import {
   loadAsset,
   PALETTE,
   type Rgb,
+  randomFrom,
 } from "./imaging.js";
 
 const ACCENT: Rgb = [10, 200, 90];
@@ -28,6 +29,18 @@ afterEach(() => {
     rmSync(directory, { recursive: true, force: true });
     directory = undefined;
   }
+});
+
+describe("randomFrom", () => {
+  it("gives the same numbers in [0, 1) for the same seed", () => {
+    const draw = (seed: number) => {
+      const random = randomFrom(seed);
+      return Array.from({ length: 50 }, () => random());
+    };
+    expect(draw(7)).toEqual(draw(7));
+    expect(draw(7)).not.toEqual(draw(42));
+    expect(draw(7).every((value) => value >= 0 && value < 1)).toBe(true);
+  });
 });
 
 describe("loadAsset", () => {
