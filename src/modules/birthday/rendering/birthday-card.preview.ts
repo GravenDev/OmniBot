@@ -1,7 +1,7 @@
 import { createCanvas, loadImage, type Image } from "@napi-rs/canvas";
-import { renderCelebrationCard } from "#lib/celebration-card.js";
+import { renderCelebrationImage } from "#lib/celebration-card.js";
 import type { Previews } from "#lib/preview.js";
-import { previewT } from "#lib/preview.js";
+import { firstFrame, previewT } from "#lib/preview.js";
 import fr from "../i18n/fr.json" with { type: "json" };
 import { birthdayCard } from "../services/announcements.js";
 
@@ -37,7 +37,8 @@ const longName: Celebrant = {
 const t = await previewT("birthday", fr);
 const today = { year: 2026, month: 11, day: 1 };
 
-function render(celebrants: Celebrant[], template: string | null = null) {
+// The card the bot posts, as Discord shows it still.
+async function render(celebrants: Celebrant[], template: string | null = null) {
   const card = birthdayCard(
     t,
     "fr",
@@ -45,12 +46,11 @@ function render(celebrants: Celebrant[], template: string | null = null) {
     template,
     today
   );
-  return Promise.resolve(
-    renderCelebrationCard({
-      ...card.card,
-      avatars: celebrants.map((celebrant) => celebrant.avatar),
-    })
-  );
+  const image = await renderCelebrationImage({
+    ...card.card,
+    avatars: celebrants.map((celebrant) => celebrant.avatar),
+  });
+  return firstFrame(image.data);
 }
 
 export default {

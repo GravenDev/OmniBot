@@ -1,9 +1,12 @@
 // Made-up members and server; the avatars are generated initials.
 import { createCanvas, loadImage, type Image } from "@napi-rs/canvas";
-import { renderCelebrationCard } from "#lib/celebration-card.js";
+import {
+  renderCelebrationImage,
+  type CelebrationCard,
+} from "#lib/celebration-card.js";
 import { font, registerFont } from "#lib/imaging.js";
 import type { Previews } from "#lib/preview.js";
-import { previewT } from "#lib/preview.js";
+import { firstFrame, previewT } from "#lib/preview.js";
 import fr from "../i18n/fr.json" with { type: "json" };
 import { membersCardText, serverCardText } from "../services/cards.js";
 
@@ -52,12 +55,15 @@ const people = [
   { name: "Morgan", years: 1, avatar: null },
 ];
 
+// The card the bot posts, as Discord shows it still.
+async function still(card: CelebrationCard) {
+  return firstFrame((await renderCelebrationImage(card)).data);
+}
+
 function members(count: number) {
   const shown = people.slice(0, count);
   const { card } = membersCardText(t, "fr", shown, today);
-  return Promise.resolve(
-    renderCelebrationCard({ ...card, avatars: shown.map((p) => p.avatar) })
-  );
+  return still({ ...card, avatars: shown.map((p) => p.avatar) });
 }
 
 function server(eldest: boolean, years = 10) {
@@ -67,9 +73,7 @@ function server(eldest: boolean, years = 10) {
     members: 12480,
     eldest: eldest ? { name: "Nora", since: "3 mars 2017" } : null,
   });
-  return Promise.resolve(
-    renderCelebrationCard({ ...card, avatars: [eldest ? icon : null] })
-  );
+  return still({ ...card, avatars: [eldest ? icon : null] });
 }
 
 export default {

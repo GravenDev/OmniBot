@@ -7,7 +7,7 @@ import {
   type DayOfYear,
 } from "#lib/calendar.js";
 import {
-  renderCelebrationCard,
+  renderCelebrationImage,
   SHOWN_PORTRAITS,
   type CelebrationCard,
 } from "#lib/celebration-card.js";
@@ -112,8 +112,9 @@ export async function seniorityCard(
       index < SHOWN_PORTRAITS ? fetchAvatar(member, 256) : null
     )
   );
-  return new AttachmentBuilder(renderCelebrationCard({ ...card, avatars }), {
-    name: "seniority.png",
+  const image = await renderCelebrationImage({ ...card, avatars });
+  return new AttachmentBuilder(image.data, {
+    name: `seniority.${image.extension}`,
     description: alt,
   });
 }
@@ -185,8 +186,9 @@ export async function serverCard(
     },
   });
   const icon = await fetchImage(guild.iconURL({ extension: "png", size: 256 }));
-  return new AttachmentBuilder(
-    renderCelebrationCard({ ...card, avatars: [icon] }),
-    { name: "server-anniversary.png", description: alt }
-  );
+  const image = await renderCelebrationImage({ ...card, avatars: [icon] });
+  return new AttachmentBuilder(image.data, {
+    name: `server-anniversary.${image.extension}`,
+    description: alt,
+  });
 }
