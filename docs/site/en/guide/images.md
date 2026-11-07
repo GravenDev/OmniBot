@@ -1,12 +1,14 @@
 # Generating Images
 
-Leaderboards and stat cards are rendered as PNG images with [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas) (prebuilt binaries, nothing to install). A ready-made stat card, and a table to draw in it, cover most needs; lower-level helpers are there for anything else.
+Leaderboards and stat cards are rendered as PNG images with [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas) (prebuilt binaries, nothing to install); animated images are encoded with [`sharp`](https://sharp.pixelplumbing.com/), as WebP. A ready-made stat card, and a table to draw in it, cover most needs; lower-level helpers are there for anything else.
 
-| Module           | Provides                                                                                                                                                                                |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `#lib/table`     | `drawTable`, `playerColumn`, `drawCellText`: ranked table with medals, avatars, names and your own columns, drawn in a stat card                                                        |
-| `#lib/stat-card` | `renderStatCard`: card with a portrait, a title, an optional rank, a grid of stat boxes and a side panel                                                                                |
-| `#lib/imaging`   | Shared palette and font, default accent (`DEFAULT_ACCENT`), avatar download, circular images and ringed portraits (`drawPortrait`), highlighting (`drawHighlight`), fitted text, assets |
+| Module                  | Provides                                                                                                                                                                                |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `#lib/table`            | `drawTable`, `playerColumn`, `drawCellText`: ranked table with medals, avatars, names and your own columns, drawn in a stat card                                                        |
+| `#lib/stat-card`        | `renderStatCard`: card with a portrait, a title, an optional rank, a grid of stat boxes and a side panel                                                                                |
+| `#lib/celebration-card` | `renderCelebrationImage`: festive card (portraits, title, names), animated under 3D confetti, the still `renderCelebrationCard` PNG as fallback                                         |
+| `#lib/confetti-3d`      | `renderConfetti`, `animateCard`: 3D confetti thrown over any card, as an animated WebP played once                                                                                      |
+| `#lib/imaging`          | Shared palette and font, default accent (`DEFAULT_ACCENT`), avatar download, circular images and ringed portraits (`drawPortrait`), highlighting (`drawHighlight`), fitted text, assets |
 
 The Outfit font and the gold, silver and bronze medals ship in `src/lib/assets/` and are loaded for you. Outfit has no emojis: `font()` adds the system's emoji font when there is one (Noto Color Emoji, installed by the Docker image), so that names containing emojis render. Always go through `font()` rather than setting `ctx.font` by hand.
 
@@ -128,7 +130,7 @@ export default {
 } satisfies Previews;
 ```
 
-`pnpm render-preview <file.preview.ts> --out <dir>` draws them as `<name>-after.png`, from the working tree. With `--before <ref>` (for a PR: the hash `git merge-base HEAD origin/master` prints), it also draws `<name>-before.png` from that commit, in a temporary worktree into which the current preview file is copied: both sides draw the same data, so they differ only by the change. `--only <name>` draws one entry. A renderer that takes a `t` gets one from `await previewT("<module id>", fr)` (`#lib/preview`), with the module's `i18n/fr.json`, as in `src/modules/four-hour-game/rendering/profile-card.preview.ts`. The preview files are type-checked with the rest of `src/`, so a change of data shape shows up at build time. `src/modules/server-stats/rendering/report-card.preview.ts` is an example.
+`pnpm render-preview <file.preview.ts> --out <dir>` draws them as `<name>-after.png`, from the working tree. With `--before <ref>` (for a PR: the hash `git merge-base HEAD origin/master` prints), it also draws `<name>-before.png` from that commit, in a temporary worktree into which the current preview file is copied: both sides draw the same data, so they differ only by the change. `--only <name>` draws one entry. A renderer that takes a `t` gets one from `await previewT("<module id>", fr)` (`#lib/preview`), with the module's `i18n/fr.json`, as in `src/modules/four-hour-game/rendering/profile-card.preview.ts`. The preview files are type-checked with the rest of `src/`, so a change of data shape shows up at build time. `src/modules/server-stats/rendering/report-card.preview.ts` is an example. An animated image is compared on the still frame Discord shows: return `firstFrame(image.data)` (`#lib/preview`) for the image of `renderCelebrationImage`, as `src/modules/birthday/rendering/birthday-card.preview.ts` does.
 
 Emojis are drawn with the system's emoji font, so they look different from one system to another; text and layout do not.
 
@@ -145,5 +147,6 @@ In a pull request, and only when one is asked for: `gh pr create … --attach ".
 
 - **Translate every text** you pass in (headers, titles, units): renderers draw what they receive.
 - **Defer the reply** (`interaction.deferReply()`) before rendering: downloading avatars and drawing takes longer than Discord's 3-second limit allows.
+- **Animate over a still image.** `renderConfetti` draws a palette's confetti over a transparent background, a frame at a time so that the bot keeps answering. It draws everything again on each call: keep its frames for the cards of one palette, as `renderCelebrationImage` does, for 10 minutes after the last card; `animateCard` then puts any card under them off the main thread. The animation starts on its last frame: Discord shows the first frame when animations are off.
 - **Cache the PNG** when the same image is requested often, with `RevisionCache` from `#lib/revision-cache` keyed on the data that drives it.
 - **Module-specific assets** (an extra font, icons) go in the module's own `assets/` folder; the Dockerfile copies every `assets/` folder next to the compiled code.
