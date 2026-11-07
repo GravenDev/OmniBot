@@ -44,6 +44,15 @@ export function rgb([r, g, b]: Rgb): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
+/** Numbers in [0, 1) from a seed: the same seed always gives the same image. */
+export function randomFrom(seed: number): () => number {
+  let state = seed;
+  return () => {
+    state = (state * 16807) % 2147483647;
+    return state / 2147483647;
+  };
+}
+
 // The system's colour emoji font, if any: the bundled fonts have no emoji, and
 // member names often do. The Docker image installs font-noto-emoji.
 const EMOJI_FONT = "Emoji";
