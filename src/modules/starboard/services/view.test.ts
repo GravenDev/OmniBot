@@ -94,6 +94,14 @@ describe("starboardMessage", () => {
     expect(json).toContain("Go to message");
   });
 
+  it("shows the origin as small text, set apart from the content", () => {
+    const { json } = render(fakeMessage());
+
+    expect(json).toMatch(
+      /-# <@author> in <#general> · <t:\d+:R>\\n\\na very good message/
+    );
+  });
+
   it("truncates a long content", () => {
     const { json } = render(fakeMessage({ content: "x".repeat(3000) }));
 
@@ -186,6 +194,9 @@ describe("starboardMessage", () => {
 
     expect(json).toContain("Forwarded message");
     expect(json).toContain("forwarded words");
+    expect(json).toMatch(
+      /-# <@author> in <#general> · <t:\d+:R>\\n-# ↪ Forwarded message\\n\\nforwarded words/
+    );
   });
 
   it("stays within Discord's 4000 characters of text", () => {

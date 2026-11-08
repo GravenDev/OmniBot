@@ -26,6 +26,7 @@ const FILE_NAME_LIMIT = 60;
 const SHOWN_EMBEDS = 2;
 const SHOWN_FILES = 3;
 const GALLERY_LIMIT = 10;
+const HEADER_GAP = "\n\n";
 
 type Body = Pick<Message, "content" | "attachments" | "embeds" | "stickers">;
 
@@ -194,11 +195,11 @@ export function starboardMessage(
   }
 
   const header = [
-    t("header", {
+    `-# ${t("header", {
       author: `<@${message.author.id}>`,
       channel: `<#${message.channelId}>`,
       sentAt: time(message.createdAt, TimestampStyles.RelativeTime),
-    }),
+    })}`,
     forwarded ? `-# ${t("forwarded")}` : null,
   ]
     .filter((part): part is string => !!part)
@@ -211,9 +212,9 @@ export function starboardMessage(
     header.length -
     others.length -
     counter.length -
-    1;
+    HEADER_GAP.length;
   const content = body.content
-    ? `${header}\n${truncate(body.content, Math.min(CONTENT_LIMIT, budget))}`
+    ? `${header}${HEADER_GAP}${truncate(body.content, Math.min(CONTENT_LIMIT, budget))}`
     : header;
   const avatar =
     message.member?.displayAvatarURL() ?? message.author.displayAvatarURL();
