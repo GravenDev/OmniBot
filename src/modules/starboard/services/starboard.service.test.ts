@@ -20,8 +20,13 @@ const mocks = vi.hoisted(() => ({
   ineligibility: vi.fn(),
   leakage: vi.fn(),
   view: vi.fn(() => ({ rendered: true })),
+  logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
 
+vi.mock("#lib/logger.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("#lib/logger.js")>()),
+  loggerMaker: () => mocks.logger,
+}));
 vi.mock("./store.js", () => ({ default: mocks.store }));
 vi.mock("./tally.js", () => mocks.tally);
 vi.mock("./view.js", () => ({ starboardMessage: mocks.view }));
@@ -208,11 +213,42 @@ describe("refresh of a message not yet on the starboard", () => {
   });
 
   it("does nothing for an ineligible message", async () => {
-    mocks.ineligibility.mockReturnValue("audience");
+    mocks.ineligibility.mockReturnValue("private");
 
     await starboard.refresh(fakeMessage() as never, config());
 
     expect(board.send).not.toHaveBeenCalled();
+  });
+
+  it("logs why a message that reached the threshold is not reposted", async () => {
+    mocks.ineligibility.mockReturnValue("channel");
+
+    await starboard.refresh(fakeMessage() as never, config());
+
+    expect(mocks.logger.info).toHaveBeenCalledWith(
+      expect.stringContaining("reason = channel")
+    );
+  });
+
+  it("warns when it cannot post in the starboard", async () => {
+    mocks.ineligibility.mockReturnValue("permissions");
+
+    await starboard.refresh(fakeMessage() as never, config());
+
+    expect(mocks.logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining("reason = permissions")
+    );
+  });
+
+  it("stays quiet about an uncached message below the threshold", async () => {
+    mocks.tally.upperBound.mockReturnValue(2);
+    mocks.ineligibility.mockReturnValue("channel");
+    const message = Object.assign(fakeMessage(), { partial: true });
+
+    await starboard.refresh(message as never, config());
+
+    expect(mocks.ineligibility).not.toHaveBeenCalled();
+    expect(mocks.logger.info).not.toHaveBeenCalled();
   });
 
   it("does nothing until the starboard channel is set", async () => {
@@ -304,8 +340,8 @@ describe("refresh of a message already on the starboard", () => {
     expect(mocks.store.remove).toHaveBeenCalledWith("m1");
   });
 
-  it("removes the repost once the source channel got more private", async () => {
-    mocks.leakage.mockReturnValue("audience");
+  it("removes the repost once the source channel turned NSFW", async () => {
+    mocks.leakage.mockReturnValue("nsfw");
 
     await starboard.refresh(fakeMessage() as never, config());
 
@@ -314,9 +350,9 @@ describe("refresh of a message already on the starboard", () => {
     expect(mocks.store.remove).toHaveBeenCalledWith("m1");
   });
 
-  it("removes it from a now private channel that is also excluded", async () => {
+  it("removes it from a now NSFW channel that is also excluded", async () => {
     mocks.ineligibility.mockReturnValue("channel");
-    mocks.leakage.mockReturnValue("audience");
+    mocks.leakage.mockReturnValue("nsfw");
 
     await starboard.refresh(fakeMessage() as never, config());
 

@@ -1,14 +1,10 @@
 import {
+  ChannelType,
   type GuildTextBasedChannel,
   type Message,
   PermissionFlagsBits,
 } from "discord.js";
-import {
-  excludedIdsOf,
-  isExcluded,
-  isNsfw,
-  widensAudience,
-} from "#lib/channel-audience.js";
+import { excludedIdsOf, isExcluded, isNsfw } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { StarboardConfigSchema } from "#modules/starboard/starboard.config.js";
 
@@ -20,7 +16,7 @@ export type Ineligibility =
   | "bot"
   | "channel"
   | "nsfw"
-  | "audience"
+  | "private"
   | "permissions";
 
 const REQUIRED_PERMISSIONS = [
@@ -45,12 +41,12 @@ export function thresholdOf(config: Config): number {
 export function leakage(
   channel: GuildTextBasedChannel,
   starboard: GuildTextBasedChannel
-): "nsfw" | "audience" | null {
+): "nsfw" | "private" | null {
   if (isNsfw(channel) && !isNsfw(starboard)) {
     return "nsfw";
   }
-  if (widensAudience(channel, starboard)) {
-    return "audience";
+  if (channel.type === ChannelType.PrivateThread) {
+    return "private";
   }
   return null;
 }

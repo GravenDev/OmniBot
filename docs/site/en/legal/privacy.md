@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Last updated: October 2026
+Last updated: November 2026
 
 ## Data Controller
 
@@ -96,7 +96,7 @@ Some modules read message content to work, without saving it to the database:
 - **Thread Creator** can use the first 50 characters of a message in the name of the thread it creates;
 - **RNGdle** reads messages in the RNGdle channel only, to recognize a pasted result and reply with a card;
 - **Clash of Code** reads messages in the channels chosen by the administrators (every channel when none is chosen), to spot game links; at an administrator's request (`/coc-admin import-channel`), it also goes through a channel's history, using Discord's message search. Only the game identifier and the ID of the message that held it are kept;
-- **Starboard** reads a message that gets reactions, to repost its author, text, images, embeds and the message it replies to in the starboard channel, never in a channel visible to people who cannot read the original one.
+- **Starboard** reads a message that gets reactions, to repost its author, text, images, embeds and the message it replies to in the starboard channel. Messages from private threads and from channels the admins excluded are never reposted.
 
 What these modules post stays on the Discord server, under the control of its administrators. The bot ignores messages from other bots, with four exceptions: Auto React also adds its reaction to them, Sticky Messages also reposts its message after them, both without reading them, Message Quote quotes a bot's message when a member posts its link, and Starboard reposts a bot's message when the administrators allow it.
 

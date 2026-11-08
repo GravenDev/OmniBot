@@ -13,6 +13,7 @@ import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
 import type { StarboardConfigSchema } from "#modules/starboard/starboard.config.js";
 import {
+  type Ineligibility,
   ineligibility,
   leakage,
   starboardChannelOf,
@@ -37,6 +38,16 @@ const FORBIDDEN = [
   RESTJSONErrorCodes.MissingAccess,
   RESTJSONErrorCodes.MissingPermissions,
 ];
+
+const REFUSAL_LEVEL: Record<Ineligibility, "debug" | "info" | "warn"> = {
+  starboard: "debug",
+  system: "debug",
+  bot: "debug",
+  channel: "info",
+  nsfw: "info",
+  private: "info",
+  permissions: "warn",
+};
 
 export function isCounted(
   emoji: { id: string | null; name: string | null },
@@ -260,18 +271,21 @@ class StarboardService implements Service {
       return;
     }
 
-    const blocked = ineligibility(message, starboard, config);
-    if (blocked) {
-      logger.debug(
-        `Message not starrable | reason = ${blocked} | messageId = ${message.id}`
-      );
+    if (upperBound(message, emojis) < threshold) {
       return;
     }
-    if (upperBound(message, emojis) < threshold) {
+    const blocked = ineligibility(message, starboard, config);
+    if (blocked) {
+      logger[REFUSAL_LEVEL[blocked]](
+        `Message not reposted | reason = ${blocked} | channelId = ${message.channelId} | messageId = ${message.id}`
+      );
       return;
     }
     const tally = await tallyReactions(message, emojis, config.get("selfStar"));
     if (tally.total < threshold) {
+      logger.debug(
+        `Not enough different members | count = ${tally.total} | threshold = ${threshold} | messageId = ${message.id}`
+      );
       return;
     }
 
