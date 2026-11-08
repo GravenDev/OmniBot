@@ -18,6 +18,11 @@ vi.mock("@napi-rs/canvas", async (importOriginal) => {
   };
 });
 
+// The first load of the module pulls in the native canvas binary and the
+// logger, some 2 s alone and more under a full parallel run: done here, while
+// the file is collected, so that no case pays it against its timeout.
+await import("./imaging.js");
+
 async function loadFont() {
   vi.resetModules();
   return (await import("./imaging.js")).font;
