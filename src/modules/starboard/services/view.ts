@@ -194,11 +194,11 @@ export function starboardMessage(
   }
 
   const header = [
-    t("header", {
+    `-# ${t("header", {
       author: `<@${message.author.id}>`,
       channel: `<#${message.channelId}>`,
       sentAt: time(message.createdAt, TimestampStyles.RelativeTime),
-    }),
+    })}`,
     forwarded ? `-# ${t("forwarded")}` : null,
   ]
     .filter((part): part is string => !!part)
@@ -211,9 +211,9 @@ export function starboardMessage(
     header.length -
     others.length -
     counter.length -
-    1;
+    2;
   const content = body.content
-    ? `${header}\n${truncate(body.content, Math.min(CONTENT_LIMIT, budget))}`
+    ? `${header}\n\n${truncate(body.content, Math.min(CONTENT_LIMIT, budget))}`
     : header;
   const avatar =
     message.member?.displayAvatarURL() ?? message.author.displayAvatarURL();
