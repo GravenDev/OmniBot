@@ -25,6 +25,9 @@ export async function postReport(
   const config = await configService.getConfigForModuleIn(module, guildId);
   const channel = config.get("reportChannel");
   if (!channel?.isSendable()) {
+    logger[channel ? "warn" : "debug"](
+      `Daily report skipped | reason = ${channel ? "report channel not sendable" : "no report channel"} | guildId = ${guildId}`
+    );
     return;
   }
   const guild = await client.guilds.fetch(guildId);
@@ -40,6 +43,9 @@ export async function postReport(
     }
   );
   if (!report) {
+    logger.info(
+      `Daily report skipped | reason = no data for the day | guildId = ${guildId}`
+    );
     return;
   }
   await channel.send({
@@ -47,7 +53,9 @@ export async function postReport(
     files: [new AttachmentBuilder(report.image, { name: "server-stats.png" })],
     allowedMentions: NO_MENTIONS,
   });
-  logger.info(`Daily report posted | guildId = ${guildId}`);
+  logger.info(
+    `Daily report posted | guildId = ${guildId} | channelId = ${channel.id}`
+  );
 }
 
 export function serverStatsTasks(module: Module<ServerStatsConfigSchema>) {

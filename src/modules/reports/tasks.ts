@@ -76,7 +76,7 @@ async function purgeGuild(
         } catch (err) {
           logger.debug(
             { err },
-            `Alert not purged, already gone | reportId = ${report.id}`
+            `Alert not purged | guildId = ${guildId} | reportId = ${report.id} | channelId = ${report.alertChannelId}`
           );
         }
       }

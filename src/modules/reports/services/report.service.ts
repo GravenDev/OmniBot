@@ -117,6 +117,9 @@ class ReportService implements Service {
     reactionKept: boolean
   ): Promise<ReportOutcome> {
     if (!canPost(config.get("alertChannel"))) {
+      logger.warn(
+        `Report not filed | reason = alert channel missing or not usable | guildId = ${snapshot.guildId} | channelId = ${config.get("alertChannel")?.id ?? "none"} | messageId = ${snapshot.messageId} | reporterId = ${reporter.userId}`
+      );
       return "unconfigured";
     }
 
@@ -129,17 +132,23 @@ class ReportService implements Service {
       if (!existing) {
         const created = await store.create(snapshot, reporter, reactionKept);
         logger.info(
-          `Report created | guildId = ${snapshot.guildId} | reportId = ${created.id}`
+          `Report created | guildId = ${snapshot.guildId} | reportId = ${created.id} | channelId = ${snapshot.channelId} | messageId = ${snapshot.messageId} | reporterId = ${reporter.userId} | source = ${reporter.source}`
         );
         await this.publish(client, config, snapshot.guildId, created.id, false);
         return "created";
       }
 
       if (!(await store.addReporter(existing.id, reporter, reactionKept))) {
+        logger.debug(
+          `Report ignored | reason = already reported by this user | guildId = ${snapshot.guildId} | reportId = ${existing.id} | reporterId = ${reporter.userId}`
+        );
         return "duplicate";
       }
 
       const reopened = existing.status !== "open";
+      logger.info(
+        `Reporter added | reopened = ${reopened} | guildId = ${snapshot.guildId} | reportId = ${existing.id} | reporterId = ${reporter.userId} | source = ${reporter.source}`
+      );
       if (reopened) {
         await store.setStatus(existing.id, "open", null);
       }
@@ -185,6 +194,9 @@ class ReportService implements Service {
       }
       if (change.deleted) {
         await store.setMessageState(report.id, "deleted");
+        logger.info(
+          `Reported message deleted | guildId = ${guildId} | reportId = ${report.id} | messageId = ${messageId}`
+        );
       } else {
         const content = await change.content().catch(() => null);
         if (
@@ -194,6 +206,9 @@ class ReportService implements Service {
           return;
         }
         await store.setMessageState(report.id, "edited", content);
+        logger.info(
+          `Reported message edited | guildId = ${guildId} | reportId = ${report.id} | messageId = ${messageId}`
+        );
       }
       await this.publish(client, config, guildId, report.id, false);
     });
@@ -253,12 +268,15 @@ class ReportService implements Service {
     const channel = config.get("alertChannel");
     if (!canPost(channel)) {
       logger.warn(
-        `No usable alert channel | guildId = ${report.guildId} | reportId = ${report.id}`
+        `No usable alert channel | guildId = ${report.guildId} | reportId = ${report.id} | channelId = ${config.get("alertChannel")?.id ?? "none"}`
       );
       return;
     }
     const sent = await channel.send(view);
     await store.setAlert(report.id, sent.channelId, sent.id);
+    logger.info(
+      `Alert sent | guildId = ${report.guildId} | reportId = ${report.id} | channelId = ${sent.channelId} | alertMessageId = ${sent.id}`
+    );
   }
 
   private async editAlert(

@@ -27,11 +27,15 @@ export async function deleteMemberData(
     if (result.status === "rejected") {
       logger.error(
         { err: result.reason },
-        `Member data deletion failed | moduleId = ${deletions[index]!.moduleId} | guildId = ${guildId}`
+        `Member data deletion failed | moduleId = ${deletions[index]!.moduleId} | guildId = ${guildId} | userId = ${userId}`
       );
     }
   });
-  return results.every((result) => result.status === "fulfilled");
+  const succeeded = results.every((result) => result.status === "fulfilled");
+  logger.info(
+    `Member data deletion requested | guildId = ${guildId} | userId = ${userId} | handlers = ${deletions.length} | success = ${succeeded}`
+  );
+  return succeeded;
 }
 
 export default declareInteractionHandler({

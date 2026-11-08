@@ -41,6 +41,9 @@ export class StickyPoster implements Service {
       return;
     }
     if ((this.pausedUntil.get(channelId) ?? 0) > Date.now()) {
+      logger.debug(
+        `Sticky repost skipped | reason = paused after a permission error | guildId = ${channel.guildId} | channelId = ${channelId}`
+      );
       return;
     }
     this.pausedUntil.delete(channelId);
@@ -82,12 +85,13 @@ export class StickyPoster implements Service {
       return await this.repost(channel);
     } catch (err) {
       const code = err instanceof DiscordAPIError ? err.code : undefined;
-      if (code !== undefined && PAUSING_ERRORS.has(code)) {
+      const paused = code !== undefined && PAUSING_ERRORS.has(code);
+      if (paused) {
         this.pausedUntil.set(channel.id, Date.now() + PAUSE_MS);
       }
       logger.warn(
         { err },
-        `Sticky repost failed | guildId = ${channel.guildId} | channelId = ${channel.id}`
+        `Sticky repost failed | guildId = ${channel.guildId} | channelId = ${channel.id} | code = ${code} | paused = ${paused}`
       );
       throw err;
     }

@@ -19,6 +19,9 @@ const { default: command } = await import("./latex.command.js");
 function run(formula: string) {
   const interaction = {
     options: { getString: () => formula },
+    guildId: "g1",
+    channelId: "c1",
+    user: { id: "u1" },
     deferReply: vi.fn(),
     editReply: vi.fn(),
     deleteReply: vi.fn(),

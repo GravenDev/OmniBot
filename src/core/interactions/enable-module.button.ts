@@ -5,6 +5,9 @@ import { getCoreT } from "#core/utils/core-config.js";
 import { errorMessageKey } from "#core/utils/error-message.js";
 import { modulesPanel } from "#core/utils/modules-panel.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
+import { loggerMaker } from "#lib/logger.js";
+
+const logger = loggerMaker("core");
 
 export default declareInteractionHandler({
   customId: "enable-module",
@@ -36,6 +39,10 @@ export default declareInteractionHandler({
     try {
       await installModule(module, interaction.guild!);
     } catch (err) {
+      logger.warn(
+        { err },
+        `Module enable failed | module = ${module.id} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
+      );
       await interaction.followUp({
         content: coreT(errorMessageKey(err, "interaction.failedEnable")),
         flags: MessageFlags.Ephemeral,

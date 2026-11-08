@@ -10,11 +10,13 @@ import {
 } from "#lib/config.js";
 import database from "#lib/database.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
+import { LogThrottle } from "#lib/log-throttle.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { declareService } from "#lib/service.js";
 
 const logger = loggerMaker("config");
+const unavailableWarnings = new LogThrottle();
 
 const configCache = new Map<string, Record<string, ConfigData<ConfigSchema>>>();
 const pendingLoads = new Map<
@@ -133,6 +135,9 @@ class ConfigService {
         update: { data: updatedConfig },
       });
       configCache.set(guildId, updatedConfig);
+      logger.info(
+        `Module config saved | module = ${module.id} | guildId = ${guildId}`
+      );
 
       return { locale, updatedModuleConfig };
     };
@@ -231,6 +236,8 @@ class ConfigService {
       update: {},
     });
 
+    logger.info(`Guild configuration created | guildId = ${guildId}`);
+
     // Cache the configuration
     const validatedConfig = this.validateConfig(stored.data);
     configCache.set(guildId, validatedConfig);
@@ -272,7 +279,7 @@ class ConfigService {
         } catch (error) {
           logger.warn(
             { err: error },
-            `Failed to load channel records | module = ${module.id} | key = ${key}`
+            `Failed to load channel records | module = ${module.id} | key = ${key} | guildId = ${guildId}`
           );
           delete deserializedConfig[key];
         }
@@ -360,9 +367,9 @@ class ConfigService {
     } catch (error) {
       // The referenced entity is gone (deleted channel/role/…) or Discord
       // refused the fetch: report null and let the caller drop it.
-      logger.warn(
+      logger[unavailableWarnings.level(`${guild?.id}:${type}:${value}`)](
         { err: error },
-        `Failed to deserialize | type = ${type} | value = ${value}`
+        `Configured entity unavailable, dropped | type = ${type} | id = ${value} | guildId = ${guild?.id}`
       );
       return null;
     }

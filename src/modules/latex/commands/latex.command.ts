@@ -5,6 +5,7 @@ import {
   SlashCommandBuilder,
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
+import { loggerMaker } from "#lib/logger.js";
 import type { LatexConfigSchema } from "#modules/latex/latex.config.js";
 import {
   FORMULA_MAX_LENGTH,
@@ -13,6 +14,8 @@ import {
 } from "#modules/latex/rendering/formula.js";
 
 const ALT_TEXT_MAX_LENGTH = 1024;
+
+const logger = loggerMaker("latex");
 
 export default declareCommand<LatexConfigSchema>({
   data: new SlashCommandBuilder()
@@ -45,6 +48,9 @@ export default declareCommand<LatexConfigSchema>({
       if (!(err instanceof FormulaError)) {
         throw err;
       }
+      logger.debug(
+        `Formula rejected | guildId = ${interaction.guildId} | channelId = ${interaction.channelId} | userId = ${interaction.user.id}`
+      );
       await interaction.followUp({
         content: config.t("render.invalid", { error: err.message }),
         flags: MessageFlags.Ephemeral,

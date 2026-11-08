@@ -26,6 +26,9 @@ async function postDailyLeaderboard(
   const config = await configService.getConfigForModuleIn(module, guildId);
   const channel = config.get("leaderboardChannel");
   if (!channel?.isSendable()) {
+    logger[channel ? "warn" : "debug"](
+      `Daily leaderboard skipped | reason = ${channel ? "leaderboard channel not sendable" : "no leaderboard channel"} | guildId = ${guildId}`
+    );
     return;
   }
 
@@ -34,6 +37,9 @@ async function postDailyLeaderboard(
     1
   );
   if (!board) {
+    logger.info(
+      `Daily leaderboard skipped | reason = no rolls yesterday | guildId = ${guildId}`
+    );
     return;
   }
   const recap = await dailyRecap(guildId, 1).catch((err: unknown) => {
@@ -53,7 +59,9 @@ async function postDailyLeaderboard(
     },
     flags: MessageFlags.SuppressNotifications,
   });
-  logger.info(`Daily leaderboard posted | guildId = ${guildId}`);
+  logger.info(
+    `Daily leaderboard posted | guildId = ${guildId} | channelId = ${channel.id} | winners = ${board.winnerIds.length}`
+  );
 }
 
 async function postReminders(
@@ -64,11 +72,17 @@ async function postReminders(
   const config = await configService.getConfigForModuleIn(module, guildId);
   const channel = config.get("leaderboardChannel");
   if (!channel?.isSendable()) {
+    logger[channel ? "warn" : "debug"](
+      `Reminders skipped | reason = ${channel ? "leaderboard channel not sendable" : "no leaderboard channel"} | guildId = ${guildId}`
+    );
     return;
   }
 
   const userIds = await store.pendingReminders(guildId, startOfUtcDay(now));
   if (userIds.length === 0) {
+    logger.debug(
+      `Reminders skipped | reason = nobody pending | guildId = ${guildId}`
+    );
     return;
   }
 

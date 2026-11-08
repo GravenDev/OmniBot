@@ -73,7 +73,10 @@ async function link(
     if (err instanceof RngdleUserNotFoundError) {
       return { kind: "notFound" };
     }
-    logger.warn({ err }, `rngdle.com unreachable | username = ${username}`);
+    logger.warn(
+      { err },
+      `rngdle.com unreachable | guildId = ${guildId} | userId = ${userId}`
+    );
     return { kind: "unreachable" };
   }
 

@@ -63,9 +63,19 @@ async function closeDays(
     guildId,
     channel?.id ?? null
   );
-  if (points.length === 0 || !channel?.isSendable()) {
+  if (points.length === 0) {
+    logger.debug(`No daily point to announce | guildId = ${guildId}`);
     return;
   }
+  if (!channel?.isSendable()) {
+    logger[channel ? "warn" : "debug"](
+      `Daily points not announced | reason = ${channel ? "game channel not sendable" : "no game channel"} | guildId = ${guildId} | channelId = ${channel?.id ?? "none"} | count = ${points.length}`
+    );
+    return;
+  }
+  logger.info(
+    `Closing days | guildId = ${guildId} | channelId = ${channel.id} | count = ${points.length}`
+  );
 
   const guild = await client.guilds.fetch(guildId);
   for (const point of points) {

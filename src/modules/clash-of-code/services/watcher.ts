@@ -71,8 +71,15 @@ class ClashWatcher {
       report = await this.limited(() => fetchClashReport(handle));
     } catch (err) {
       if (err instanceof ClashNotFoundError) {
+        logger.debug(
+          `Clash not found on CodinGame | guildId = ${message.guildId} | handle = ${handle}`
+        );
         return "unknown";
       }
+      logger.warn(
+        { err },
+        `CodinGame unreachable, watching anyway | guildId = ${message.guildId} | handle = ${handle}`
+      );
     }
     if (report?.finished) {
       return "finished";
@@ -266,6 +273,9 @@ class ClashWatcher {
   private async publish(game: WatchedGame, report: ClashReport): Promise<void> {
     const channel = await this.channel(game);
     if (!channel || !this.client || !this.module) {
+      logger[channel ? "warn" : "debug"](
+        `Clash result not posted | reason = ${channel ? "bot not ready" : "channel missing or not sendable"} | guildId = ${game.guildId} | channelId = ${game.channelId} | handle = ${game.handle}`
+      );
       return;
     }
     const config = await configService.getConfigForModuleIn(

@@ -12,6 +12,7 @@ import {
 import type { ConfigProvider } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
 import { fetchAvatar } from "#lib/imaging.js";
+import { loggerMaker } from "#lib/logger.js";
 import { truncate } from "#lib/text.js";
 import type { BirthdayConfigSchema } from "../birthday.config.js";
 import {
@@ -20,6 +21,8 @@ import {
   type BirthdayCalendarLabels,
 } from "../rendering/birthday-calendar.js";
 import birthdayService, { type BirthdayEntry } from "./birthday.service.js";
+
+const logger = loggerMaker("birthday");
 
 const ALT_LIMIT = 1024;
 
@@ -120,11 +123,13 @@ export async function postMonthlyCalendar(
   today: CalendarDay
 ): Promise<void> {
   const channel = config.get("channel");
-  if (
-    today.day !== 1 ||
-    !config.get("monthlyCalendar") ||
-    !channel?.isSendable()
-  ) {
+  if (today.day !== 1 || !config.get("monthlyCalendar")) {
+    return;
+  }
+  if (!channel?.isSendable()) {
+    logger[channel ? "warn" : "debug"](
+      `Monthly calendar skipped | reason = ${channel ? "channel not sendable" : "no channel"} | guildId = ${guildId}`
+    );
     return;
   }
   const entries = (await birthdayService.list(guildId)).filter((entry) =>
@@ -172,4 +177,7 @@ export async function postMonthlyCalendar(
     ],
     allowedMentions: { parse: [] },
   });
+  logger.info(
+    `Monthly calendar posted | guildId = ${guildId} | channelId = ${channel.id} | count = ${days.reduce((total, day) => total + day.length, 0)}`
+  );
 }

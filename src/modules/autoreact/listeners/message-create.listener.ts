@@ -36,6 +36,9 @@ export default declareEventListener<"messageCreate">({
 
     const { guildId, channelId } = message;
     if ((pausedUntil.get(channelId) ?? 0) > Date.now()) {
+      logger.debug(
+        `Reaction skipped | reason = paused after a permission error | guildId = ${guildId} | channelId = ${channelId}`
+      );
       return;
     }
     pausedUntil.delete(channelId);
@@ -65,12 +68,13 @@ export default declareEventListener<"messageCreate">({
         );
         return;
       }
-      if (code !== undefined && PAUSING_ERRORS.has(code)) {
+      const paused = code !== undefined && PAUSING_ERRORS.has(code);
+      if (paused) {
         pausedUntil.set(channelId, Date.now() + PAUSE_MS);
       }
       logger.warn(
         { err },
-        `Reaction failed | guildId = ${guildId} | channelId = ${channelId} | emoji = ${emoji}`
+        `Reaction failed | guildId = ${guildId} | channelId = ${channelId} | messageId = ${message.id} | emoji = ${emoji} | code = ${code} | paused = ${paused}`
       );
     }
   },

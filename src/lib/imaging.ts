@@ -130,7 +130,7 @@ export async function fetchImage(url: string | null): Promise<Image | null> {
     }
     return await loadImage(Buffer.from(await response.arrayBuffer()));
   } catch (err) {
-    logger.warn({ err }, `Could not fetch image | url = ${url}`);
+    logger.warn({ err }, `Could not fetch image | url = ${url.split("?")[0]}`);
     return null;
   }
 }

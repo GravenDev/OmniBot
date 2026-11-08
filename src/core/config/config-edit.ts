@@ -131,7 +131,7 @@ export async function refreshSourceConfigMessageAtPage(
   } catch (err) {
     logger.warn(
       { err },
-      `Could not refresh source config message | id = ${sourceMessageId}`
+      `Could not refresh source config message | module = ${module.id} | messageId = ${sourceMessageId} | channelId = ${interaction.channelId} | guildId = ${interaction.guildId}`
     );
   }
 }

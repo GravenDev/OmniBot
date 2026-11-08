@@ -55,7 +55,9 @@ async function handleCommand(
   const command = findCommand(interaction.commandName, interaction.commandType);
 
   if (!command) {
-    logger.warn(`Command not found | name = ${interaction.commandName}`);
+    logger.warn(
+      `Command not found | name = ${interaction.commandName} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
+    );
     if (interaction.guild && interaction.guildId) {
       const coreConfig = await configService.getConfigForModuleIn(
         coreModule,
@@ -93,7 +95,7 @@ async function handleCommand(
 
   if (!enabled) {
     logger.warn(
-      `Command not enabled | name = ${interaction.commandName} | module = ${command.module.id}`
+      `Command not enabled | name = ${interaction.commandName} | module = ${command.module.id} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
     );
     await interaction.reply({
       content: coreConfig.t("command.notEnabled", {
@@ -119,7 +121,10 @@ async function handleCommand(
   try {
     await command.command.execute(interaction, config);
   } catch (err) {
-    logger.error({ err }, `Command failed | name = ${interaction.commandName}`);
+    logger.error(
+      { err },
+      `Command failed | name = ${interaction.commandName} | module = ${command.module.id} | guildId = ${interaction.guildId} | channelId = ${interaction.channelId} | userId = ${interaction.user.id}`
+    );
     const payload = {
       content: coreConfig.t(errorMessageKey(err, "command.failed"), {
         commandName: interaction.commandName,
@@ -185,7 +190,7 @@ async function handleComplete(interaction: AutocompleteInteraction) {
   } catch (err) {
     logger.error(
       { err },
-      `Autocomplete failed | name = ${interaction.commandName}`
+      `Autocomplete failed | name = ${interaction.commandName} | module = ${command.module.id} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
     );
     try {
       await interaction.respond([]);
@@ -239,7 +244,7 @@ async function handleInteraction(interaction: CompatibleInteraction) {
 
   if (!enabled) {
     logger.warn(
-      `Interaction for disabled module | customId = ${interaction.customId} | module = ${handler.module.id}`
+      `Interaction for disabled module | customId = ${interaction.customId} | module = ${handler.module.id} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
     );
     await interaction.reply({
       content: coreConfig.t("interaction.moduleNotEnabled"),
@@ -280,7 +285,7 @@ async function handleInteraction(interaction: CompatibleInteraction) {
   } catch (err) {
     logger.error(
       { err },
-      `Interaction handler failed | customId = ${interaction.customId}`
+      `Interaction handler failed | customId = ${interaction.customId} | module = ${handler.module.id} | guildId = ${interaction.guildId} | channelId = ${interaction.channelId} | userId = ${interaction.user.id}`
     );
     const payload = {
       content: coreConfig.t(errorMessageKey(err, "interaction.failed")),
@@ -341,7 +346,10 @@ export default declareEventListener({
     try {
       await dispatch(interaction);
     } catch (err) {
-      logger.error({ err }, "Interaction dispatch failed");
+      logger.error(
+        { err },
+        `Interaction dispatch failed | type = ${interaction.type} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
+      );
       try {
         await replyDispatchFailure(interaction);
       } catch {

@@ -109,6 +109,9 @@ async function softban(
   reason: string
 ): Promise<TrapResult> {
   if (member && !member.bannable) {
+    logger.warn(
+      `Trap member not bannable | guildId = ${message.guildId} | channelId = ${message.channelId} | userId = ${message.author.id}`
+    );
     return {
       outcome: "notBannable",
       messageKept: await removeMessage(message),
@@ -148,9 +151,15 @@ async function sanction(
     (config.get("exemptRoles") ?? []).map((role) => role.id)
   );
   if (member && isExempt(member, message.channel, exemptRoleIds)) {
+    logger.debug(
+      `Trap ignored | reason = exempt member | guildId = ${message.guildId} | channelId = ${message.channelId} | userId = ${message.author.id}`
+    );
     return null;
   }
   if (!member && (await isBanned(message.guild, message.author.id))) {
+    logger.debug(
+      `Trap ignored | reason = author already banned | guildId = ${message.guildId} | channelId = ${message.channelId} | userId = ${message.author.id}`
+    );
     return null;
   }
   const purgeSeconds = purgeSecondsOf(config);
@@ -192,6 +201,9 @@ export async function springTrap(
   const key = `${message.guildId}:${message.author.id}`;
   const current = recent.get(key);
   if (current) {
+    logger.debug(
+      `Trap follow-up ignored | reason = cooldown | guildId = ${message.guildId} | channelId = ${message.channelId} | userId = ${message.author.id} | deleted = ${current.deleteFollowUps}`
+    );
     if (current.deleteFollowUps) {
       await removeMessage(message);
     }

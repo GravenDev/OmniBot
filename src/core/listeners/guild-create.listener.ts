@@ -132,6 +132,10 @@ async function sendWelcome(guild: Guild, t: TFunction): Promise<void> {
     } catch (error) {
       logSendError(error, "systemChannel", guild.id);
     }
+  } else {
+    logger.info(
+      `Welcome channel unavailable, falling back to owner DM | guild = ${guild.id} | systemChannelId = ${guild.systemChannelId}`
+    );
   }
 
   try {
@@ -150,6 +154,7 @@ export default declareEventListener({
   eventType: "guildCreate",
   execute: async (guild) => {
     const t = createT(resolveJoinLocale(guild), "core");
+    logger.info(`Guild joined | guild = ${guild.id}`);
 
     // Explicit init on first join (no more late lazy creation): creates the
     // row when absent, reloads + recaches it on rejoin.

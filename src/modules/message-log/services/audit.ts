@@ -1,5 +1,10 @@
 import { AuditLogEvent, type Guild, PermissionFlagsBits } from "discord.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
+import { LogThrottle } from "#lib/log-throttle.js";
+import { loggerMaker } from "#lib/logger.js";
+
+const logger = loggerMaker("message-log");
+const warnings = new LogThrottle();
 
 const FRESHNESS_MS = 10_000;
 const CLOCK_SKEW_MS = 2_000;
@@ -32,6 +37,9 @@ export class DeleterFinder {
 
   readonly find: DeleterLookup = async (guild, authorId, channelId) => {
     if (!guild.members.me?.permissions.has(PermissionFlagsBits.ViewAuditLog)) {
+      logger.debug(
+        `Deleter lookup skipped | reason = missing View Audit Log permission | guildId = ${guild.id}`
+      );
       return null;
     }
     const receivedAt = this.now();
@@ -53,7 +61,13 @@ export class DeleterFinder {
     }
     const logs = await guild
       .fetchAuditLogs({ type: AuditLogEvent.MessageDelete, limit: 10 })
-      .catch(() => null);
+      .catch((err: unknown) => {
+        logger[warnings.level(`audit:${guild.id}`)](
+          { err },
+          `Audit log fetch failed | guildId = ${guild.id} | channelId = ${channelId}`
+        );
+        return null;
+      });
     const now = this.now();
     const oldestFirst = [...(logs?.entries.values() ?? [])].reverse();
     for (const entry of oldestFirst) {

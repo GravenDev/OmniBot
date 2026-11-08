@@ -31,7 +31,10 @@ export async function postCard<T>(
     if (!(err instanceof DiscordAPIError)) {
       throw err;
     }
-    logger.warn({ err }, `Card refused, posting text: ${what}`);
+    logger.warn(
+      { err },
+      `Card refused, posting text: ${what} | code = ${err.code}`
+    );
     return false;
   }
 }

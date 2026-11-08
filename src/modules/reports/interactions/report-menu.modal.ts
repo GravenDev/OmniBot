@@ -29,6 +29,10 @@ export default declareInteractionHandler<
 
     const alertChannel = config.get("alertChannel");
     if (!canPost(alertChannel) || !channelId || !messageId) {
+      const usable = canPost(alertChannel);
+      logger[usable ? "debug" : "warn"](
+        `Report modal refused | reason = ${usable ? "incomplete custom id" : "alert channel missing or not usable"} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
+      );
       await interaction.editReply(config.t("menu.unconfigured"));
       return;
     }
@@ -45,10 +49,12 @@ export default declareInteractionHandler<
         err instanceof DiscordAPIError &&
         (err.code === RESTJSONErrorCodes.MissingAccess ||
           err.code === RESTJSONErrorCodes.MissingPermissions);
-      logger.info(
-        { err },
-        `Reported message unreadable | messageId = ${messageId}`
-      );
+      const context = `noAccess = ${noAccess} | guildId = ${interaction.guildId} | channelId = ${channelId} | messageId = ${messageId} | userId = ${interaction.user.id}`;
+      if (noAccess) {
+        logger.warn({ err }, `Reported message unreadable | ${context}`);
+      } else {
+        logger.info({ err }, `Reported message unreadable | ${context}`);
+      }
       await interaction.editReply(
         config.t(noAccess ? "menu.noAccess" : "menu.gone")
       );

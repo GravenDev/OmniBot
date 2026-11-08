@@ -375,17 +375,24 @@ class FourHourGameService implements Service {
     return this.queue.run(guildId, async () => {
       const round = await load();
       if (!round) {
+        logger.debug(
+          `Round sync skipped | reason = game channel or delay not usable | guildId = ${guildId}`
+        );
         return;
       }
-      await round.announce(
-        await this.replayDowntime(
-          guildId,
-          round.channelId,
-          round.history,
-          round.delaySeconds,
-          now
-        )
+      const caughtUp = await this.replayDowntime(
+        guildId,
+        round.channelId,
+        round.history,
+        round.delaySeconds,
+        now
       );
+      if (caughtUp.length > 0) {
+        logger.info(
+          `Caught-up points recorded | guildId = ${guildId} | channelId = ${round.channelId} | count = ${caughtUp.length}`
+        );
+      }
+      await round.announce(caughtUp);
     });
   }
 

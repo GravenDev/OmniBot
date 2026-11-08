@@ -20,7 +20,10 @@ export function loadGlobalEvents(client: Client) {
       listener
         .execute(...args, undefined)
         .catch((err: unknown) =>
-          logger.error({ err }, "Global listener execution failed")
+          logger.error(
+            { err },
+            `Global listener execution failed | event = ${listener.eventType}`
+          )
         )
     );
   }
@@ -90,12 +93,18 @@ export function loadModuleEvents(client: Client, module: Module) {
                 listener
                   .execute(...args, config)
                   .catch((err: unknown) =>
-                    logger.error({ err }, "Listener execution failed")
+                    logger.error(
+                      { err },
+                      `Listener execution failed | module = ${module.id} | event = ${listener.eventType} | guildId = ${guildId}`
+                    )
                   )
               );
           })
           .catch((err: unknown) =>
-            logger.error({ err }, "Failed to fetch module state")
+            logger.error(
+              { err },
+              `Failed to fetch module state | module = ${module.id} | event = ${listener.eventType} | guildId = ${guildId}`
+            )
           );
         return;
       }
@@ -104,7 +113,10 @@ export function loadModuleEvents(client: Client, module: Module) {
       listener
         .execute(...args, undefined)
         .catch((err: unknown) =>
-          logger.error({ err }, "Listener execution failed")
+          logger.error(
+            { err },
+            `Listener execution failed | module = ${module.id} | event = ${listener.eventType}`
+          )
         );
     });
   }

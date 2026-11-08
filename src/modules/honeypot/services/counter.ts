@@ -98,7 +98,13 @@ function postableChannel(
   config: Config
 ): GuildTextBasedChannel | null {
   const channel = config.get("counterChannel");
-  if (!channel?.isSendable() || channel.isDMBased()) {
+  if (!channel) {
+    return null;
+  }
+  if (!channel.isSendable() || channel.isDMBased()) {
+    logger.warn(
+      `Counter channel not usable | reason = not sendable | guildId = ${guild.id} | channelId = ${channel.id}`
+    );
     return null;
   }
   const required = [
@@ -110,6 +116,9 @@ function postableChannel(
   ];
   const me = guild.members.me;
   if (me && !channel.permissionsFor(me).has(required)) {
+    logger.warn(
+      `Counter channel not usable | reason = missing permissions | guildId = ${guild.id} | channelId = ${channel.id}`
+    );
     return null;
   }
   return channel;
