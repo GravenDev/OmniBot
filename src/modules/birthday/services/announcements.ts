@@ -107,15 +107,71 @@ export function birthdayMessage(
   );
 }
 
+/** Users a message may allow to mention: Discord refuses a message allowing more. */
+const MENTION_LIMIT = 100;
+
+export interface WishMessage {
+  content: string;
+  /** The members the message names, and only them. */
+  userIds: string[];
+}
+
+/**
+ * The members in order, over as few messages as Discord accepts: each one is
+ * the sentence `wish` writes for its own members, within the length and
+ * mention limits.
+ */
+function splitWish(
+  userIds: string[],
+  wish: (userIds: string[]) => string
+): WishMessage[] {
+  const messages: WishMessage[] = [];
+  let current: string[] = [];
+  for (const userId of userIds) {
+    const next = [...current, userId];
+    if (
+      current.length > 0 &&
+      (next.length > MENTION_LIMIT || wish(next).length > MESSAGE_LIMIT)
+    ) {
+      messages.push({ content: wish(current), userIds: current });
+      current = [userId];
+    } else {
+      current = next;
+    }
+  }
+  if (current.length > 0) {
+    messages.push({ content: wish(current), userIds: current });
+  }
+  return messages;
+}
+
 /** Text posted with the card: the mentions, which an image cannot carry. */
-export function cardContent(
+export function cardMessages(
   t: TFunction,
   locale: string,
   userIds: string[]
-): string {
-  return t("announce.card", {
-    users: formatList(userIds.map(mention), locale),
-  });
+): WishMessage[] {
+  return splitWish(userIds, (some) =>
+    t("announce.card", { users: formatList(some.map(mention), locale) })
+  );
+}
+
+/**
+ * The text wish, when the card is not posted. Too many members to wish them
+ * together in one message: the card's wording, split as it is.
+ */
+export function wishMessages(
+  t: TFunction,
+  locale: string,
+  template: string | null,
+  userIds: string[],
+  random: () => number = Math.random
+): WishMessage[] {
+  const content = birthdayMessage(t, locale, template, userIds, random);
+  if (userIds.length <= MENTION_LIMIT && content.length <= MESSAGE_LIMIT) {
+    return [{ content, userIds }];
+  }
+  return cardMessages(t, locale, userIds);
 }
 
 const ALT_LIMIT = 1024;

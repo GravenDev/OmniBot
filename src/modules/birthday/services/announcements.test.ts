@@ -6,11 +6,12 @@ import fr from "../i18n/fr.json" with { type: "json" };
 import {
   birthdayCard,
   birthdayMessage,
-  cardContent,
+  cardMessages,
   formatPercent,
   milestoneEmbed,
   pickGuildMessage,
   plainMessage,
+  wishMessages,
 } from "./announcements.js";
 
 describe("plainMessage", () => {
@@ -96,11 +97,62 @@ describe("birthdayMessage", () => {
   });
 });
 
-describe("cardContent", () => {
+// Discord ids are 17 to 20 digits: a mention takes 22 characters or more.
+const ids = (count: number) =>
+  Array.from({ length: count }, (_, i) => String(10n ** 18n + BigInt(i)));
+
+describe("wishMessages", () => {
+  it("wishes one member, or several together, in a single message", () => {
+    expect(wishMessages(t(), "fr", "Bravo {user} !", ["42"])).toEqual([
+      { content: "Bravo <@42> !", userIds: ["42"] },
+    ]);
+    expect(wishMessages(t(), "fr", null, ["1", "2"])).toEqual([
+      {
+        content:
+          "🎂 Aujourd'hui, <@1> et <@2> fêtent leur anniversaire ensemble. Bon anniversaire !",
+        userIds: ["1", "2"],
+      },
+    ]);
+  });
+
+  it("splits the wishes Discord would refuse, everyone named once", () => {
+    const everyone = ids(150);
+    const messages = wishMessages(t(), "fr", null, everyone);
+    expect(messages.length).toBeGreaterThan(1);
+    for (const { content, userIds } of messages) {
+      expect(content.length).toBeLessThanOrEqual(2000);
+      expect(userIds.length).toBeLessThanOrEqual(100);
+      expect(content).toMatch(/^🎂 Joyeux anniversaire /);
+      for (const userId of userIds) {
+        expect(content).toContain(`<@${userId}>`);
+      }
+    }
+    expect(messages.flatMap(({ userIds }) => userIds)).toEqual(everyone);
+  });
+});
+
+describe("cardMessages", () => {
   it("mentions every member celebrating", () => {
-    expect(cardContent(t(), "fr", ["1", "2"])).toBe(
-      "🎂 Joyeux anniversaire <@1> et <@2> !"
-    );
+    expect(cardMessages(t(), "fr", ["1", "2"])).toEqual([
+      { content: "🎂 Joyeux anniversaire <@1> et <@2> !", userIds: ["1", "2"] },
+    ]);
+  });
+
+  it("splits the mentions over messages Discord accepts", () => {
+    const everyone = ids(250);
+    const messages = cardMessages(t(), "fr", everyone);
+    for (const { content, userIds } of messages) {
+      expect(content.length).toBeLessThanOrEqual(2000);
+      expect(userIds.length).toBeLessThanOrEqual(100);
+    }
+    expect(messages.flatMap(({ userIds }) => userIds)).toEqual(everyone);
+  });
+
+  it("allows no more than 100 mentions per message, however short", () => {
+    const short = Array.from({ length: 101 }, (_, i) => String(i));
+    expect(
+      cardMessages(t(), "fr", short).map(({ userIds }) => userIds.length)
+    ).toEqual([100, 1]);
   });
 });
 

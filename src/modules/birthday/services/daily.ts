@@ -29,9 +29,10 @@ import type { BirthdayConfigSchema } from "../birthday.config.js";
 import {
   birthdayCard,
   plainMessage,
-  birthdayMessage,
-  cardContent,
+  cardMessages,
   pickGuildMessage,
+  wishMessages,
+  type WishMessage,
 } from "./announcements.js";
 import birthdayService, { type BirthdayEntry } from "./birthday.service.js";
 import { postMonthlyCalendar } from "./calendar.js";
@@ -95,6 +96,8 @@ async function drawCard(
  * Posts today's card, with the mentions in its text. The plain text wish
  * goes instead when the card cannot be drawn or Discord refuses it (no
  * permission to attach files, say), so that the birthdays are still wished.
+ * Too many members for one message: the mentions follow in more messages,
+ * only the first carrying the card.
  */
 async function sendWishes(
   config: Config,
@@ -105,24 +108,31 @@ async function sendWishes(
 ): Promise<void> {
   const userIds = celebrants.map((member) => member.id);
   const template = pickGuildMessage(config.get("messages") ?? []);
-  const allowedMentions = {
-    users: await mentionService.mentionable(guildId, userIds),
-  };
+  const mentionable = await mentionService.mentionable(guildId, userIds);
+  // Each message allows the mentions of its own members only: Discord
+  // refuses a message allowing more than 100, whatever its content.
+  const allowedMentions = (message: WishMessage) => ({
+    users: mentionable.filter((userId) => message.userIds.includes(userId)),
+  });
+  const [first, ...others] = cardMessages(config.t, config.locale, userIds);
   const posted = await postCard(
     logger,
     `the birthdays | guildId = ${guildId}`,
     () => drawCard(config, celebrants, template, today),
     (card) =>
       channel.send({
-        content: cardContent(config.t, config.locale, userIds),
+        content: first!.content,
         files: [card],
-        allowedMentions,
+        allowedMentions: allowedMentions(first!),
       })
   );
-  if (!posted) {
+  const messages = posted
+    ? others
+    : wishMessages(config.t, config.locale, template, userIds);
+  for (const message of messages) {
     await channel.send({
-      content: birthdayMessage(config.t, config.locale, template, userIds),
-      allowedMentions,
+      content: message.content,
+      allowedMentions: allowedMentions(message),
     });
   }
 }

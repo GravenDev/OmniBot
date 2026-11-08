@@ -236,6 +236,83 @@ describe("runGuildDay", () => {
     });
   });
 
+  it("spreads the mentions of a crowded day over several messages", async () => {
+    const ids = Array.from({ length: 150 }, (_, i) =>
+      String(10n ** 18n + BigInt(i))
+    );
+    service.list.mockResolvedValue(
+      ids.map((userId) => ({ userId, day: 16, month: 10, announce: true }))
+    );
+    const { client, send, members } = setup();
+    for (const id of ids) {
+      members.set(id, member(id, "2024-01-01T08:00:00Z"));
+    }
+    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    const posts = (
+      send.mock.calls as unknown as [
+        {
+          content: string;
+          files?: unknown[];
+          allowedMentions: { users: string[] };
+        },
+      ][]
+    ).map(([post]) => post);
+    expect(posts.length).toBeGreaterThan(1);
+    expect(posts[0]!.files).toHaveLength(1);
+    expect(posts.slice(1).every((post) => post.files === undefined)).toBe(true);
+    for (const post of posts) {
+      expect(post.content.length).toBeLessThanOrEqual(2000);
+      expect(post.allowedMentions.users.length).toBeLessThanOrEqual(100);
+      expect(
+        post.allowedMentions.users.every((id) =>
+          post.content.includes(`<@${id}>`)
+        )
+      ).toBe(true);
+    }
+    expect(posts.flatMap((post) => post.allowedMentions.users).sort()).toEqual(
+      [...ids].sort()
+    );
+  });
+
+  it("spreads the text wish of a crowded day too, without the card", async () => {
+    renderCelebrationImage.mockRejectedValue(new Error("no canvas"));
+    const ids = [
+      ...Array.from({ length: 150 }, (_, i) => String(10n ** 18n + BigInt(i))),
+      "quiet",
+    ];
+    service.list.mockResolvedValue(
+      ids.map((userId) => ({ userId, day: 16, month: 10, announce: true }))
+    );
+    const { client, send, members } = setup();
+    for (const id of ids) {
+      members.set(id, member(id, "2024-01-01T08:00:00Z"));
+    }
+    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    const posts = (
+      send.mock.calls as unknown as [
+        {
+          content: string;
+          files?: unknown[];
+          allowedMentions: { users: string[] };
+        },
+      ][]
+    ).map(([post]) => post);
+    expect(posts.length).toBeGreaterThan(1);
+    expect(posts.every((post) => post.files === undefined)).toBe(true);
+    for (const post of posts) {
+      expect(post.content.length).toBeLessThanOrEqual(2000);
+      expect(post.allowedMentions.users.length).toBeLessThanOrEqual(100);
+    }
+    // Everyone named, and only those who accept it notified.
+    const named = ids.filter((id) =>
+      posts.some((post) => post.content.includes(`<@${id}>`))
+    );
+    expect(named).toEqual(ids);
+    expect(posts.flatMap((post) => post.allowedMentions.users).sort()).toEqual(
+      ids.filter((id) => id !== "quiet").sort()
+    );
+  });
+
   it("only mentions the members who accept it", async () => {
     service.list.mockResolvedValue([
       { userId: "quiet", day: 16, month: 10, announce: true },
