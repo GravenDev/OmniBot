@@ -28,6 +28,9 @@ Au démarrage du bot (`src/index.ts`), la séquence suivante est exécutée :
    └─ crée le client Discord avec l'union de toutes les intentions
 
 5. Gestionnaire ClientReady (asynchrone)
+   ├─ startHeartbeat() — santé toutes les 30 s vers le fichier du healthcheck
+   │   Docker (en production) et vers Uptime Kuma (si UPTIME_KUMA_PUSH_URL est
+   │   défini), voir src/core/monitoring/
    ├─ Pour chaque module :
    │   ├─ module.onLoad(client, registry)
    │   └─ loadModuleEvents(client, module)
@@ -38,10 +41,12 @@ Au démarrage du bot (`src/index.ts`), la séquence suivante est exécutée :
    └─ loadGlobalEvents(client)
 
 6. Connexion
+   ├─ clearHealthFile() — supprime un fichier de santé laissé par un plantage
    └─ client.login(token)
 
 7. Gestionnaires d'arrêt
-   └─ SIGTERM / SIGINT → client.destroy() + prisma.$disconnect()
+   └─ SIGTERM / SIGINT → arrêt du heartbeat + clearHealthFile()
+      + client.destroy() + prisma.$disconnect()
 ```
 
 ## Auto-découverte des modules

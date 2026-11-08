@@ -59,7 +59,7 @@ export function uptimeKumaReporter(
         // Messages only, never the error object: it could quote the URL and
         // its token.
         logger.warn(
-          `Uptime Kuma heartbeat not delivered | error = ${describe(err)}`
+          `Uptime Kuma heartbeat not delivered | reason = ${describe(err)}`
         );
         failing = true;
       }

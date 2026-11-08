@@ -35,7 +35,7 @@ export function healthFileReporter(path = HEALTH_FILE): Reporter {
       if (!failing) {
         logger.warn(
           { err },
-          "Health file not written, the container healthcheck will fail"
+          `Health file not written, the container healthcheck will fail | path = ${path}`
         );
         failing = true;
       }
