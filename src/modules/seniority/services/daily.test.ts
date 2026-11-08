@@ -195,6 +195,75 @@ describe("runGuildDay", () => {
     ]);
   });
 
+  it("posts the server's anniversary in its own channel when one is set", async () => {
+    const serverSend = vi.fn(async () => ({}));
+    const serverChannel = {
+      id: "party",
+      isSendable: () => true,
+      send: serverSend,
+    };
+    const { client, send } = setup({ serverChannel } as Partial<
+      ConfigData<SeniorityConfigSchema>
+    >);
+    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    expect(sent(send).map(({ content }) => content)).toEqual([
+      "🎉 **Ancienneté sur le serveur**\n<@alice> <@bob> <@quiet>",
+    ]);
+    expect(sent(serverSend).map(({ content }) => content)).toEqual([
+      "🎂 Le serveur fête ses 5 ans !",
+    ]);
+  });
+
+  it("posts the server's anniversary in its own channel without an announcement channel", async () => {
+    const serverSend = vi.fn(async () => ({}));
+    const serverChannel = {
+      id: "party",
+      isSendable: () => true,
+      send: serverSend,
+    };
+    const { client, send } = setup({ channel: null, serverChannel } as Partial<
+      ConfigData<SeniorityConfigSchema>
+    >);
+    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    expect(send).not.toHaveBeenCalled();
+    expect(sent(serverSend).map(({ content }) => content)).toEqual([
+      "🎂 Le serveur fête ses 5 ans !",
+    ]);
+  });
+
+  it("fetches no members for the member anniversaries without a channel to post them", async () => {
+    const { client, guild } = setup({ channel: undefined } as Partial<
+      ConfigData<SeniorityConfigSchema>
+    >);
+    await runGuildDay(
+      client,
+      module,
+      "guild-1",
+      new Date("2026-10-17T07:00:00Z")
+    );
+    expect(guild.members.fetch).not.toHaveBeenCalled();
+    expect(cards.seniorityCard).not.toHaveBeenCalled();
+  });
+
+  it("fetches no members on the server's anniversary without a channel for anything", async () => {
+    const { client, guild, send } = setup({ channel: undefined } as Partial<
+      ConfigData<SeniorityConfigSchema>
+    >);
+    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    expect(guild.members.fetch).not.toHaveBeenCalled();
+    expect(cards.serverCard).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("fetches no members when the bot cannot post in the channel", async () => {
+    const { client, guild, send } = setup({
+      channel: { id: "voice", isSendable: () => false, send: vi.fn() },
+    } as unknown as Partial<ConfigData<SeniorityConfigSchema>>);
+    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    expect(guild.members.fetch).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
   it("fetches no members when there is nothing to announce", async () => {
     const { client, send, guild } = setup({ memberAnniversaries: false });
     await runGuildDay(

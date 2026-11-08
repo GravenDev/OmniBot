@@ -1,6 +1,8 @@
 {
   "config.channel.name": "Announcement channel",
-  "config.channel.description": "Channel where member anniversaries and the server's anniversary are announced. Nothing is announced until it is set.",
+  "config.channel.description": "Channel where member anniversaries are announced, and the server's anniversary unless it has its own. Unset: member anniversaries are not announced.",
+  "config.serverChannel.name": "Server anniversary channel",
+  "config.serverChannel.description": "Channel where the server's anniversary is announced. Unset: the announcement channel.",
 
   "config.timeZone.name": "Time zone",
   "config.timeZone.description": "Time zone the server's days follow.",

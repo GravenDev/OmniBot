@@ -567,7 +567,7 @@ Fête l'ancienneté des membres sur le serveur et l'anniversaire du serveur. Le 
 
 ### Annonces quotidiennes
 
-Chaque jour, à l'heure et dans le fuseau configurés, le bot publie dans le salon des annonces :
+Chaque jour, à l'heure et dans le fuseau configurés, le bot publie dans le salon des annonces (l'anniversaire du serveur dans son propre salon, si `serverChannel` est défini) :
 
 1. **L'ancienneté** : les membres arrivés sur le serveur un jour comme aujourd'hui il y a une année pleine ou plus, du plus ancien au plus récent. Une carte de fête, animée comme celle des anniversaires (en boucle, ou une seule fois si le `loopCard` de `/config seniority` est désactivé), montre les avatars des trois premiers, leur pseudo et leur nombre d'années, puis « +N » pour les autres ; le texte qui l'accompagne mentionne tous les membres fêtés, en plusieurs messages s'il le faut (2000 caractères et 100 mentions au plus par message), et seul le premier porte l'image. Son texte alternatif nomme tout le monde. Les bots n'y figurent pas. Discord remet la date d'arrivée à zéro quand un membre quitte puis revient. Une arrivée un 29 février est fêtée le 28 les années non bissextiles.
 2. **L'anniversaire du serveur**, le jour anniversaire de sa création : une carte de fête animée (en boucle, ou une seule fois si le `loopCard` de `/config seniority` est désactivé) avec l'icône du serveur, sa date de création, son nombre de membres et la plus ancienne présence parmi les membres (bots exclus), sous une ligne de texte sans mention.
@@ -580,7 +580,8 @@ Chacune des deux annonces peut être désactivée. Les annonces de chaque journ�
 
 | Champ                 | Type    | Description                                                                                                                                                                                     |
 | --------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `channel`             | Salon   | Salon des annonces. Tant qu'il n'est pas défini, rien n'est annoncé.                                                                                                                            |
+| `channel`             | Salon   | Salon des annonces : l'ancienneté des membres, et l'anniversaire du serveur s'il n'a pas son propre salon. Tant qu'il n'est pas défini, l'ancienneté n'est pas annoncée.                        |
+| `serverChannel`       | Salon   | Salon de l'anniversaire du serveur. Non défini, ou supprimé depuis : le salon des annonces.                                                                                                     |
 | `timeZone`            | Choix   | Fuseau horaire des journées du serveur (Europe/Paris par défaut).                                                                                                                               |
 | `hour`                | Nombre  | Heure des annonces, de 0 à 23 (9 par défaut).                                                                                                                                                   |
 | `memberAnniversaries` | Booléen | Annoncer l'ancienneté des membres (activé par défaut).                                                                                                                                          |

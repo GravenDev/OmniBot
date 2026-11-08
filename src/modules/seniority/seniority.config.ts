@@ -5,7 +5,13 @@ export const seniorityConfigSchema = {
   channel: {
     name: "Announcement channel",
     description:
-      "Channel where member anniversaries and the server's anniversary are announced. Nothing is announced until it is set.",
+      "Channel where member anniversaries are announced, and the server's anniversary unless it has its own. Unset: member anniversaries are not announced.",
+    type: ConfigType.CHANNEL,
+  },
+  serverChannel: {
+    name: "Server anniversary channel",
+    description:
+      "Channel where the server's anniversary is announced. Unset: the announcement channel.",
     type: ConfigType.CHANNEL,
   },
   timeZone: {
