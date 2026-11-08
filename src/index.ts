@@ -22,12 +22,16 @@ import {
   startModuleTasks,
   stopAllTasks,
 } from "./core/loaders/task-scheduler.js";
+import {
+  clearHealthFile,
+  healthFileReporter,
+} from "./core/monitoring/health-file.js";
 import { botHealth, databaseProbe } from "./core/monitoring/health.js";
 import { startHeartbeat } from "./core/monitoring/heartbeat.js";
 import { uptimeKumaReporter } from "./core/monitoring/uptime-kuma.js";
 import { setRuntime } from "./core/runtime.js";
 import prisma, { Prisma } from "./lib/database.js";
-import { uptimeKumaPushUrl } from "./lib/env.js";
+import { isDevMode, uptimeKumaPushUrl } from "./lib/env.js";
 import { initI18n } from "./lib/i18n.js";
 import logger from "./lib/logger.js";
 import sql = Prisma.sql;
@@ -76,13 +80,15 @@ let stopMonitoring: (() => Promise<void>) | null = null;
 client.once(Events.ClientReady, async (readyClient) => {
   // Started once ready, so a startup is not reported as an outage.
   const uptimeKuma = uptimeKumaReporter(uptimeKumaPushUrl());
-  if (uptimeKuma) {
-    const probeDatabase = databaseProbe(() => prisma.$queryRaw(sql`SELECT 1`));
-    stopMonitoring = startHeartbeat({
-      check: () => botHealth(readyClient, probeDatabase),
-      reporters: [uptimeKuma],
-    });
-  }
+  const probeDatabase = databaseProbe(() => prisma.$queryRaw(sql`SELECT 1`));
+  stopMonitoring = startHeartbeat({
+    check: () => botHealth(readyClient, probeDatabase),
+    // The health file only serves the image's HEALTHCHECK: not in development.
+    reporters: [
+      ...(isDevMode() ? [] : [healthFileReporter()]),
+      ...(uptimeKuma ? [uptimeKuma] : []),
+    ],
+  });
 
   const failed = new Set<string>();
   for (const module of modules) {
@@ -143,6 +149,10 @@ process.on("uncaughtException", (err) => {
   process.exit(1);
 });
 
+// A file left by a crash would pass the first healthcheck of a restarted
+// container before it reaches Discord, wherever /tmp is not a tmpfs.
+await clearHealthFile().catch(() => undefined);
+
 await client.login(token);
 
 let shuttingDown = false;
@@ -154,6 +164,7 @@ const shutdown = async () => {
   logger.info("Shutting down...");
   stopAllTasks();
   await stopMonitoring?.();
+  await clearHealthFile().catch(() => undefined);
   try {
     await client.destroy();
     await prisma.$disconnect();
