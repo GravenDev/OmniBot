@@ -19,7 +19,7 @@ export interface ConfettiScene {
 }
 
 export const CONFETTI_FPS = 30;
-/** Seconds from the throw to the last landing. */
+/** Seconds the throw lasts: the last piece lands by 2.5 s, then they lie still. */
 export const CONFETTI_DURATION = 3;
 const FRAMES = CONFETTI_DURATION * CONFETTI_FPS + 1;
 const PIECES = 110;
@@ -536,8 +536,9 @@ function drawFrame(
 
 // ---------------------------------------------------------------- the API
 /**
- * The confetti over a transparent background, one PNG per frame from the throw
- * to the last landing. The same palette always gives the same frames, which
+ * The confetti over a transparent background, one PNG per frame over the
+ * throw's 3 s, the last ones lying still once every piece has landed. The same
+ * palette always gives the same frames, which
  * suit every card of the scene. Each frame takes some 40 ms of canvas work:
  * the bot's other tasks run between two frames.
  */
@@ -562,14 +563,38 @@ export async function renderConfetti(
 }
 
 /**
- * A card under the confetti, as an animated WebP played once. Its first frame
- * is the last one, shown for one frame: Discord shows the first frame when
- * animations are off, so they still see the confetti landed. Composed by
- * libvips in one pass, off the main thread, the card tiled under every frame.
+ * In a loop, how long the last frame stays before the next throw. The throw
+ * already ends on some 0.5 s of landed confetti (the last piece lands by
+ * 2.5 s): about 2 s of rest in all.
+ */
+export const CONFETTI_REST_MS = 1500;
+
+/**
+ * In a loop, the frames over which the landed confetti fade out before the
+ * next throw (some 0.3 s): without them, they vanish at once.
+ */
+export const CONFETTI_FADE_FRAMES = 9;
+
+export interface AnimateOptions {
+  /**
+   * Replay forever, resting on the landed confetti between two throws (the
+   * default), or play once and stay on them.
+   */
+  loop?: boolean;
+}
+
+/**
+ * A card under the confetti, as an animated WebP replayed forever (the landed
+ * confetti rest, fade out, then are thrown again), or played once with
+ * `{ loop: false }`. Its first frame is the last one, shown for one frame:
+ * Discord shows the first frame when animations are off, so they still see
+ * the confetti landed. Composed by libvips in one pass, off the main thread,
+ * the card tiled under every frame.
  */
 export async function animateCard(
   card: Buffer,
-  confetti: readonly Buffer[]
+  confetti: readonly Buffer[],
+  { loop = true }: AnimateOptions = {}
 ): Promise<Buffer> {
   if (confetti.length < 2) {
     throw new RangeError("The throw takes two frames at least");
@@ -587,12 +612,34 @@ export async function animateCard(
       `The card is ${under!.width}×${under!.height}, the confetti ${frame!.width}×${frame!.height}`
     );
   }
-  const sequence = [confetti.at(-1)!, ...confetti];
-  const delay = Math.round((CONFETTI_DURATION * 1000) / (confetti.length - 1));
+  const landed = confetti.at(-1)!;
+  // In a loop, the landed confetti fade out after the still first frame, so
+  // that each new throw starts from the bare card without a jump.
+  const fading = loop
+    ? await Promise.all(
+        Array.from({ length: CONFETTI_FADE_FRAMES }, (_, i) =>
+          sharp(landed)
+            .ensureAlpha()
+            .linear(
+              [1, 1, 1, 1 - (i + 1) / (CONFETTI_FADE_FRAMES + 1)],
+              [0, 0, 0, 0]
+            )
+            .png()
+            .toBuffer()
+        )
+      )
+    : [];
+  const sequence = [landed, ...fading, ...confetti];
+  const step = Math.round((CONFETTI_DURATION * 1000) / (confetti.length - 1));
+  // In a loop, the last frame rests, then the first (the same image) leads
+  // into the next throw. Played once, it simply stays.
+  const delay = sequence.map((_, i) =>
+    loop && i === sequence.length - 1 ? CONFETTI_REST_MS : step
+  );
   return sharp(sequence, { join: { animated: true } })
     .composite([
       { input: card, tile: true, gravity: "northwest", blend: "dest-over" },
     ])
-    .webp({ quality: 85, loop: 1, delay: sequence.map(() => delay), effort: 4 })
+    .webp({ quality: 85, loop: loop ? 0 : 1, delay, effort: 4 })
     .toBuffer();
 }

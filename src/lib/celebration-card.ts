@@ -2,6 +2,7 @@ import type { Image, SKRSContext2D } from "@napi-rs/canvas";
 import {
   animateCard,
   renderConfetti,
+  type AnimateOptions,
   type ConfettiScene,
 } from "./confetti-3d.js";
 import {
@@ -283,13 +284,15 @@ function framesFor(colors: readonly Rgb[]): Promise<Buffer[]> {
 
 /**
  * The card under 3D confetti thrown from the portraits, as an animated WebP
- * played once, which starts on its last frame for clients not animating it.
+ * replayed forever (once with `{ loop: false }`), which starts on its last
+ * frame for clients not animating it.
  */
 async function renderAnimatedCelebrationCard(
-  card: CelebrationCard
+  card: CelebrationCard,
+  options: AnimateOptions
 ): Promise<Buffer> {
   const frames = await framesFor(card.confetti);
-  return animateCard(drawCard(card, false), frames);
+  return animateCard(drawCard(card, false), frames, options);
 }
 
 /** A card to attach: animated, or still when the animation fails. */
@@ -299,11 +302,12 @@ export interface CelebrationImage {
 }
 
 export async function renderCelebrationImage(
-  card: CelebrationCard
+  card: CelebrationCard,
+  options: AnimateOptions = {}
 ): Promise<CelebrationImage> {
   try {
     return {
-      data: await renderAnimatedCelebrationCard(card),
+      data: await renderAnimatedCelebrationCard(card, options),
       extension: "webp",
     };
   } catch (err) {

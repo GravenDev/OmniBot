@@ -5,6 +5,8 @@ import {
   animateCard,
   clipAround,
   CONFETTI_DURATION,
+  CONFETTI_FADE_FRAMES,
+  CONFETTI_REST_MS,
   hsl,
   renderConfetti,
   type ConfettiScene,
@@ -114,9 +116,9 @@ describe("animateCard", () => {
     return ctx.canvas.toBuffer("image/png");
   };
 
-  it("plays once, starting on the landed confetti", async () => {
+  it("plays once on request, starting on the landed confetti", async () => {
     const frames = await renderConfetti(SCENE, COLORS, FRAMES);
-    const webp = await animateCard(card(), frames);
+    const webp = await animateCard(card(), frames, { loop: false });
     const meta = await sharp(webp).metadata();
     expect(meta.format).toBe("webp");
     expect(meta.loop).toBe(1);
@@ -134,9 +136,54 @@ describe("animateCard", () => {
     expect(gap(first, last)).toBeLessThan(3);
   });
 
-  it("puts the card under the frames", async () => {
+  it("replays forever by default, resting on the landed confetti", async () => {
     const frames = await renderConfetti(SCENE, COLORS, FRAMES);
     const webp = await animateCard(card(), frames);
+    const meta = await sharp(webp).metadata();
+    expect(meta.loop).toBe(0);
+    // Still the landed confetti first, for clients that do not animate.
+    const first = await sharp(webp, { page: 0 }).raw().toBuffer();
+    const last = await sharp(webp, { page: meta.pages! - 1 })
+      .raw()
+      .toBuffer();
+    expect(gap(first, last)).toBeLessThan(3);
+    const step = Math.round((CONFETTI_DURATION * 1000) / (FRAMES - 1));
+    // The landed confetti stay a while before the next throw. libwebp merges
+    // equal frames in a row, adding up their delays: the total tells.
+    expect(meta.delay!.at(-1)).toBeGreaterThanOrEqual(CONFETTI_REST_MS);
+    expect(meta.delay!.reduce((sum, ms) => sum + ms, 0)).toBe(
+      step * (FRAMES + CONFETTI_FADE_FRAMES) + CONFETTI_REST_MS
+    );
+  });
+
+  it("fades the landed confetti out before throwing again", async () => {
+    const frames = await renderConfetti(SCENE, COLORS, FRAMES);
+    const webp = await animateCard(card(), frames);
+    const alone = await sharp(card()).removeAlpha().raw().toBuffer();
+    const fromCard = async (page: number) =>
+      gap(await sharp(webp, { page }).removeAlpha().raw().toBuffer(), alone);
+    // From the landed confetti down to the bare card, a little each frame.
+    const fading = [];
+    for (let page = 0; page <= CONFETTI_FADE_FRAMES + 1; page++) {
+      fading.push(await fromCard(page));
+    }
+    for (let i = 1; i < fading.length; i++) {
+      expect(fading[i], `frame ${i}`).toBeLessThan(fading[i - 1]!);
+    }
+    expect(fading.at(-1)).toBeLessThan(3);
+  });
+
+  it("plays once without fading", async () => {
+    const frames = await renderConfetti(SCENE, COLORS, FRAMES);
+    const webp = await animateCard(card(), frames, { loop: false });
+    expect((await sharp(webp).metadata()).pages).toBeLessThanOrEqual(
+      FRAMES + 1
+    );
+  });
+
+  it("puts the card under the frames", async () => {
+    const frames = await renderConfetti(SCENE, COLORS, FRAMES);
+    const webp = await animateCard(card(), frames, { loop: false });
     // The throw's first frame holds no confetti yet: the card alone, give or
     // take the lossy encoding.
     const thrown = await sharp(webp, { page: 1 })
