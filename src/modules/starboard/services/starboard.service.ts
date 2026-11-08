@@ -43,7 +43,7 @@ const REFUSAL_LEVEL: Record<Ineligibility, "debug" | "info" | "warn"> = {
   starboard: "debug",
   system: "debug",
   bot: "debug",
-  channel: "info",
+  channel: "debug",
   nsfw: "info",
   private: "info",
   permissions: "warn",

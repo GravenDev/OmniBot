@@ -221,12 +221,24 @@ describe("refresh of a message not yet on the starboard", () => {
   });
 
   it("logs why a message that reached the threshold is not reposted", async () => {
-    mocks.ineligibility.mockReturnValue("channel");
+    mocks.ineligibility.mockReturnValue("private");
     const message = Object.assign(fakeMessage(), { id: "refused" });
 
     await starboard.refresh(message as never, config());
 
     expect(mocks.logger.info).toHaveBeenCalledWith(
+      expect.stringContaining("reason = private")
+    );
+  });
+
+  it("keeps the channels the admins left out to the debug logs", async () => {
+    mocks.ineligibility.mockReturnValue("channel");
+    const message = Object.assign(fakeMessage(), { id: "excluded" });
+
+    await starboard.refresh(message as never, config());
+
+    expect(mocks.logger.info).not.toHaveBeenCalled();
+    expect(mocks.logger.debug).toHaveBeenCalledWith(
       expect.stringContaining("reason = channel")
     );
   });
