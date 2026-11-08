@@ -24,6 +24,10 @@ Quand désactiver un module supprimerait des données qu'un administrateur ne pe
 
 Un module qui a besoin d'un intent privilégié (Server Members, Presence ou Message Content) que Discord n'a pas accordé au bot n'est pas chargé et ne fait rien, sur aucun serveur. Il reste dans la liste, à la fin, marqué 🚫 avec un bouton **Indisponible** grisé et le nom de l'intent manquant ; s'il était activé sur le serveur, la liste précise qu'il le reste et garde sa configuration. Ses commandes slash et de menu contextuel encore présentes sur un serveur répondent, en message visible de soi seul, qu'elles sont indisponibles ; l'autocomplétion de ses commandes et les boutons de ses anciens messages restent sans réponse. Son activation et sa configuration sont conservées, même quand on modifie la configuration d'un autre module ; il reprend au premier redémarrage qui suit l'octroi de l'intent. Si le bot a été réinvité sur un serveur pendant que le module était écarté, et que le bot était en ligne à ce moment-là, les commandes du module y sont réinstallées à son retour.
 
+### `/config` — Champs texte
+
+Les fenêtres de saisie de Discord ne convertissent pas les codes d'emoji, contrairement à la zone de message. Un texte saisi dans `/config` (champ texte, élément d'une liste, champ d'un réglage par salon) voit donc ses codes d'emoji connus (`:tada:`, `:birthday:`) remplacés par l'emoji à l'enregistrement. Le reste est gardé tel qu'écrit : le code (`` `:tada:` ``), un lien, un code échappé (`\:tada:`) ou en majuscules, un code collé à un mot (`10:30:00`, `IT:FR:DE`), un nom inconnu, et un emoji du serveur sous son nom (même s'il porte celui d'un emoji standard) ou sa forme complète (`<:nom:id>`). Les textes enregistrés avant ce changement ne sont pas convertis : il suffit de les enregistrer à nouveau.
+
 ### `/config` — Réinitialiser des champs
 
 En bas du panneau `/config` d'un module, un bouton **Réinitialiser…** ouvre un sélecteur (éphémère, visible de l'administrateur seul) listant les champs actuellement personnalisés, plus une entrée **Tous les champs**. Les champs choisis sont remis à leur valeur par défaut.

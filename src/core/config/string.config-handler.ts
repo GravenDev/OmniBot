@@ -8,7 +8,13 @@ import {
 } from "discord.js";
 import configService from "#core/services/config.service.js";
 import { replyWithCoreT } from "#core/utils/core-config.js";
-import { ConfigProvider, ConfigType, type ConfigSchema } from "#lib/config.js";
+import {
+  ConfigProvider,
+  ConfigType,
+  expandTypedShortcodes,
+  type ConfigSchema,
+  fetchGuildEmojis,
+} from "#lib/config.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import type { Module } from "#lib/module.js";
 import type { Registry } from "#lib/registry.js";
@@ -63,7 +69,10 @@ const handleModalSubmit = declareInteractionHandler({
       return;
     }
 
-    const value = interaction.fields.getTextInputValue("value");
+    const value = await expandTypedShortcodes(
+      interaction.fields.getTextInputValue("value"),
+      () => fetchGuildEmojis(interaction.guild)
+    );
 
     const components = await saveConfigValue(
       module,

@@ -19,6 +19,7 @@ import {
   getConfigTypeName,
   resolveEmoji,
   type ListOf,
+  expandTypedShortcodes,
 } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
@@ -327,6 +328,10 @@ const addListItemModal = declareInteractionHandler({
     let item: string | number | boolean | null;
     if (type === ConfigType.EMOJI) {
       item = resolveEmoji(raw, await fetchGuildEmojis(interaction.guild));
+    } else if (type === ConfigType.STRING) {
+      item = await expandTypedShortcodes(raw, () =>
+        fetchGuildEmojis(interaction.guild)
+      );
     } else {
       item = ConfigValidator[type](raw) ? parseScalar(raw, type) : null;
     }

@@ -320,6 +320,29 @@ describe("channel records handlers", () => {
     expect(configEdit.refreshSourceConfigMessage).toHaveBeenCalled();
   });
 
+  it("turns the emoji shortcodes of a text field into emojis", async () => {
+    // A modal does not convert them, unlike Discord's message box.
+    vi.mocked(configEdit.getConfigEntry).mockReturnValue({
+      ...entry,
+      fields: { message: { name: "Message", type: ConfigType.STRING } },
+    });
+    const interaction = modalSubmit(
+      { message: "Bienvenue :tada: à 10:30:00" },
+      "111"
+    );
+    await run("channel-records-modal", interaction, [
+      "mod",
+      "reactions",
+      "src",
+    ]);
+
+    expect(source.save).toHaveBeenCalledWith(
+      interaction.guild,
+      { channelId: "111", values: { message: "Bienvenue 🎉 à 10:30:00" } },
+      expect.objectContaining({ userId: "admin" })
+    );
+  });
+
   it("refuses to add a channel that is already configured", async () => {
     source.list.mockResolvedValue([record("111", "🎉")]);
     const interaction = modalSubmit({ emoji: "👍" }, "111");

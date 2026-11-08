@@ -113,6 +113,26 @@ describe("add-list-item-modal", () => {
     });
   });
 
+  it("turns the emoji shortcodes of a text item into emojis", async () => {
+    entry.mockReturnValue({
+      name: "Messages",
+      description: "",
+      type: [ConfigType.STRING],
+    });
+    currentValues([]);
+    const submit = handlers()["add-list-item-modal"]!;
+
+    await submit.execute(
+      fakeModal("Joyeux anniversaire {user} ! :birthday:"),
+      ["mod", "count", "src"],
+      undefined as never
+    );
+
+    expect(updateConfig).toHaveBeenCalledWith(fakeModule, "guild-1", {
+      count: ["Joyeux anniversaire {user} ! 🎂"],
+    });
+  });
+
   it("rejects an invalid value without persisting", async () => {
     currentValues([1, 2]);
     const submit = handlers()["add-list-item-modal"]!;
@@ -160,6 +180,24 @@ describe("emoji lists", () => {
       name: "Emojis",
       description: "",
       type: [ConfigType.EMOJI],
+    });
+  });
+
+  it("keeps a text item's shortcode the server's own emoji bears", async () => {
+    entry.mockReturnValue({
+      name: "Messages",
+      description: "",
+      type: [ConfigType.STRING],
+    });
+    currentValues([]);
+    await handlers()["add-list-item-modal"]!.execute(
+      fakeModal("Bravo :star: :tada:"),
+      ["mod", "count", "src"],
+      undefined as never
+    );
+    // :star: is the server's; a standard star must not replace it.
+    expect(updateConfig).toHaveBeenCalledWith(fakeModule, "guild-1", {
+      count: ["Bravo :star: 🎉"],
     });
   });
 
