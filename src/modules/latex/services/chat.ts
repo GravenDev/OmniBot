@@ -104,7 +104,9 @@ function ignoreGone(err: unknown, message?: AnyMessage): null {
   if (err instanceof DiscordAPIError && GONE_ERRORS.has(err.code)) {
     const context = `code = ${err.code} | guildId = ${message?.guildId} | channelId = ${message?.channelId} | messageId = ${message?.id}`;
     if (err.code === RESTJSONErrorCodes.UnknownMessage) {
-      logger.debug(`Rendering skipped | reason = message gone | ${context}`);
+      logger.debug(
+        `Rendering skipped | reason = source message or its rendering gone | ${context}`
+      );
     } else {
       logger[warnings.level(`forbidden:${message?.channelId}`)](
         { err },

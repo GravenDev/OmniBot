@@ -123,20 +123,13 @@ export async function postMonthlyCalendar(
   today: CalendarDay
 ): Promise<void> {
   const channel = config.get("channel");
-  if (
-    today.day === 1 &&
-    config.get("monthlyCalendar") &&
-    !channel?.isSendable()
-  ) {
+  if (today.day !== 1 || !config.get("monthlyCalendar")) {
+    return;
+  }
+  if (!channel?.isSendable()) {
     logger[channel ? "warn" : "debug"](
       `Monthly calendar skipped | reason = ${channel ? "channel not sendable" : "no channel"} | guildId = ${guildId}`
     );
-  }
-  if (
-    today.day !== 1 ||
-    !config.get("monthlyCalendar") ||
-    !channel?.isSendable()
-  ) {
     return;
   }
   const entries = (await birthdayService.list(guildId)).filter((entry) =>

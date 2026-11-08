@@ -16,14 +16,14 @@ export default declareEventListener<"messageReactionAdd", ReportsConfigSchema>({
     if (!config || user.bot) {
       return;
     }
+    if (!matchesEmoji(config.get("emoji"), reaction.emoji)) {
+      return;
+    }
     const alertChannel = config.get("alertChannel");
     if (!alertChannel?.isSendable()) {
       logger.debug(
         `Reaction ignored | reason = alert channel missing or not sendable | guildId = ${reaction.message.guildId} | messageId = ${reaction.message.id}`
       );
-      return;
-    }
-    if (!matchesEmoji(config.get("emoji"), reaction.emoji)) {
       return;
     }
 

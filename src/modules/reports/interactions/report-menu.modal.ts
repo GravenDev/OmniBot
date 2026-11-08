@@ -29,8 +29,9 @@ export default declareInteractionHandler<
 
     const alertChannel = config.get("alertChannel");
     if (!canPost(alertChannel) || !channelId || !messageId) {
-      logger[canPost(alertChannel) ? "debug" : "warn"](
-        `Report modal refused | reason = ${canPost(alertChannel) ? "incomplete custom id" : "alert channel missing or not usable"} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
+      const usable = canPost(alertChannel);
+      logger[usable ? "debug" : "warn"](
+        `Report modal refused | reason = ${usable ? "incomplete custom id" : "alert channel missing or not usable"} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
       );
       await interaction.editReply(config.t("menu.unconfigured"));
       return;

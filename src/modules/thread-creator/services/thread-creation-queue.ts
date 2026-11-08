@@ -1,7 +1,9 @@
 import type { Message } from "discord.js";
+import { LogThrottle } from "#lib/log-throttle.js";
 import { loggerMaker } from "#lib/logger.js";
 
 const logger = loggerMaker("thread-creator");
+const warnings = new LogThrottle();
 
 /** Pacing window and cap — mirrors Discord's thread-creation rate limit. */
 const RATE_LIMIT_WINDOW_MS = 10_000;
@@ -124,14 +126,14 @@ export class ThreadCreationQueue {
         return;
       }
       if (code === 160005) {
-        logger.warn(
+        logger[warnings.level(`${code}:${message.channelId}`)](
           { err: error },
           `Thread not created | reason = thread limit reached | code = ${code} | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
         );
         return;
       }
       if (code === 50013) {
-        logger.warn(
+        logger[warnings.level(`${code}:${message.channelId}`)](
           { err: error },
           `Thread not created | reason = missing permissions | code = ${code} | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
         );

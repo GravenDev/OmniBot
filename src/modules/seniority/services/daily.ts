@@ -38,13 +38,13 @@ async function send(
   guildId: string,
   message: MessageCreateOptions,
   userIds: string[]
-): Promise<void> {
+): Promise<boolean> {
   const channel = config.get("channel");
   if (!channel?.isSendable()) {
     logger[channel ? "warn" : "debug"](
       `Announcement skipped | reason = ${channel ? "channel not sendable" : "no channel"} | guildId = ${guildId}`
     );
-    return;
+    return false;
   }
   await channel.send({
     ...message,
@@ -52,6 +52,7 @@ async function send(
       users: await mentionService.mentionable(guildId, userIds),
     },
   });
+  return true;
 }
 
 async function announceMembers(
@@ -74,17 +75,19 @@ async function announceMembers(
     config.t,
     celebrated.map(({ member }) => member.id)
   );
+  let delivered = false;
   const posted = await postCard(
     logger,
     `the member anniversaries | guildId = ${guild.id}`,
     () => seniorityCard(config, celebrated, today),
-    (card) =>
-      send(
+    async (card) => {
+      delivered = await send(
         config,
         guild.id,
         { content: first!.content, files: [card] },
         first!.userIds
-      )
+      );
+    }
   );
   const messages = posted
     ? others
@@ -93,9 +96,10 @@ async function announceMembers(
         celebrated.map(({ member, years }) => ({ userId: member.id, years }))
       );
   for (const { content, userIds } of messages) {
-    await send(config, guild.id, { content }, userIds);
+    delivered =
+      (await send(config, guild.id, { content }, userIds)) || delivered;
   }
-  if (config.get("channel")?.isSendable()) {
+  if (delivered) {
     logger.info(
       `Member anniversaries announced | guildId = ${guild.id} | count = ${celebrated.length} | card = ${posted}`
     );
