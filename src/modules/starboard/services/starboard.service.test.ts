@@ -222,18 +222,34 @@ describe("refresh of a message not yet on the starboard", () => {
 
   it("logs why a message that reached the threshold is not reposted", async () => {
     mocks.ineligibility.mockReturnValue("channel");
+    const message = Object.assign(fakeMessage(), { id: "refused" });
 
-    await starboard.refresh(fakeMessage() as never, config());
+    await starboard.refresh(message as never, config());
 
     expect(mocks.logger.info).toHaveBeenCalledWith(
       expect.stringContaining("reason = channel")
     );
   });
 
+  it("logs a refusal once, not at every new reaction", async () => {
+    mocks.ineligibility.mockReturnValue("nsfw");
+    const message = Object.assign(fakeMessage(), { id: "popular" });
+
+    await starboard.refresh(message as never, config());
+    await starboard.refresh(message as never, config());
+    await starboard.refresh(message as never, config());
+
+    expect(mocks.logger.info).toHaveBeenCalledOnce();
+    expect(mocks.logger.debug).toHaveBeenCalledWith(
+      expect.stringContaining("reason = nsfw")
+    );
+  });
+
   it("warns when it cannot post in the starboard", async () => {
     mocks.ineligibility.mockReturnValue("permissions");
+    const message = Object.assign(fakeMessage(), { id: "forbidden" });
 
-    await starboard.refresh(fakeMessage() as never, config());
+    await starboard.refresh(message as never, config());
 
     expect(mocks.logger.warn).toHaveBeenCalledWith(
       expect.stringContaining("reason = permissions")

@@ -48,6 +48,7 @@ const REFUSAL_LEVEL: Record<Ineligibility, "debug" | "info" | "warn"> = {
   private: "info",
   permissions: "warn",
 };
+const REFUSALS_REMEMBERED = 1000;
 
 export function isCounted(
   emoji: { id: string | null; name: string | null },
@@ -75,6 +76,7 @@ interface Pending {
 class StarboardService implements Service {
   private readonly queue = new KeyedQueue();
   private readonly pending = new Map<string, Pending>();
+  private readonly refusals = new Set<string>();
 
   refresh(message: AnyMessage, config: Config): Promise<void> {
     return this.schedule(message, config, "any");
@@ -276,9 +278,7 @@ class StarboardService implements Service {
     }
     const blocked = ineligibility(message, starboard, config);
     if (blocked) {
-      logger[REFUSAL_LEVEL[blocked]](
-        `Message not reposted | reason = ${blocked} | channelId = ${message.channelId} | messageId = ${message.id}`
-      );
+      this.logRefusal(message, blocked);
       return;
     }
     const tally = await tallyReactions(message, emojis, config.get("selfStar"));
@@ -310,6 +310,20 @@ class StarboardService implements Service {
     }
     logger.info(
       `Message starred | messageId = ${message.id} | count = ${tally.total}`
+    );
+  }
+
+  private logRefusal(message: Message<true>, reason: Ineligibility): void {
+    const key = `${message.id}:${reason}`;
+    const level = this.refusals.has(key) ? "debug" : REFUSAL_LEVEL[reason];
+    this.refusals.delete(key);
+    this.refusals.add(key);
+    const [oldest] = this.refusals;
+    if (this.refusals.size > REFUSALS_REMEMBERED && oldest !== undefined) {
+      this.refusals.delete(oldest);
+    }
+    logger[level](
+      `Message not reposted | reason = ${reason} | channelId = ${message.channelId} | messageId = ${message.id}`
     );
   }
 
