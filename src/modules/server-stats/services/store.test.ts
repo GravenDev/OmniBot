@@ -56,12 +56,14 @@ describe("recording", () => {
       create: { guildId: "guild-1", day, userId: "user-1", messages: 1 },
       update: { messages: { increment: 1 } },
     });
-    expect(prisma.$transaction).toHaveBeenCalledOnce();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
     expect(prisma.serverStatsDay.upsert).not.toHaveBeenCalled();
   });
 
   it("counts a newcomer on their first message of the day only", async () => {
-    prisma.$transaction.mockResolvedValueOnce([{}, {}, { messages: 1 }]);
+    prisma.serverStatsMember.upsert.mockReturnValueOnce({
+      messages: 1,
+    } as never);
     await store.recordMessage("guild-1", day, 9, "chan-1", "user-1", true);
     expect(prisma.serverStatsDay.upsert).toHaveBeenCalledWith({
       where: { guildId_day: { guildId: "guild-1", day } },
@@ -71,7 +73,9 @@ describe("recording", () => {
   });
 
   it("does not count a member who joined another day", async () => {
-    prisma.$transaction.mockResolvedValueOnce([{}, {}, { messages: 1 }]);
+    prisma.serverStatsMember.upsert.mockReturnValueOnce({
+      messages: 1,
+    } as never);
     await store.recordMessage("guild-1", day, 9, "chan-1", "user-1", false);
     expect(prisma.serverStatsDay.upsert).not.toHaveBeenCalled();
   });

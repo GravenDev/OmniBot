@@ -51,7 +51,10 @@ async function recordMessage(
   newcomer: boolean
 ): Promise<void> {
   await ensureStarted(guildId);
-  const [, , member] = await prisma.$transaction([
+  // Each upsert is an atomic increment on its own: a transaction would hold the
+  // hour row, shared by every message of the guild, locked until the commit
+  // and make concurrent messages queue behind each other.
+  const [, , member] = await Promise.all([
     prisma.serverStatsHour.upsert({
       where: { guildId_day_hour: { guildId, day, hour } },
       create: { guildId, day, hour, messages: 1 },
