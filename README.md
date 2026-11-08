@@ -103,6 +103,11 @@ itself — the `deploy` job calls the stack webhook once the images are publishe
 it without deploying it, and the `deploy` job skips those tags for the same
 reason.
 
+PostgreSQL comes from Docker Hub, which limits pulls per IP address. Pinned by
+digest, it is only pulled when missing from the host; registering a Docker Hub
+account (a read-only access token) in Portainer's Registries ties the limit to
+that account instead of the host's IP.
+
 To run the stack by hand instead:
 
 ```bash
