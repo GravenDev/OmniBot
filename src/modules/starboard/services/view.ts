@@ -26,6 +26,7 @@ const FILE_NAME_LIMIT = 60;
 const SHOWN_EMBEDS = 2;
 const SHOWN_FILES = 3;
 const GALLERY_LIMIT = 10;
+const HEADER_GAP = "\n\n";
 
 type Body = Pick<Message, "content" | "attachments" | "embeds" | "stickers">;
 
@@ -211,9 +212,9 @@ export function starboardMessage(
     header.length -
     others.length -
     counter.length -
-    2;
+    HEADER_GAP.length;
   const content = body.content
-    ? `${header}\n\n${truncate(body.content, Math.min(CONTENT_LIMIT, budget))}`
+    ? `${header}${HEADER_GAP}${truncate(body.content, Math.min(CONTENT_LIMIT, budget))}`
     : header;
   const avatar =
     message.member?.displayAvatarURL() ?? message.author.displayAvatarURL();

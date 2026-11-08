@@ -194,6 +194,9 @@ describe("starboardMessage", () => {
 
     expect(json).toContain("Forwarded message");
     expect(json).toContain("forwarded words");
+    expect(json).toMatch(
+      /-# <@author> in <#general> · <t:\d+:R>\\n-# ↪ Forwarded message\\n\\nforwarded words/
+    );
   });
 
   it("stays within Discord's 4000 characters of text", () => {
