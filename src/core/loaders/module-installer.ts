@@ -1,11 +1,14 @@
 import type { Client, Guild } from "discord.js";
 import { client } from "#core/runtime.js";
 import moduleService from "#core/services/module.service.js";
+import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import {
   installModuleCommandsIn,
   uninstallModuleCommandsIn,
 } from "./command-loader.js";
+
+const logger = loggerMaker("modules");
 
 /**
  * Narrows the ambient client to a ready one. Command registration needs
@@ -36,6 +39,7 @@ export async function installModule(module: Module, guild: Guild) {
 
   // Change the module state in the database
   await moduleService.enableModule(module.id, guild);
+  logger.info(`Module enabled | module = ${module.id} | guildId = ${guild.id}`);
 }
 
 export async function uninstallModule(module: Module, guild: Guild) {
@@ -53,4 +57,7 @@ export async function uninstallModule(module: Module, guild: Guild) {
 
   // Change the module state in the database
   await moduleService.disableModule(module.id, guild);
+  logger.info(
+    `Module disabled | module = ${module.id} | guildId = ${guild.id}`
+  );
 }

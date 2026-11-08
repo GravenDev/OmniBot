@@ -1,10 +1,13 @@
 import { setTimeout as sleep } from "node:timers/promises";
+import { loggerMaker } from "#lib/logger.js";
 import {
   compressScoreTable,
   extractScoreTable,
   isPlausibleTable,
   type CompressedTable,
 } from "./scoring.js";
+
+const logger = loggerMaker("rngdle");
 
 const SITE_URL = "https://www.rngdle.com";
 const USER_AGENT = "OmniBot (+https://github.com/GravenDev/OmniBot)";
@@ -50,7 +53,11 @@ async function request(url: string): Promise<Response> {
     if (!RETRYABLE_STATUSES.has(response.status) || attempt >= MAX_ATTEMPTS) {
       return response;
     }
-    await sleep(retryDelayMs(response, attempt));
+    const delayMs = retryDelayMs(response, attempt);
+    logger.debug(
+      `RNGdle request retried | status = ${response.status} | attempt = ${attempt} | delayMs = ${delayMs}`
+    );
+    await sleep(delayMs);
   }
 }
 
@@ -110,9 +117,10 @@ export async function fetchUserRolls(
       throw new RngdleUserNotFoundError(username);
     }
     if (!response.ok) {
-      throw new RngdleApiError(
-        `RNGdle API responded ${response.status} for ${username}`
+      logger.debug(
+        `RNGdle API request failed | status = ${response.status} | page = ${page}`
       );
+      throw new RngdleApiError(`RNGdle API responded ${response.status}`);
     }
 
     const { rolls: pageRolls, hasMore } = parseRollsPage(await response.json());
@@ -131,6 +139,7 @@ export async function fetchUserRolls(
 export async function fetchScoreTable(): Promise<CompressedTable | null> {
   const home = await request(SITE_URL);
   if (!home.ok) {
+    logger.debug(`rngdle.com home page failed | status = ${home.status}`);
     throw new RngdleApiError(`rngdle.com responded ${home.status}`);
   }
   const scripts = [

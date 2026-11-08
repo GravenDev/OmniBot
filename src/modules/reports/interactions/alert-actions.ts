@@ -121,10 +121,18 @@ async function deleteReported(
     await channel.messages.delete(report.messageId);
   } catch (error) {
     if (!isUnknownMessage(error)) {
-      logger.warn({ err: error }, `Delete failed | reportId = ${report.id}`);
+      logger.warn(
+        { err: error },
+        `Delete failed | guildId = ${report.guildId} | reportId = ${report.id} | channelId = ${report.channelId} | messageId = ${report.messageId} | moderatorId = ${interaction.user.id}`
+      );
       failed = true;
       await tell(interaction, config.t(discordErrorKey(error)));
     }
+  }
+  if (!failed) {
+    logger.info(
+      `Reported message deleted or already gone | guildId = ${report.guildId} | reportId = ${report.id} | channelId = ${report.channelId} | messageId = ${report.messageId} | moderatorId = ${interaction.user.id}`
+    );
   }
 
   await store.addAction(report.id, {
@@ -173,6 +181,9 @@ async function runDirect(
     duration: null,
     failed: false,
   });
+  logger.info(
+    `Report handled | action = ${action} | guildId = ${report.guildId} | reportId = ${report.id} | moderatorId = ${interaction.user.id}`
+  );
 }
 
 function directButton(action: Direct) {
@@ -360,6 +371,9 @@ async function runSanction(
       ? "alreadyBanned"
       : null);
   if (block) {
+    logger.info(
+      `Sanction refused | sanction = ${sanction} | block = ${block} | guildId = ${report.guildId} | reportId = ${report.id} | targetId = ${report.authorId} | moderatorId = ${interaction.user.id}`
+    );
     await tell(interaction, config.t(`block.${block}`));
     return;
   }
@@ -382,7 +396,7 @@ async function runSanction(
   } catch (error) {
     logger.warn(
       { err: error },
-      `Sanction failed | sanction = ${sanction} | reportId = ${report.id}`
+      `Sanction failed | sanction = ${sanction} | guildId = ${report.guildId} | reportId = ${report.id} | targetId = ${report.authorId} | moderatorId = ${interaction.user.id}`
     );
     failed = true;
     await tell(interaction, config.t(discordErrorKey(error)));
@@ -396,6 +410,9 @@ async function runSanction(
     failed,
   });
   if (!failed) {
+    logger.info(
+      `Sanction applied | sanction = ${sanction} | guildId = ${report.guildId} | reportId = ${report.id} | targetId = ${report.authorId} | moderatorId = ${interaction.user.id}`
+    );
     await store.setStatus(report.id, "resolved", interaction.user.id);
   }
 }

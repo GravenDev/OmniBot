@@ -19,6 +19,11 @@ export default declareEventListener<"messageCreate", FourHourGameConfigSchema>({
     const channel = config.get("channel");
     const delay = config.get("delay");
     if (!channel || channel.id !== message.channelId || !(delay > 0)) {
+      if (channel && channel.id === message.channelId) {
+        logger.debug(
+          `Message ignored | reason = invalid delay | guildId = ${message.guildId} | channelId = ${message.channelId}`
+        );
+      }
       return;
     }
 
@@ -35,11 +40,14 @@ export default declareEventListener<"messageCreate", FourHourGameConfigSchema>({
       );
 
       if (result.kind !== "point") {
+        logger.debug(
+          `Message handled without point | outcome = ${result.kind} | guildId = ${message.guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
+        );
         return;
       }
 
       logger.info(
-        `Point awarded | guildId = ${message.guildId} | userId = ${result.winnerId} | score = ${result.score}`
+        `Point awarded | guildId = ${message.guildId} | channelId = ${message.channelId} | messageId = ${message.id} | userId = ${result.winnerId} | score = ${result.score} | heldSeconds = ${result.heldSeconds}`
       );
 
       await announcePoint(message.channel, result, config);

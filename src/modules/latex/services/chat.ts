@@ -7,7 +7,10 @@ import {
   RESTJSONErrorCodes,
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { isApiError } from "#lib/discord-errors.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
+import { LogThrottle } from "#lib/log-throttle.js";
+import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS_REPLY } from "#lib/mentions.js";
 import { canReplyWithFile } from "#lib/permissions.js";
 import type { LatexConfigSchema } from "#modules/latex/latex.config.js";
@@ -41,6 +44,9 @@ const GONE_ERRORS = new Set<number | string>([
   RESTJSONErrorCodes.MissingAccess,
   RESTJSONErrorCodes.MissingPermissions,
 ]);
+
+const logger = loggerMaker("latex");
+const warnings = new LogThrottle();
 
 type Config = ConfigProvider<LatexConfigSchema>;
 type AnyMessage = Message | PartialMessage;
@@ -94,8 +100,17 @@ function textToRender(message: Message, config: Config): string | null {
     .trim();
 }
 
-function ignoreGone(err: unknown): null {
+function ignoreGone(err: unknown, message?: AnyMessage): null {
   if (err instanceof DiscordAPIError && GONE_ERRORS.has(err.code)) {
+    const context = `code = ${err.code} | guildId = ${message?.guildId} | channelId = ${message?.channelId} | messageId = ${message?.id}`;
+    if (err.code === RESTJSONErrorCodes.UnknownMessage) {
+      logger.debug(`Rendering skipped | reason = message gone | ${context}`);
+    } else {
+      logger[warnings.level(`forbidden:${message?.channelId}`)](
+        { err },
+        `Rendering skipped | reason = missing access or permissions | ${context}`
+      );
+    }
     return null;
   }
   throw err;
@@ -174,6 +189,9 @@ async function reply(
   config: Config
 ): Promise<void> {
   if (!canReplyWithFile(message)) {
+    logger[warnings.level(`permissions:${message.channelId}`)](
+      `Rendering skipped | reason = missing channel permissions | guildId = ${message.guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
+    );
     return;
   }
   const sent = await message
@@ -184,9 +202,12 @@ async function reply(
       // second push.
       flags: MessageFlags.SuppressNotifications,
     })
-    .catch(ignoreGone);
+    .catch((err: unknown) => ignoreGone(err, message));
   if (sent) {
     remember(message.id, sent.id);
+    logger.debug(
+      `Rendering posted | guildId = ${message.guildId} | channelId = ${message.channelId} | messageId = ${message.id} | replyId = ${sent.id}`
+    );
   }
 }
 
@@ -248,16 +269,26 @@ export async function renderEdited(
     }
     if (!text) {
       replies.delete(message.id);
-      await existing.delete().catch(() => undefined);
+      await existing.delete().catch((err: unknown) => {
+        if (!isApiError(err, RESTJSONErrorCodes.UnknownMessage)) {
+          logger.warn(
+            { err },
+            `Rendering could not be removed | guildId = ${message.guildId} | channelId = ${message.channelId} | messageId = ${message.id} | replyId = ${existing.id}`
+          );
+        }
+      });
       return;
     }
     remember(message.id, existing.id);
     if (!canReplyWithFile(message)) {
+      logger[warnings.level(`permissions:${message.channelId}`)](
+        `Rendering skipped | reason = missing channel permissions | guildId = ${message.guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
+      );
       return;
     }
     await existing
       .edit({ ...(await payloadFor(text, config)), attachments: [] })
-      .catch(ignoreGone);
+      .catch((err: unknown) => ignoreGone(err, message));
   });
 }
 
@@ -271,6 +302,13 @@ export async function removeReply(message: AnyMessage): Promise<void> {
       return;
     }
     replies.delete(message.id);
-    await message.channel.messages.delete(replyId).catch(() => undefined);
+    await message.channel.messages.delete(replyId).catch((err: unknown) => {
+      if (!isApiError(err, RESTJSONErrorCodes.UnknownMessage)) {
+        logger.warn(
+          { err },
+          `Rendering could not be removed | guildId = ${message.guildId} | channelId = ${message.channelId} | messageId = ${message.id} | replyId = ${replyId}`
+        );
+      }
+    });
   });
 }

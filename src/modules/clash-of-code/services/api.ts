@@ -1,4 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
+import { loggerMaker } from "#lib/logger.js";
+
+const logger = loggerMaker("clash-of-code");
 
 const REPORT_URL =
   "https://www.codingame.com/services/ClashOfCode/findClashReportInfoByHandle";
@@ -96,7 +99,11 @@ async function request(handle: string): Promise<Response> {
     if (!RETRYABLE_STATUSES.has(response.status) || attempt >= MAX_ATTEMPTS) {
       return response;
     }
-    await sleep(retryDelayMs(response, attempt));
+    const delayMs = retryDelayMs(response, attempt);
+    logger.debug(
+      `CodinGame request retried | status = ${response.status} | attempt = ${attempt} | delayMs = ${delayMs} | handle = ${handle}`
+    );
+    await sleep(delayMs);
   }
 }
 
@@ -158,9 +165,15 @@ export async function fetchClashReport(handle: string): Promise<ClashReport> {
     throw new ClashNotFoundError(handle);
   }
   if (response.status === 429) {
+    logger.debug(
+      `CodinGame rate limit persists, giving up | status = ${response.status} | handle = ${handle}`
+    );
     throw new ClashRateLimitedError(handle, retryAfterMs(response));
   }
   if (!response.ok) {
+    logger.debug(
+      `CodinGame request failed | status = ${response.status} | handle = ${handle}`
+    );
     throw new ClashApiError(
       `CodinGame responded ${response.status} for clash ${handle}`
     );

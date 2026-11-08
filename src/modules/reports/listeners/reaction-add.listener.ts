@@ -18,6 +18,9 @@ export default declareEventListener<"messageReactionAdd", ReportsConfigSchema>({
     }
     const alertChannel = config.get("alertChannel");
     if (!alertChannel?.isSendable()) {
+      logger.debug(
+        `Reaction ignored | reason = alert channel missing or not sendable | guildId = ${reaction.message.guildId} | messageId = ${reaction.message.id}`
+      );
       return;
     }
     if (!matchesEmoji(config.get("emoji"), reaction.emoji)) {
@@ -31,7 +34,7 @@ export default declareEventListener<"messageReactionAdd", ReportsConfigSchema>({
       reactionKept = true;
       logger.warn(
         { err },
-        `Report reaction could not be removed | messageId = ${reaction.message.id}`
+        `Report reaction could not be removed | guildId = ${reaction.message.guildId} | channelId = ${reaction.message.channelId} | messageId = ${reaction.message.id} | userId = ${user.id}`
       );
     }
 
@@ -43,7 +46,7 @@ export default declareEventListener<"messageReactionAdd", ReportsConfigSchema>({
     } catch (err) {
       logger.info(
         { err },
-        `Reported message is gone | messageId = ${reaction.message.id}`
+        `Reported message is gone | guildId = ${reaction.message.guildId} | channelId = ${reaction.message.channelId} | messageId = ${reaction.message.id}`
       );
       return;
     }
@@ -53,7 +56,7 @@ export default declareEventListener<"messageReactionAdd", ReportsConfigSchema>({
     const blocked = ineligibility(message, user.id, alertChannel.id);
     if (blocked) {
       logger.debug(
-        `Report ignored | reason = ${blocked} | messageId = ${message.id}`
+        `Report ignored | reason = ${blocked} | guildId = ${message.guildId} | messageId = ${message.id} | userId = ${user.id}`
       );
       return;
     }

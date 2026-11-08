@@ -10,8 +10,11 @@ import {
   type MessageContextMenuCommandInteraction,
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
+import { loggerMaker } from "#lib/logger.js";
 import type { ReportsConfigSchema } from "../reports.config.js";
 import { ineligibility } from "../services/report.service.js";
+
+const logger = loggerMaker("reports");
 
 export const REPORT_MODAL_ID = "report-menu-modal";
 export const REASON_MAX = 500;
@@ -30,6 +33,9 @@ export default declareCommand<
     const alertChannel = config.get("alertChannel");
     const message = interaction.targetMessage;
     if (!alertChannel?.isSendable() || !message.inGuild()) {
+      logger.warn(
+        `Report menu refused | reason = alert channel missing or not sendable | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
+      );
       await interaction.reply({
         content: config.t("menu.unconfigured"),
         flags: MessageFlags.Ephemeral,

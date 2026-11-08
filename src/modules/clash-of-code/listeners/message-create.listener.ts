@@ -28,6 +28,9 @@ export default declareEventListener<"messageCreate", ClashOfCodeConfigSchema>({
         (channel) => channel.id === message.channelId || channel.id === parentId
       )
     ) {
+      logger.debug(
+        `Clash link ignored | reason = channel not in configured channels | guildId = ${message.guildId} | channelId = ${message.channelId}`
+      );
       return;
     }
 

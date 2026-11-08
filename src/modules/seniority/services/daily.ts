@@ -41,6 +41,9 @@ async function send(
 ): Promise<void> {
   const channel = config.get("channel");
   if (!channel?.isSendable()) {
+    logger[channel ? "warn" : "debug"](
+      `Announcement skipped | reason = ${channel ? "channel not sendable" : "no channel"} | guildId = ${guildId}`
+    );
     return;
   }
   await channel.send({
@@ -91,6 +94,11 @@ async function announceMembers(
       );
   for (const { content, userIds } of messages) {
     await send(config, guild.id, { content }, userIds);
+  }
+  if (config.get("channel")?.isSendable()) {
+    logger.info(
+      `Member anniversaries announced | guildId = ${guild.id} | count = ${celebrated.length} | card = ${posted}`
+    );
   }
 }
 
@@ -195,7 +203,9 @@ export async function runGuildDay(
       announceServer(guild, config, members, serverYears)
     );
   }
-  logger.info(`Day announced | guildId = ${guildId} | day = ${day}`);
+  logger.info(
+    `Day announced | guildId = ${guildId} | day = ${day} | memberAnniversaries = ${config.get("memberAnniversaries")} | serverYears = ${serverYears ?? "none"}`
+  );
 }
 
 export async function runAllGuildDays(

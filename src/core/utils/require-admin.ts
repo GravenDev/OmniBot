@@ -6,6 +6,9 @@ import {
 } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
 import type { CompatibleInteraction } from "#lib/interaction.js";
+import { loggerMaker } from "#lib/logger.js";
+
+const logger = loggerMaker("core");
 
 type GuardedInteraction =
   | CompatibleInteraction
@@ -17,6 +20,9 @@ export async function requireAdmin(
   t: TFunction
 ): Promise<boolean> {
   if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+    logger.debug(
+      `Admin access refused | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
+    );
     await interaction.reply({
       content: t("admin.noPermission"),
       flags: MessageFlags.Ephemeral,
@@ -32,6 +38,9 @@ export async function requirePermissions(
   t: TFunction
 ): Promise<boolean> {
   if (!interaction.memberPermissions?.has(permissions)) {
+    logger.debug(
+      `Missing member permissions | permissions = ${permissions} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
+    );
     await interaction.reply({
       content: t("interaction.memberMissingPermissions"),
       flags: MessageFlags.Ephemeral,

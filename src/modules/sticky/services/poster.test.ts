@@ -25,7 +25,7 @@ const store = vi.hoisted(() => ({
 
 vi.mock("./store.js", () => ({ default: store }));
 vi.mock("#lib/logger.js", () => ({
-  loggerMaker: () => ({ warn: vi.fn(), info: vi.fn() }),
+  loggerMaker: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn() }),
 }));
 
 const { StickyPoster } = await import("./poster.js");

@@ -59,6 +59,9 @@ class RngdleSync implements Service {
     };
     for (const guildId of await moduleService.getActivatedGuildIds("rngdle")) {
       const report = await this.start(guildId, full);
+      logger.info(
+        `Guild sync done | guildId = ${guildId} | full = ${full} | accounts = ${report.accounts} | inserted = ${report.inserted} | updated = ${report.updated} | failed = ${report.failed}`
+      );
       total.accounts += report.accounts;
       total.inserted += report.inserted;
       total.updated += report.updated;
@@ -139,7 +142,7 @@ class RngdleSync implements Service {
           report.failed += 1;
           logger.warn(
             err instanceof RngdleUserNotFoundError ? {} : { err },
-            `Failed to sync RNGdle rolls | guildId = ${account.guildId} | username = ${account.username}`
+            `Failed to sync RNGdle rolls | guildId = ${account.guildId} | userId = ${account.userId}`
           );
         }
       }

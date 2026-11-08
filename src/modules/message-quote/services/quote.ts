@@ -20,6 +20,7 @@ import {
 import type { ConfigProvider } from "#lib/config.js";
 import { stripHiddenText } from "#lib/hidden-text.js";
 import type { TFunction } from "#lib/i18n.js";
+import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS_REPLY } from "#lib/mentions.js";
 import { truncate } from "#lib/text.js";
 import {
@@ -27,6 +28,8 @@ import {
   QUOTE_CUSTOM_ID,
 } from "#modules/message-quote/interactions/delete.button.js";
 import type { MessageQuoteConfigSchema } from "#modules/message-quote/message-quote.config.js";
+
+const logger = loggerMaker("message-quote");
 
 export const MAX_QUOTES = 3;
 
@@ -116,16 +119,29 @@ export async function resolveQuote(
   const channel = await source.guild.channels
     .fetch(link.channelId)
     .catch(() => null);
-  if (
-    !channel?.isTextBased() ||
-    isExcluded(channel, excludedIds) ||
-    (isNsfw(channel) && !isNsfw(source.channel)) ||
-    !(await canRead(member, channel))
-  ) {
+  const skip = (reason: string): null => {
+    logger.debug(
+      `Quote skipped | reason = ${reason} | guildId = ${source.guildId} | channelId = ${link.channelId} | messageId = ${link.messageId} | userId = ${member.id}`
+    );
     return null;
+  };
+  if (!channel?.isTextBased()) {
+    return skip("channel not found or not text");
+  }
+  if (isExcluded(channel, excludedIds)) {
+    return skip("excluded channel");
+  }
+  if (isNsfw(channel) && !isNsfw(source.channel)) {
+    return skip("nsfw channel quoted from a non-nsfw channel");
+  }
+  if (!(await canRead(member, channel))) {
+    return skip("quoter cannot read the channel");
   }
   const quoted = await channel.messages.fetch(link.messageId).catch(() => null);
-  return quoted && !isOwnQuote(quoted) ? quoted : null;
+  if (!quoted) {
+    return skip("message not found");
+  }
+  return isOwnQuote(quoted) ? skip("message is already a quote") : quoted;
 }
 
 function isImage(attachment: Attachment): boolean {
@@ -240,6 +256,9 @@ export async function quoteLinks(
     config.get("excludedCategories")
   );
   if (isExcluded(message.channel, excludedIds)) {
+    logger.debug(
+      `Quote ignored | reason = excluded channel | guildId = ${message.guildId} | channelId = ${message.channelId}`
+    );
     return;
   }
 
@@ -247,6 +266,9 @@ export async function quoteLinks(
     message.member ??
     (await message.guild.members.fetch(message.author.id).catch(() => null));
   if (!member) {
+    logger.debug(
+      `Quote ignored | reason = author not resolvable | guildId = ${message.guildId} | userId = ${message.author.id}`
+    );
     return;
   }
 
@@ -256,6 +278,9 @@ export async function quoteLinks(
     )
   ).filter((quoted) => quoted !== null);
   if (quotes.length === 0) {
+    logger.debug(
+      `Quote ignored | reason = no quotable link | guildId = ${message.guildId} | channelId = ${message.channelId} | messageId = ${message.id} | links = ${links.length}`
+    );
     return;
   }
 

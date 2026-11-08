@@ -1,6 +1,9 @@
 import type { Image } from "@napi-rs/canvas";
 import type { Client, Guild } from "discord.js";
 import { fetchAvatar } from "./imaging.js";
+import { loggerMaker } from "./logger.js";
+
+const logger = loggerMaker("players");
 
 export interface Player {
   name: string;
@@ -32,6 +35,9 @@ async function resolvePlayer(
   if (user) {
     return { name: user.displayName, avatar: await fetchAvatar(user) };
   }
+  logger.debug(
+    `Player not resolved | guildId = ${guild?.id ?? "unknown"} | userId = ${userId}`
+  );
   return null;
 }
 

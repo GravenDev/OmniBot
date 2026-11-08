@@ -23,12 +23,17 @@ export async function handleGameDeletions(
   }
 
   try {
-    await fourHourGameService.handleDeletion(
+    const replaced = await fourHourGameService.handleDeletion(
       guildId,
       channel.id,
       messageIds,
       () => fetchStandingMessage(channel)
     );
+    if (replaced) {
+      logger.info(
+        `Holding message deleted, previous one put back in place | guildId = ${guildId} | channelId = ${channelId}`
+      );
+    }
   } catch (err) {
     logger.error(
       { err },

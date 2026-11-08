@@ -181,7 +181,16 @@ async function announceBirthdays(
   );
   await updateRole(guild.id, config, members, announced);
   const channel = config.get("channel");
-  if (announced.length === 0 || !channel?.isSendable()) {
+  if (announced.length === 0) {
+    logger.debug(
+      `No birthday to announce | guildId = ${guild.id} | entries = ${entries.length}`
+    );
+    return;
+  }
+  if (!channel?.isSendable()) {
+    logger[channel ? "warn" : "debug"](
+      `Birthday wishes skipped | reason = ${channel ? "channel not sendable" : "no channel"} | guildId = ${guild.id} | count = ${announced.length}`
+    );
     return;
   }
   await sendWishes(
@@ -190,6 +199,9 @@ async function announceBirthdays(
     channel,
     announced.map((userId) => members.get(userId)!),
     today
+  );
+  logger.info(
+    `Birthday wishes posted | guildId = ${guild.id} | channelId = ${channel.id} | count = ${announced.length}`
   );
 }
 

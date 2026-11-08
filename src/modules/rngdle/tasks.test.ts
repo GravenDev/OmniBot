@@ -28,7 +28,12 @@ vi.mock("#core/services/module.service.js", () => ({
 vi.mock("./services/sync.js", () => ({ default: { syncAll } }));
 vi.mock("./services/store.js", () => ({ default: { pendingReminders } }));
 vi.mock("#lib/logger.js", () => {
-  const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+  const logger = {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+  };
   return { loggerMaker: () => logger };
 });
 vi.mock("./services/views.js", () => ({

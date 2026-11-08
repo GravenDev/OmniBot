@@ -1,5 +1,7 @@
 import type { Message } from "discord.js";
-import logger from "#lib/logger.js";
+import { loggerMaker } from "#lib/logger.js";
+
+const logger = loggerMaker("thread-creator");
 
 /** Pacing window and cap — mirrors Discord's thread-creation rate limit. */
 const RATE_LIMIT_WINDOW_MS = 10_000;
@@ -53,6 +55,9 @@ export class ThreadCreationQueue {
     while (queue.length > 0) {
       const waitMs = this.msUntilSlotFree(guildId);
       if (waitMs > 0) {
+        logger.debug(
+          `Thread creation delayed | reason = rate limit window full | guildId = ${guildId} | waitMs = ${waitMs} | queued = ${queue.length}`
+        );
         setTimeout(() => void this.pump(guildId), waitMs);
         return;
       }
@@ -95,7 +100,9 @@ export class ThreadCreationQueue {
       if (welcomeMessage) {
         await thread.send(welcomeMessage);
       }
-      logger.info(`Fil créé avec succès : "${threadName}" (${guildId})`);
+      logger.info(
+        `Thread created | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id} | threadId = ${thread.id}`
+      );
     } catch (error) {
       this.logCreationError(error, message, guildId);
     }
@@ -111,25 +118,29 @@ export class ThreadCreationQueue {
       const code = (error as { code: number }).code;
       if (code === 160004) {
         logger.warn(
-          `Impossible de créer un fil : le message a été supprimé (${guildId})`
+          { err: error },
+          `Thread not created | reason = message deleted | code = ${code} | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
         );
         return;
       }
       if (code === 160005) {
         logger.warn(
-          `Limite de fils de discussion atteinte dans ${message.channel.id} (${guildId})`
+          { err: error },
+          `Thread not created | reason = thread limit reached | code = ${code} | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
         );
         return;
       }
       if (code === 50013) {
         logger.warn(
-          `Permissions insuffisantes pour créer un fil dans ${message.channel.id} (${guildId})`
+          { err: error },
+          `Thread not created | reason = missing permissions | code = ${code} | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
         );
         return;
       }
     }
     logger.error(
-      `Erreur lors de la création du fil pour le message ${message.id} : ${error}`
+      { err: error },
+      `Thread creation failed | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
     );
   }
 }

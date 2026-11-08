@@ -1,6 +1,7 @@
 import {
   ChannelType,
   PermissionsBitField,
+  RESTJSONErrorCodes,
   type CategoryChannel,
   type Guild,
   type GuildMember,
@@ -9,6 +10,7 @@ import {
   type VoiceBasedChannel,
   type VoiceChannel,
 } from "discord.js";
+import { isApiError } from "#lib/discord-errors.js";
 import type { TFunction } from "#lib/i18n.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
@@ -201,8 +203,11 @@ async function notify(
     setTimeout(() => {
       message.delete().catch(() => undefined);
     }, NOTICE_LIFETIME_MS).unref();
-  } catch {
-    logger.debug(`Hub notice not posted | channelId = ${hub.id}`);
+  } catch (err) {
+    logger.debug(
+      { err },
+      `Hub notice not posted | guildId = ${hub.guild.id} | channelId = ${hub.id} | userId = ${member.id}`
+    );
   }
 }
 
@@ -214,9 +219,14 @@ async function moveTo(
     await member.voice.setChannel(channel);
     return true;
   } catch (err) {
-    logger.debug(
+    const forbidden = isApiError(
+      err,
+      RESTJSONErrorCodes.MissingAccess,
+      RESTJSONErrorCodes.MissingPermissions
+    );
+    logger[forbidden ? "warn" : "debug"](
       { err },
-      `Member not moved | userId = ${member.id} | channelId = ${channel.id}`
+      `Member not moved | guildId = ${member.guild.id} | userId = ${member.id} | channelId = ${channel.id}`
     );
     return false;
   }
@@ -233,6 +243,9 @@ async function returnToOwnChannel(
   return queue.run(existing.channelId, async () => {
     const channel = voiceChannel(member.guild, existing.channelId);
     if (!channel) {
+      logger.debug(
+        `Owned channel missing, record dropped | guildId = ${member.guild.id} | channelId = ${existing.channelId} | userId = ${member.id}`
+      );
       await store.removeChannel(existing.channelId);
       return false;
     }
@@ -265,6 +278,9 @@ export function joinHub(
     const now = Date.now();
     const last = lastCreation.get(key) ?? 0;
     if (now - last < CREATE_COOLDOWN_MS) {
+      logger.debug(
+        `Hub join refused | reason = cooldown | guildId = ${guild.id} | hubId = ${hubChannel.id} | userId = ${member.id}`
+      );
       await notify(
         hubChannel,
         member,
@@ -282,7 +298,7 @@ export function joinHub(
       ?.missing(REQUIRED_PERMISSIONS) ?? [...REQUIRED_PERMISSIONS];
     if (missing.length > 0) {
       logger.warn(
-        `Missing permissions | guildId = ${guild.id} | hubId = ${hubChannel.id} | missing = ${missing.join(",")}`
+        `Missing permissions | guildId = ${guild.id} | hubId = ${hubChannel.id} | userId = ${member.id} | missing = ${missing.join(",")}`
       );
       await notify(hubChannel, member, config.t("hub.unavailable"));
       return;

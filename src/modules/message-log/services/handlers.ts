@@ -8,6 +8,7 @@ import type {
   ReadonlyCollection,
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { MessageLogConfigSchema } from "#modules/message-log/message-log.config.js";
 import { type DeleterLookup, findDeleter } from "./audit.js";
@@ -18,6 +19,8 @@ import {
   isAuthoredByMember,
 } from "./entries.js";
 import { type LogTarget, logTargetFor } from "./routing.js";
+
+const logger = loggerMaker("message-log");
 
 type Config = ConfigProvider<MessageLogConfigSchema>;
 type AnyMessage = Message | PartialMessage;
@@ -39,6 +42,9 @@ export async function logDeletion(
   lookupDeleter: DeleterLookup = findDeleter
 ): Promise<void> {
   if (message.partial || !message.inGuild() || !isAuthoredByMember(message)) {
+    logger.debug(
+      `Deletion not logged | reason = ${message.partial ? "uncached message" : "not authored by a member"} | messageId = ${message.id} | channelId = ${message.channelId}`
+    );
     return;
   }
   const target = logTargetFor(message.channel, config);
@@ -80,6 +86,9 @@ export async function logEdit(
     !isAuthoredByMember(before) ||
     before.content === after.content
   ) {
+    logger.debug(
+      `Edit not logged | reason = ${!config.get("logEdits") ? "edit logging disabled" : before.partial || after.partial ? "uncached message" : "not a member text change"} | messageId = ${after.id} | channelId = ${after.channelId}`
+    );
     return;
   }
   const target = logTargetFor(before.channel, config);

@@ -83,11 +83,23 @@ export async function logTrap(
   purgeSeconds: number
 ): Promise<void> {
   const channel = config.get("logChannel");
-  if (!channel?.isSendable() || channel.isDMBased()) {
+  if (!channel) {
+    logger.debug(
+      `Trap log skipped | reason = no log channel | guildId = ${message.guildId}`
+    );
+    return;
+  }
+  if (!channel.isSendable() || channel.isDMBased()) {
+    logger.warn(
+      `Trap log skipped | reason = log channel not sendable | guildId = ${message.guildId} | logChannelId = ${channel.id}`
+    );
     return;
   }
   const me = channel.guild.members.me;
   if (me && !channel.permissionsFor(me).has(REQUIRED_PERMISSIONS)) {
+    logger.warn(
+      `Trap log skipped | reason = missing permissions | guildId = ${message.guildId} | logChannelId = ${channel.id}`
+    );
     return;
   }
   try {

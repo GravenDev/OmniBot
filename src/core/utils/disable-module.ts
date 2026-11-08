@@ -46,6 +46,10 @@ export async function disableAndRefresh(
   try {
     await uninstallModule(module, interaction.guild!);
   } catch (err) {
+    logger.warn(
+      { err },
+      `Module disable failed | module = ${module.id} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
+    );
     await interaction.followUp({
       content: coreT(errorMessageKey(err, "interaction.failedDisable")),
       flags: MessageFlags.Ephemeral,

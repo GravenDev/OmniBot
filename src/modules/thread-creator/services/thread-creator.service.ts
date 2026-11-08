@@ -1,8 +1,11 @@
 import type { Message } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
 import type { ThreadCreatorConfigSchema } from "#modules/thread-creator/thread-creator.config.js";
 import { ThreadCreationQueue } from "./thread-creation-queue.js";
+
+const logger = loggerMaker("thread-creator");
 
 class ThreadCreatorService implements Service {
   private readonly queue = new ThreadCreationQueue();
@@ -57,6 +60,9 @@ class ThreadCreatorService implements Service {
       !watchedChannels ||
       !watchedChannels.some((channel) => channel.id === message.channel.id)
     ) {
+      logger.debug(
+        `Thread not scheduled | reason = channel not watched | guildId = ${message.guild.id} | channelId = ${message.channel.id}`
+      );
       return;
     }
 

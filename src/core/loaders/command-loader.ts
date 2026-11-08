@@ -30,7 +30,8 @@ async function registerCommands(
     );
   } catch (error) {
     logger.error(
-      `Failed to load commands | scope = ${scope} | error = ${error}`
+      { err: error },
+      `Failed to load commands | scope = ${scope} | count = ${body.length}`
     );
   }
 }

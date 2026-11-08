@@ -1,8 +1,10 @@
 import { ChannelType, type Message } from "discord.js";
 import { declareEventListener } from "#lib/listener.js";
-import logger from "#lib/logger.js";
+import { loggerMaker } from "#lib/logger.js";
 import threadCreatorService from "#modules/thread-creator/services/thread-creator.service.js";
 import type { ThreadCreatorConfigSchema } from "#modules/thread-creator/thread-creator.config.js";
+
+const logger = loggerMaker("thread-creator");
 
 export default declareEventListener<"messageCreate", ThreadCreatorConfigSchema>(
   {
@@ -37,7 +39,8 @@ export default declareEventListener<"messageCreate", ThreadCreatorConfigSchema>(
         threadCreatorService.scheduleThreadForMessage(message, config);
       } catch (error) {
         logger.error(
-          `Erreur dans le listener messageCreate du ThreadCreator : ${error}`
+          { err: error },
+          `Thread scheduling failed | guildId = ${message.guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
         );
       }
     },
