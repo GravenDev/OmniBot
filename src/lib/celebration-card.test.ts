@@ -82,6 +82,15 @@ describe("renderCelebrationImage", () => {
     expect((bare as Buffer).equals(renderCelebrationCard(card()))).toBe(false);
   });
 
+  it("passes the loop choice on to the animation", async () => {
+    await renderCelebrationImage(card());
+    await renderCelebrationImage(card(), { loop: false });
+    expect(engine.animateCard.mock.calls.map((call) => call[2])).toEqual([
+      {},
+      { loop: false },
+    ]);
+  });
+
   it("draws a palette's confetti once for all its cards", async () => {
     await Promise.all([
       renderCelebrationImage(card()),
