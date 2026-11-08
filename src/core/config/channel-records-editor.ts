@@ -26,6 +26,7 @@ import {
   type ChannelRecordOutcome,
   type ChannelRecordsConfigEntry,
 } from "#lib/config.js";
+import { withDeadline } from "#lib/deadline.js";
 import { preview } from "#lib/format.js";
 import { createT, type TFunction } from "#lib/i18n.js";
 import {
@@ -55,19 +56,6 @@ const logger = loggerMaker("config");
 export function prefillWait(createdTimestamp: number): number {
   const left = MODAL_DEADLINE_MS - (Date.now() - createdTimestamp);
   return Math.min(PREFILL_WAIT_MS, Math.max(0, left));
-}
-
-export function withDeadline<T>(
-  promise: Promise<T>,
-  waitMs: number
-): Promise<T | null> {
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<null>((resolve) => {
-    timer = setTimeout(() => resolve(null), waitMs);
-  });
-  return Promise.race([promise.catch(() => null), timeout]).finally(() =>
-    clearTimeout(timer)
-  );
 }
 
 interface Resolved {

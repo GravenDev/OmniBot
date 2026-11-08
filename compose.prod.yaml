@@ -88,6 +88,7 @@ services:
       DISCORD_TOKEN: ${DISCORD_TOKEN:?DISCORD_TOKEN is required}
       DATABASE_URL: *database_url
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      UPTIME_KUMA_PUSH_URL: ${UPTIME_KUMA_PUSH_URL:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -104,8 +105,8 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    # No healthcheck: the bot exposes no HTTP/TCP endpoint — see the
-    # Deployment section of README.md.
+    # No healthcheck: the bot exposes no HTTP/TCP endpoint; it pushes its
+    # health to Uptime Kuma instead — see the Deployment section of README.md.
     deploy:
       resources:
         limits:
