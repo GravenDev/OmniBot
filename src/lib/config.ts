@@ -8,7 +8,11 @@ import {
   type User,
 } from "discord.js";
 import { formatDuration, parseDuration } from "./duration.js";
-import { emojiFromShortcode } from "./emoji-shortcodes.js";
+import {
+  CUSTOM_EMOJI_SOURCE,
+  emojiFromShortcode,
+  expandShortcodes,
+} from "./emoji-shortcodes.js";
 import { createT, type TFunction } from "./i18n.js";
 import type { Module } from "./module.js";
 
@@ -30,7 +34,7 @@ export enum ConfigType {
   CHANNEL_RECORDS = "CHANNEL_RECORDS",
 }
 
-const CUSTOM_EMOJI = /^<a?:\w{2,32}:\d{17,20}>$/;
+const CUSTOM_EMOJI = new RegExp(`^${CUSTOM_EMOJI_SOURCE}$`);
 const EMOJI_CODEPOINT = /\p{Extended_Pictographic}|\p{Regional_Indicator}|⃣/u;
 
 export function isEmoji(value: string): boolean {
@@ -112,6 +116,25 @@ export async function fetchGuildEmojis(
   } catch {
     return [...guild.emojis.cache.values()];
   }
+}
+
+/**
+ * Text typed in a modal, its emoji shortcodes turned into emojis as Discord's
+ * message box would: a modal leaves them as typed. The guild's own emoji
+ * names are kept; `guildEmojis` (a fetch, usually) is only called when the
+ * text holds a shortcode.
+ */
+export async function expandTypedShortcodes(
+  text: string,
+  guildEmojis: () => Promise<Iterable<{ name: string | null }>>
+): Promise<string> {
+  if (expandShortcodes(text) === text) {
+    return text;
+  }
+  const names = [...(await guildEmojis())].flatMap((emoji) =>
+    emoji.name ? [emoji.name] : []
+  );
+  return expandShortcodes(text, names);
 }
 
 const VARIATION_SELECTOR = /️/g;

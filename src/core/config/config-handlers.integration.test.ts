@@ -53,6 +53,8 @@ const {
 } = await import("./config-edit.js");
 const { default: NumberConfigHandler } =
   await import("./number.config-handler.js");
+const { default: StringConfigHandler } =
+  await import("./string.config-handler.js");
 const { default: DurationConfigHandler } =
   await import("./duration.config-handler.js");
 const { default: UserConfigHandler } = await import("./user.config-handler.js");
@@ -113,6 +115,29 @@ beforeEach(() => {
   updateConfig.mockResolvedValue(mockConfigProvider());
   getConfig.mockResolvedValue(mockConfigProvider());
   isList.mockReturnValue(false);
+});
+
+describe("StringConfigHandler modal submit", () => {
+  it("turns the emoji shortcodes Discord left as typed into emojis", async () => {
+    // A modal does not convert them, unlike Discord's message box.
+    const submit = await captureRegisteredHandler(new StringConfigHandler());
+    const interaction = {
+      guildId: "guild-1",
+      fields: { getTextInputValue: () => "Bienvenue :wave: :inconnu:" },
+      isFromMessage: () => true,
+      update: vi.fn(),
+      reply: vi.fn(),
+    } as unknown as ModalSubmitInteraction;
+
+    await submit.execute(interaction, ["mod", "welcome"], undefined as never);
+
+    expect(save).toHaveBeenCalledWith(
+      fakeModule,
+      "guild-1",
+      "welcome",
+      "Bienvenue 👋 :inconnu:"
+    );
+  });
 });
 
 describe("NumberConfigHandler modal submit", () => {

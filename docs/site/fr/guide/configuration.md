@@ -79,6 +79,8 @@ conservation: {
 },
 ```
 
+Le texte saisi dans un champ `STRING` (seul, dans une liste ou dans un champ `CHANNEL_RECORDS`) voit ses codes d'emoji remplacés par l'emoji avant l'enregistrement, comme le ferait la zone de message de Discord (`:tada:` → 🎉) : une modale les laisse tels quels. Restent tels qu'écrits : le code, les liens, les codes échappés ou en majuscules, ceux collés à un mot (`10:30:00`, `IT:FR:DE`), les noms inconnus et ceux des emojis du serveur. Pour une modale propre au module, appeler `expandTypedShortcodes(texte, interaction.guild)` depuis `#lib/config.js`.
+
 ### Listes
 
 N'importe quel type sauf `DURATION` peut être déclaré en **liste** via `type: [ConfigType.X]` :
@@ -179,7 +181,7 @@ export const reactionRecords: ChannelRecordSource = {
 
 - `save` et `remove` renvoient `{ ok, message }` : le message (traduit avec le `t` du module) s'affiche en tête de l'éditeur. Y placer les vérifications propres au module (permissions du bot dans le salon, emoji utilisable…)
 - À l'ouverture de l'éditeur, les entrées dont le salon n'existe plus sont retirées via `remove`, et l'éditeur refuse de fonctionner pour un module désactivé
-- Le cœur vérifie seulement que chaque champ est rempli et qu'un champ `EMOJI` contient un emoji avant d'appeler `save`
+- Le cœur vérifie seulement que chaque champ est rempli et qu'un champ `EMOJI` contient un emoji, et remplace les codes d'emoji des champs `STRING` (voir plus haut), avant d'appeler `save`
 - `config.get("reactions")` renvoie les entrées (`{ channelId, values }[]`) lues depuis la source ; `undefined` si la source a échoué
 - Le bouton **Réinitialiser** du panneau ne touche pas ces entrées : ce ne sont pas des valeurs stockées avec un défaut
 - Traduire les libellés avec `config.<clé>.name`, `config.<clé>.description`, `config.<clé>.channel` et `config.<clé>.fields.<champ>`

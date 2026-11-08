@@ -12,6 +12,7 @@ import {
   type ConfigData,
   type ConfigEntry,
   type ConfigSchema,
+  expandTypedShortcodes,
 } from "./config.js";
 import { addTranslations, initI18n } from "./i18n.js";
 import type { Module } from "./module.js";
@@ -192,6 +193,28 @@ describe("resolveEmoji", () => {
       expect(resolveEmoji(value, guildEmojis)).toBeNull();
     }
   );
+});
+
+describe("expandTypedShortcodes", () => {
+  const star = { name: "Star" };
+
+  it("keeps a shortcode a guild emoji bears, whatever its case", async () => {
+    expect(
+      await expandTypedShortcodes("Bravo :star: :tada:", async () => [star])
+    ).toBe("Bravo :star: 🎉");
+  });
+
+  it("asks for the guild's emojis only when a shortcode was found", async () => {
+    let asked = 0;
+    const emojis = async () => {
+      asked++;
+      return [star];
+    };
+    await expandTypedShortcodes("Rendez-vous à 10:30:00, :pasunemoji:", emojis);
+    expect(asked).toBe(0);
+    await expandTypedShortcodes("Bravo :tada:", emojis);
+    expect(asked).toBe(1);
+  });
 });
 
 describe("matchesEmoji", () => {

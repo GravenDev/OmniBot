@@ -79,6 +79,8 @@ retention: {
 },
 ```
 
+Text typed in a `STRING` field (alone, in a list or in a `CHANNEL_RECORDS` field) has its emoji shortcodes turned into emojis before it is saved, as Discord's message box would (`:tada:` → 🎉): a modal leaves them as typed. Code, links, escaped or capitalised shortcodes, shortcodes glued to a word (`10:30:00`, `IT:FR:DE`), unknown names and the guild's own emoji names are kept as written. For a modal of your own, call `expandTypedShortcodes(text, interaction.guild)` from `#lib/config.js`.
+
 ### Lists
 
 Any type except `DURATION` can be declared as a **list** using `type: [ConfigType.X]`:
@@ -179,7 +181,7 @@ export const reactionRecords: ChannelRecordSource = {
 
 - `save` and `remove` return `{ ok, message }`: the message (translated with the module's `t`) is shown at the top of the editor. Put the module's own checks there (bot permissions in the channel, usable emoji, …)
 - When the editor opens, records whose channel no longer exists are removed through `remove`, and the editor refuses to work for a disabled module
-- The core only checks that each field is filled in and that `EMOJI` fields hold an emoji before calling `save`
+- The core only checks that each field is filled in and that `EMOJI` fields hold an emoji, and turns the emoji shortcodes of `STRING` fields into emojis (see above), before calling `save`
 - `config.get("reactions")` returns the records (`{ channelId, values }[]`) read from the source; it is `undefined` if the source failed
 - Records are not affected by the panel's **Reset** button: they are not a stored value with a default
 - Localize the labels with `config.<key>.name`, `config.<key>.description`, `config.<key>.channel` and `config.<key>.fields.<field>`

@@ -12,6 +12,7 @@ import {
   type ButtonInteraction,
   type Guild,
   type ModalSubmitInteraction,
+  type GuildEmoji,
 } from "discord.js";
 import coreModule from "#core/core.module.js";
 import configService from "#core/services/config.service.js";
@@ -25,6 +26,7 @@ import {
   type ChannelRecord,
   type ChannelRecordOutcome,
   type ChannelRecordsConfigEntry,
+  expandTypedShortcodes,
 } from "#lib/config.js";
 import { withDeadline } from "#lib/deadline.js";
 import { preview } from "#lib/format.js";
@@ -391,6 +393,9 @@ async function readValues(
   t: TFunction
 ): Promise<{ values: Record<string, string> } | { error: string }> {
   const values: Record<string, string> = {};
+  // Fetched once per modal, and only when a field needs them.
+  let fetched: Promise<GuildEmoji[]> | undefined;
+  const guildEmojis = () => (fetched ??= fetchGuildEmojis(interaction.guild));
   for (const [field, spec] of Object.entries(entry.fields)) {
     const typed = interaction.fields.getTextInputValue(field).trim();
     if (!typed) {
@@ -401,14 +406,14 @@ async function readValues(
       };
     }
     if (spec.type === ConfigType.EMOJI) {
-      const emoji = resolveEmoji(
-        typed,
-        await fetchGuildEmojis(interaction.guild)
-      );
+      const emoji = resolveEmoji(typed, await guildEmojis());
       if (!emoji) {
         return { error: t("channelRecords.invalidEmoji", { value: typed }) };
       }
       values[field] = emoji;
+    } else if (spec.type === ConfigType.STRING) {
+      // A modal leaves emoji shortcodes as typed, unlike the message box.
+      values[field] = await expandTypedShortcodes(typed, guildEmojis);
     } else {
       values[field] = typed;
     }
