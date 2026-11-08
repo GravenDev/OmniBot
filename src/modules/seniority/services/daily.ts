@@ -4,6 +4,7 @@ import type {
   Guild,
   GuildMember,
   MessageCreateOptions,
+  SendableChannels,
 } from "discord.js";
 import configService from "#core/services/config.service.js";
 import mentionService from "#core/services/mention.service.js";
@@ -33,31 +34,55 @@ const logger = loggerMaker("seniority");
 
 type Config = ConfigProvider<SeniorityConfigSchema>;
 
+/** Where the member anniversaries go, and the setting that names it. */
+const membersTarget = (config: Config) =>
+  ({ channel: config.get("channel"), setting: "channel" }) as const;
+
+/** Where the server's anniversary goes: its own channel, or the members'. */
+function serverTarget(config: Config) {
+  const own = config.get("serverChannel");
+  return own
+    ? ({ channel: own, setting: "serverChannel" } as const)
+    : membersTarget(config);
+}
+
+/**
+ * The channel an announcement can be posted in, or null, logged with the
+ * setting to fix: checked before the members are fetched, which would be for
+ * nothing.
+ */
+function postable(
+  { channel, setting }: ReturnType<typeof serverTarget>,
+  guildId: string,
+  what: string
+): SendableChannels | null {
+  if (channel?.isSendable()) {
+    return channel;
+  }
+  logger[channel ? "warn" : "debug"](
+    `Announcement skipped | what = ${what} | reason = ${channel ? "channel not sendable" : "no channel"} | setting = ${setting} | channelId = ${channel?.id ?? "none"} | guildId = ${guildId}`
+  );
+  return null;
+}
+
 async function send(
-  config: Config,
+  channel: SendableChannels,
   guildId: string,
   message: MessageCreateOptions,
   userIds: string[]
-): Promise<boolean> {
-  const channel = config.get("channel");
-  if (!channel?.isSendable()) {
-    logger[channel ? "warn" : "debug"](
-      `Announcement skipped | reason = ${channel ? "channel not sendable" : "no channel"} | guildId = ${guildId}`
-    );
-    return false;
-  }
+): Promise<void> {
   await channel.send({
     ...message,
     allowedMentions: {
       users: await mentionService.mentionable(guildId, userIds),
     },
   });
-  return true;
 }
 
 async function announceMembers(
   guild: Guild,
   config: Config,
+  channel: SendableChannels,
   members: Collection<string, GuildMember>,
   today: CalendarDay
 ): Promise<void> {
@@ -75,19 +100,17 @@ async function announceMembers(
     config.t,
     celebrated.map(({ member }) => member.id)
   );
-  let delivered = false;
   const posted = await postCard(
     logger,
     `the member anniversaries | guildId = ${guild.id}`,
     () => seniorityCard(config, celebrated, today),
-    async (card) => {
-      delivered = await send(
-        config,
+    (card) =>
+      send(
+        channel,
         guild.id,
         { content: first!.content, files: [card] },
         first!.userIds
-      );
-    }
+      )
   );
   const messages = posted
     ? others
@@ -96,19 +119,17 @@ async function announceMembers(
         celebrated.map(({ member, years }) => ({ userId: member.id, years }))
       );
   for (const { content, userIds } of messages) {
-    delivered =
-      (await send(config, guild.id, { content }, userIds)) || delivered;
+    await send(channel, guild.id, { content }, userIds);
   }
-  if (delivered) {
-    logger.info(
-      `Member anniversaries announced | guildId = ${guild.id} | count = ${celebrated.length} | card = ${posted}`
-    );
-  }
+  logger.info(
+    `Member anniversaries announced | guildId = ${guild.id} | count = ${celebrated.length} | card = ${posted}`
+  );
 }
 
 async function announceServer(
   guild: Guild,
   config: Config,
+  channel: SendableChannels,
   members: Collection<string, GuildMember> | null,
   years: number
 ): Promise<void> {
@@ -118,7 +139,7 @@ async function announceServer(
     () => serverCard(guild, config, members?.values() ?? [], years),
     (card) =>
       send(
-        config,
+        channel,
         guild.id,
         {
           content: config.t("serverCard.content", { count: years }),
@@ -129,7 +150,7 @@ async function announceServer(
   );
   if (!posted) {
     await send(
-      config,
+      channel,
       guild.id,
       {
         content: serverAnniversaryMessage(config.t, {
@@ -192,19 +213,26 @@ export async function runGuildDay(
   const serverYears = config.get("serverAnniversary")
     ? anniversaryYears(guild.createdAt, today, timeZone)
     : null;
-  const members =
-    config.get("memberAnniversaries") || serverYears !== null
-      ? await allMembers(guild)
+  // Checked first: members fetched for an announcement that can go nowhere
+  // would be for nothing.
+  const membersChannel = config.get("memberAnniversaries")
+    ? postable(membersTarget(config), guildId, "member anniversaries")
+    : null;
+  const serverChannel =
+    serverYears !== null
+      ? postable(serverTarget(config), guildId, "the server anniversary")
       : null;
+  const members =
+    membersChannel || serverChannel ? await allMembers(guild) : null;
   await state.claimDay(guildId, day);
-  if (members && config.get("memberAnniversaries")) {
+  if (members && membersChannel) {
     await attempt(guildId, "member anniversaries", () =>
-      announceMembers(guild, config, members, today)
+      announceMembers(guild, config, membersChannel, members, today)
     );
   }
-  if (serverYears !== null) {
+  if (serverYears !== null && serverChannel) {
     await attempt(guildId, "the server anniversary", () =>
-      announceServer(guild, config, members, serverYears)
+      announceServer(guild, config, serverChannel, members, serverYears)
     );
   }
   logger.info(

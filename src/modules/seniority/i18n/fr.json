@@ -1,6 +1,8 @@
 {
   "config.channel.name": "Salon des annonces",
-  "config.channel.description": "Salon où sont annoncés l'ancienneté des membres et l'anniversaire du serveur. Rien n'est annoncé tant qu'il n'est pas défini.",
+  "config.channel.description": "Salon où est annoncée l'ancienneté des membres, et l'anniversaire du serveur s'il n'a pas le sien. Non défini : l'ancienneté n'est pas annoncée.",
+  "config.serverChannel.name": "Salon de l'anniversaire du serveur",
+  "config.serverChannel.description": "Salon où est annoncé l'anniversaire du serveur. Non défini : le salon des annonces.",
 
   "config.timeZone.name": "Fuseau horaire",
   "config.timeZone.description": "Fuseau horaire que suivent les journées du serveur.",
