@@ -16,3 +16,24 @@ export function isDevMode(): boolean {
 export function devGuildId(): string | undefined {
   return process.env["DEV_GUILD_ID"];
 }
+
+/**
+ * Optional push URL of an Uptime Kuma monitor, when it is a valid http(s) URL.
+ * Unset, empty or invalid: the bot runs without monitoring (an invalid one is
+ * reported at startup, see bootstrap/validate-env-vars.ts). Secret, since its
+ * token is enough to report a status: never log it.
+ */
+export function uptimeKumaPushUrl(): URL | undefined {
+  const raw = process.env["UPTIME_KUMA_PUSH_URL"];
+  if (!raw) {
+    return undefined;
+  }
+  try {
+    const url = new URL(raw);
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? url
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}

@@ -85,6 +85,8 @@ Copy `.env.example` to `.env`:
 - `LOG_LEVEL` — optional: `fatal`, `error`, `warn`, `info`, `debug`, `trace` or
   `silent` (default `debug` in development, `info` otherwise). Logs are
   pretty-printed in development and JSON otherwise.
+- `UPTIME_KUMA_PUSH_URL` — optional: push URL of an Uptime Kuma monitor (see
+  [Monitoring](#monitoring)). Unset, the bot runs without monitoring.
 
 ## Deployment
 
@@ -150,8 +152,9 @@ when running the stack by hand:
   `DATABASE_URL` is assembled from them by the compose file; PostgreSQL sits on
   an internal network and publishes no port.
 - `LOG_LEVEL` — optional, `info` by default.
+- `UPTIME_KUMA_PUSH_URL` — optional, see [Monitoring](#monitoring).
 
-All but `LOG_LEVEL` are required and have no default.
+All but `LOG_LEVEL` and `UPTIME_KUMA_PUSH_URL` are required and have no default.
 
 What the stack does:
 
@@ -165,6 +168,34 @@ What the stack does:
   the Discord gateway state or a redundant "is PID 1 alive?" check. `tini`
   forwards `SIGTERM`, which the bot handles by closing the Discord client and
   the Prisma pool.
+
+### Monitoring
+
+The bot can push its health to an [Uptime Kuma](https://github.com/louislam/uptime-kuma)
+**Push** monitor: create the monitor, copy its push URL into
+`UPTIME_KUMA_PUSH_URL`, and the bot calls it every 30 s once connected to
+Discord. Without the variable, the bot runs without monitoring; an invalid
+URL is reported once at startup, in the list of variables, and the bot then
+runs without it too.
+
+- **up** — every gateway shard is ready and the database answers within 5 s;
+  the gateway latency is sent as the ping.
+- **down**, with the reason as the message — a gateway shard is not ready
+  (`Discord gateway <status>`: `Connecting`, `Resuming` or `Identifying` while
+  it reconnects, `WaitingForGuilds` for up to 15 s after a new session,
+  `Disconnected` when Discord closed the connection for good, an invalid token
+  for instance), or the database does not answer within 5 s
+  (`Database unreachable`).
+- **no heartbeat** — the process is stopped, stuck or cannot reach Uptime
+  Kuma; the monitor turns down after its heartbeat interval.
+
+Down is reported only once two checks in a row fail, 30 s apart, so a gateway
+resume of a few seconds does not page anyone: an outage shows after 30 to 60 s.
+Set the monitor's heartbeat interval above 30 s (60 s is Uptime Kuma's
+default).
+The URL holds the monitor's token: keep it in the stack's secret variables, the
+bot never logs it. A deploy restarts the bot without reporting down: the first
+heartbeat follows the connection to Discord.
 
 Building the image alone:
 

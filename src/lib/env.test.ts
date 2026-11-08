@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { devGuildId, isDevMode } from "./env.js";
+import { devGuildId, isDevMode, uptimeKumaPushUrl } from "./env.js";
 
 describe("isDevMode", () => {
   const original = process.env["NODE_ENV"];
@@ -53,5 +53,36 @@ describe("devGuildId", () => {
   it("returns undefined when DEV_GUILD_ID is unset", () => {
     delete process.env["DEV_GUILD_ID"];
     expect(devGuildId()).toBeUndefined();
+  });
+});
+
+describe("uptimeKumaPushUrl", () => {
+  const original = process.env["UPTIME_KUMA_PUSH_URL"];
+
+  afterEach(() => {
+    if (original === undefined) {
+      delete process.env["UPTIME_KUMA_PUSH_URL"];
+    } else {
+      process.env["UPTIME_KUMA_PUSH_URL"] = original;
+    }
+  });
+
+  it("parses an http(s) URL", () => {
+    process.env["UPTIME_KUMA_PUSH_URL"] =
+      "https://kuma.example/api/push/t?status=up&msg=OK&ping=";
+    expect(uptimeKumaPushUrl()?.pathname).toBe("/api/push/t");
+  });
+
+  it.each(["", "not a url", "ftp://kuma.example/api/push/t", "javascript:x"])(
+    "is undefined for %j",
+    (value) => {
+      process.env["UPTIME_KUMA_PUSH_URL"] = value;
+      expect(uptimeKumaPushUrl()).toBeUndefined();
+    }
+  );
+
+  it("is undefined when unset", () => {
+    delete process.env["UPTIME_KUMA_PUSH_URL"];
+    expect(uptimeKumaPushUrl()).toBeUndefined();
   });
 });
