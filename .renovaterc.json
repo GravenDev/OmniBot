@@ -56,6 +56,12 @@
       "pinDigests": false
     },
     {
+      "description": "trivy-action's `version` input names a Trivy release to download: a commit hash there breaks the scan. The release is immutable; the action itself stays pinned by hash",
+      "matchManagers": ["github-actions"],
+      "matchPackageNames": ["aquasecurity/trivy"],
+      "pinDigests": false
+    },
+    {
       "description": "Our own images follow releases through the latest tag and the deploy webhook: never pinned",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["ghcr.io/gravendev/**"],
