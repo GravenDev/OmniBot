@@ -105,8 +105,8 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    # No healthcheck: the bot exposes no HTTP/TCP endpoint; it pushes its
-    # health to Uptime Kuma instead — see the Deployment section of README.md.
+    # Healthcheck from the image (Dockerfile): a file the bot touches while
+    # healthy, in the /tmp tmpfs above — see the Deployment section of README.md.
     deploy:
       resources:
         limits:

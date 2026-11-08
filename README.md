@@ -163,13 +163,20 @@ What the stack does:
   itself ships no Prisma CLI, and two bot instances can never race on the
   migration history.
 - **`bot`** — read-only root filesystem, all capabilities dropped, restarted by
-  Docker (`restart: unless-stopped`). It has **no healthcheck on purpose**: the
-  bot exposes no HTTP or TCP endpoint, so any probe would either be a lie about
-  the Discord gateway state or a redundant "is PID 1 alive?" check. `tini`
-  forwards `SIGTERM`, which the bot handles by closing the Discord client and
-  the Prisma pool.
+  Docker (`restart: unless-stopped`). Its **healthcheck** comes from the image:
+  the bot exposes no HTTP or TCP endpoint, so it touches `/tmp/omnibot-health`
+  on each heartbeat that finds it up, and removes it otherwise (see
+  [Monitoring](#monitoring)). The container is healthy while the file is less
+  than 2 minutes old: a bot that is down, or stuck, turns `unhealthy` after
+  three checks. Docker does not restart an unhealthy container by itself; the
+  status shows in `docker ps` and Portainer. `tini` forwards `SIGTERM`, which
+  the bot handles by closing the Discord client and the Prisma pool.
 
 ### Monitoring
+
+Every 30 s once connected to Discord, the bot checks its health and reports it
+to Docker's healthcheck (see above, production only) and, when configured, to
+Uptime Kuma.
 
 The bot can push its health to an [Uptime Kuma](https://github.com/louislam/uptime-kuma)
 **Push** monitor: create the monitor, copy its push URL into

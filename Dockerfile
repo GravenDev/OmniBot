@@ -139,11 +139,14 @@ COPY --from=build --chown=root:root /app/dist ./dist
 # Everything is owned by root and read-only for the unprivileged runtime user.
 USER omnibot
 
-# No HEALTHCHECK on purpose: the bot exposes no HTTP/TCP endpoint, and any probe
-# limited to "is the node process alive?" would be redundant with the container
-# lifecycle (tini exits with the bot, so the container stops and the restart
-# policy kicks in). A probe that lied about the Discord gateway state
-# would be worse than none — see the Deployment section of README.md.
+# The bot exposes no HTTP/TCP endpoint: every 30 s, it touches /tmp/omnibot-health
+# when its gateway connection is ready and the database answers, and removes it
+# otherwise (src/core/monitoring/). Healthy means touched less than 2 minutes
+# ago, so a stuck process turns unhealthy too. The start period covers the
+# connection to Discord, before the first heartbeat. /tmp is a tmpfs in
+# compose.prod.yaml, the only writable path of the read-only root filesystem.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=2m --retries=3 \
+  CMD test -n "$(find /tmp/omnibot-health -mmin -2 2>/dev/null)"
 
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["sh", "-c", "node ./bootstrap/validate-env-vars.ts && exec node ./dist/index.js"]
