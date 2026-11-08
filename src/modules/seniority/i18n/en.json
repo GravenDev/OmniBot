@@ -13,6 +13,8 @@
 
   "config.serverAnniversary.name": "Server anniversary",
   "config.serverAnniversary.description": "Announce the anniversary of the server's creation.",
+  "config.loopCard.name": "Loop the cards",
+  "config.loopCard.description": "Replay the animated cards (member and server anniversaries) forever, resting on the landed confetti between two throws. Off: they play once.",
 
   "members.heading": "🎉 **Anniversaries on the server**",
   "members.line_one": "{{user}} has been with us for **{{count}} year** today",

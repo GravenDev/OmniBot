@@ -34,6 +34,13 @@ export const seniorityConfigSchema = {
     type: ConfigType.BOOLEAN,
     defaultValue: true,
   },
+  loopCard: {
+    name: "Loop the cards",
+    description:
+      "Replay the animated cards (member and server anniversaries) forever, resting on the landed confetti between two throws. Off: they play once.",
+    type: ConfigType.BOOLEAN,
+    defaultValue: true,
+  },
 } satisfies ConfigSchema;
 
 export type SeniorityConfigSchema = typeof seniorityConfigSchema;

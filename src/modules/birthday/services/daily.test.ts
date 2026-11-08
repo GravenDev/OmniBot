@@ -174,7 +174,8 @@ describe("runGuildDay", () => {
         names: "alice",
         avatars: [null],
         quote: expect.objectContaining({ text: "Bravo alice !" }),
-      })
+      }),
+      { loop: true }
     );
     expect(files[0]!.description).toContain("« Bravo alice ! »");
   });
@@ -190,6 +191,19 @@ describe("runGuildDay", () => {
       { files: { name: string }[] },
     ];
     expect(files[0]!.name).toBe("birthday.png");
+  });
+
+  it("loops the card, or plays it once when the server asks", async () => {
+    const { client } = setup();
+    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    expect(renderCelebrationImage.mock.calls.at(-1)![1]).toEqual({
+      loop: true,
+    });
+    const once = setup({ loopCard: false });
+    await runGuildDay(once.client, module, "guild-1", NINE_IN_PARIS);
+    expect(renderCelebrationImage.mock.calls.at(-1)![1]).toEqual({
+      loop: false,
+    });
   });
 
   it("falls back to the text wish when the card cannot be drawn", async () => {

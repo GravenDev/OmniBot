@@ -2,13 +2,13 @@
 
 Leaderboards and stat cards are rendered as PNG images with [`@napi-rs/canvas`](https://github.com/Brooooooklyn/canvas) (prebuilt binaries, nothing to install); animated images are encoded with [`sharp`](https://sharp.pixelplumbing.com/), as WebP. A ready-made stat card, and a table to draw in it, cover most needs; lower-level helpers are there for anything else.
 
-| Module                  | Provides                                                                                                                                                                                |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `#lib/table`            | `drawTable`, `playerColumn`, `drawCellText`: ranked table with medals, avatars, names and your own columns, drawn in a stat card                                                        |
-| `#lib/stat-card`        | `renderStatCard`: card with a portrait, a title, an optional rank, a grid of stat boxes and a side panel                                                                                |
-| `#lib/celebration-card` | `renderCelebrationImage`: festive card (portraits, title, names), animated under 3D confetti, the still `renderCelebrationCard` PNG as fallback                                         |
-| `#lib/confetti-3d`      | `renderConfetti`, `animateCard`: 3D confetti thrown over any card, as an animated WebP played once                                                                                      |
-| `#lib/imaging`          | Shared palette and font, default accent (`DEFAULT_ACCENT`), avatar download, circular images and ringed portraits (`drawPortrait`), highlighting (`drawHighlight`), fitted text, assets |
+| Module                  | Provides                                                                                                                                                                                 |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `#lib/table`            | `drawTable`, `playerColumn`, `drawCellText`: ranked table with medals, avatars, names and your own columns, drawn in a stat card                                                         |
+| `#lib/stat-card`        | `renderStatCard`: card with a portrait, a title, an optional rank, a grid of stat boxes and a side panel                                                                                 |
+| `#lib/celebration-card` | `renderCelebrationImage`: festive card (portraits, title, names), animated under 3D confetti (in a loop, once with `{ loop: false }`), the still `renderCelebrationCard` PNG as fallback |
+| `#lib/confetti-3d`      | `renderConfetti`, `animateCard`: 3D confetti thrown over any card, as an animated WebP replayed forever (once with `{ loop: false }`)                                                    |
+| `#lib/imaging`          | Shared palette and font, default accent (`DEFAULT_ACCENT`), avatar download, circular images and ringed portraits (`drawPortrait`), highlighting (`drawHighlight`), fitted text, assets  |
 
 The Outfit font and the gold, silver and bronze medals ship in `src/lib/assets/` and are loaded for you. Outfit has no emojis: `font()` adds the system's emoji font when there is one (Noto Color Emoji, installed by the Docker image), so that names containing emojis render. Always go through `font()` rather than setting `ctx.font` by hand.
 
@@ -147,6 +147,6 @@ In a pull request, and only when one is asked for: `gh pr create … --attach ".
 
 - **Translate every text** you pass in (headers, titles, units): renderers draw what they receive.
 - **Defer the reply** (`interaction.deferReply()`) before rendering: downloading avatars and drawing takes longer than Discord's 3-second limit allows.
-- **Animate over a still image.** `renderConfetti` draws a palette's confetti over a transparent background, a frame at a time so that the bot keeps answering. It draws everything again on each call: keep its frames for the cards of one palette, as `renderCelebrationImage` does, for 10 minutes after the last card; `animateCard` then puts any card under them off the main thread. The animation starts on its last frame: Discord shows the first frame when animations are off.
+- **Animate over a still image.** `renderConfetti` draws a palette's confetti over a transparent background, a frame at a time so that the bot keeps answering. It draws everything again on each call: keep its frames for the cards of one palette, as `renderCelebrationImage` does, for 10 minutes after the last card; `animateCard` then puts any card under them off the main thread. The animation starts on its last frame: Discord shows the first frame when animations are off. It replays forever, resting about 2 s on the landed confetti then fading them out, or plays once with `{ loop: false }`; modules leave the choice to the server (`loopCard`).
 - **Cache the PNG** when the same image is requested often, with `RevisionCache` from `#lib/revision-cache` keyed on the data that drives it.
 - **Module-specific assets** (an extra font, icons) go in the module's own `assets/` folder; the Dockerfile copies every `assets/` folder next to the compiled code.

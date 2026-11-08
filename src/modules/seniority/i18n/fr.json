@@ -13,6 +13,8 @@
 
   "config.serverAnniversary.name": "Anniversaire du serveur",
   "config.serverAnniversary.description": "Annoncer l'anniversaire de la création du serveur.",
+  "config.loopCard.name": "Cartes en boucle",
+  "config.loopCard.description": "Rejouer les cartes animées (ancienneté et anniversaire du serveur) sans fin, en restant un instant sur les confettis posés entre deux lancers. Désactivé : elles se jouent une fois.",
 
   "members.heading": "🎉 **Ancienneté sur le serveur**",
   "members.line_one": "{{user}} est parmi nous depuis **{{count}} an** aujourd'hui",

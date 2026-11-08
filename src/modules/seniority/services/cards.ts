@@ -112,7 +112,10 @@ export async function seniorityCard(
       index < SHOWN_PORTRAITS ? fetchAvatar(member, 256) : null
     )
   );
-  const image = await renderCelebrationImage({ ...card, avatars });
+  const image = await renderCelebrationImage(
+    { ...card, avatars },
+    { loop: config.get("loopCard") }
+  );
   return new AttachmentBuilder(image.data, {
     name: `seniority.${image.extension}`,
     description: alt,
@@ -186,7 +189,10 @@ export async function serverCard(
     },
   });
   const icon = await fetchImage(guild.iconURL({ extension: "png", size: 256 }));
-  const image = await renderCelebrationImage({ ...card, avatars: [icon] });
+  const image = await renderCelebrationImage(
+    { ...card, avatars: [icon] },
+    { loop: config.get("loopCard") }
+  );
   return new AttachmentBuilder(image.data, {
     name: `server-anniversary.${image.extension}`,
     description: alt,
