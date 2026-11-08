@@ -1,17 +1,16 @@
-import type { GuildTextBasedChannel, Message } from "discord.js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  ChannelType,
+  type GuildTextBasedChannel,
+  type Message,
+} from "discord.js";
+import { describe, expect, it } from "vitest";
 import { makeTestConfig } from "#lib/testing.js";
 import { starboardConfigSchema } from "#modules/starboard/starboard.config.js";
-
-const audience = vi.hoisted(() => ({ widens: vi.fn(() => false) }));
-
-vi.mock("#lib/channel-audience.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("#lib/channel-audience.js")>()),
-  widensAudience: audience.widens,
-}));
-
-const { ineligibility, starboardChannelOf, thresholdOf } =
-  await import("./eligibility.js");
+import {
+  ineligibility,
+  starboardChannelOf,
+  thresholdOf,
+} from "./eligibility.js";
 
 type Values = Parameters<
   typeof makeTestConfig<typeof starboardConfigSchema>
@@ -49,10 +48,6 @@ function fakeMessage(overrides: Record<string, unknown> = {}) {
     ...rest,
   } as unknown as Message<true>;
 }
-
-beforeEach(() => {
-  audience.widens.mockReturnValue(false);
-});
 
 describe("ineligibility", () => {
   it("accepts a regular member message", () => {
@@ -138,12 +133,30 @@ describe("ineligibility", () => {
     ).toBeNull();
   });
 
-  it("does not show a message to people who cannot read its channel", () => {
-    audience.widens.mockReturnValue(true);
+  it("never reposts a message from a private thread", () => {
+    const message = fakeMessage({
+      channel: {
+        id: "thread",
+        parentId: "general",
+        type: ChannelType.PrivateThread,
+        isThread: () => true,
+      },
+    });
 
-    expect(ineligibility(fakeMessage(), fakeStarboard(), config())).toBe(
-      "audience"
-    );
+    expect(ineligibility(message, fakeStarboard(), config())).toBe("private");
+  });
+
+  it("reposts a message from a public thread", () => {
+    const message = fakeMessage({
+      channel: {
+        id: "thread",
+        parentId: "general",
+        type: ChannelType.PublicThread,
+        isThread: () => true,
+      },
+    });
+
+    expect(ineligibility(message, fakeStarboard(), config())).toBeNull();
   });
 
   it("needs to be able to post in the starboard", () => {
