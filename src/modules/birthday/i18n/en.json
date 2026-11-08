@@ -19,6 +19,8 @@
 
   "config.monthlyCalendar.name": "Monthly calendar",
   "config.monthlyCalendar.description": "On the 1st of each month, post a calendar of the month's birthdays (members who chose to be announced only).",
+  "config.loopCard.name": "Loop the card",
+  "config.loopCard.description": "Replay the animated card forever, resting on the landed confetti between two throws. Off: it plays once.",
 
   "announce.builtIn.1": "🎂 Happy birthday {user}!",
   "announce.builtIn.2": "🎉 It's {user}'s birthday today, happy birthday!",

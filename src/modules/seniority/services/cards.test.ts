@@ -47,8 +47,8 @@ const guild = {
   memberCount: 12480,
 } as unknown as Guild;
 
-const config = () =>
-  makeTestConfig("seniority", seniorityConfigSchema, {}, "fr");
+const config = (values: { loopCard?: boolean } = {}) =>
+  makeTestConfig("seniority", seniorityConfigSchema, values, "fr");
 
 const NOV_1 = { year: 2026, month: 11, day: 1 };
 
@@ -114,6 +114,14 @@ describe("seniorityCard", () => {
     );
   });
 
+  it("loops the card, or plays it once when the server asks", async () => {
+    await seniorityCard(config(), celebrated, NOV_1);
+    await seniorityCard(config({ loopCard: false }), celebrated, NOV_1);
+    expect(
+      rendering.renderCelebrationImage.mock.calls.map((call) => call[1])
+    ).toEqual([{ loop: true }, { loop: false }]);
+  });
+
   it("wishes a single member on their own", async () => {
     await seniorityCard(config(), celebrated.slice(4), NOV_1);
     expect(rendering.renderCelebrationImage.mock.calls[0]![0]).toMatchObject({
@@ -149,6 +157,14 @@ describe("serverCard", () => {
       "Le serveur fête ses 10 ans. Créé le 1er novembre 2016, 12 480 membres. Plus ancienne présence : nora, depuis le 3 mars 2017."
     );
     expect(card.name).toBe("server-anniversary.webp");
+  });
+
+  it("loops the card, or plays it once when the server asks", async () => {
+    await serverCard(guild, config(), [], 10);
+    await serverCard(guild, config({ loopCard: false }), [], 10);
+    expect(
+      rendering.renderCelebrationImage.mock.calls.map((call) => call[1])
+    ).toEqual([{ loop: true }, { loop: false }]);
   });
 
   it("leaves the longest-standing member out on a server of bots only", async () => {

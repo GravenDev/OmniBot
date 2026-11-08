@@ -19,6 +19,8 @@
 
   "config.monthlyCalendar.name": "Calendrier du mois",
   "config.monthlyCalendar.description": "Le 1er de chaque mois, publier un calendrier des anniversaires du mois (seulement ceux des membres qui ont accepté d'être annoncés).",
+  "config.loopCard.name": "Carte en boucle",
+  "config.loopCard.description": "Rejouer la carte animée sans fin, en restant un instant sur les confettis posés entre deux lancers. Désactivé : elle se joue une fois.",
 
   "announce.builtIn.1": "🎂 Joyeux anniversaire {user} !",
   "announce.builtIn.2": "🎉 C'est l'anniversaire de {user} aujourd'hui, bon anniversaire !",

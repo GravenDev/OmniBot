@@ -81,7 +81,10 @@ async function drawCard(
       index < SHOWN_PORTRAITS ? fetchAvatar(member, 256) : null
     )
   );
-  const image = await renderCelebrationImage({ ...card, avatars });
+  const image = await renderCelebrationImage(
+    { ...card, avatars },
+    { loop: config.get("loopCard") }
+  );
   return new AttachmentBuilder(image.data, {
     name: `birthday.${image.extension}`,
     description: alt,

@@ -47,6 +47,13 @@ export const birthdayConfigSchema = {
     type: ConfigType.BOOLEAN,
     defaultValue: true,
   },
+  loopCard: {
+    name: "Loop the card",
+    description:
+      "Replay the animated card forever, resting on the landed confetti between two throws. Off: it plays once.",
+    type: ConfigType.BOOLEAN,
+    defaultValue: true,
+  },
 } satisfies ConfigSchema;
 
 export type BirthdayConfigSchema = typeof birthdayConfigSchema;
