@@ -11,45 +11,20 @@ export interface MemberAnniversary {
   years: number;
 }
 
-/**
- * Lines under one heading, split into as many messages as Discord's limit
- * needs, and at most `maxLines` lines each; `separator` joins the lines (the
- * heading always ends its own line).
- */
-export function chunkLines(
-  heading: string,
-  lines: string[],
-  separator = "\n",
-  maxLines = Infinity
-): string[] {
-  const messages: string[] = [];
-  let current = heading;
-  let joiner = "\n";
-  let count = 0;
-  for (const line of lines) {
-    if (
-      count === maxLines ||
-      current.length + joiner.length + line.length > MESSAGE_LIMIT
-    ) {
-      messages.push(current);
-      current = line;
-      count = 1;
-    } else {
-      current = `${current}${joiner}${line}`;
-      count++;
-    }
-    joiner = separator;
-  }
-  messages.push(current);
-  return messages;
-}
-
 export interface AnnouncementMessage {
   content: string;
   /** The members the message names, and only them. */
   userIds: string[];
 }
 
+/**
+ * The members celebrated, grouped by years, longest-standing first and in
+ * their given order within a group: a header line ("**5 ans**"), then their
+ * mentions on one line. Split into as many messages as Discord needs — 2000
+ * characters, and 100 mentions since each message allows the mentions of its
+ * own members only — and a message cut inside a group starts on its header
+ * again, so that every mention reads under its years.
+ */
 export function memberAnniversaryMessages(
   t: TFunction,
   anniversaries: MemberAnniversary[]
@@ -58,43 +33,30 @@ export function memberAnniversaryMessages(
     return [];
   }
   const sorted = [...anniversaries].sort((a, b) => b.years - a.years);
-  return withMentions(
-    chunkLines(
-      t("members.heading"),
-      sorted.map(({ userId, years }) =>
-        t("members.line", { user: mention(userId), count: years })
-      ),
-      "\n",
-      MENTION_LIMIT
-    ),
-    sorted.map(({ userId }) => userId)
-  );
-}
-
-/** The heading and the mentions of the members celebrated, in their order, to go with the image. */
-export function memberMentionMessages(
-  t: TFunction,
-  userIds: string[]
-): AnnouncementMessage[] {
-  if (userIds.length === 0) {
-    return [];
+  const messages: AnnouncementMessage[] = [];
+  let content = t("members.heading");
+  let userIds: string[] = [];
+  let years: number | null = null;
+  for (const anniversary of sorted) {
+    const tag = mention(anniversary.userId);
+    const header = t("members.group", { count: anniversary.years });
+    const sameGroup = anniversary.years === years;
+    const added = sameGroup ? ` ${tag}` : `\n${header}\n${tag}`;
+    if (
+      userIds.length === MENTION_LIMIT ||
+      content.length + added.length > MESSAGE_LIMIT
+    ) {
+      messages.push({ content, userIds });
+      content = `${header}\n${tag}`;
+      userIds = [];
+    } else {
+      content += added;
+    }
+    userIds.push(anniversary.userId);
+    years = anniversary.years;
   }
-  return withMentions(
-    chunkLines(t("members.heading"), userIds.map(mention), " ", MENTION_LIMIT),
-    userIds
-  );
-}
-
-// Each message allows the mentions of its own lines only: Discord refuses a
-// message allowing more than 100, whatever its content.
-function withMentions(
-  contents: string[],
-  userIds: string[]
-): AnnouncementMessage[] {
-  return contents.map((content) => ({
-    content,
-    userIds: userIds.filter((userId) => content.includes(mention(userId))),
-  }));
+  messages.push({ content, userIds });
+  return messages;
 }
 
 export interface ServerAnniversary {

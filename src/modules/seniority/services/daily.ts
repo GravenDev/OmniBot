@@ -24,7 +24,6 @@ import { postCard } from "#lib/post-card.js";
 import type { SeniorityConfigSchema } from "../seniority.config.js";
 import {
   memberAnniversaryMessages,
-  memberMentionMessages,
   serverAnniversaryMessage,
 } from "./announcements.js";
 import { celebratedMembers, seniorityCard, serverCard } from "./cards.js";
@@ -94,12 +93,13 @@ async function announceMembers(
   if (celebrated.length === 0) {
     return;
   }
-  // Images never notify: the text names everyone, the image only the first
-  // ones, and only the first message carries it.
-  const [first, ...others] = memberMentionMessages(
+  // Images never notify: the text names everyone, grouped by years, and only
+  // its first message carries the card. Without a card, the text alone.
+  const messages = memberAnniversaryMessages(
     config.t,
-    celebrated.map(({ member }) => member.id)
+    celebrated.map(({ member, years }) => ({ userId: member.id, years }))
   );
+  const [first, ...others] = messages;
   const posted = await postCard(
     logger,
     `the member anniversaries | guildId = ${guild.id}`,
@@ -112,13 +112,7 @@ async function announceMembers(
         first!.userIds
       )
   );
-  const messages = posted
-    ? others
-    : memberAnniversaryMessages(
-        config.t,
-        celebrated.map(({ member, years }) => ({ userId: member.id, years }))
-      );
-  for (const { content, userIds } of messages) {
+  for (const { content, userIds } of posted ? others : messages) {
     await send(channel, guild.id, { content }, userIds);
   }
   logger.info(

@@ -122,7 +122,8 @@ describe("runGuildDay", () => {
     const messages = sent(send);
     expect(messages).toEqual([
       {
-        content: "🎉 **Ancienneté sur le serveur**\n<@alice> <@bob> <@quiet>",
+        content:
+          "🎉 **Ancienneté sur le serveur**\n**3 ans**\n<@alice>\n**1 an**\n<@bob> <@quiet>",
         files: ["members.png"],
         allowedMentions: { users: ["alice", "bob"] },
       },
@@ -150,7 +151,7 @@ describe("runGuildDay", () => {
     expect(sent(send)).toEqual([
       {
         content:
-          "🎉 **Ancienneté sur le serveur**\n<@alice> est parmi nous depuis **3 ans** aujourd'hui\n<@bob> est parmi nous depuis **1 an** aujourd'hui\n<@quiet> est parmi nous depuis **1 an** aujourd'hui",
+          "🎉 **Ancienneté sur le serveur**\n**3 ans**\n<@alice>\n**1 an**\n<@bob> <@quiet>",
         allowedMentions: { users: ["alice", "bob"] },
       },
       {
@@ -180,8 +181,8 @@ describe("runGuildDay", () => {
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
 
     expect(sent(send).map(({ content }) => content)).toEqual([
-      "🎉 **Ancienneté sur le serveur**\n<@alice> <@bob> <@quiet>",
-      "🎉 **Ancienneté sur le serveur**\n<@alice> est parmi nous depuis **3 ans** aujourd'hui\n<@bob> est parmi nous depuis **1 an** aujourd'hui\n<@quiet> est parmi nous depuis **1 an** aujourd'hui",
+      "🎉 **Ancienneté sur le serveur**\n**3 ans**\n<@alice>\n**1 an**\n<@bob> <@quiet>",
+      "🎉 **Ancienneté sur le serveur**\n**3 ans**\n<@alice>\n**1 an**\n<@bob> <@quiet>",
       "🎂 Le serveur fête ses 5 ans !",
       "🎂 **Le serveur fête ses 5 ans aujourd'hui !**\n5 membres",
     ]);
@@ -207,7 +208,7 @@ describe("runGuildDay", () => {
     >);
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(sent(send).map(({ content }) => content)).toEqual([
-      "🎉 **Ancienneté sur le serveur**\n<@alice> <@bob> <@quiet>",
+      "🎉 **Ancienneté sur le serveur**\n**3 ans**\n<@alice>\n**1 an**\n<@bob> <@quiet>",
     ]);
     expect(sent(serverSend).map(({ content }) => content)).toEqual([
       "🎂 Le serveur fête ses 5 ans !",

@@ -19,8 +19,8 @@
   "config.loopCard.description": "Replay the animated cards (member and server anniversaries) forever, resting on the landed confetti between two throws. Off: they play once.",
 
   "members.heading": "🎉 **Anniversaries on the server**",
-  "members.line_one": "{{user}} has been with us for **{{count}} year** today",
-  "members.line_other": "{{user}} has been with us for **{{count}} years** today",
+  "members.group_one": "**{{count}} year**",
+  "members.group_other": "**{{count}} years**",
 
   "server.headline_one": "🎂 **The server is {{count}} year old today!**",
   "server.headline_other": "🎂 **The server is {{count}} years old today!**",
@@ -33,6 +33,8 @@
   "membersCard.entry": "{{name}} ({{years}})",
   "membersCard.years_one": "{{count}} year",
   "membersCard.years_other": "{{count}} years",
+  "membersCard.group": "{{years}}: {{count}}",
+  "membersCard.others": "others: {{count}}",
   "membersCard.alt": "Today's member anniversaries: {{names}}",
 
   "serverCard.content_one": "🎂 The server turns {{count}}!",

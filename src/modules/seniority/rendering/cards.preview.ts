@@ -66,6 +66,16 @@ function members(count: number) {
   return still({ ...card, avatars: shown.map((p) => p.avatar) });
 }
 
+// A busy day on a large server, as on 2026-11-09: 23 members, three years.
+function crowd(years = [5, 5, 5, ...Array(8).fill(4), ...Array(12).fill(3)]) {
+  const shown = years.map((count, index) => ({
+    ...(people[index] ?? { name: `Membre ${index}`, avatar: null }),
+    years: count,
+  }));
+  const { card } = membersCardText(t, "fr", shown, today);
+  return still({ ...card, avatars: shown.map((p) => p.avatar) });
+}
+
 function server(eldest: boolean, years = 10) {
   const { card } = serverCardText(t, "fr", {
     years,
@@ -80,6 +90,12 @@ export default {
   "seniority-one": () => members(1),
   "seniority-three": () => members(3),
   "seniority-eight": () => members(8),
+  "seniority-crowd": () => crowd(),
+  // A ten-year-old server: more years than the line holds.
+  "seniority-decade": () =>
+    crowd([
+      10, 9, 9, 8, 7, 7, 6, 5, 5, 5, 4, 4, 3, 3, 3, 2, 2, 2, 1, 1, 1, 1, 1,
+    ]),
   "server-anniversary": () => server(true),
   "server-anniversary-bots-only": () => server(false, 1),
 } satisfies Previews;
