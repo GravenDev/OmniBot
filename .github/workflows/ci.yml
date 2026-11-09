@@ -62,6 +62,51 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+  # Checks every version in the lockfile, dev dependencies included, against
+  # OSV's malicious-packages advisories (`MAL-…`): versions published to do
+  # harm — a hijacked account, a typosquat — that the pnpm release age did not
+  # keep out. This is what gates the automerged lockfile maintenance, as a
+  # required check of master: GitHub's automerge waits for no other. Known
+  # vulnerabilities are not this job's: their fixes are taken by hand (see
+  # pnpm-workspace.yaml), Trivy scans the images, and they are never printed:
+  # the log of a public repository is readable by anyone, while a malicious
+  # package is public knowledge already.
+  malware:
+    runs-on: ubuntu-26.04
+    permissions: *read-only
+
+    steps:
+      - *checkout
+      - name: Set up osv-scanner
+        uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          install_args: osv-scanner
+          cache: false
+      # Exit status 1 only means something was found; anything above is a scan
+      # that did not complete, and must not pass for a clean one. A malicious
+      # version may come back under another id (a GHSA) with its `MAL-` id
+      # among the aliases: both are matched.
+      #
+      # osv-scanner reads an osv-scanner.toml next to the lockfile, whose ignore
+      # entries would hide a malicious version: an empty config overrides it.
+      - name: Check the lockfile for malicious packages
+        run: |
+          config=$(mktemp)
+          status=0
+          osv-scanner scan source --config "$config" --lockfile pnpm-lock.yaml --format json --output-file osv.json || status=$?
+          if [ "$status" -gt 1 ]; then
+            echo "::error::osv-scanner failed with status $status"
+            exit 1
+          fi
+          malicious=$(jq -r '[.results[]?.packages[]? | .package as $p
+            | .vulnerabilities[]? | .id, .aliases[]? | select(startswith("MAL-"))
+            | "\($p.name)@\($p.version): \(.)"] | unique[]' osv.json)
+          if [ -n "$malicious" ]; then
+            echo "::error::Malicious package versions in pnpm-lock.yaml"
+            echo "$malicious"
+            exit 1
+          fi
+
   docker:
     runs-on: blacksmith-2vcpu-ubuntu-2604
     permissions: *read-only
@@ -116,7 +161,7 @@ jobs:
   # checks: a separate workflow triggered by the same tag would run *beside*
   # them, and could push an image whose lint or tests had just failed.
   publish:
-    needs: [lint, build, docker]
+    needs: [lint, build, docker, malware]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: blacksmith-2vcpu-ubuntu-2604
     permissions:
