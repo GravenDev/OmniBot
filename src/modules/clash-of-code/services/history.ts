@@ -1,33 +1,18 @@
-import { setTimeout as sleep } from "node:timers/promises";
 import type { REST } from "discord.js";
+import {
+  searchGuildMessages,
+  type SearchMessage,
+} from "#lib/discord-polyfills/guild-message-search.js";
 import { parseClashLinks } from "./links.js";
 
-// Discord's message search, opened to bots in 2025. `link_hostname` takes the
-// registrable domain: "codingame.com" matches the www. links, the reverse finds
-// nothing. Results come 25 at a time, oldest first, and the next page starts
-// after the last message seen (`min_id`), which `offset` (capped at 9975)
-// could not. Age-restricted channels are left out unless `include_nsfw`.
+// Discord's message search (#lib/discord-polyfills/guild-message-search.ts).
+// `link_hostname` takes the registrable domain: "codingame.com" matches the
+// www. links, the reverse finds nothing. Results come 25 at a time, oldest
+// first, and the next page starts after the last message seen (`min_id`),
+// which `offset` (capped at 9975) could not. Age-restricted channels are left
+// out unless `include_nsfw`.
 const PAGE_SIZE = 25;
 const HOSTNAME = "codingame.com";
-// The search answers 202 with this code while the guild is being indexed.
-const INDEX_NOT_READY = 110000;
-const MAX_INDEX_WAITS = 10;
-const MIN_INDEX_WAIT_MS = 2_000;
-const MAX_INDEX_WAIT_MS = 30_000;
-
-interface SearchMessage {
-  id: string;
-  channel_id: string;
-  content?: string;
-  author?: { bot?: boolean };
-}
-
-interface SearchResponse {
-  // One message per inner array: the context around it is no longer sent.
-  messages?: SearchMessage[][];
-  code?: number;
-  retry_after?: number;
-}
 
 export interface LinkedClash {
   handle: string;
@@ -61,12 +46,6 @@ export interface SearchProgress {
   found: number;
 }
 
-export class SearchNotReadyError extends Error {
-  constructor() {
-    super("Discord is still indexing the guild for search");
-  }
-}
-
 // The next page, or null when the deadline comes first.
 async function searchPage(
   rest: REST,
@@ -84,26 +63,7 @@ async function searchPage(
     limit: String(PAGE_SIZE),
     ...(after && { min_id: after }),
   });
-  for (let wait = 0; ; wait++) {
-    const body = (await rest.get(`/guilds/${guildId}/messages/search`, {
-      query,
-    })) as SearchResponse;
-    if (body.code !== INDEX_NOT_READY) {
-      return (body.messages ?? []).flat();
-    }
-    if (wait >= MAX_INDEX_WAITS) {
-      throw new SearchNotReadyError();
-    }
-    const retryAfterMs = (body.retry_after ?? 0) * 1000;
-    const waitMs = Math.min(
-      Math.max(retryAfterMs, MIN_INDEX_WAIT_MS),
-      MAX_INDEX_WAIT_MS
-    );
-    if (Date.now() + waitMs >= deadline) {
-      return null;
-    }
-    await sleep(waitMs);
-  }
+  return searchGuildMessages(rest, guildId, query, deadline);
 }
 
 /**

@@ -1,17 +1,19 @@
 import {
   AttachmentBuilder,
   ChannelType,
-  DiscordAPIError,
   escapeMarkdown,
   InteractionContextType,
   MessageFlags,
   PermissionFlagsBits,
   SlashCommandBuilder,
-  RESTJSONErrorCodes,
   type ChatInputCommandInteraction,
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
+import {
+  isSearchDenied,
+  SearchNotReadyError,
+} from "#lib/discord-polyfills/guild-message-search.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { ClashOfCodeConfigSchema } from "#modules/clash-of-code/clash-of-code.config.js";
@@ -29,7 +31,6 @@ import {
   type SearchProgress,
   type SearchState,
   searchChannelClashes,
-  SearchNotReadyError,
 } from "#modules/clash-of-code/services/history.js";
 import { parseClashLinks } from "#modules/clash-of-code/services/links.js";
 import store from "#modules/clash-of-code/services/store.js";
@@ -244,10 +245,7 @@ async function importChannel(interaction: Interaction, config: Config) {
         }
       );
     } catch (err) {
-      const noAccess =
-        err instanceof DiscordAPIError &&
-        (err.code === RESTJSONErrorCodes.MissingAccess ||
-          err.code === RESTJSONErrorCodes.MissingPermissions);
+      const noAccess = isSearchDenied(err);
       if (!noAccess && !(err instanceof SearchNotReadyError)) {
         logger.warn({ err }, `Message search failed | guildId = ${guildId}`);
       }

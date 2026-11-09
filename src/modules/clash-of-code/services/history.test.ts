@@ -4,11 +4,11 @@ vi.mock("node:timers/promises", () => ({
   setTimeout: (ms: number) => new Promise((resolve) => setTimeout(resolve, ms)),
 }));
 
+import { SearchNotReadyError } from "#lib/discord-polyfills/guild-message-search.js";
 import {
   newSearchState,
   type SearchProgress,
   searchChannelClashes,
-  SearchNotReadyError,
 } from "./history.js";
 
 const A = "a".repeat(40);
