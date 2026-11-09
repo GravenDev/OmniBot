@@ -4,3 +4,9 @@ pnpm = "12.17.0"
 pitchfork = "2.33.0"
 gh = "2.103.3"
 git-cliff = "2.14.2"
+
+[settings]
+# Same delay as pnpm and Renovate. It only holds back fuzzy versions
+# (`mise use tool@latest`, `mise up`): the exact pins above are moved by
+# Renovate alone, which applies its own 7 days.
+minimum_release_age = "7d"
