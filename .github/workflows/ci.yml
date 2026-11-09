@@ -23,7 +23,7 @@ jobs:
   # ran as fast on GitHub's runners, free for a public repository. Two vCPUs: a
   # cached build waits on the disk more than on the CPU. The tests do not: they
   # took 30 s there against 20 s on GitHub's four, so `build` stays on GitHub.
-  # With both kinds of runner in this workflow, every job names Ubuntu 24.04
+  # With both kinds of runner in this workflow, every job names Ubuntu 26.04
   # rather than `ubuntu-latest`: they all run on the same system, whichever side
   # they land on.
   lint:
@@ -55,7 +55,7 @@ jobs:
         run: pnpm test
 
   docker:
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2604
     permissions: *read-only
 
     steps:
@@ -108,7 +108,7 @@ jobs:
   publish:
     needs: [lint, build, docker]
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: blacksmith-2vcpu-ubuntu-2604
     permissions:
       contents: read
       packages: write
