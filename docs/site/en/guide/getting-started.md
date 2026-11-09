@@ -12,7 +12,7 @@ The core system wires everything together — adding a feature means creating a 
 
 | Area            | Choice                                                                               |
 | --------------- | ------------------------------------------------------------------------------------ |
-| Language        | TypeScript (ESM, NodeNext), Node.js 24                                               |
+| Language        | TypeScript (ESM, NodeNext), Node.js 26                                               |
 | Discord API     | discord.js v14                                                                       |
 | Database        | PostgreSQL 17 via Prisma ORM                                                         |
 | Package manager | pnpm (workspaces: bot + docs site)                                                   |
@@ -27,7 +27,7 @@ The core system wires everything together — adding a feature means creating a 
 
 ### Prerequisites
 
-- [mise](https://mise.jdx.dev/) — pins Node.js, pnpm, and pitchfork versions. Without mise, install **Node.js 24** and **pnpm** manually (check `.mise.toml` for exact versions).
+- [mise](https://mise.jdx.dev/) — pins Node.js, pnpm, and pitchfork versions. Without mise, install **Node.js 26** and **pnpm** manually (check `.mise.toml` for exact versions).
 - **Docker** — for the PostgreSQL 17 container.
 - A **Discord bot token** — create an application in the [Discord Developer Portal](https://discord.com/developers/applications), then go to the Bot section and reset the token. Enable **Message Content Intent** if your module needs it, and **Server Members Intent** (required by Server Stats, Birthdays and Member anniversaries: without it, these modules are skipped at startup and `/modules` shows them as unavailable).
 

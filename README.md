@@ -30,7 +30,7 @@ feature never means touching the bootstrap.
 
 | Area        | Choice                                                                                                                                                                      |
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Language    | TypeScript (ESM, `NodeNext`), Node.js 24                                                                                                                                    |
+| Language    | TypeScript (ESM, `NodeNext`), Node.js 26                                                                                                                                    |
 | Discord     | [discord.js](https://discord.js.org/) v14                                                                                                                                   |
 | Database    | PostgreSQL 17 via [Prisma](https://www.prisma.io/) (multi-file schema)                                                                                                      |
 | Package mgr | [pnpm](https://pnpm.io/)                                                                                                                                                    |
@@ -44,7 +44,7 @@ feature never means touching the bootstrap.
 ### Prerequisites
 
 - [mise](https://mise.jdx.dev/) — pins Node.js, pnpm, pitchfork, gh and git-cliff (`mise install`).
-  Without mise, install Node.js 24 and pnpm manually (versions are in `.mise.toml`).
+  Without mise, install Node.js 26 and pnpm manually (versions are in `.mise.toml`).
 - Docker (for the PostgreSQL container).
 - A Discord bot token — from the [Discord Developer Portal](https://discord.com/developers/applications).
 
@@ -141,7 +141,7 @@ survive a reboot of the host.
 How long they are kept is the journal's setting (`SystemMaxUse`,
 `MaxRetentionSec` in `/etc/systemd/journald.conf`), not the stack's.
 
-The images come from the multi-stage `Dockerfile` (Node 24 on Alpine, non-root
+The images come from the multi-stage `Dockerfile` (Node 26 on Alpine, non-root
 user, `tini` as PID 1), built by CI on every pull request and published on tag.
 
 Variables to provide — in the Portainer stack configuration, or in `.env.prod`

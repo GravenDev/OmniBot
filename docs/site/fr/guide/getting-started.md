@@ -12,7 +12,7 @@ Le système central relie le tout — ajouter une fonctionnalité signifie crée
 
 | Domaine                 | Choix                                                                                    |
 | ----------------------- | ---------------------------------------------------------------------------------------- |
-| Langage                 | TypeScript (ESM, NodeNext), Node.js 24                                                   |
+| Langage                 | TypeScript (ESM, NodeNext), Node.js 26                                                   |
 | API Discord             | discord.js v14                                                                           |
 | Base de données         | PostgreSQL 17 via Prisma ORM                                                             |
 | Gestionnaire de paquets | pnpm (workspaces : bot + site de doc)                                                    |
@@ -27,7 +27,7 @@ Le système central relie le tout — ajouter une fonctionnalité signifie crée
 
 ### Prérequis
 
-- [mise](https://mise.jdx.dev/) — fixe les versions de Node.js, pnpm et pitchfork. Sans mise, installez **Node.js 24** et **pnpm** manuellement (vérifiez `.mise.toml` pour les versions exactes).
+- [mise](https://mise.jdx.dev/) — fixe les versions de Node.js, pnpm et pitchfork. Sans mise, installez **Node.js 26** et **pnpm** manuellement (vérifiez `.mise.toml` pour les versions exactes).
 - **Docker** — pour le conteneur PostgreSQL 17.
 - Un **token de bot Discord** — créez une application dans le [Discord Developer Portal](https://discord.com/developers/applications), puis allez dans la section Bot et réinitialisez le token. Activez **Message Content Intent** si votre module en a besoin, ainsi que **Server Members Intent** (requis par Server Stats, Anniversaires et Ancienneté : sans lui, ces modules sont écartés au démarrage et `/modules` les montre comme indisponibles).
 
