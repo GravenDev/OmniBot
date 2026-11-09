@@ -26,6 +26,13 @@
       "automerge": true
     },
     {
+      "description": "Automerge runtime libraries the tests cover (scheduler, translations, logs, emoji data): a regression fails the CI. discord.js, sharp, @napi-rs/canvas and @mathjax/src stay manual: the tests see neither the gateway nor the rendering",
+      "matchDepTypes": ["dependencies"],
+      "matchPackageNames": ["croner", "i18next", "pino", "emojibase-data"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "automerge": true
+    },
+    {
       "description": "Group pnpm updates across .mise.toml and package.json packageManager field into a single PR",
       "matchPackageNames": ["pnpm"],
       "groupName": "pnpm",
