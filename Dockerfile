@@ -10,18 +10,14 @@
 # Alpine keeps the runtime small. Prisma 7 has no native query engine any more
 # (the client goes through node-postgres), so only the migrator carries a
 # platform-specific binary: the schema engine, fetched for musl at install.
-ARG NODE_IMAGE=node:26.12.1-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797
+ARG NODE_IMAGE=node:26.13.0-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216
 
-# --- base: pnpm through corepack, shared by every stage --------------------
+# --- base: pnpm, shared by every stage -------------------------------------
 FROM ${NODE_IMAGE} AS base
 
 ENV PNPM_HOME=/pnpm \
     PATH=/pnpm:$PATH \
-    COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     CI=1
-
-# `packageManager` in package.json pins the pnpm version corepack activates.
-RUN corepack enable
 
 WORKDIR /app
 
@@ -33,7 +29,8 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY docs/site/package.json ./docs/site/package.json
 COPY docker/migrator/package.json ./docker/migrator/package.json
 
-RUN corepack install
+# `packageManager` in package.json pins the pnpm version installed.
+RUN npm install --global "$(node -p "require('./package.json').packageManager")"
 
 # --- deps: full dependency graph (dev included), used to build -------------
 FROM base AS deps
@@ -92,12 +89,11 @@ RUN --mount=type=cache,id=pnpm-store-${TARGETPLATFORM},target=/pnpm/store,sharin
 # It carries the Prisma CLI, prisma.config.ts (schema location and connection
 # URL from DATABASE_URL), dbinfo.prisma and the migration history. Applying
 # migrations needs the datasource, not the models: src/prisma alone is a valid
-# schema. npm, corepack and yarn are removed, as in the runtime image.
+# schema. npm and npx are removed, as in the runtime image.
 FROM ${NODE_IMAGE} AS migrator
 
-RUN rm -r /usr/local/lib/node_modules /opt/yarn-v* \
- && rm /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
-       /usr/local/bin/yarn /usr/local/bin/yarnpkg
+RUN rm -r /usr/local/lib/node_modules \
+ && rm /usr/local/bin/npm /usr/local/bin/npx
 
 WORKDIR /app
 COPY --from=migrator-deps /migrator ./
@@ -115,13 +111,12 @@ FROM ${NODE_IMAGE} AS runtime
 # tini: real init as PID 1 — forwards SIGTERM to node (the bot closes the
 #       Discord client and the Prisma pool on SIGTERM) and reaps zombies.
 #
-# The bot only ever runs `node`: npm, npx, corepack and yarn, shipped with the
-# Node image, are removed. They are dead weight here, and their bundled
-# dependencies are what an image scanner would otherwise keep reporting.
+# The bot only ever runs `node`: npm and npx, shipped with the Node image, are
+# removed. They are dead weight here, and their bundled dependencies are what
+# an image scanner would otherwise keep reporting.
 RUN apk add --no-cache tini font-noto-emoji \
- && rm -r /usr/local/lib/node_modules /opt/yarn-v* \
- && rm /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
-       /usr/local/bin/yarn /usr/local/bin/yarnpkg \
+ && rm -r /usr/local/lib/node_modules \
+ && rm /usr/local/bin/npm /usr/local/bin/npx \
  && addgroup -S -g 10001 omnibot \
  && adduser -S -u 10001 -G omnibot -H -h /app omnibot
 
