@@ -27,7 +27,7 @@ jobs:
   # rather than `ubuntu-latest`: they all run on the same system, whichever side
   # they land on.
   lint:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions: &read-only
       contents: read
 
@@ -43,7 +43,7 @@ jobs:
         run: pnpm exec oxlint --deny-warnings
 
   build:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions: *read-only
 
     steps:
@@ -195,7 +195,7 @@ jobs:
     # on one would restart the stack onto the version already running — a
     # deployment that reports success and changes nothing.
     if: ${{ !contains(github.ref_name, '-') }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions: {}
 
     steps:
@@ -212,7 +212,7 @@ jobs:
   scan:
     needs: publish
     if: ${{ !contains(github.ref_name, '-') }}
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       actions: write
 
@@ -237,7 +237,7 @@ jobs:
   # holding a secret on a tag run runs nothing a branch could have written.
   release-notes:
     needs: publish
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     # The AI_API_KEY secret lives in this environment, which only `v*` tags may
     # use: a workflow edited on a branch cannot read it.
     environment: release
@@ -274,7 +274,7 @@ jobs:
   # A tag with a `-` is a prerelease, like the images: `latest` does not move.
   release:
     needs: release-notes
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write # creates the release, or edits its notes
 
