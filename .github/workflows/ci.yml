@@ -36,6 +36,14 @@ jobs:
         uses: actions/checkout@v7
         with:
           persist-credentials: false
+      - name: Check that mise and the Docker image run the same Node
+        run: |
+          mise=$(sed -nE 's/^node = "([^"]+)"$/\1/p' .mise.toml)
+          image=$(sed -nE 's/^ARG NODE_IMAGE=node:([0-9.]+)-.*/\1/p' Dockerfile)
+          if [ -z "$mise" ] || [ "$mise" != "$image" ]; then
+            echo "::error::Node ${mise:-?} in .mise.toml but ${image:-?} in the Dockerfile: they must match"
+            exit 1
+          fi
       - uses: $/.github/actions/setup
       - name: Check code format
         run: pnpm exec oxfmt --check .
