@@ -70,7 +70,9 @@ jobs:
       - *checkout
       - &setup-buildx
         name: Setup Blacksmith Builder
-        uses: useblacksmith/setup-docker-builder@19215110ab936351210feebdfa5b440b4493e184 # v2
+        uses: useblacksmith/setup-docker-builder@19215110ab936351210feebdfa5b440b4493e184 # v2.2.0
+        with:
+          cache-key: omnibot/images
       # amd64 only, like the release: the Portainer host is amd64, and nothing
       # consumes an arm64 image.
       #
