@@ -6,8 +6,9 @@ description: >-
 runs:
   using: composite
   steps:
-    # Only node and pnpm: the other tools listed in .mise.toml (pitchfork, gh)
-    # are for local development.
+    # Only node and pnpm: the other tools listed in .mise.toml are for local
+    # development (pitchfork, gh) or installed by the job that needs them
+    # (osv-scanner, git-cliff).
     #
     # zizmor flags both caches below (cache-poisoning) in a workflow that also
     # publishes. The jobs using this action publish nothing themselves, though,

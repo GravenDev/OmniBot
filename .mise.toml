@@ -4,6 +4,7 @@ pnpm = "12.17.0"
 pitchfork = "2.33.0"
 gh = "2.103.3"
 git-cliff = "2.14.2"
+osv-scanner = "2.7.0"
 
 [settings]
 # Same delay as pnpm and Renovate. It only holds back fuzzy versions
