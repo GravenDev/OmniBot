@@ -15,11 +15,20 @@
   "lockFileMaintenance": {
     "enabled": true,
     "schedule": ["before 9am on Monday"],
-    "description": "Weekly, in the Monday slot: small diffs, and transitive fixes in a week. The slot is repeated here, since Renovate's own default for lock file maintenance (before 4am on monday) would win over the global one. Automerged, although it moves direct dependencies within their ranges as well as transitive ones, and the manual rules below do not reach it: every version held back 7 days and checked by pnpm (minimumReleaseAge, trustPolicy in pnpm-workspace.yaml), with the whole CI as the gate, its `malware` job (osv-scanner) included: GitHub's automerge only waits for required checks, so `malware` must be one on master, like lint, build and docker. No Renovate release age here: Renovate cannot date a whole-lockfile refresh and would leave its stability-days check pending forever",
+    "description": "Weekly, in the Monday slot: small diffs, and transitive fixes in a week. The slot is repeated here, since Renovate's own default for lock file maintenance (before 4am on monday) would win over the global one. Automerged: direct dependencies are pinned (rule below), so it moves transitive ones only; every version held back 7 days and checked by pnpm (minimumReleaseAge, trustPolicy in pnpm-workspace.yaml), with the whole CI as the gate, its `malware` job (osv-scanner) included: GitHub's automerge only waits for required checks, so `malware` must be one on master, like lint, build and docker. No Renovate release age here: Renovate cannot date a whole-lockfile refresh and would leave its stability-days check pending forever",
     "minimumReleaseAge": null,
     "automerge": true
   },
   "packageRules": [
+    {
+      "description": "Pin the direct dependencies to exact versions (Renovate's advice for an application): lock file maintenance, automerged, then only moves transitive ones, and every direct bump comes as its own PR under the rules below. pnpm's minimumReleaseAge holds both back 7 days anyway",
+      "matchDepTypes": [
+        "dependencies",
+        "devDependencies",
+        "pnpm.catalog.default"
+      ],
+      "rangeStrategy": "pin"
+    },
     {
       "description": "Automerge devDependency updates (minor + patch). CI (lint + build + tests) is the merge gate; majors stay manual for review.",
       "matchDepTypes": ["devDependencies"],
