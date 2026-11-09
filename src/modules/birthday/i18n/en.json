@@ -72,17 +72,14 @@
   "paradox.field.nextValue": "{{count}} registrations · {{percent}}",
 
   "set.invalid": "This date does not exist.",
-  "set.done": "🎂 Your birthday is registered: **{{date}}**.",
-  "set.announced": "It will be announced in {{channel}}.",
-  "set.announcedLater": "It will be announced once an announcement channel is set.",
-  "set.private": "It will not be announced: it only counts in `/birthday stats`.",
-  "set.data": "Only the day and the month are stored. `/birthday show` shows them, `/birthday remove` deletes them; leaving the server deletes them too.",
 
   "show.none": "You have not registered your birthday on this server.",
-  "show.entry": "Your birthday: **{{date}}**.",
-  "show.announced": "It is announced on the server.",
-  "show.private": "It is not announced: it only counts in the statistics.",
-  "show.stored": "That is all the module stores about you, with your Discord ID. `/birthday remove` deletes it.",
+  "own.title.set": "### 🎂 Birthday saved",
+  "own.title.show": "### 🎂 Your birthday",
+  "own.announced": "Announced in {{channel}}",
+  "own.announcedLater": "Will be announced once an announcement channel is set",
+  "own.private": "Not announced: only counted in `/birthday stats`",
+  "own.stored": "Only the day, the month and your announcement choice are kept, with your Discord ID. `/birthday remove` deletes them; leaving the server does too.",
 
   "announce.hide": "Stop announcing my birthday",
   "announce.show": "Announce my birthday",
@@ -93,7 +90,7 @@
   "remove.done": "Your birthday is deleted.",
   "remove.none": "You had no birthday registered on this server.",
 
-  "upcoming.heading": "🎂 **Birthdays of the next {{count}} days**",
+  "upcoming.heading": "### 🎂 Birthdays in the next {{count}} days",
   "upcoming.none": "No birthday in the next {{count}} days.",
   "upcoming.line": "**{{date}}** · {{user}} · {{when}}",
   "upcoming.more_one": "… and {{count}} more birthday",

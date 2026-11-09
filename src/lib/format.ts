@@ -43,6 +43,8 @@ export function formatPercentage(
 }
 
 const DESCRIPTION_LIMIT = 4096;
+// What a message laid out with components may hold, all its text included.
+export const COMPONENTS_TEXT_LIMIT = 4000;
 const MORE_LINE_RESERVE = 64;
 
 // Lines within an embed description, or a message with a smaller `limit`; a

@@ -13,7 +13,12 @@ import {
   vi,
 } from "vitest";
 import type { ConfigData } from "#lib/config.js";
-import { initTestI18n, makeTestConfig, silenceLogs } from "#lib/testing.js";
+import {
+  initTestI18n,
+  makeTestConfig,
+  messageText,
+  silenceLogs,
+} from "#lib/testing.js";
 import {
   birthdayConfigSchema,
   type BirthdayConfigSchema,
@@ -159,7 +164,18 @@ function config(values: Partial<ConfigData<BirthdayConfigSchema>> = {}) {
 }
 
 function content(reply: ReturnType<typeof vi.fn>): string {
-  return (reply.mock.calls[0] as [{ content: string }])[0].content;
+  return messageText((reply.mock.calls[0] as [{ content?: string }])[0]);
+}
+
+// A reply laid out with components: the flag, and no content beside them.
+function expectFramed(reply: ReturnType<typeof vi.fn>) {
+  const sent = (
+    reply.mock.calls[0] as [{ content?: string; flags?: number }]
+  )[0];
+  expect(sent.content ?? "").toBe("");
+  expect((sent.flags ?? 0) & MessageFlags.IsComponentsV2).toBe(
+    MessageFlags.IsComponentsV2
+  );
 }
 
 beforeAll(async () => {
@@ -211,7 +227,10 @@ describe("/birthday set", () => {
     });
     expect(deferReply).toHaveBeenCalledWith({ flags: MessageFlags.Ephemeral });
     expect(content(reply)).toContain("**14 mars**");
-    expect(content(reply)).toContain("Il sera annoncé dans <#chan>.");
+    expect(content(reply)).toContain("Annoncé dans <#chan>");
+    expect(content(reply)).toContain("Anniversaire enregistré");
+    expect(content(reply)).toContain("votre choix d'annonce");
+    expectFramed(reply);
     expect(checkMilestones).toHaveBeenCalledWith("guild", provider);
   });
 
@@ -226,7 +245,32 @@ describe("/birthday set", () => {
       "guild",
       expect.objectContaining({ announce: false })
     );
-    expect(content(reply)).toContain("Il ne sera pas annoncé");
+    expect(content(reply)).toContain("Non annoncé");
+  });
+});
+
+describe("/birthday show", () => {
+  it("answers with the member's sheet", async () => {
+    service.list.mockResolvedValue([
+      { userId: "me", day: 14, month: 3, announce: true },
+    ]);
+    const { interaction: i, reply } = interaction({ subcommand: "show" });
+    await command.execute(i, config());
+    expect(content(reply)).toContain("Votre anniversaire");
+    expect(content(reply)).toContain("**14 mars**");
+    expect(content(reply)).toContain(
+      "Sera annoncé dès qu'un salon d'annonces sera défini"
+    );
+    expectFramed(reply);
+  });
+
+  it("frames the answer when no birthday is saved", async () => {
+    const { interaction: i, reply } = interaction({ subcommand: "show" });
+    await command.execute(i, config());
+    expect(content(reply)).toBe(
+      "Vous n'avez pas enregistré votre anniversaire sur ce serveur."
+    );
+    expectFramed(reply);
   });
 });
 
@@ -356,7 +400,7 @@ describe("birthday twins in /birthday set and show", () => {
       booleans: { announce: false },
     });
     await command.execute(i, config());
-    expect(content(reply)).toContain("Il ne sera pas annoncé");
+    expect(content(reply)).toContain("Non annoncé");
     expect(content(reply)).toContain("avec <@a>.");
   });
 
@@ -621,9 +665,18 @@ describe("/birthday upcoming", () => {
     const { interaction: i, reply } = interaction({ subcommand: "upcoming" });
     await command.execute(i, config({ timeZone: "UTC" }));
     const text = content(reply);
-    expect(text.length).toBeLessThanOrEqual(2000);
+    // A message laid out with components holds 4000 characters of text.
+    expect(text.length).toBeLessThanOrEqual(4000);
     const shown = (text.match(/<@/g) ?? []).length;
     expect(text).toContain(`… et ${200 - shown} autres anniversaires`);
+    expectFramed(reply);
+  });
+
+  it("frames the reply when nobody's birthday is coming", async () => {
+    const { interaction: i, reply } = interaction({ subcommand: "upcoming" });
+    await command.execute(i, config({ timeZone: "UTC" }));
+    expect(content(reply)).toContain("Aucun anniversaire");
+    expectFramed(reply);
   });
 
   it("only lists the announced birthdays", async () => {
