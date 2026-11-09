@@ -526,11 +526,11 @@ Ces annonces ne citent que des chiffres : ni membre, ni date. Tous les anniversa
 
 ### `/birthday set <day> <month> [announce]`
 
-Enregistre ou modifie l'anniversaire du membre. Une date qui n'existe pas (30 février…) est refusée ; le 29 février est accepté. Avec `announce: False`, l'anniversaire n'est jamais annoncé, ni nommé, ni affiché : il compte seulement dans les statistiques. Ce compte peut laisser deviner qu'une date est prise (en voyant le nombre de dates partagées changer), jamais par qui. La réponse, visible du membre seul, rappelle où il sera annoncé et ce qui est conservé.
+Enregistre ou modifie l'anniversaire du membre. Une date qui n'existe pas (30 février…) est refusée ; le 29 février est accepté. Avec `announce: False`, l'anniversaire n'est jamais annoncé, ni nommé, ni affiché : il compte seulement dans les statistiques. Ce compte peut laisser deviner qu'une date est prise (en voyant le nombre de dates partagées changer), jamais par qui. La réponse, visible du membre seul, est la fiche d'anniversaire décrite sous `/birthday show`, titrée « Anniversaire enregistré ».
 
 ### `/birthday show` et `/birthday remove`
 
-Affiche ce que le module conserve sur le membre, ou le supprime. Réponses visibles du membre seul. Sous la réponse de `/birthday set` et de `/birthday show`, un bouton **Ne plus annoncer mon anniversaire** (ou **Annoncer mon anniversaire**) change ce choix sans retaper la date ; il agit toujours sur l'anniversaire de qui clique, et retire aussitôt le rôle d'anniversaire quand l'anniversaire n'est plus annoncé.
+Affiche ce que le module conserve sur le membre, ou le supprime. Réponses visibles du membre seul. `/birthday show` répond par une fiche encadrée à la couleur du module : la date, le salon où elle est annoncée (« Sera annoncé dès qu'un salon d'annonces sera défini » quand aucun ne l'est, ou « Non annoncé », compté seulement dans `/birthday stats`), les jumeaux d'anniversaire, puis en petit ce qui est conservé et comment le supprimer. À côté de la date, sur la fiche de `/birthday set` comme de `/birthday show`, un bouton **Ne plus annoncer mon anniversaire** (ou **Annoncer mon anniversaire**) change ce choix sans retaper la date, et met la fiche à jour ; il agit toujours sur l'anniversaire de qui clique, et retire aussitôt le rôle d'anniversaire quand l'anniversaire n'est plus annoncé.
 
 ### Jumeaux d'anniversaire
 
@@ -538,7 +538,7 @@ La réponse de `/birthday set` et de `/birthday show` indique aussi avec qui le 
 
 ### `/birthday upcoming`
 
-Liste les anniversaires des 30 prochains jours, aujourd'hui compris, dans le fuseau du serveur, pour les seuls membres qui ont accepté d'être annoncés. Personne n'est notifié. Si la liste dépasse la taille d'un message Discord, les anniversaires les plus lointains sont omis, et une dernière ligne indique combien.
+Liste les anniversaires des 30 prochains jours, aujourd'hui compris, dans le fuseau du serveur, pour les seuls membres qui ont accepté d'être annoncés. La liste est encadrée à la couleur du module, comme la réponse quand aucun anniversaire n'approche. Personne n'est notifié. Si la liste dépasse les 4 000 caractères qu'un tel message peut contenir, les anniversaires les plus lointains sont omis, et une dernière ligne indique combien.
 
 ### `/birthday stats [role | channel]`
 

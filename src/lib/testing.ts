@@ -112,3 +112,43 @@ export function fakeMessage(overrides: Record<string, any> = {}) {
     ...overrides,
   };
 }
+
+/**
+ * The text a sent message shows: its content, or the text displays of its
+ * components (Components V2), in order, one per line. Both when a message
+ * carries both, which Discord refuses: a test then sees the content too.
+ */
+export function messageText(message: {
+  content?: string;
+  components?: readonly unknown[];
+}): string {
+  const texts: string[] = message.content ? [message.content] : [];
+  const walk = (node: unknown): void => {
+    const json =
+      node && typeof node === "object" && "toJSON" in node
+        ? (node as { toJSON(): unknown }).toJSON()
+        : node;
+    if (!json || typeof json !== "object") {
+      return;
+    }
+    const { type, content, components, accessory } = json as {
+      type?: number;
+      content?: string;
+      components?: unknown[];
+      accessory?: unknown;
+    };
+    if (type === 10 && content !== undefined) {
+      texts.push(content);
+    }
+    for (const child of components ?? []) {
+      walk(child);
+    }
+    if (accessory) {
+      walk(accessory);
+    }
+  };
+  for (const component of message.components ?? []) {
+    walk(component);
+  }
+  return texts.join("\n");
+}

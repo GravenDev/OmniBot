@@ -70,17 +70,14 @@
   "paradox.field.nextValue": "{{count}} inscriptions · {{percent}}",
 
   "set.invalid": "Cette date n'existe pas.",
-  "set.done": "🎂 Votre anniversaire est enregistré : **{{date}}**.",
-  "set.announced": "Il sera annoncé dans {{channel}}.",
-  "set.announcedLater": "Il sera annoncé dès qu'un salon d'annonces sera défini.",
-  "set.private": "Il ne sera pas annoncé : il compte seulement dans `/birthday stats`.",
-  "set.data": "Seuls le jour et le mois sont conservés. `/birthday show` les affiche, `/birthday remove` les supprime ; quitter le serveur les supprime aussi.",
 
   "show.none": "Vous n'avez pas enregistré votre anniversaire sur ce serveur.",
-  "show.entry": "Votre anniversaire : **{{date}}**.",
-  "show.announced": "Il est annoncé sur le serveur.",
-  "show.private": "Il n'est pas annoncé : il compte seulement dans les statistiques.",
-  "show.stored": "C'est tout ce que le module conserve à votre sujet, avec votre identifiant Discord. `/birthday remove` le supprime.",
+  "own.title.set": "### 🎂 Anniversaire enregistré",
+  "own.title.show": "### 🎂 Votre anniversaire",
+  "own.announced": "Annoncé dans {{channel}}",
+  "own.announcedLater": "Sera annoncé dès qu'un salon d'annonces sera défini",
+  "own.private": "Non annoncé : compte seulement dans `/birthday stats`",
+  "own.stored": "Seuls le jour, le mois et votre choix d'annonce sont conservés, avec votre identifiant Discord. `/birthday remove` les supprime ; quitter le serveur aussi.",
 
   "announce.hide": "Ne plus annoncer mon anniversaire",
   "announce.show": "Annoncer mon anniversaire",
@@ -91,7 +88,7 @@
   "remove.done": "Votre anniversaire est supprimé.",
   "remove.none": "Vous n'aviez pas d'anniversaire enregistré sur ce serveur.",
 
-  "upcoming.heading": "🎂 **Les anniversaires des {{count}} prochains jours**",
+  "upcoming.heading": "### 🎂 Les anniversaires des {{count}} prochains jours",
   "upcoming.none": "Aucun anniversaire dans les {{count}} prochains jours.",
   "upcoming.line": "**{{date}}** · {{user}} · {{when}}",
   "upcoming.more_one": "… et {{count}} autre anniversaire",

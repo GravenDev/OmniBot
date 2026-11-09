@@ -14,13 +14,12 @@ import {
 } from "#lib/calendar.js";
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
-import { describeLines } from "#lib/format.js";
+import { COMPONENTS_TEXT_LIMIT, describeLines } from "#lib/format.js";
 import { fetchImage } from "#lib/imaging.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { BirthdayConfigSchema } from "#modules/birthday/birthday.config.js";
 import { renderStatsCard } from "#modules/birthday/rendering/stats-card.js";
-import { MESSAGE_LIMIT } from "#modules/birthday/services/announcements.js";
 import birthdayService, {
   type BirthdayEntry,
 } from "#modules/birthday/services/birthday.service.js";
@@ -37,7 +36,7 @@ import {
   statsText,
   type BirthdayStats,
 } from "#modules/birthday/services/stats.js";
-import { announceRow, showMessage, twinsLine } from "./own-birthday.js";
+import { ownBirthdaySheet, sheetNotice } from "./own-birthday.js";
 
 const UPCOMING_DAYS = 30;
 
@@ -62,12 +61,8 @@ const MONTHS = [
 ] as const;
 
 /** A reply only the member sees; an edit once the reply was deferred. */
-async function replyPrivately(
-  interaction: GuildInteraction,
-  content: string,
-  components: ReturnType<typeof announceRow>[] = []
-) {
-  const message = { content, components, allowedMentions: NO_MENTIONS };
+async function replyPrivately(interaction: GuildInteraction, content: string) {
+  const message = { content, allowedMentions: NO_MENTIONS };
   if (interaction.deferred) {
     await interaction.editReply(message);
   } else {
@@ -97,28 +92,11 @@ async function setBirthday(interaction: GuildInteraction, config: Config) {
     await dropBirthdayRole(config, interaction.guildId, entry.userId);
   }
 
-  const channel = config.get("channel");
-  const visibility = entry.announce
-    ? channel
-      ? config.t("set.announced", { channel: `<#${channel.id}>` })
-      : config.t("set.announcedLater")
-    : config.t("set.private");
-  const twins = await twinsLine(
-    interaction,
-    config,
-    entry,
-    await birthdayService.list(interaction.guildId)
-  );
-  await replyPrivately(
-    interaction,
-    [
-      config.t("set.done", { date: formatDayOfYear(entry, config.locale) }),
-      visibility,
-      ...(twins ? [twins] : []),
-      config.t("set.data"),
-    ].join("\n"),
-    [announceRow(config, entry.announce)]
-  );
+  const entries = await birthdayService.list(interaction.guildId);
+  await interaction.editReply({
+    ...(await ownBirthdaySheet(interaction, config, entry, entries, "set")),
+    allowedMentions: NO_MENTIONS,
+  });
 
   await checkMilestones(interaction.guildId, config).catch((err: unknown) =>
     logger.error(
@@ -134,11 +112,15 @@ async function showBirthday(interaction: GuildInteraction, config: Config) {
   const entries = await birthdayService.list(interaction.guildId);
   const entry = entries.find(({ userId }) => userId === interaction.user.id);
   if (!entry) {
-    await replyPrivately(interaction, config.t("show.none"));
+    // Framed like the sheet, as the button says it once the birthday is gone.
+    await interaction.editReply({
+      ...sheetNotice(config.t("show.none")),
+      allowedMentions: NO_MENTIONS,
+    });
     return;
   }
   await interaction.editReply({
-    ...(await showMessage(interaction, config, entry, entries)),
+    ...(await ownBirthdaySheet(interaction, config, entry, entries)),
     allowedMentions: NO_MENTIONS,
   });
 }
@@ -178,7 +160,7 @@ async function showUpcoming(interaction: GuildInteraction, config: Config) {
   const coming = upcoming(entries, today, UPCOMING_DAYS);
   if (coming.length === 0) {
     await interaction.reply({
-      content: config.t("upcoming.none", { count: UPCOMING_DAYS }),
+      ...sheetNotice(config.t("upcoming.none", { count: UPCOMING_DAYS })),
       allowedMentions: NO_MENTIONS,
     });
     return;
@@ -194,12 +176,16 @@ async function showUpcoming(interaction: GuildInteraction, config: Config) {
   );
   // A single reply: past Discord's limit, the furthest birthdays are left
   // out, and counted.
-  const content = describeLines(
-    [config.t("upcoming.heading", { count: UPCOMING_DAYS }), ...lines],
-    (count) => config.t("upcoming.more", { count }),
-    MESSAGE_LIMIT
+  const heading = config.t("upcoming.heading", { count: UPCOMING_DAYS });
+  const list = describeLines(
+    lines,
+    (count) => `-# ${config.t("upcoming.more", { count })}`,
+    COMPONENTS_TEXT_LIMIT - heading.length
   );
-  await interaction.reply({ content, allowedMentions: NO_MENTIONS });
+  await interaction.reply({
+    ...sheetNotice(heading, list),
+    allowedMentions: NO_MENTIONS,
+  });
 }
 
 /** The stats card, or `null` when it cannot be drawn. */

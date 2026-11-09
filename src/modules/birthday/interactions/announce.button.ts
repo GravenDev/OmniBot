@@ -5,7 +5,8 @@ import { NO_MENTIONS } from "#lib/mentions.js";
 import type { BirthdayConfigSchema } from "#modules/birthday/birthday.config.js";
 import {
   ANNOUNCE_BUTTON_ID,
-  showMessage,
+  ownBirthdaySheet,
+  sheetNotice,
 } from "#modules/birthday/commands/own-birthday.js";
 import birthdayService from "#modules/birthday/services/birthday.service.js";
 import { dropBirthdayRole } from "#modules/birthday/services/role.js";
@@ -24,7 +25,7 @@ export default declareInteractionHandler<
   access: "everyone",
   check: (interaction): interaction is ButtonInteraction =>
     interaction.isButton(),
-  async execute(interaction, [state], config) {
+  async execute(interaction, [state, title], config) {
     if (!interaction.inGuild() || (state !== "on" && state !== "off")) {
       return;
     }
@@ -34,9 +35,11 @@ export default declareInteractionHandler<
     const entries = await birthdayService.list(guildId);
     const own = entries.find((entry) => entry.userId === userId);
     if (!own) {
+      // A reply sent before the sheets had content: an edit to components
+      // must clear it, or Discord refuses it.
       await interaction.editReply({
-        content: config.t("show.none"),
-        components: [],
+        content: "",
+        ...sheetNotice(config.t("show.none")),
         allowedMentions: NO_MENTIONS,
       });
       return;
@@ -53,11 +56,13 @@ export default declareInteractionHandler<
       }
     }
     await interaction.editReply({
-      ...(await showMessage(
+      content: "",
+      ...(await ownBirthdaySheet(
         interaction,
         config,
         entry,
-        entries.map((other) => (other.userId === userId ? entry : other))
+        entries.map((other) => (other.userId === userId ? entry : other)),
+        title === "set" ? "set" : "show"
       )),
       allowedMentions: NO_MENTIONS,
     });

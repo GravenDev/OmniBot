@@ -1,7 +1,11 @@
 import {
-  ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ContainerBuilder,
+  MessageFlags,
+  SectionBuilder,
+  SeparatorSpacingSize,
+  TextDisplayBuilder,
   type ButtonInteraction,
   type ChatInputCommandInteraction,
 } from "discord.js";
@@ -9,6 +13,7 @@ import { formatDayOfYear } from "#lib/calendar.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { BirthdayConfigSchema } from "#modules/birthday/birthday.config.js";
+import { ACCENT_COLOR } from "#modules/birthday/rendering/theme.js";
 import type { BirthdayEntry } from "#modules/birthday/services/birthday.service.js";
 
 // Twins named in the reply to /birthday set and show; the rest are counted.
@@ -98,31 +103,93 @@ export async function twinsLine(
   });
 }
 
-/** The button that hides an announced birthday, or announces a hidden one. */
-export function announceRow(config: Config, announce: boolean) {
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(`${ANNOUNCE_BUTTON_ID}:${announce ? "off" : "on"}`)
-      .setLabel(config.t(announce ? "announce.hide" : "announce.show"))
-      .setStyle(ButtonStyle.Secondary)
-  );
+/** Which command the sheet answers: `/birthday set` or `/birthday show`. */
+export type SheetTitle = "set" | "show";
+
+/**
+ * The button that hides an announced birthday, or announces a hidden one. It
+ * carries the sheet's title, so that its edit keeps it.
+ */
+function announceButton(config: Config, announce: boolean, title: SheetTitle) {
+  const id = `${ANNOUNCE_BUTTON_ID}:${announce ? "off" : "on"}`;
+  return new ButtonBuilder()
+    .setCustomId(title === "set" ? `${id}:set` : id)
+    .setLabel(config.t(announce ? "announce.hide" : "announce.show"))
+    .setStyle(ButtonStyle.Secondary);
 }
 
-/** What `/birthday show` says about the member's own birthday, with its button. */
-export async function showMessage(
+/** Where the birthday is announced, if it is. */
+function visibility(config: Config, announce: boolean): string {
+  if (!announce) {
+    return config.t("own.private");
+  }
+  const channel = config.get("channel");
+  return channel
+    ? config.t("own.announced", { channel: `<#${channel.id}>` })
+    : config.t("own.announcedLater");
+}
+
+/** A message laid out with components: the flag goes with every send and edit. */
+export interface SheetMessage {
+  components: ContainerBuilder[];
+  flags: MessageFlags.IsComponentsV2;
+}
+
+/** Text in the module's frame: a reply, or the edit of a sheet message. */
+export function sheetNotice(...texts: string[]): SheetMessage {
+  return {
+    components: [
+      new ContainerBuilder()
+        .setAccentColor(ACCENT_COLOR)
+        .addTextDisplayComponents(
+          texts.map((text) => new TextDisplayBuilder().setContent(text))
+        ),
+    ],
+    flags: MessageFlags.IsComponentsV2,
+  };
+}
+
+/**
+ * The member's own birthday, as `/birthday set` and `/birthday show` answer
+ * it and its button updates it: the date and where it is announced beside
+ * the button that changes it, the members who share it, then what is stored.
+ */
+export async function ownBirthdaySheet(
   interaction: MemberInteraction,
   config: Config,
   entry: BirthdayEntry,
-  entries: readonly BirthdayEntry[]
-) {
+  entries: readonly BirthdayEntry[],
+  title: SheetTitle = "show"
+): Promise<SheetMessage> {
   const twins = await twinsLine(interaction, config, entry, entries);
-  return {
-    content: [
-      config.t("show.entry", { date: formatDayOfYear(entry, config.locale) }),
-      config.t(entry.announce ? "show.announced" : "show.private"),
-      ...(twins ? [twins] : []),
-      config.t("show.stored"),
-    ].join("\n"),
-    components: [announceRow(config, entry.announce)],
-  };
+  const container = new ContainerBuilder()
+    .setAccentColor(ACCENT_COLOR)
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(config.t(`own.title.${title}`))
+    )
+    .addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent(
+            [
+              `**${formatDayOfYear(entry, config.locale)}**`,
+              visibility(config, entry.announce),
+            ].join("\n")
+          )
+        )
+        .setButtonAccessory(announceButton(config, entry.announce, title))
+    );
+  if (twins) {
+    container.addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(twins)
+    );
+  }
+  container
+    .addSeparatorComponents((separator) =>
+      separator.setSpacing(SeparatorSpacingSize.Small)
+    )
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(`-# ${config.t("own.stored")}`)
+    );
+  return { components: [container], flags: MessageFlags.IsComponentsV2 };
 }
