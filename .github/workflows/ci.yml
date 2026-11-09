@@ -70,7 +70,7 @@ jobs:
       - *checkout
       - &setup-buildx
         name: Setup Blacksmith Builder
-        uses: useblacksmith/setup-docker-builder@e4c1c000c95f9cc255f72940e9c56bcbd1239436 # v1
+        uses: useblacksmith/setup-docker-builder@19215110ab936351210feebdfa5b440b4493e184 # v2
       # amd64 only, like the release: the Portainer host is amd64, and nothing
       # consumes an arm64 image.
       #
