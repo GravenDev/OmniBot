@@ -19,8 +19,8 @@
   "config.loopCard.description": "Rejouer les cartes animées (ancienneté et anniversaire du serveur) sans fin, en restant un instant sur les confettis posés entre deux lancers. Désactivé : elles se jouent une fois.",
 
   "members.heading": "🎉 **Ancienneté sur le serveur**",
-  "members.line_one": "{{user}} est parmi nous depuis **{{count}} an** aujourd'hui",
-  "members.line_other": "{{user}} est parmi nous depuis **{{count}} ans** aujourd'hui",
+  "members.group_one": "**{{count}} an**",
+  "members.group_other": "**{{count}} ans**",
 
   "server.headline_one": "🎂 **Le serveur fête ses {{count}} an aujourd'hui !**",
   "server.headline_other": "🎂 **Le serveur fête ses {{count}} ans aujourd'hui !**",
@@ -33,6 +33,8 @@
   "membersCard.entry": "{{name}} ({{years}})",
   "membersCard.years_one": "{{count}} an",
   "membersCard.years_other": "{{count}} ans",
+  "membersCard.group": "{{years}} : {{count}}",
+  "membersCard.others": "autres : {{count}}",
   "membersCard.alt": "Ancienneté du jour : {{names}}",
 
   "serverCard.content_one": "🎂 Le serveur fête son premier anniversaire !",

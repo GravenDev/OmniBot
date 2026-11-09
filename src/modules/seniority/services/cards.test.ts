@@ -78,7 +78,7 @@ describe("seniorityCard", () => {
     years: 11 - index,
   }));
 
-  it("names the first members with their years, and everyone in the alt text", async () => {
+  it("counts the members per years past three, and names everyone in the alt text", async () => {
     const card: AttachmentBuilder = await seniorityCard(
       config(),
       celebrated,
@@ -91,7 +91,7 @@ describe("seniorityCard", () => {
     expect(drawn).toMatchObject({
       kicker: "Ancienneté",
       title: "5 anniversaires d'arrivée !",
-      names: "m0 (11 ans) · m1 (10 ans) · m2 (9 ans) · +2",
+      names: "11 ans : 1 · 10 ans : 1 · 9 ans : 1 · autres : 2",
       footer: "📅  1er novembre",
       // Only the drawn portraits are fetched.
       avatars: ["avatar", "avatar", "avatar", null, null],
@@ -120,6 +120,35 @@ describe("seniorityCard", () => {
     expect(
       rendering.renderCelebrationImage.mock.calls.map((call) => call[1])
     ).toEqual([{ loop: true }, { loop: false }]);
+  });
+
+  it("names up to three members with their years", async () => {
+    await seniorityCard(config(), celebrated.slice(2), NOV_1);
+    expect(rendering.renderCelebrationImage.mock.calls[0]![0]).toMatchObject({
+      names: "m2 (9 ans) · m3 (8 ans) · m4 (7 ans)",
+    });
+  });
+
+  it("groups the members of the same years, longest-standing first", async () => {
+    const crowd = [5, 3, 5, 3, 3].map((years, index) => ({
+      member: member(`c${index}`, "2020-11-01T08:00:00Z"),
+      years,
+    }));
+    await seniorityCard(config(), crowd, NOV_1);
+    expect(rendering.renderCelebrationImage.mock.calls[0]![0]).toMatchObject({
+      names: "5 ans : 2 · 3 ans : 3",
+    });
+  });
+
+  it("counts three years at most, then the others together", async () => {
+    const crowd = [9, 9, 8, 7, 6, 6, 5].map((years, index) => ({
+      member: member(`d${index}`, "2016-11-01T08:00:00Z"),
+      years,
+    }));
+    await seniorityCard(config(), crowd, NOV_1);
+    expect(rendering.renderCelebrationImage.mock.calls[0]![0]).toMatchObject({
+      names: "9 ans : 2 · 8 ans : 1 · 7 ans : 1 · autres : 3",
+    });
   });
 
   it("wishes a single member on their own", async () => {

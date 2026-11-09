@@ -56,8 +56,10 @@ export interface CardText {
 }
 
 /**
- * What the day's card says: the first members with their years, then "+N"
- * for the others, whom the text mentions; everyone in the alternative text.
+ * What the day's card says: up to `SHOWN_PORTRAITS` members, each with their
+ * years; past that, how many members per years, since the portraits already
+ * end on "+N" and names cut short help no one. The text mentions everyone,
+ * and the alternative text names them all.
  */
 export function membersCardText(
   t: TFunction,
@@ -65,23 +67,19 @@ export function membersCardText(
   people: { name: string; years: number }[],
   day: DayOfYear
 ): CardText {
+  const yearsText = (count: number) => t("membersCard.years", { count });
   const named = ({ name, years }: { name: string; years: number }) =>
-    t("membersCard.entry", {
-      name,
-      years: t("membersCard.years", { count: years }),
-    });
-  const others = people.length - SHOWN_PORTRAITS;
+    t("membersCard.entry", { name, years: yearsText(years) });
   return {
     card: {
       accent: ACCENT,
       confetti: CONFETTI,
       kicker: t("membersCard.kicker"),
       title: t("membersCard.title", { count: people.length }),
-      names: people
-        .slice(0, SHOWN_PORTRAITS)
-        .map(named)
-        .concat(others > 0 ? [`+${others}`] : [])
-        .join(" · "),
+      names:
+        people.length <= SHOWN_PORTRAITS
+          ? people.map(named).join(" · ")
+          : yearsSummary(t, byYears(people), yearsText),
       footer: `📅  ${formatDayOfYear(day, locale)}`,
     },
     alt: truncate(
@@ -89,6 +87,41 @@ export function membersCardText(
       ALT_TEXT_LIMIT
     ),
   };
+}
+
+/** Years groups the card names before gathering the rest under "others". */
+const SHOWN_GROUPS = 3;
+
+/**
+ * "5 ans : 3 · 4 ans : 8", the longest-standing first. Past `SHOWN_GROUPS`
+ * groups the rest are counted together: the line holds about seven groups,
+ * and a server old enough to have more would see a count cut in half.
+ */
+function yearsSummary(
+  t: TFunction,
+  groups: [number, number][],
+  yearsText: (count: number) => string
+): string {
+  const shown =
+    groups.length > SHOWN_GROUPS ? groups.slice(0, SHOWN_GROUPS) : groups;
+  const others = groups
+    .slice(shown.length)
+    .reduce((sum, [, count]) => sum + count, 0);
+  return shown
+    .map(([years, count]) =>
+      t("membersCard.group", { count, years: yearsText(years) })
+    )
+    .concat(others > 0 ? [t("membersCard.others", { count: others })] : [])
+    .join(" · ");
+}
+
+/** How many people per years, longest-standing first. */
+function byYears(people: { years: number }[]): [number, number][] {
+  const counts = new Map<number, number>();
+  for (const { years } of people) {
+    counts.set(years, (counts.get(years) ?? 0) + 1);
+  }
+  return [...counts].sort(([a], [b]) => b - a);
 }
 
 /** The day's card of the members celebrated, longest-standing first. */
