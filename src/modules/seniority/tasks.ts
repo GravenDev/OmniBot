@@ -1,7 +1,9 @@
+import moduleService from "#core/services/module.service.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
 import type { SeniorityConfigSchema } from "./seniority.config.js";
 import { runAllGuildDays } from "./services/daily.js";
+import { sweepDepartures } from "./services/overrides.js";
 
 export function seniorityTasks(module: Module<SeniorityConfigSchema>) {
   return [
@@ -12,6 +14,27 @@ export function seniorityTasks(module: Module<SeniorityConfigSchema>) {
       schedule: "0 * * * *",
       runOnStart: true,
       run: (client) => runAllGuildDays(client, module),
+    }),
+  ];
+}
+
+/**
+ * Run even where the module is skipped (a missing privileged intent) or its
+ * `onLoad` failed: a recomputed seniority must still be deleted a year after
+ * the member left.
+ */
+export function seniorityMaintenanceTasks(moduleId: string) {
+  return [
+    declareTask({
+      id: "sweep-departures",
+      schedule: "30 4 * * *",
+      // A night missed while the bot was down is caught up at start.
+      runOnStart: true,
+      async run(client) {
+        await sweepDepartures(client, async (guildId) =>
+          (await moduleService.getActivatedGuildIds(moduleId)).includes(guildId)
+        );
+      },
     }),
   ];
 }

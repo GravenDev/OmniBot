@@ -7,16 +7,25 @@ import {
 
 export const MAX_BAN_PURGE_SECONDS = 7 * 24 * 60 * 60;
 
+/**
+ * The member, or null when they are not on the server, or when Discord knows no
+ * user with that id (a deleted account still has one). `force` asks Discord rather than the cache, which can keep a
+ * member whose departure the bot missed.
+ */
 export async function fetchMember(
   guild: Guild,
-  userId: string
+  userId: string,
+  { force = false } = {}
 ): Promise<GuildMember | null> {
   try {
-    return await guild.members.fetch(userId);
+    return await guild.members.fetch(
+      force ? { user: userId, force: true } : userId
+    );
   } catch (error) {
     if (
       error instanceof DiscordAPIError &&
-      error.code === RESTJSONErrorCodes.UnknownMember
+      (error.code === RESTJSONErrorCodes.UnknownMember ||
+        error.code === RESTJSONErrorCodes.UnknownUser)
     ) {
       return null;
     }

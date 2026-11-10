@@ -1,4 +1,9 @@
-import type { REST } from "discord.js";
+import {
+  DiscordAPIError,
+  RESTJSONErrorCodes,
+  type Client,
+  type REST,
+} from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SearchNotReadyError } from "#lib/discord-polyfills/guild-message-search.js";
 
@@ -9,11 +14,14 @@ const db = vi.hoisted(() => ({
   updateMany: vi.fn(),
   deleteMany: vi.fn(),
 }));
+const allMembers = vi.hoisted(() => vi.fn());
+vi.mock("#lib/guild-members.js", () => ({ allMembers }));
+
 vi.mock("#lib/database.js", () => ({
   default: { seniorityOverride: db },
 }));
 
-const { firstMessageDate, recompute, seniorityStart } =
+const { firstMessageDate, recompute, seniorityStart, sweepDepartures } =
   await import("./overrides.js");
 
 const JOINED = new Date("2024-06-01T10:00:00Z");
@@ -104,8 +112,14 @@ describe("recompute", () => {
     });
     expect(db.upsert).toHaveBeenCalledWith({
       where: { guildId_userId: { guildId: "g", userId: "u" } },
-      create: { guildId: "g", userId: "u", since: new Date(FIRST) },
-      update: { since: new Date(FIRST) },
+      // Recomputed for a member who is here: no departure to count from.
+      create: {
+        guildId: "g",
+        userId: "u",
+        since: new Date(FIRST),
+        leftAt: null,
+      },
+      update: { since: new Date(FIRST), leftAt: null },
     });
   });
 
@@ -181,5 +195,219 @@ describe("recompute", () => {
     ).rejects.toBeInstanceOf(SearchNotReadyError);
     expect(db.upsert).not.toHaveBeenCalled();
     expect(db.deleteMany).not.toHaveBeenCalled();
+  });
+});
+
+// Whether the module is enabled, guild by guild, as the task asks it.
+const activeIn = (guildIds: string[]) => async (guildId: string) =>
+  guildIds.includes(guildId);
+
+describe("sweepDepartures", () => {
+  const NOW = new Date("2026-11-10T00:00:00Z");
+  const OVER_A_YEAR = new Date("2025-11-01T00:00:00Z");
+  const RECENT = new Date("2026-06-01T00:00:00Z");
+
+  const fetchMember = vi.fn();
+  const apiError = (code: number) =>
+    new DiscordAPIError({ code, message: "" }, code, 404, "GET", "/", {});
+
+  beforeEach(() => {
+    // Without the member list, the sweep asks member by member.
+    allMembers.mockRejectedValue(new Error("no members intent"));
+  });
+
+  function client(
+    present: string[],
+    guilds = ["g"],
+    available = true
+  ): Client<true> {
+    fetchMember.mockImplementation(async ({ user }: { user: string }) => {
+      if (present.includes(user)) {
+        return { id: user };
+      }
+      throw apiError(RESTJSONErrorCodes.UnknownMember);
+    });
+    return {
+      guilds: {
+        cache: new Map(
+          guilds.map((id) => [
+            id,
+            {
+              id,
+              available,
+              memberCount: present.length,
+              members: { fetch: fetchMember },
+            },
+          ])
+        ),
+      },
+    } as unknown as Client<true>;
+  }
+
+  it("reads the member list once, rather than asking member by member", async () => {
+    db.findMany.mockResolvedValue([
+      { guildId: "g", userId: "gone", leftAt: null },
+      { guildId: "g", userId: "back", leftAt: RECENT },
+    ]);
+    allMembers.mockResolvedValue(new Map([["back", {}]]));
+    await sweepDepartures(client(["back"]), activeIn(["g"]), NOW);
+    expect(allMembers).toHaveBeenCalledTimes(1);
+    expect(fetchMember).not.toHaveBeenCalled();
+    expect(db.updateMany).toHaveBeenCalledWith({
+      where: { guildId: "g", userId: "gone", leftAt: null },
+      data: { leftAt: NOW },
+    });
+    expect(db.updateMany).toHaveBeenCalledWith({
+      where: { guildId: "g", userId: "back", leftAt: { not: null } },
+      data: { leftAt: null },
+    });
+  });
+
+  it("asks member by member when the list misses members", async () => {
+    db.findMany.mockResolvedValue([
+      { guildId: "g", userId: "here", leftAt: null },
+    ]);
+    // Fewer members than the server counts: "here" may just be missing.
+    allMembers.mockResolvedValue(new Map());
+    await sweepDepartures(client(["here"]), activeIn(["g"]), NOW);
+    expect(fetchMember).toHaveBeenCalledWith({ user: "here", force: true });
+    expect(db.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("keeps the date a calendar year, leap day included", async () => {
+    // Left on 1 March 2027: 365 days later is 29 February 2028, a day early.
+    db.findMany.mockResolvedValue([
+      {
+        guildId: "g",
+        userId: "gone",
+        leftAt: new Date("2027-03-01T12:00:00Z"),
+      },
+    ]);
+    await sweepDepartures(
+      client([]),
+      activeIn(["g"]),
+      new Date("2028-03-01T04:30:00Z")
+    );
+    expect(db.deleteMany).not.toHaveBeenCalled();
+    await sweepDepartures(
+      client([]),
+      activeIn(["g"]),
+      new Date("2028-03-02T04:30:00Z")
+    );
+    expect(db.deleteMany).toHaveBeenCalled();
+  });
+
+  it("dates a departure, then deletes the date a year later", async () => {
+    db.findMany.mockResolvedValue([
+      { guildId: "g", userId: "gone", leftAt: null },
+      { guildId: "g", userId: "old", leftAt: OVER_A_YEAR },
+      { guildId: "g", userId: "recent", leftAt: RECENT },
+    ]);
+    await sweepDepartures(client([]), activeIn(["g"]), NOW);
+    expect(db.updateMany).toHaveBeenCalledWith({
+      where: { guildId: "g", userId: "gone", leftAt: null },
+      data: { leftAt: NOW },
+    });
+    // Unless a recompute marked them present meanwhile.
+    expect(db.deleteMany).toHaveBeenCalledWith({
+      where: {
+        guildId: "g",
+        userId: "old",
+        leftAt: { lt: new Date("2025-11-10T00:00:00Z") },
+      },
+    });
+    // Asked to Discord, not to a cache that may have missed the departure.
+    expect(fetchMember).toHaveBeenCalledWith({ user: "gone", force: true });
+    expect(db.deleteMany).toHaveBeenCalledTimes(1);
+    expect(db.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it("forgets the departure of a member back, even a year on", async () => {
+    db.findMany.mockResolvedValue([
+      { guildId: "g", userId: "back", leftAt: OVER_A_YEAR },
+      { guildId: "g", userId: "here", leftAt: null },
+    ]);
+    await sweepDepartures(client(["back", "here"]), activeIn(["g"]), NOW);
+    expect(db.updateMany).toHaveBeenCalledWith({
+      where: { guildId: "g", userId: "back", leftAt: { not: null } },
+      data: { leftAt: null },
+    });
+    expect(db.updateMany).toHaveBeenCalledTimes(1);
+    expect(db.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("deletes the dates of a guild where the module is disabled", async () => {
+    db.findMany.mockResolvedValue([
+      { guildId: "off", userId: "u", leftAt: null },
+    ]);
+    await sweepDepartures(client([], ["off"]), activeIn([]), NOW);
+    expect(db.deleteMany).toHaveBeenCalledWith({ where: { guildId: "off" } });
+    expect(fetchMember).not.toHaveBeenCalled();
+  });
+
+  it("counts an id Discord knows no user for as gone", async () => {
+    db.findMany.mockResolvedValue([
+      { guildId: "g", userId: "unknown", leftAt: null },
+    ]);
+    const c = client([]);
+    fetchMember.mockRejectedValue(apiError(RESTJSONErrorCodes.UnknownUser));
+    await sweepDepartures(c, activeIn(["g"]), NOW);
+    expect(db.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { leftAt: NOW } })
+    );
+  });
+
+  it("goes on with the other members when one fails", async () => {
+    db.findMany.mockResolvedValue([
+      { guildId: "g", userId: "broken", leftAt: null },
+      { guildId: "g", userId: "gone", leftAt: null },
+    ]);
+    const c = client([]);
+    fetchMember.mockRejectedValueOnce(new Error("Missing Access"));
+    await sweepDepartures(c, activeIn(["g"]), NOW);
+    expect(db.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { guildId: "g", userId: "gone", leftAt: null },
+      })
+    );
+  });
+
+  it("goes on with the other guilds when one fails", async () => {
+    db.findMany.mockResolvedValue([
+      { guildId: "broken", userId: "u", leftAt: null },
+      { guildId: "g", userId: "gone", leftAt: null },
+    ]);
+    const c = client([], ["broken", "g"]);
+    // A database blip on one guild's activation, outside the member loop.
+    const isActivated = async (guildId: string) => {
+      if (guildId === "broken") {
+        throw new Error("database down");
+      }
+      return true;
+    };
+    await sweepDepartures(c, isActivated, NOW);
+    expect(db.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { guildId: "g", userId: "gone", leftAt: null },
+      })
+    );
+  });
+
+  it("waits for an unavailable guild", async () => {
+    db.findMany.mockResolvedValue([
+      { guildId: "g", userId: "u", leftAt: OVER_A_YEAR },
+    ]);
+    await sweepDepartures(client([], ["g"], false), activeIn(["g"]), NOW);
+    expect(fetchMember).not.toHaveBeenCalled();
+    expect(db.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it("keeps the dates of a guild the bot left, as its configuration", async () => {
+    db.findMany.mockResolvedValue([
+      { guildId: "gone-guild", userId: "u", leftAt: OVER_A_YEAR },
+    ]);
+    await sweepDepartures(client([], []), activeIn(["gone-guild"]), NOW);
+    expect(db.deleteMany).not.toHaveBeenCalled();
+    expect(db.updateMany).not.toHaveBeenCalled();
   });
 });

@@ -13,7 +13,7 @@ describe("maintenance tasks of the shipped modules", async () => {
     // A module that fails to import is skipped, not thrown: make sure the
     // ones with maintenance tasks are actually checked below.
     expect(modules.map((module) => module.id)).toEqual(
-      expect.arrayContaining(["reports", "server-stats"])
+      expect.arrayContaining(["reports", "server-stats", "seniority"])
     );
   });
 

@@ -9,12 +9,15 @@ model SeniorityState {
 // A member's seniority recomputed by an administrator: the earliest of their
 // current arrival and their first message still on the server. Discord resets
 // the arrival date of a member who leaves and comes back; this row is kept
-// after they leave, so that it still holds when they return. Deleted by
-// `/privacy delete` and when the module is uninstalled.
+// after they leave, so that it still holds when they return, for a year.
+// Deleted by `/privacy delete` and when the module is uninstalled.
 model SeniorityOverride {
   guildId String
   userId  String
   since   DateTime
+  // When the daily sweep (`sweepDepartures`) first found the member gone, null
+  // while they are on the server: the row is deleted a year later.
+  leftAt  DateTime?
 
   @@id([guildId, userId])
 }

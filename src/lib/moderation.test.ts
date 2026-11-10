@@ -1,5 +1,5 @@
 import { DiscordAPIError, RESTJSONErrorCodes, type Guild } from "discord.js";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fetchMember } from "./moderation.js";
 
 function apiError(code: number) {
@@ -27,6 +27,22 @@ describe("fetchMember", () => {
         "author"
       )
     ).resolves.toBeNull();
+  });
+
+  it("treats an id Discord knows no user for as gone", async () => {
+    await expect(
+      fetchMember(
+        guildFailingWith(apiError(RESTJSONErrorCodes.UnknownUser)),
+        "author"
+      )
+    ).resolves.toBeNull();
+  });
+
+  it("can ask Discord rather than the cache", async () => {
+    const fetch = vi.fn(async () => ({ id: "author" }));
+    const guild = { members: { fetch } } as unknown as Guild;
+    await fetchMember(guild, "author", { force: true });
+    expect(fetch).toHaveBeenCalledWith({ user: "author", force: true });
   });
 
   it("does not mistake another failure for a member who left", async () => {
