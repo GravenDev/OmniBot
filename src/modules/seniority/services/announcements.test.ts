@@ -28,8 +28,8 @@ describe("memberAnniversaryMessages", () => {
       ])
     ).toEqual([
       {
-        content:
-          "🎉 **Ancienneté sur le serveur**\n**3 ans**\n<@2> <@3>\n**1 an**\n<@1> <@4>",
+        // The heading goes above the card: the lines follow it, one a group.
+        content: "**3 ans** · <@2> <@3>\n**1 an** · <@1> <@4>",
         userIds: ["2", "3", "1", "4"],
       },
     ]);
@@ -45,8 +45,8 @@ describe("memberAnniversaryMessages", () => {
       100, 100, 50,
     ]);
     expect(messages.flatMap(({ userIds }) => userIds)).toEqual(ids);
-    expect(messages[1]!.content.startsWith("**1 an**\n<@100> ")).toBe(true);
-    expect(messages[2]!.content.startsWith("**1 an**\n<@200> ")).toBe(true);
+    expect(messages[1]!.content.startsWith("**1 an** · <@100> ")).toBe(true);
+    expect(messages[2]!.content.startsWith("**1 an** · <@200> ")).toBe(true);
   });
 
   it("stays under Discord's length limit with real ids", () => {
@@ -58,7 +58,14 @@ describe("memberAnniversaryMessages", () => {
       ids.map((userId, index) => ({ userId, years: 1 + (index % 7) }))
     );
     expect(messages.length).toBeGreaterThan(1);
-    expect(messages.every(({ content }) => content.length <= 2000)).toBe(true);
+    // 4000 characters in a message laid out with components, the heading's
+    // included.
+    expect(
+      messages.every(
+        ({ content }) =>
+          content.length + "🎉 **Ancienneté sur le serveur**".length <= 4000
+      )
+    ).toBe(true);
     expect(new Set(messages.flatMap(({ userIds }) => userIds))).toEqual(
       new Set(ids)
     );
@@ -68,41 +75,43 @@ describe("memberAnniversaryMessages", () => {
     }
   });
 
-  it("puts every mention under its own years, across length cuts", () => {
-    // Long ids: the messages are cut on length, well before 100 mentions.
-    const anniversaries = Array.from({ length: 200 }, (_, index) => ({
+  it("puts every mention on the line of its own years, across cuts", () => {
+    const anniversaries = Array.from({ length: 300 }, (_, index) => ({
       userId: String(10n ** 19n + BigInt(index)),
       years: 1 + (index % 7),
     }));
     const messages = memberAnniversaryMessages(t(), anniversaries);
-    expect(messages.every(({ userIds }) => userIds.length < 100)).toBe(true);
     const read: MemberAnniversary[] = [];
-    messages.forEach(({ content }, index) => {
-      const lines = content.split("\n");
-      if (index === 0) {
-        expect(lines.shift()).toBe("🎉 **Ancienneté sur le serveur**");
-      }
-      let years: number | null = null;
-      for (const line of lines) {
-        const header = /^\*\*(\d+) ans?\*\*$/.exec(line);
-        if (header) {
-          years = Number(header[1]);
-          continue;
-        }
-        expect(years, `"${line}" has no header above it`).not.toBeNull();
+    for (const { content } of messages) {
+      for (const line of content.split("\n")) {
+        const header = /^\*\*(\d+) ans?\*\* · /.exec(line);
+        expect(header, `"${line}" has no years`).not.toBeNull();
         for (const [, userId] of line.matchAll(/<@(\d+)>/g)) {
-          read.push({ userId: userId!, years: years! });
+          read.push({ userId: userId!, years: Number(header![1]) });
         }
       }
-    });
+    }
     const expected = [...anniversaries].sort((a, b) => b.years - a.years);
     expect(read).toEqual(expected);
+  });
+
+  it("cuts on length too, a cut line starting on its years again", () => {
+    // A small limit, so that length cuts before 100 mentions.
+    const ids = Array.from({ length: 20 }, (_, index) => String(1000 + index));
+    const messages = memberAnniversaryMessages(t(), at(4, ...ids), 60);
+    expect(messages.length).toBeGreaterThan(1);
+    expect(messages.every(({ userIds }) => userIds.length < 100)).toBe(true);
+    for (const { content } of messages) {
+      expect(content.length).toBeLessThanOrEqual(60);
+      expect(content.startsWith("**4 ans** · ")).toBe(true);
+    }
+    expect(messages.flatMap(({ userIds }) => userIds)).toEqual(ids);
   });
 
   it("starts a message on a group header, never on bare mentions", () => {
     const ids = Array.from({ length: 150 }, (_, index) => String(index));
     const messages = memberAnniversaryMessages(t(), at(4, ...ids));
-    expect(messages[1]!.content.startsWith("**4 ans**\n")).toBe(true);
+    expect(messages[1]!.content.startsWith("**4 ans** · ")).toBe(true);
   });
 
   it("says nothing without anniversaries", () => {

@@ -24,7 +24,7 @@ import { allMembers } from "#lib/guild-members.js";
 import { fetchAvatar } from "#lib/imaging.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
-import { postCard } from "#lib/post-card.js";
+import { celebrationMessage, postCard } from "#lib/post-card.js";
 import type { BirthdayConfigSchema } from "../birthday.config.js";
 import {
   birthdayCard,
@@ -114,22 +114,38 @@ async function sendWishes(
   const allowedMentions = (message: WishMessage) => ({
     users: mentionable.filter((userId) => message.userIds.includes(userId)),
   });
-  const [first, ...others] = cardMessages(config.t, config.locale, userIds);
+  // The heading, the card full width, then the mentions: a birthday the
+  // member registered, so they notify.
+  const [first, ...others] = cardMessages(config.locale, userIds);
   const posted = await postCard(
     logger,
     `the birthdays | guildId = ${guildId}`,
     () => drawCard(config, celebrants, template, today),
     (card) =>
       channel.send({
-        content: first!.content,
-        files: [card],
+        ...celebrationMessage({
+          heading: config.t("announce.heading"),
+          card,
+          text: first!.content,
+        }),
         allowedMentions: allowedMentions(first!),
       })
   );
-  const messages = posted
-    ? others
-    : wishMessages(config.t, config.locale, template, userIds);
-  for (const message of messages) {
+  if (posted) {
+    for (const message of others) {
+      await channel.send({
+        ...celebrationMessage({ text: message.content }),
+        allowedMentions: allowedMentions(message),
+      });
+    }
+    return;
+  }
+  for (const message of wishMessages(
+    config.t,
+    config.locale,
+    template,
+    userIds
+  )) {
     await channel.send({
       content: message.content,
       allowedMentions: allowedMentions(message),

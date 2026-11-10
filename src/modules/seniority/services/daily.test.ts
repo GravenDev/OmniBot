@@ -1,13 +1,20 @@
 import {
+  AttachmentBuilder,
   Collection,
   DiscordAPIError,
+  MessageFlags,
   type Client,
   type GuildMember,
 } from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConfigData } from "#lib/config.js";
 import type { Module } from "#lib/module.js";
-import { initTestI18n, makeTestConfig, silenceLogs } from "#lib/testing.js";
+import {
+  initTestI18n,
+  makeTestConfig,
+  messageText,
+  silenceLogs,
+} from "#lib/testing.js";
 import en from "../i18n/en.json" with { type: "json" };
 import fr from "../i18n/fr.json" with { type: "json" };
 import {
@@ -95,15 +102,24 @@ function sent(send: ReturnType<typeof vi.fn>) {
       (
         call as unknown as [
           {
-            content: string;
+            content?: string;
             files?: unknown[];
             components?: unknown[];
+            flags?: number;
             allowedMentions: { users: string[] };
           },
         ]
       )[0]
   );
 }
+
+const memberCard = new AttachmentBuilder(Buffer.from("m"), {
+  name: "seniority.webp",
+  description: "Ancienneté du jour",
+});
+const serverCard = new AttachmentBuilder(Buffer.from("s"), {
+  name: "server.webp",
+});
 
 // 16 October 2026, 09:00 in Paris.
 const NINE_IN_PARIS = new Date("2026-10-16T07:00:00Z");
@@ -117,8 +133,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.lastDay.mockResolvedValue("2026-10-15");
   state.claimDay.mockResolvedValue(undefined);
-  cards.seniorityCard.mockResolvedValue("members.png");
-  cards.serverCard.mockResolvedValue("server.png");
+  cards.seniorityCard.mockResolvedValue(memberCard);
+  cards.serverCard.mockResolvedValue(serverCard);
 });
 
 describe("runGuildDay", () => {
@@ -130,29 +146,38 @@ describe("runGuildDay", () => {
     const { client, send } = setup({ serverAnniversary: false });
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     const [first] = sent(send);
-    expect(first!.content).toBe(
-      "🎉 **Ancienneté sur le serveur**\n**6 ans**\n<@bob>\n**3 ans**\n<@alice>\n**1 an**\n<@quiet>"
+    expect(messageText(first!)).toBe(
+      "🎉 **Ancienneté sur le serveur**\n**6 ans** · <@bob>\n**3 ans** · <@alice>\n**1 an** · <@quiet>"
     );
+    // The card shows the same years as the lines.
+    const [, celebrated] = cards.seniorityCard.mock.calls[0]!;
+    expect(
+      (celebrated as { member: GuildMember; years: number }[]).map(
+        ({ member, years }) => [member.id, years]
+      )
+    ).toEqual([
+      ["bob", 6],
+      ["alice", 3],
+      ["quiet", 1],
+    ]);
   });
 
   it("posts the member anniversaries, then the server's", async () => {
     const { client, send } = setup();
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
 
-    const messages = sent(send);
-    expect(messages).toEqual([
-      {
-        content:
-          "🎉 **Ancienneté sur le serveur**\n**3 ans**\n<@alice>\n**1 an**\n<@bob> <@quiet>",
-        files: ["members.png"],
-        allowedMentions: { users: ["alice", "bob"] },
-      },
-      {
-        content: "🎂 Le serveur fête ses 5 ans !",
-        files: ["server.png"],
-        allowedMentions: { users: [] },
-      },
-    ]);
+    const [members, server] = sent(send);
+    // The heading, the card full width, then the groups.
+    expect(messageText(members!)).toBe(
+      "🎉 **Ancienneté sur le serveur**\n**3 ans** · <@alice>\n**1 an** · <@bob> <@quiet>"
+    );
+    expect(members!.files).toEqual([memberCard]);
+    expect(members!.flags).toBe(MessageFlags.IsComponentsV2);
+    expect(members!.allowedMentions).toEqual({ users: ["alice", "bob"] });
+    expect(messageText(server!)).toBe("🎂 Le serveur fête ses 5 ans !");
+    expect(server!.files).toEqual([serverCard]);
+    expect(server!.flags).toBe(MessageFlags.IsComponentsV2);
+    expect(server!.allowedMentions).toEqual({ users: [] });
     // The members celebrated today, longest-standing first.
     const [, celebrated, day] = cards.seniorityCard.mock.calls[0]!;
     expect(
@@ -168,17 +193,17 @@ describe("runGuildDay", () => {
     cards.serverCard.mockRejectedValue(new Error("canvas"));
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
 
-    expect(sent(send)).toEqual([
-      {
-        content:
-          "🎉 **Ancienneté sur le serveur**\n**3 ans**\n<@alice>\n**1 an**\n<@bob> <@quiet>",
-        allowedMentions: { users: ["alice", "bob"] },
-      },
-      {
-        content: "🎂 **Le serveur fête ses 5 ans aujourd'hui !**\n5 membres",
-        allowedMentions: { users: [] },
-      },
-    ]);
+    const [members, server] = sent(send);
+    expect(messageText(members!)).toBe(
+      "🎉 **Ancienneté sur le serveur**\n**3 ans** · <@alice>\n**1 an** · <@bob> <@quiet>"
+    );
+    expect(members!).not.toHaveProperty("files");
+    expect(members!.flags).toBe(MessageFlags.IsComponentsV2);
+    expect(members!.allowedMentions).toEqual({ users: ["alice", "bob"] });
+    expect(server).toEqual({
+      content: "🎂 **Le serveur fête ses 5 ans aujourd'hui !**\n5 membres",
+      allowedMentions: { users: [] },
+    });
   });
 
   it("falls back to the text announcements when Discord refuses the images", async () => {
@@ -200,9 +225,9 @@ describe("runGuildDay", () => {
     });
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
 
-    expect(sent(send).map(({ content }) => content)).toEqual([
-      "🎉 **Ancienneté sur le serveur**\n**3 ans**\n<@alice>\n**1 an**\n<@bob> <@quiet>",
-      "🎉 **Ancienneté sur le serveur**\n**3 ans**\n<@alice>\n**1 an**\n<@bob> <@quiet>",
+    expect(sent(send).map(messageText)).toEqual([
+      "🎉 **Ancienneté sur le serveur**\n**3 ans** · <@alice>\n**1 an** · <@bob> <@quiet>",
+      "🎉 **Ancienneté sur le serveur**\n**3 ans** · <@alice>\n**1 an** · <@bob> <@quiet>",
       "🎂 Le serveur fête ses 5 ans !",
       "🎂 **Le serveur fête ses 5 ans aujourd'hui !**\n5 membres",
     ]);
@@ -211,7 +236,7 @@ describe("runGuildDay", () => {
   it("can announce one without the other", async () => {
     const { client, send } = setup({ memberAnniversaries: false });
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
-    expect(sent(send).map(({ content }) => content)).toEqual([
+    expect(sent(send).map(messageText)).toEqual([
       "🎂 Le serveur fête ses 5 ans !",
     ]);
   });
@@ -227,10 +252,10 @@ describe("runGuildDay", () => {
       ConfigData<SeniorityConfigSchema>
     >);
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
-    expect(sent(send).map(({ content }) => content)).toEqual([
-      "🎉 **Ancienneté sur le serveur**\n**3 ans**\n<@alice>\n**1 an**\n<@bob> <@quiet>",
+    expect(sent(send).map(messageText)).toEqual([
+      "🎉 **Ancienneté sur le serveur**\n**3 ans** · <@alice>\n**1 an** · <@bob> <@quiet>",
     ]);
-    expect(sent(serverSend).map(({ content }) => content)).toEqual([
+    expect(sent(serverSend).map(messageText)).toEqual([
       "🎂 Le serveur fête ses 5 ans !",
     ]);
   });
@@ -247,7 +272,7 @@ describe("runGuildDay", () => {
     >);
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(send).not.toHaveBeenCalled();
-    expect(sent(serverSend).map(({ content }) => content)).toEqual([
+    expect(sent(serverSend).map(messageText)).toEqual([
       "🎂 Le serveur fête ses 5 ans !",
     ]);
   });
@@ -344,10 +369,12 @@ describe("runGuildDay", () => {
     // The image goes with the first message only.
     expect(messages.filter(({ files }) => files)).toHaveLength(1);
     expect(messages[0]!.files).toBeDefined();
-    for (const { content, allowedMentions } of messages) {
-      expect(allowedMentions.users.length).toBeLessThanOrEqual(100);
-      for (const id of allowedMentions.users) {
-        expect(content).toContain(`<@${id}>`);
+    for (const message of messages) {
+      // Every message is laid out with components, not the first only.
+      expect(message.flags).toBe(MessageFlags.IsComponentsV2);
+      expect(message.allowedMentions.users.length).toBeLessThanOrEqual(100);
+      for (const id of message.allowedMentions.users) {
+        expect(messageText(message)).toContain(`<@${id}>`);
       }
     }
     // The 150, alice and bob; "quiet" turned their mentions off.

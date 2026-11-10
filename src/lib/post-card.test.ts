@@ -1,7 +1,7 @@
-import { DiscordAPIError } from "discord.js";
+import { AttachmentBuilder, DiscordAPIError, MessageFlags } from "discord.js";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { loggerMaker } from "./logger.js";
-import { postCard } from "./post-card.js";
+import { celebrationMessage, postCard } from "./post-card.js";
 import { silenceLogs } from "./testing.js";
 
 const logger = loggerMaker("test");
@@ -58,5 +58,43 @@ describe("postCard", () => {
         () => Promise.reject(new Error("socket closed"))
       )
     ).rejects.toThrow("socket closed");
+  });
+});
+
+describe("celebrationMessage", () => {
+  const card = new AttachmentBuilder(Buffer.from("x"), {
+    name: "seniority.webp",
+    description: "Ancienneté du jour : Nora",
+  });
+
+  it("puts the heading above the card, full width, then the lines", () => {
+    const message = celebrationMessage({
+      heading: "🎉 **Ancienneté**",
+      card,
+      text: "**5 ans** · <@1>",
+    });
+    expect(message.flags).toBe(MessageFlags.IsComponentsV2);
+    expect(message.files).toEqual([card]);
+    expect(message.components.map((c) => c.toJSON())).toEqual([
+      { type: 10, content: "🎉 **Ancienneté**" },
+      {
+        type: 12,
+        items: [
+          {
+            media: { url: "attachment://seniority.webp" },
+            description: "Ancienneté du jour : Nora",
+          },
+        ],
+      },
+      { type: 10, content: "**5 ans** · <@1>" },
+    ]);
+  });
+});
+
+describe("celebrationMessage, card name", () => {
+  it("refuses a card without a name, which no gallery could show", () => {
+    expect(() =>
+      celebrationMessage({ card: new AttachmentBuilder(Buffer.from("x")) })
+    ).toThrow("name");
   });
 });
