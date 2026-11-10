@@ -12,6 +12,11 @@ import {
 } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
+import {
+  componentsMedia,
+  componentsText,
+  hiddenAttachments,
+} from "#lib/message-content.js";
 import { truncate } from "#lib/text.js";
 import type { Tally } from "./tally.js";
 
@@ -28,7 +33,10 @@ const SHOWN_FILES = 3;
 const GALLERY_LIMIT = 10;
 const HEADER_GAP = "\n\n";
 
-type Body = Pick<Message, "content" | "attachments" | "embeds" | "stickers">;
+type Body = Pick<
+  Message,
+  "content" | "attachments" | "embeds" | "stickers" | "components"
+>;
 
 interface GalleryItem {
   url: string;
@@ -88,7 +96,7 @@ function embedMedia(embed: Embed): string | undefined {
   }
 }
 
-function gallery(body: Body): GalleryItem[] {
+function gallery(body: Body, hidden: ReadonlySet<string>): GalleryItem[] {
   const embedItems: GalleryItem[] = [];
   for (const embed of body.embeds) {
     const url = embedMedia(embed);
@@ -99,7 +107,7 @@ function gallery(body: Body): GalleryItem[] {
   const items: GalleryItem[] = [
     ...body.attachments.filter(isMedia).map((attachment) => ({
       url: attachment.url,
-      spoiler: attachment.spoiler,
+      spoiler: attachment.spoiler || hidden.has(attachment.id),
     })),
     ...body.stickers
       .filter((sticker) => sticker.format !== StickerFormatType.Lottie)
@@ -152,7 +160,7 @@ function extras(body: Body, t: TFunction): string {
 
 function replyLine(reply: Message, t: TFunction): string {
   const excerpt = truncate(
-    reply.content.replace(/\s+/g, " ").trim(),
+    (reply.content || componentsText(reply)).replace(/\s+/g, " ").trim(),
     REPLY_LIMIT
   );
   return `-# ${t("reply", {
@@ -186,7 +194,30 @@ export function starboardMessage(
   t: TFunction,
   withMedia = true
 ) {
-  const { body, forwarded } = bodyOf(message);
+  const { body: raw, forwarded } = bodyOf(message);
+  // A message laid out with components shows its uploads through them, and
+  // sets their spoiler there: its galleries are shown as they are (the upload
+  // once, hidden by either spoiler), its other uploads with that spoiler.
+  const hidden = hiddenAttachments(raw);
+  const shown = componentsMedia(raw).map((item) => ({
+    url: item.url,
+    spoiler:
+      item.spoiler ||
+      (!!item.attachmentId &&
+        (hidden.has(item.attachmentId) ||
+          !!raw.attachments.get(item.attachmentId)?.spoiler)),
+    id: item.attachmentId,
+  }));
+  const shownIds = new Set(shown.map((item) => item.id));
+  const body: Body = {
+    content: raw.content,
+    attachments: raw.attachments.filter(
+      (attachment) => !shownIds.has(attachment.id)
+    ),
+    embeds: raw.embeds,
+    stickers: raw.stickers,
+    components: raw.components,
+  };
   const container = new ContainerBuilder().setAccentColor(ACCENT);
 
   const replied = reply ? replyLine(reply, t) : null;
@@ -213,8 +244,10 @@ export function starboardMessage(
     others.length -
     counter.length -
     HEADER_GAP.length;
-  const content = body.content
-    ? `${header}${HEADER_GAP}${truncate(body.content, Math.min(CONTENT_LIMIT, budget))}`
+  // A message laid out with components has no content: its text displays.
+  const text = body.content || componentsText(body);
+  const content = text
+    ? `${header}${HEADER_GAP}${truncate(text, Math.min(CONTENT_LIMIT, budget))}`
     : header;
   const avatar =
     message.member?.displayAvatarURL() ?? message.author.displayAvatarURL();
@@ -228,7 +261,9 @@ export function starboardMessage(
     container.addTextDisplayComponents((text) => text.setContent(others));
   }
 
-  const media = withMedia ? gallery(body) : [];
+  const media = withMedia
+    ? [...gallery(body, hidden), ...shown].slice(0, GALLERY_LIMIT)
+    : [];
   if (media.length > 0) {
     container.addMediaGalleryComponents((mediaGallery) =>
       mediaGallery.addItems(

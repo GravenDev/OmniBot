@@ -99,17 +99,19 @@ function fakeQuoted(
       contentType: string;
       spoiler: boolean;
     }>[];
-    snapshot?: { content: string; embeds?: unknown[] };
+    snapshot?: { content: string; embeds?: unknown[]; components?: unknown[] };
     embeds?: unknown[];
     authorId?: string;
     withMember?: boolean;
     buttonIds?: string[];
+    /** A message laid out with components: no content, no attachments. */
+    components?: unknown[];
   } = {}
 ) {
   const attachments = new Collection(
     (options.attachments ?? []).map((attachment, index) => [
       String(index),
-      { spoiler: false, ...attachment },
+      { id: String(index), spoiler: false, ...attachment },
     ])
   );
   const author = {
@@ -127,6 +129,7 @@ function fakeQuoted(
               "s",
               {
                 embeds: [],
+                components: [],
                 ...options.snapshot,
                 attachments: new Collection(),
               },
@@ -144,13 +147,15 @@ function fakeQuoted(
     createdAt: new Date("2026-10-14T19:58:00Z"),
     channel: { name: "general" },
     client: { user: { id: "bot" } },
-    components: options.buttonIds
-      ? [
-          {
-            components: options.buttonIds.map((customId) => ({ customId })),
-          },
-        ]
-      : [],
+    components: options.components
+      ? options.components
+      : options.buttonIds
+        ? [
+            {
+              components: options.buttonIds.map((customId) => ({ customId })),
+            },
+          ]
+        : [],
   } as unknown as Message<true>;
 }
 
@@ -465,6 +470,159 @@ describe("resolveQuote", () => {
 });
 
 describe("quoteEmbed", () => {
+  it("reads a message laid out with components, text and image", () => {
+    // Without content or attachments: its text displays and gallery instead.
+    const embed = quoteEmbed(
+      fakeQuoted({
+        components: [
+          { type: 10, content: "🎂 **Joyeux anniversaire !**" },
+          { type: 12, items: [{ media: { url: "https://cdn/card.webp" } }] },
+          { type: 10, content: "<@1>" },
+        ],
+      }),
+      member,
+      t
+    ).data;
+    expect(embed.description).toBe("🎂 **Joyeux anniversaire !**\n<@1>");
+    expect(embed.image?.url).toBe("https://cdn/card.webp");
+  });
+
+  it("reads a forwarded message laid out with components", () => {
+    const embed = quoteEmbed(
+      fakeQuoted({
+        snapshot: {
+          content: "",
+          components: [
+            { type: 10, content: "🎂 forwarded" },
+            { type: 12, items: [{ media: { url: "https://cdn/card.webp" } }] },
+          ],
+        },
+      }),
+      member,
+      t
+    ).data;
+    expect(embed.description).toBe("🎂 forwarded");
+    expect(embed.image?.url).toBe("https://cdn/card.webp");
+  });
+
+  it("links the other uploads of a gallery, the spoilered one included", () => {
+    const upload = (name: string) => ({
+      name,
+      url: `https://cdn/${name}`,
+      contentType: "image/png",
+    });
+    const embed = quoteEmbed(
+      fakeQuoted({
+        attachments: [upload("a.png"), upload("b.png"), upload("c.png")],
+        components: [
+          {
+            type: 12,
+            items: ["a", "b", "c"].map((name, index) => ({
+              media: {
+                url: `https://cdn/${name}.png`,
+                attachment_id: `${index}`,
+              },
+              spoiler: name === "a",
+            })),
+          },
+        ],
+      }),
+      member,
+      t
+    ).data;
+    expect(embed.image?.url).toBe("https://cdn/b.png");
+    expect(embed.description).toBe(
+      "📎 [a.png](https://cdn/a.png)\n📎 [c.png](https://cdn/c.png)"
+    );
+  });
+
+  it("keeps hidden an uploaded thumbnail inside a spoiler container", () => {
+    const embed = quoteEmbed(
+      fakeQuoted({
+        attachments: [
+          { name: "t.png", url: "https://cdn/t.png", contentType: "image/png" },
+        ],
+        components: [
+          {
+            type: 17,
+            spoiler: true,
+            components: [
+              {
+                type: 9,
+                components: [{ type: 10, content: "secret" }],
+                accessory: {
+                  type: 11,
+                  media: { url: "https://cdn/t.png", attachment_id: "0" },
+                },
+              },
+            ],
+          },
+        ],
+      }),
+      member,
+      t
+    ).data;
+    expect(embed.image).toBeUndefined();
+  });
+
+  it("does not take a gallery video for the image", () => {
+    const embed = quoteEmbed(
+      fakeQuoted({
+        components: [
+          {
+            type: 12,
+            items: [
+              {
+                media: {
+                  url: "https://cdn/clip.mp4",
+                  content_type: "video/mp4",
+                },
+              },
+              { media: { url: "https://cdn/card.webp" } },
+            ],
+          },
+        ],
+      }),
+      member,
+      t
+    ).data;
+    expect(embed.image?.url).toBe("https://cdn/card.webp");
+  });
+
+  it("keeps hidden the uploaded image a gallery shows as a spoiler", () => {
+    // Its gallery item holds the spoiler; the attachment itself does not.
+    const embed = quoteEmbed(
+      fakeQuoted({
+        attachments: [
+          {
+            name: "end.png",
+            url: "https://cdn/end.png",
+            contentType: "image/png",
+          },
+        ],
+        components: [
+          { type: 10, content: "the end" },
+          {
+            type: 12,
+            items: [
+              {
+                media: { url: "https://cdn/end.png", attachment_id: "0" },
+                spoiler: true,
+              },
+            ],
+          },
+        ],
+      }),
+      member,
+      t
+    ).data;
+    // Linked like a classic spoilered attachment, but not shown.
+    expect(embed.image).toBeUndefined();
+    expect(embed.description).toBe(
+      "the end\n📎 [end.png](https://cdn/end.png)"
+    );
+  });
+
   it("shows the author, the content, the channel and the quoter", () => {
     const embed = quoteEmbed(fakeQuoted({ content: "hello" }), member, t).data;
     expect(embed.author).toMatchObject({
