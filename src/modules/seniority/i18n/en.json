@@ -48,5 +48,16 @@
   "serverCard.members_other": "{{formatted}} members",
   "serverCard.eldest": "Longest-standing member: {{name}}, since {{date}}",
   "serverCard.alt_one": "The server turns {{count}}. Created on {{created}}, {{memberCount}}.",
-  "serverCard.alt_other": "The server turns {{count}}. Created on {{created}}, {{memberCount}}."
+  "serverCard.alt_other": "The server turns {{count}}. Created on {{created}}, {{memberCount}}.",
+
+  "admin.recompute.corrected": "{{user}}'s seniority now counts from {{since}}, before their current arrival on {{joined}}. Their next anniversaries take it into account.",
+  "admin.recompute.correctedPartial": "{{user}}'s seniority now counts from {{since}}, before their current arrival on {{joined}}. Discord is still indexing the server's old history, which can take hours on a large server: run the command again later, an older message may turn up.",
+  "admin.recompute.unchanged": "{{user}}'s seniority counts from their arrival on {{joined}}: none of their messages the bot can read on the server is older.",
+  "admin.recompute.notMember": "{{user}} is not a member of the server: their seniority can only be recomputed while they are here.",
+  "admin.recompute.bot": "Bots are not celebrated: nothing to recompute for {{user}}.",
+  "admin.recompute.notReady": "Discord is still indexing the server's messages: try again later. On a large server, indexing the old history can take hours.",
+  "admin.recompute.noAccess": "Discord refuses the bot the message search: it needs Message Content access, to enable in Discord's Developer Portal, and permission to read the channels. Retrying will not help until that is set.",
+  "admin.recompute.failed": "Recomputing {{user}}'s seniority failed: try again later.",
+  "uninstall.warning_one": "One member's recomputed seniority will be deleted: it will have to be recomputed again.",
+  "uninstall.warning_other": "The recomputed seniority of {{count}} members will be deleted: it will have to be recomputed again."
 }

@@ -72,6 +72,35 @@ describe("celebratedMembers", () => {
   });
 });
 
+describe("celebratedMembers with recomputed seniority", () => {
+  it("counts from the recomputed date, not from a later return", () => {
+    const celebrated = celebratedMembers(
+      [
+        // Came back on 2025-11-02; first posted on 2019-11-01.
+        member("returned", "2025-11-02T08:00:00Z"),
+        member("five-years", "2021-11-01T08:00:00Z"),
+      ],
+      NOV_1,
+      "Europe/Paris",
+      new Map([["returned", new Date("2019-11-01T12:00:00Z")]])
+    );
+    expect(celebrated.map(({ member, years }) => [member.id, years])).toEqual([
+      ["returned", 7],
+      ["five-years", 5],
+    ]);
+  });
+
+  it("ignores a recomputed date later than the arrival", () => {
+    const celebrated = celebratedMembers(
+      [member("one-year", "2025-11-01T08:00:00Z")],
+      NOV_1,
+      "Europe/Paris",
+      new Map([["one-year", new Date("2026-01-01T00:00:00Z")]])
+    );
+    expect(celebrated.map(({ years }) => years)).toEqual([1]);
+  });
+});
+
 describe("seniorityCard", () => {
   const celebrated = Array.from({ length: 5 }, (_, index) => ({
     member: member(`m${index}`, `${2015 + index}-11-01T08:00:00Z`),
@@ -161,6 +190,23 @@ describe("seniorityCard", () => {
 });
 
 describe("serverCard", () => {
+  it("names the longest-standing member by their recomputed seniority", async () => {
+    await serverCard(
+      guild,
+      config(),
+      [
+        member("first-arrival", "2017-01-01T08:00:00Z"),
+        member("returned", "2024-01-01T08:00:00Z"),
+      ],
+      10,
+      new Map([["returned", new Date("2016-12-01T08:00:00Z")]])
+    );
+    const [drawn] = rendering.renderCelebrationImage.mock.calls[0]! as [
+      { details: string[] },
+    ];
+    expect(drawn.details.join(" ")).toContain("returned");
+  });
+
   it("names the longest-standing member, bots excluded", async () => {
     const card: AttachmentBuilder = await serverCard(
       guild,

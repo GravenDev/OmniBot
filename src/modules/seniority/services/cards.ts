@@ -18,6 +18,7 @@ import { fetchAvatar, fetchImage } from "#lib/imaging.js";
 import { truncate } from "#lib/text.js";
 import { ACCENT, CONFETTI } from "../rendering/theme.js";
 import type { SeniorityConfigSchema } from "../seniority.config.js";
+import { seniorityStart } from "./overrides.js";
 
 type Config = ConfigProvider<SeniorityConfigSchema>;
 
@@ -26,27 +27,33 @@ const ALT_TEXT_LIMIT = 1024;
 export interface Celebrated {
   member: GuildMember;
   years: number;
+  /** The date their seniority counts from. */
+  since: Date;
 }
 
-/** Members whose arrival anniversary is `today`, longest-standing first; bots excluded. */
+/**
+ * Members whose seniority anniversary is `today`, longest-standing first;
+ * bots excluded. Seniority counts from the arrival, or from the earlier date
+ * an administrator recomputed (`overrides`, by user id).
+ */
 export function celebratedMembers(
   members: Iterable<GuildMember>,
   today: CalendarDay,
-  timeZone: string
+  timeZone: string,
+  overrides: ReadonlyMap<string, Date> = new Map()
 ): Celebrated[] {
   const celebrated: Celebrated[] = [];
   for (const member of members) {
     if (member.user.bot || !member.joinedAt) {
       continue;
     }
-    const years = anniversaryYears(member.joinedAt, today, timeZone);
+    const since = seniorityStart(member.joinedAt, overrides.get(member.id));
+    const years = anniversaryYears(since, today, timeZone);
     if (years !== null) {
-      celebrated.push({ member, years });
+      celebrated.push({ member, years, since });
     }
   }
-  return celebrated.sort(
-    (a, b) => a.member.joinedAt!.getTime() - b.member.joinedAt!.getTime()
-  );
+  return celebrated.sort((a, b) => a.since.getTime() - b.since.getTime());
 }
 
 /** A card's text, its portraits aside, and its alternative text. */
@@ -194,22 +201,26 @@ export function serverCardText(
   };
 }
 
-/** The server's anniversary card, with its longest-standing member (bots excluded). */
+/**
+ * The server's anniversary card, with its longest-standing member (bots
+ * excluded), counted like the members' anniversaries.
+ */
 export async function serverCard(
   guild: Guild,
   config: Config,
   members: Iterable<GuildMember>,
-  years: number
+  years: number,
+  overrides: ReadonlyMap<string, Date> = new Map()
 ): Promise<AttachmentBuilder> {
   const timeZone = config.get("timeZone");
-  let eldest: GuildMember | null = null;
+  let eldest: { member: GuildMember; since: Date } | null = null;
   for (const member of members) {
-    if (
-      !member.user.bot &&
-      member.joinedAt &&
-      (!eldest || member.joinedAt < eldest.joinedAt!)
-    ) {
-      eldest = member;
+    if (member.user.bot || !member.joinedAt) {
+      continue;
+    }
+    const since = seniorityStart(member.joinedAt, overrides.get(member.id));
+    if (!eldest || since < eldest.since) {
+      eldest = { member, since };
     }
   }
   const { card, alt } = serverCardText(config.t, config.locale, {
@@ -217,8 +228,8 @@ export async function serverCard(
     createdOn: formatDate(guild.createdAt, config.locale, timeZone),
     members: guild.memberCount,
     eldest: eldest && {
-      name: eldest.displayName,
-      since: formatDate(eldest.joinedAt!, config.locale, timeZone),
+      name: eldest.member.displayName,
+      since: formatDate(eldest.since, config.locale, timeZone),
     },
   });
   const icon = await fetchImage(guild.iconURL({ extension: "png", size: 256 }));

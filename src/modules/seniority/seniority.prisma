@@ -5,3 +5,16 @@ model SeniorityState {
   // Guild-local day (YYYY-MM-DD) whose announcements already ran.
   lastDay String?
 }
+
+// A member's seniority recomputed by an administrator: the earliest of their
+// current arrival and their first message still on the server. Discord resets
+// the arrival date of a member who leaves and comes back; this row is kept
+// after they leave, so that it still holds when they return. Deleted by
+// `/privacy delete` and when the module is uninstalled.
+model SeniorityOverride {
+  guildId String
+  userId  String
+  since   DateTime
+
+  @@id([guildId, userId])
+}

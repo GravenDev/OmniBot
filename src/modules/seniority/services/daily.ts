@@ -27,6 +27,7 @@ import {
   serverAnniversaryMessage,
 } from "./announcements.js";
 import { celebratedMembers, seniorityCard, serverCard } from "./cards.js";
+import { overrides } from "./overrides.js";
 import * as state from "./state.js";
 
 const logger = loggerMaker("seniority");
@@ -83,12 +84,14 @@ async function announceMembers(
   config: Config,
   channel: SendableChannels,
   members: Collection<string, GuildMember>,
+  recomputed: ReadonlyMap<string, Date>,
   today: CalendarDay
 ): Promise<void> {
   const celebrated = celebratedMembers(
     members.values(),
     today,
-    config.get("timeZone")
+    config.get("timeZone"),
+    recomputed
   );
   if (celebrated.length === 0) {
     return;
@@ -125,12 +128,13 @@ async function announceServer(
   config: Config,
   channel: SendableChannels,
   members: Collection<string, GuildMember> | null,
+  recomputed: ReadonlyMap<string, Date>,
   years: number
 ): Promise<void> {
   const posted = await postCard(
     logger,
     `the server anniversary | guildId = ${guild.id}`,
-    () => serverCard(guild, config, members?.values() ?? [], years),
+    () => serverCard(guild, config, members?.values() ?? [], years, recomputed),
     (card) =>
       send(
         channel,
@@ -218,15 +222,25 @@ export async function runGuildDay(
       : null;
   const members =
     membersChannel || serverChannel ? await allMembers(guild) : null;
+  const recomputed = members
+    ? await overrides(guildId)
+    : new Map<string, Date>();
   await state.claimDay(guildId, day);
   if (members && membersChannel) {
     await attempt(guildId, "member anniversaries", () =>
-      announceMembers(guild, config, membersChannel, members, today)
+      announceMembers(guild, config, membersChannel, members, recomputed, today)
     );
   }
   if (serverYears !== null && serverChannel) {
     await attempt(guildId, "the server anniversary", () =>
-      announceServer(guild, config, serverChannel, members, serverYears)
+      announceServer(
+        guild,
+        config,
+        serverChannel,
+        members,
+        recomputed,
+        serverYears
+      )
     );
   }
   logger.info(

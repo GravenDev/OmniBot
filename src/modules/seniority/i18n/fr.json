@@ -48,5 +48,16 @@
   "serverCard.members_other": "{{formatted}} membres",
   "serverCard.eldest": "Plus ancienne présence : {{name}}, depuis le {{date}}",
   "serverCard.alt_one": "Le serveur fête son premier anniversaire. Créé le {{created}}, {{memberCount}}.",
-  "serverCard.alt_other": "Le serveur fête ses {{count}} ans. Créé le {{created}}, {{memberCount}}."
+  "serverCard.alt_other": "Le serveur fête ses {{count}} ans. Créé le {{created}}, {{memberCount}}.",
+
+  "admin.recompute.corrected": "L'ancienneté de {{user}} part désormais du {{since}}, avant son arrivée actuelle du {{joined}}. Ses prochaines fêtes d'ancienneté en tiennent compte.",
+  "admin.recompute.correctedPartial": "L'ancienneté de {{user}} part désormais du {{since}}, avant son arrivée actuelle du {{joined}}. Discord indexe encore l'historique ancien du serveur, ce qui peut prendre des heures sur un grand serveur : relancez la commande plus tard, un message plus ancien pourrait s'y trouver.",
+  "admin.recompute.unchanged": "L'ancienneté de {{user}} part de son arrivée, le {{joined}} : aucun de ses messages que le bot peut lire sur le serveur n'est plus ancien.",
+  "admin.recompute.notMember": "{{user}} n'est pas membre du serveur : son ancienneté ne peut être recalculée qu'en sa présence.",
+  "admin.recompute.bot": "Les bots ne sont pas fêtés : rien à recalculer pour {{user}}.",
+  "admin.recompute.notReady": "Discord indexe encore les messages du serveur : réessayez plus tard. Sur un grand serveur, l'indexation de l'historique ancien peut prendre des heures.",
+  "admin.recompute.noAccess": "Discord refuse la recherche de messages au bot : elle demande l'accès Message Content, à activer dans le portail développeur de Discord, et la lecture des salons. Réessayer n'y changera rien tant que ce n'est pas réglé.",
+  "admin.recompute.failed": "Le recalcul de l'ancienneté de {{user}} a échoué : réessayez plus tard.",
+  "uninstall.warning_one": "L'ancienneté recalculée d'un membre sera supprimée : il faudra la recalculer à nouveau.",
+  "uninstall.warning_other": "Les anciennetés recalculées de {{count}} membres seront supprimées : il faudra les recalculer à nouveau."
 }
