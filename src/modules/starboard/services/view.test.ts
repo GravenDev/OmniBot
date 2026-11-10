@@ -81,6 +81,142 @@ describe("counterLine", () => {
 });
 
 describe("starboardMessage", () => {
+  it("shows the text and image of a message laid out with components", () => {
+    const { json } = render(
+      fakeMessage({
+        content: "",
+        components: [
+          { type: 10, content: "🎂 **Joyeux anniversaire !**" },
+          { type: 12, items: [{ media: { url: "https://cdn/card.webp" } }] },
+          { type: 10, content: "<@1>" },
+        ],
+      })
+    );
+    expect(json).toContain("🎂 **Joyeux anniversaire !**\\n<@1>");
+    expect(json).toContain("https://cdn/card.webp");
+  });
+
+  it("shows a forwarded message laid out with components", () => {
+    const { json } = render(
+      fakeMessage({
+        content: "",
+        messageSnapshots: new Collection([
+          [
+            "s",
+            fakeMessage({
+              content: "",
+              components: [
+                { type: 10, content: "🎂 forwarded" },
+                {
+                  type: 12,
+                  items: [{ media: { url: "https://cdn/card.webp" } }],
+                },
+              ],
+            }),
+          ],
+        ]),
+      })
+    );
+    expect(json).toContain("🎂 forwarded");
+    expect(json).toContain("https://cdn/card.webp");
+  });
+
+  it("shows an uploaded image once, with the spoiler of its gallery", () => {
+    const card = {
+      id: "a1",
+      ...attachment("card.png", "image/png"),
+    };
+    const { payload } = render(
+      fakeMessage({
+        content: "",
+        attachments: new Collection([["a1", card]]),
+        components: [
+          {
+            type: 12,
+            items: [
+              {
+                media: { url: card.url, attachment_id: "a1" },
+                spoiler: true,
+              },
+            ],
+          },
+        ],
+      })
+    );
+    const items = JSON.stringify(payload.components).match(/card\.png/g);
+    expect(items).toHaveLength(1);
+    expect(JSON.stringify(payload.components)).toContain('"spoiler":true');
+  });
+
+  it("keeps the spoiler of an upload's file name when a gallery shows it", () => {
+    const card = {
+      id: "a1",
+      ...attachment("SPOILER_card.png", "image/png", true),
+    };
+    const { json } = render(
+      fakeMessage({
+        content: "",
+        attachments: new Collection([["a1", card]]),
+        components: [
+          {
+            type: 12,
+            items: [{ media: { url: card.url, attachment_id: "a1" } }],
+          },
+        ],
+      })
+    );
+    expect(json).toContain('"spoiler":true');
+  });
+
+  it("keeps hidden an upload a spoiler container shows as a thumbnail", () => {
+    const thumb = { id: "a1", ...attachment("t.png", "image/png") };
+    const { json } = render(
+      fakeMessage({
+        content: "",
+        attachments: new Collection([["a1", thumb]]),
+        components: [
+          {
+            type: 17,
+            spoiler: true,
+            components: [
+              {
+                type: 9,
+                components: [{ type: 10, content: "secret" }],
+                accessory: {
+                  type: 11,
+                  media: { url: thumb.url, attachment_id: "a1" },
+                },
+              },
+            ],
+          },
+        ],
+      })
+    );
+    expect(json).toContain('"spoiler":true');
+  });
+
+  it("hides a gallery upload another component shows as a spoiler", () => {
+    const card = { id: "a1", ...attachment("card.png", "image/png") };
+    const { json } = render(
+      fakeMessage({
+        content: "",
+        attachments: new Collection([["a1", card]]),
+        components: [
+          {
+            type: 12,
+            items: [{ media: { url: card.url, attachment_id: "a1" } }],
+          },
+          {
+            type: 13,
+            file: { url: card.url, attachment_id: "a1" },
+            spoiler: true,
+          },
+        ],
+      })
+    );
+    expect(json).toContain('"spoiler":true');
+  });
+
   it("never pings anyone", () => {
     expect(render(fakeMessage()).payload.allowedMentions).toBe(NO_MENTIONS);
   });
@@ -176,6 +312,18 @@ describe("starboardMessage", () => {
     expect(json).toContain(
       "↪ Replying to <@other>: the question over two lines"
     );
+  });
+
+  it("shows the text of a reply laid out with components", () => {
+    const reply = fakeMessage({
+      author: { id: "other" },
+      content: "",
+      components: [{ type: 10, content: "🎂 happy birthday" }],
+    }) as unknown as Message;
+
+    const { json } = render(fakeMessage(), reply);
+
+    expect(json).toContain("↪ Replying to <@other>: 🎂 happy birthday");
   });
 
   it("shows the content of a forwarded message", () => {

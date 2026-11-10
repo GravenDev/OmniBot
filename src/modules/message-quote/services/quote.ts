@@ -22,6 +22,11 @@ import { stripHiddenText } from "#lib/hidden-text.js";
 import type { TFunction } from "#lib/i18n.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS_REPLY } from "#lib/mentions.js";
+import {
+  componentsMedia,
+  componentsText,
+  hiddenAttachments,
+} from "#lib/message-content.js";
 import { truncate } from "#lib/text.js";
 import {
   deleteButton,
@@ -159,20 +164,40 @@ export function quoteEmbed(
     ...quoted.attachments.values(),
     ...(snapshot?.attachments.values() ?? []),
   ];
-  const image = attachments.find(isImage);
+  // A message laid out with components sets the spoiler of its uploads on
+  // the components showing them, not on the attachments.
+  const hidden = new Set([
+    ...hiddenAttachments(quoted),
+    ...(snapshot ? hiddenAttachments(snapshot) : []),
+  ]);
+  const image = attachments.find(
+    (attachment) => isImage(attachment) && !hidden.has(attachment.id)
+  );
+  // Its galleries can also show media from a link, which are not uploads.
+  const linked = [
+    ...componentsMedia(quoted),
+    ...(snapshot ? componentsMedia(snapshot) : []),
+  ].filter((item) => !item.attachmentId);
   const files = attachments
     .filter((attachment) => attachment !== image)
     .map((attachment) => `📎 [${attachment.name}](${attachment.url})`);
   const firstEmbed = quoted.embeds[0] ?? snapshot?.embeds[0];
   const text =
     quoted.content ||
+    // A message laid out with components has no content: its text displays.
+    componentsText(quoted) ||
     snapshot?.content ||
+    (snapshot ? componentsText(snapshot) : "") ||
     firstEmbed?.description ||
     firstEmbed?.title ||
     "";
   const description = [text, ...files].filter(Boolean).join("\n");
   const imageUrl =
     image?.url ??
+    linked.find(
+      (item) =>
+        !item.spoiler && (item.contentType?.startsWith("image/") ?? true)
+    )?.url ??
     (text.includes("||")
       ? undefined
       : (firstEmbed?.image?.url ?? firstEmbed?.thumbnail?.url));

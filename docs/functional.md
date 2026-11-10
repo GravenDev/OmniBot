@@ -410,6 +410,7 @@ Reposte dans un salon dédié les messages qui reçoivent assez de réactions, e
 - Si le message d'origine est supprimé, son repost l'est aussi. Si un modérateur supprime le repost, le message n'est plus jamais reposté.
 - Ne sont jamais repostés : les messages du salon starboard et de ses fils, les messages système, ceux du bot lui-même (dont les reposts d'un ancien salon starboard), ceux des bots et des webhooks (sauf si `ignoreBots` est désactivé), ceux des salons exclus ou hors des salons surveillés, ceux d'un salon NSFW vers un starboard qui ne l'est pas, et ceux des fils privés.
 - Les salons réservés à un rôle sont repostés comme les autres, même si le salon starboard est visible par des membres qui ne peuvent pas les lire : pour qu'un salon du staff n'y apparaisse jamais, l'ajouter aux salons ou catégories exclus. Un forum, un salon de médias ou une scène ne se sélectionne pas dans les salons exclus : excluez sa catégorie. Exclure un salon n'efface pas les reposts déjà publiés, qui restent à supprimer à la main.
+- Un message mis en page avec des composants (Components V2, comme ceux d'autres apps) est reposté avec le texte et les images de ses composants, en gardant leurs spoilers ; un message transféré aussi.
 - Si le bot ne peut pas voir le salon starboard ou y écrire, rien n'est reposté. Changer de salon starboard laisse les anciens reposts en place ; leur compteur continue d'être mis à jour.
 - Quand un message atteint le seuil mais n'est pas reposté parce qu'il vient d'un salon NSFW ou d'un fil privé, la raison est journalisée une fois par message ; une permission manquante dans le salon starboard l'est en avertissement. Les salons exclus ou non surveillés ne sont journalisés qu'en niveau `debug`.
 - Si le salon d'origine devient NSFW, le repost est supprimé à la réaction ou à la modification suivante, même si le salon a aussi été exclu entre-temps.
@@ -748,7 +749,7 @@ Cite les messages Discord dont le lien est posté sur le serveur.
 
 ### Comportement automatique
 
-Quand un membre poste un lien vers un message (`https://discord.com/channels/…`, y compris `ptb.` et `canary.`), le bot répond avec une citation : auteur et avatar, texte, première image, autres pièces jointes en liens, salon d'origine, membre qui cite et date du message. Un bouton « Aller au message » ouvre l'original. Les mentions présentes dans le message cité ne notifient personne, et la citation part en @silent : le message qui contient le lien a déjà notifié le salon.
+Quand un membre poste un lien vers un message (`https://discord.com/channels/…`, y compris `ptb.` et `canary.`), le bot répond avec une citation : auteur et avatar, texte, première image, autres pièces jointes en liens, salon d'origine, membre qui cite et date du message. Un bouton « Aller au message » ouvre l'original. Un message mis en page avec des composants (Components V2) est cité avec le texte et la première image de ses composants. Les mentions présentes dans le message cité ne notifient personne, et la citation part en @silent : le message qui contient le lien a déjà notifié le salon.
 
 Un message transféré est cité avec son contenu transféré. Un message sans texte reprend la description (ou le titre) de son premier embed, à défaut le bot indique qu'il n'a pas de texte.
 
