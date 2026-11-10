@@ -17,6 +17,13 @@ import {
 
 const state = vi.hoisted(() => ({ lastDay: vi.fn(), claimDay: vi.fn() }));
 vi.mock("./state.js", () => state);
+const recomputed = vi.hoisted(() => ({
+  overrides: vi.fn(async () => new Map<string, Date>()),
+}));
+vi.mock("./overrides.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./overrides.js")>()),
+  ...recomputed,
+}));
 
 const getConfigForModuleIn = vi.hoisted(() => vi.fn());
 vi.mock("#core/services/config.service.js", () => ({
@@ -115,6 +122,19 @@ beforeEach(() => {
 });
 
 describe("runGuildDay", () => {
+  it("puts a recomputed member under the years of their first message", async () => {
+    // Bob's first message is from 2020: six years, not one.
+    recomputed.overrides.mockResolvedValueOnce(
+      new Map([["bob", new Date("2020-10-16T08:00:00Z")]])
+    );
+    const { client, send } = setup({ serverAnniversary: false });
+    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    const [first] = sent(send);
+    expect(first!.content).toBe(
+      "🎉 **Ancienneté sur le serveur**\n**6 ans**\n<@bob>\n**3 ans**\n<@alice>\n**1 an**\n<@quiet>"
+    );
+  });
+
   it("posts the member anniversaries, then the server's", async () => {
     const { client, send } = setup();
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);

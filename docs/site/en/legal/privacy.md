@@ -83,7 +83,7 @@ The Birthdays module stores, only for the members who register it themselves wit
 
 ### Member anniversaries
 
-The Member anniversaries module only stores, for each guild, the last day announced. It reads the members' join dates and the guild's creation date, provided by Discord, without storing them.
+The Member anniversaries module stores, for each guild, the last day announced. It reads the members' join dates and the guild's creation date, provided by Discord, without storing them. When an administrator recomputes a member's seniority (`/seniority-admin recompute`), it stores the date it counts from: the member's first message on the guild, when it predates their current arrival. Purpose: celebrating the real seniority of a member who left and came back, whose join date Discord reset. Legal basis: the guild's legitimate interest in celebrating its members' real seniority; the member can have this date deleted at any time with `/privacy delete`.
 
 ## Message Content Read Without Being Stored
 
@@ -96,6 +96,7 @@ Some modules read message content to work, without saving it to the database:
 - **Thread Creator** can use the first 50 characters of a message in the name of the thread it creates;
 - **RNGdle** reads messages in the RNGdle channel only, to recognize a pasted result and reply with a card;
 - **Clash of Code** reads messages in the channels chosen by the administrators (every channel when none is chosen), to spot game links; at an administrator's request (`/coc-admin import-channel`), it also goes through a channel's history, using Discord's message search. Only the game identifier and the ID of the message that held it are kept;
+- **Member anniversaries** looks up, at an administrator's request (`/seniority-admin recompute`), a member's first message using Discord's message search. Discord returns their oldest messages (25 at most), content included: only the date of the earliest is used, their content is neither used nor kept, and the date is kept only when it predates the member's current arrival;
 - **Starboard** reads a message that gets reactions, to repost its author, text, images, embeds and the message it replies to in the starboard channel. Messages from private threads are never reposted, nor messages from channels the admins excluded, once they are excluded.
 
 What these modules post stays on the Discord server, under the control of its administrators. The bot ignores messages from other bots, with four exceptions: Auto React also adds its reaction to them, Sticky Messages also reposts its message after them, both without reading them, Message Quote quotes a bot's message when a member posts its link, and Starboard reposts a bot's message when the administrators allow it.
@@ -106,7 +107,7 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 
 ## Data Retention
 
-- **Module configuration and activation**: kept as long as the bot is on the guild. When the bot leaves a guild (kick or removal), they are deliberately kept so everything is restored automatically if the bot is re-invited. Disabling a module deletes neither its configuration nor its data: they remain subject to the periods below.
+- **Module configuration and activation**: kept as long as the bot is on the guild. When the bot leaves a guild (kick or removal), they are deliberately kept so everything is restored automatically if the bot is re-invited. Disabling a module deletes neither its configuration nor its data, except for recomputed seniority and birthdays: they remain subject to the periods below.
 - **Reports**: a report is deleted, message copy included, 30 days after the message was last reported at the latest, whether it is closed or not. Each guild's administrators can shorten this period for closed reports. The deletion happens even when the module is disabled or the bot has left the guild.
 - **Activity statistics**: counters are deleted after a year, a period that cannot be changed. The date tracking started is kept with no time limit.
 - **RNGdle**: rolls, username and reminder subscription are kept until the member unlinks with `/rngdle unlink`, or an administrator unlinks them. The record of a claimed card is deleted two days later.
@@ -117,9 +118,10 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 - **Sticky messages**: kept until an administrator removes them in `/config`, or the channel is deleted.
 - **Starboard**: an entry is deleted with the original message, with its repost when it falls below the threshold and the administrators chose to remove it, when the original channel or thread is deleted (the repost is deleted too), or when the starboard channel is deleted. When a moderator deletes a repost, the entry is kept so that the message is never reposted. The bot only sees these deletions while the module is enabled and the bot is online: a message or channel deleted while the module is disabled, or while the bot is offline, leaves its entry and its repost in place. The guild's administrators can then delete the repost by hand.
 - **Temporary voice channels**: a channel's entry is deleted with the channel, when it empties or is deleted; if the bot is offline at that moment, it is deleted when the bot comes back, even if the module was disabled in the meantime. A member's remembered settings are deleted one year after they last changed them or created a channel, even if the module is disabled.
-- **Birthdays**: permanently deleted when the member removes them (`/birthday remove` or `/privacy delete`), leaves the guild, or when the module is disabled on the guild, unlike the data of other modules. If the bot leaves the guild, they stay stored, like the configuration, until it comes back. `/birthday show` shows what is kept.
+- **Recomputed seniority**: kept when the member leaves the guild, so that it still holds if they come back; deleted by `/privacy delete` (an administrator can recompute it again afterwards) and when the module is disabled on the guild, unlike the data of other modules. A member who has left the guild can no longer run `/privacy delete`: they ask the instance operator to delete it.
+- **Birthdays**: permanently deleted when the member removes them (`/birthday remove` or `/privacy delete`), leaves the guild, or when the module is disabled on the guild, like recomputed seniority and unlike the data of other modules. If the bot leaves the guild, they stay stored, like the configuration, until it comes back. `/birthday show` shows what is kept.
 
-Any member can delete the data the bot keeps about them on a guild themselves, at any time, with the `/privacy delete` command: their activity statistics, their game data (4-hour game, RNGdle, Clash of Code link), their birthday and their mention preference. Reports are not part of it: they stay with the moderators until they are deleted automatically. For any other deletion request, contact the instance operator.
+Any member can delete the data the bot keeps about them on a guild themselves, at any time, with the `/privacy delete` command: their activity statistics, their game data (4-hour game, RNGdle, Clash of Code link), their birthday, their recomputed seniority and their mention preference. Reports are not part of it: they stay with the moderators until they are deleted automatically. For any other deletion request, contact the instance operator.
 
 ## Data Sharing
 
