@@ -141,7 +141,18 @@
     {
       "files": ["src/**/*.ts"],
       "rules": {
-        "omnibot/no-whole-guild-member-fetch": "error"
+        "omnibot/no-whole-guild-member-fetch": "error",
+        "omnibot/discord-rest-in-polyfills": "error"
+      }
+    },
+    {
+      "files": [
+        "src/lib/discord-polyfills/**",
+        "src/core/loaders/**",
+        "src/**/*.test.ts"
+      ],
+      "rules": {
+        "omnibot/discord-rest-in-polyfills": "off"
       }
     },
     {

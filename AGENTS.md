@@ -55,6 +55,7 @@ The docs are also published as a VitePress site (sources in `docs/site/`) — ru
 - Prisma reads every `*.prisma` file under `src/` (multi-file schema): models live in the module's own `*.prisma` file, and model names must be unique across modules.
 - Run `pnpm prisma:generate` before building after any schema change.
 - Fetch a whole guild's members with `allMembers(guild)` (or `loadAllMembers(guild)` to only fill the cache) from `#lib/guild-members.js`, never `guild.members.fetch()` or a direct API call: Discord rate limits those requests per guild, and the helper shares one between modules. The `omnibot/no-whole-guild-member-fetch` lint rule (`lint/omnibot.js`) enforces it across `src/`.
+- Reach Discord through discord.js's methods. A call to Discord's REST API (`client.rest` with `Routes`) for what discord.js does not implement yet goes in `src/lib/discord-polyfills/`, one file per feature, with a test that fails once discord.js ships it, so the polyfill gets deleted then. The `omnibot/discord-rest-in-polyfills` lint rule (`lint/omnibot.js`) rejects such a call, a route or a Discord API URL anywhere else in `src/`; only the core loaders (command registration, the intent check before login) and tests are exempt.
 - Import across directories with `#…` subpath imports (e.g. `#lib/config.js`, `#core/…`), not deep relative paths (`../../…`); keep same-directory imports relative (`./x.js`). Always keep the `.js` extension (NodeNext).
 
 ## Environment
