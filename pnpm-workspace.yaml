@@ -7,7 +7,7 @@ packages:
 
 # One Prisma CLI version for the bot (generate, migrate dev) and the migrator.
 catalog:
-  prisma: ~7.9.1
+  prisma: 7.9.1
 
 shellEmulator: true
 
