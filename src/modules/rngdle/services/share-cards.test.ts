@@ -263,8 +263,9 @@ describe("answerShare", () => {
     expect(data.subtitle).toContain("card.notLinked");
   });
 
-  it("checks a member's results at most once every 10 minutes", async () => {
+  it("checks rngdle.com at most once every 10 minutes while it fails", async () => {
     mocks.store.account.mockResolvedValue(ACCOUNT);
+    mocks.refreshAccount.mockRejectedValue(new Error("rngdle.com is down"));
     const config = configWith(SHARING) as never;
     await answerShare(shareMessage() as never, config);
     vi.setSystemTime(clock + 9 * MINUTE);
@@ -288,10 +289,11 @@ describe("answerShare", () => {
 
   it("keeps the cooldown when the member links another username", async () => {
     mocks.store.account.mockResolvedValue(ACCOUNT);
+    mocks.refreshAccount.mockRejectedValue(new Error("rngdle.com is down"));
     const config = configWith(SHARING) as never;
     await answerShare(shareMessage() as never, config);
     mocks.store.account.mockResolvedValue({ ...ACCOUNT, username: "Bob" });
-    vi.setSystemTime(clock + 2 * MINUTE);
+    vi.setSystemTime(clock + 10 * 1000);
     await answerShare(shareMessage() as never, config);
 
     expect(mocks.refreshAccount).toHaveBeenCalledTimes(1);
@@ -513,6 +515,117 @@ describe("answerShare", () => {
 
       expect(mocks.refreshAccount).toHaveBeenCalledWith(ACCOUNT);
       expect(data.subtitle).not.toContain("card.notLinked");
+    });
+  });
+
+  describe("for a linked member who first pasted a roll made logged out", () => {
+    const LOGGED_IN = "RNGdle 🎲 222222\n\n🟦 RARE • Top 12%\n\n52 000 EP";
+
+    // The first paste is a roll rngdle.com never recorded (made logged out):
+    // the check finds nothing. The second, `secondsLater`, is the member's
+    // recorded roll.
+    async function loggedOutThenIn(secondsLater: number) {
+      const config = configWith(SHARING) as never;
+      let recorded = false;
+      mocks.store.account.mockResolvedValue(ACCOUNT);
+      mocks.refreshAccount.mockImplementation(async () => {});
+      mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
+        recorded && filter?.from && filter.userId
+          ? [{ ...roll("u1", 52000), number: 222222 }]
+          : []
+      );
+      await answerShare(shareMessage() as never, config);
+      expect(mocks.refreshAccount).toHaveBeenCalledTimes(1);
+
+      // Rolled logged in meanwhile: recorded on rngdle.com, not downloaded.
+      mocks.refreshAccount.mockImplementation(async () => {
+        recorded = true;
+      });
+      mocks.render.mockClear();
+      vi.setSystemTime(clock + secondsLater * 1000);
+      await answerShare(shareMessage(LOGGED_IN) as never, config);
+      const [[data]] = mocks.render.mock.calls as unknown as [
+        [{ subtitle: string; number: number }],
+      ];
+      return data;
+    }
+
+    it("verifies the logged-in roll pasted a few minutes later", async () => {
+      const data = await loggedOutThenIn(2 * 60);
+
+      expect(mocks.refreshAccount).toHaveBeenCalledTimes(2);
+      expect(data.number).toBe(222222);
+      expect(data.subtitle).not.toContain("card.notLinked");
+    });
+
+    it("does not spend the quick retry on the same roll pasted again", async () => {
+      const config = configWith(SHARING) as never;
+      let recorded = false;
+      mocks.store.account.mockResolvedValue(ACCOUNT);
+      mocks.refreshAccount.mockImplementation(async () => {});
+      mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
+        recorded && filter?.from && filter.userId
+          ? [{ ...roll("u1", 52000), number: 222222 }]
+          : []
+      );
+      // The roll made logged out, then the same by mistake 40 s later.
+      await answerShare(shareMessage() as never, config);
+      vi.setSystemTime(clock + 40 * 1000);
+      await answerShare(shareMessage() as never, config);
+      expect(mocks.refreshAccount).toHaveBeenCalledTimes(1);
+
+      // Then the recorded one.
+      mocks.refreshAccount.mockImplementation(async () => {
+        recorded = true;
+      });
+      mocks.render.mockClear();
+      vi.setSystemTime(clock + 60 * 1000);
+      await answerShare(
+        shareMessage(
+          "RNGdle 🎲 222222\n\n🟦 RARE • Top 12%\n\n52 000 EP"
+        ) as never,
+        config
+      );
+      expect(mocks.refreshAccount).toHaveBeenCalledTimes(2);
+      const [[data]] = mocks.render.mock.calls as unknown as [
+        [{ subtitle: string; number: number }],
+      ];
+      expect(data.number).toBe(222222);
+      expect(data.subtitle).not.toContain("card.notLinked");
+    });
+
+    it("checks the logged-in roll pasted right after, at any pace", async () => {
+      const data = await loggedOutThenIn(5);
+
+      expect(mocks.refreshAccount).toHaveBeenCalledTimes(2);
+      expect(data.subtitle).not.toContain("card.notLinked");
+    });
+
+    it("checks rngdle.com at most 3 times in 10 minutes", async () => {
+      const config = configWith(SHARING) as never;
+      mocks.store.account.mockResolvedValue(ACCOUNT);
+      mocks.refreshAccount.mockImplementation(async () => {});
+      mocks.store.rolls.mockResolvedValue([]);
+      // A different made-up number each time: none is on rngdle.com.
+      const pasteAt = async (seconds: number) => {
+        vi.setSystemTime(clock + seconds * 1000);
+        const number = 300000 + seconds;
+        await answerShare(
+          shareMessage(
+            `RNGdle 🎲 ${number}\n\n🟦 RARE • Top 12%\n\n52 000 EP`
+          ) as never,
+          config
+        );
+      };
+      await pasteAt(0);
+      await pasteAt(1);
+      await pasteAt(2);
+      expect(mocks.refreshAccount).toHaveBeenCalledTimes(3);
+      await pasteAt(3);
+      await pasteAt(9 * 60);
+      expect(mocks.refreshAccount).toHaveBeenCalledTimes(3);
+      await pasteAt(10 * 60); // a new window
+      expect(mocks.refreshAccount).toHaveBeenCalledTimes(4);
     });
   });
 
