@@ -1,11 +1,12 @@
 import { GatewayIntentBits } from "discord.js";
 import { loggerMaker } from "#lib/logger.js";
 import { defineModule } from "#lib/module.js";
+import type { ScheduledTask } from "#lib/task.js";
 import seniorityAdminCommand from "./commands/seniority-admin.command.js";
 import { seniorityConfigSchema } from "./seniority.config.js";
 import { clearGuild, remove } from "./services/overrides.js";
 import { uninstallWarning } from "./services/uninstall.js";
-import { seniorityTasks } from "./tasks.js";
+import { seniorityMaintenanceTasks, seniorityTasks } from "./tasks.js";
 
 const logger = loggerMaker("seniority");
 
@@ -48,6 +49,9 @@ const seniorityModule = defineModule({
   },
 
   uninstallWarning,
+
+  maintenanceTasks: (): ScheduledTask[] =>
+    seniorityMaintenanceTasks(seniorityModule.id),
 
   async deleteMemberData(guildId, userId) {
     await remove(guildId, userId);
