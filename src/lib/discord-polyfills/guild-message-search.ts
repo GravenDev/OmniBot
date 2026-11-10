@@ -17,7 +17,6 @@ import { isApiError } from "#lib/discord-errors.js";
 // It reads the channels the bot can see, is open only to applications granted
 // Message Content in the Developer Portal (no gateway intent is involved),
 // and answers 202 with a code (110000) while the guild is being indexed.
-const INDEX_NOT_READY = 110000;
 const MAX_INDEX_WAITS = 10;
 const MIN_INDEX_WAIT_MS = 2_000;
 const MAX_INDEX_WAIT_MS = 30_000;
@@ -56,7 +55,8 @@ export class SearchNotReadyError extends Error {
  * null when `deadline` (epoch ms) comes before the index does. The deadline
  * only bounds those waits: discord.js's rate limit waits ignore an abort
  * signal, and its own aborts are not told apart from a network timeout.
- * Throws `SearchNotReadyError` when the index never becomes available.
+ * Throws `SearchNotReadyError` when the index never becomes available, and
+ * an error on a body that is neither a page nor a not-ready answer.
  */
 export async function searchGuildMessagesPage(
   rest: REST,
@@ -68,11 +68,18 @@ export async function searchGuildMessagesPage(
     const body = (await rest.get(Routes.guildMessagesSearch(guildId), {
       query,
     })) as RESTGetAPIGuildMessagesSearchResult;
-    if (!("code" in body) || body.code !== INDEX_NOT_READY) {
-      const page = body as Exclude<typeof body, { code: number }>;
+    // A body with a code is not a page: 110000, or another not-ready answer,
+    // which a missing page must not turn into "no result".
+    if (!("code" in body)) {
+      // Nor must a body without messages: an empty page has `messages: []`.
+      if (!Array.isArray(body.messages)) {
+        throw new Error(
+          "Discord's message search answered with a body that is not a page of results"
+        );
+      }
       return {
-        messages: (page.messages ?? []).flat(),
-        deepIndexing: page.doing_deep_historical_index === true,
+        messages: body.messages.flat(),
+        deepIndexing: body.doing_deep_historical_index === true,
       };
     }
     if (wait >= MAX_INDEX_WAITS) {
