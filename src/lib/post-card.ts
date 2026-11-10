@@ -1,4 +1,11 @@
-import { DiscordAPIError } from "discord.js";
+import {
+  DiscordAPIError,
+  MediaGalleryBuilder,
+  MessageFlags,
+  TextDisplayBuilder,
+  type AttachmentBuilder,
+} from "discord.js";
+import { COMPONENTS_TEXT_LIMIT } from "./format.js";
 import type { loggerMaker } from "./logger.js";
 
 type Logger = ReturnType<typeof loggerMaker>;
@@ -37,4 +44,53 @@ export async function postCard<T>(
     );
     return false;
   }
+}
+
+/**
+ * The text a celebration's mentions may take in one message: the components'
+ * limit, less a heading and the card's alternative text (1024 at most), should
+ * Discord count them in it.
+ */
+export const CELEBRATION_TEXT_LIMIT = COMPONENTS_TEXT_LIMIT - 100 - 1024;
+
+export interface Celebration {
+  /** Above the card: what is celebrated. */
+  heading?: string;
+  /** Shown full width, with its alternative text. */
+  card?: AttachmentBuilder;
+  /** Under the card: whom, with their mentions. */
+  text?: string;
+}
+
+/**
+ * A celebration laid out with components and no frame: the heading, the card
+ * full width, then the text, so that the party reads before the names. Its
+ * mentions notify as the caller's `allowedMentions` say, in a text display as
+ * in a message's content.
+ */
+export function celebrationMessage({ heading, card, text }: Celebration) {
+  const components: (TextDisplayBuilder | MediaGalleryBuilder)[] = [];
+  if (heading) {
+    components.push(new TextDisplayBuilder().setContent(heading));
+  }
+  if (card) {
+    if (!card.name) {
+      // `attachment://null` would show a broken image, or be refused.
+      throw new Error("A celebration card needs a file name");
+    }
+    components.push(
+      new MediaGalleryBuilder().addItems((item) => {
+        item.setURL(`attachment://${card.name}`);
+        return card.description ? item.setDescription(card.description) : item;
+      })
+    );
+  }
+  if (text) {
+    components.push(new TextDisplayBuilder().setContent(text));
+  }
+  return {
+    components,
+    ...(card && { files: [card] }),
+    flags: MessageFlags.IsComponentsV2,
+  } as const;
 }

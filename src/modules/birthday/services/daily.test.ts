@@ -1,13 +1,19 @@
 import {
   Collection,
   DiscordAPIError,
+  MessageFlags,
   type Client,
   type GuildMember,
 } from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConfigData } from "#lib/config.js";
 import type { Module } from "#lib/module.js";
-import { initTestI18n, makeTestConfig, silenceLogs } from "#lib/testing.js";
+import {
+  initTestI18n,
+  makeTestConfig,
+  messageText,
+  silenceLogs,
+} from "#lib/testing.js";
 import {
   birthdayConfigSchema,
   type BirthdayConfigSchema,
@@ -164,11 +170,20 @@ describe("runGuildDay", () => {
 
     expect(service.removeMany).toHaveBeenCalledWith("guild-1", ["gone"]);
     expect(send).toHaveBeenCalledTimes(1);
-    const [{ content, files }] = send.mock.calls[0] as unknown as [
-      { content: string; files: { name: string; description: string }[] },
+    const [message] = send.mock.calls[0] as unknown as [
+      {
+        components: unknown[];
+        files: { name: string; description: string }[];
+        flags: number;
+        allowedMentions: { users: string[] };
+      },
     ];
+    const { files } = message;
     expect(files[0]!.name).toBe("birthday.webp");
-    expect(content).toBe("🎂 Joyeux anniversaire <@alice> !");
+    // The heading, the card full width, then the mentions, which notify.
+    expect(messageText(message)).toBe("🎂 **Joyeux anniversaire !**\n<@alice>");
+    expect(message.flags).toBe(MessageFlags.IsComponentsV2);
+    expect(message.allowedMentions).toEqual({ users: ["alice"] });
     expect(renderCelebrationImage).toHaveBeenCalledWith(
       expect.objectContaining({
         names: "alice",
@@ -251,7 +266,7 @@ describe("runGuildDay", () => {
     const posts = (
       send.mock.calls as unknown as [
         {
-          content: string;
+          components: unknown[];
           files?: unknown[];
           allowedMentions: { users: string[] };
         },
@@ -261,11 +276,11 @@ describe("runGuildDay", () => {
     expect(posts[0]!.files).toHaveLength(1);
     expect(posts.slice(1).every((post) => post.files === undefined)).toBe(true);
     for (const post of posts) {
-      expect(post.content.length).toBeLessThanOrEqual(2000);
+      expect(messageText(post).length).toBeLessThanOrEqual(4000);
       expect(post.allowedMentions.users.length).toBeLessThanOrEqual(100);
       expect(
         post.allowedMentions.users.every((id) =>
-          post.content.includes(`<@${id}>`)
+          messageText(post).includes(`<@${id}>`)
         )
       ).toBe(true);
     }
@@ -478,9 +493,9 @@ describe("monthly calendar", () => {
       runGuildDay(client, module, "guild-1", FIRST_IN_PARIS)
     ).resolves.toBeUndefined();
     expect(send).toHaveBeenCalledTimes(1);
-    expect(send).toHaveBeenCalledWith(
-      expect.objectContaining({ content: "🎂 Joyeux anniversaire <@alice> !" })
-    );
+    expect(
+      messageText((send.mock.calls[0] as [{ components: unknown[] }])[0])
+    ).toBe("🎂 **Joyeux anniversaire !**\n<@alice>");
 
     renderBirthdayCalendar.mockReturnValue(Buffer.from("calendar"));
     const other = setup();

@@ -1,6 +1,6 @@
 import type { TFunction } from "#lib/i18n.js";
+import { CELEBRATION_TEXT_LIMIT } from "#lib/post-card.js";
 
-const MESSAGE_LIMIT = 2000;
 /** Users a message may allow to mention. */
 const MENTION_LIMIT = 100;
 
@@ -19,35 +19,37 @@ export interface AnnouncementMessage {
 
 /**
  * The members celebrated, grouped by years, longest-standing first and in
- * their given order within a group: a header line ("**5 ans**"), then their
- * mentions on one line. Split into as many messages as Discord needs — 2000
- * characters, and 100 mentions since each message allows the mentions of its
- * own members only — and a message cut inside a group starts on its header
- * again, so that every mention reads under its years.
+ * their given order within a group: one line a group, its years then its
+ * mentions ("**5 ans** · @a @b"). Split into as many messages as Discord
+ * needs — 100 mentions, and the text a celebration may take since each message allows the
+ * mentions of its own members only — and a line cut across messages starts
+ * on its years again, so that every mention reads with them. The heading is
+ * not part of it: it goes above the card.
  */
 export function memberAnniversaryMessages(
   t: TFunction,
-  anniversaries: MemberAnniversary[]
+  anniversaries: MemberAnniversary[],
+  limit = CELEBRATION_TEXT_LIMIT
 ): AnnouncementMessage[] {
   if (anniversaries.length === 0) {
     return [];
   }
   const sorted = [...anniversaries].sort((a, b) => b.years - a.years);
   const messages: AnnouncementMessage[] = [];
-  let content = t("members.heading");
+  let content = "";
   let userIds: string[] = [];
   let years: number | null = null;
   for (const anniversary of sorted) {
     const tag = mention(anniversary.userId);
-    const header = t("members.group", { count: anniversary.years });
+    const line = `${t("members.group", { count: anniversary.years })} · ${tag}`;
     const sameGroup = anniversary.years === years;
-    const added = sameGroup ? ` ${tag}` : `\n${header}\n${tag}`;
+    const added = sameGroup ? ` ${tag}` : `${content ? "\n" : ""}${line}`;
     if (
       userIds.length === MENTION_LIMIT ||
-      content.length + added.length > MESSAGE_LIMIT
+      content.length + added.length > limit
     ) {
       messages.push({ content, userIds });
-      content = `${header}\n${tag}`;
+      content = line;
       userIds = [];
     } else {
       content += added;

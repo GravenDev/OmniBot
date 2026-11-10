@@ -20,7 +20,7 @@ import { isGuildSetupError } from "#lib/discord-errors.js";
 import { allMembers } from "#lib/guild-members.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
-import { postCard } from "#lib/post-card.js";
+import { celebrationMessage, postCard } from "#lib/post-card.js";
 import type { SeniorityConfigSchema } from "../seniority.config.js";
 import {
   memberAnniversaryMessages,
@@ -96,13 +96,13 @@ async function announceMembers(
   if (celebrated.length === 0) {
     return;
   }
-  // Images never notify: the text names everyone, grouped by years, and only
-  // its first message carries the card. Without a card, the text alone.
-  const messages = memberAnniversaryMessages(
+  // The heading, the card, then the members grouped by years; more messages
+  // carry the groups only.
+  const [first, ...others] = memberAnniversaryMessages(
     config.t,
     celebrated.map(({ member, years }) => ({ userId: member.id, years }))
   );
-  const [first, ...others] = messages;
+  const heading = config.t("members.heading");
   const posted = await postCard(
     logger,
     `the member anniversaries | guildId = ${guild.id}`,
@@ -111,12 +111,25 @@ async function announceMembers(
       send(
         channel,
         guild.id,
-        { content: first!.content, files: [card] },
+        celebrationMessage({ heading, card, text: first!.content }),
         first!.userIds
       )
   );
-  for (const { content, userIds } of posted ? others : messages) {
-    await send(channel, guild.id, { content }, userIds);
+  if (!posted) {
+    await send(
+      channel,
+      guild.id,
+      celebrationMessage({ heading, text: first!.content }),
+      first!.userIds
+    );
+  }
+  for (const { content, userIds } of others) {
+    await send(
+      channel,
+      guild.id,
+      celebrationMessage({ text: content }),
+      userIds
+    );
   }
   logger.info(
     `Member anniversaries announced | guildId = ${guild.id} | count = ${celebrated.length} | card = ${posted}`
@@ -139,10 +152,10 @@ async function announceServer(
       send(
         channel,
         guild.id,
-        {
-          content: config.t("serverCard.content", { count: years }),
-          files: [card],
-        },
+        celebrationMessage({
+          heading: config.t("serverCard.content", { count: years }),
+          card,
+        }),
         []
       )
   );

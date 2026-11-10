@@ -26,6 +26,7 @@
   "announce.builtIn.2": "🎉 It's {user}'s birthday today, happy birthday!",
   "announce.builtIn.3": "🥳 Everyone, wish {user} a happy birthday!",
   "announce.together": "🎂 Today, {{users}} celebrate their birthday together. Happy birthday!",
+  "announce.heading": "🎂 **Happy birthday!**",
   "announce.card": "🎂 Happy birthday {{users}}!",
 
   "card.kicker_one": "Birthday",

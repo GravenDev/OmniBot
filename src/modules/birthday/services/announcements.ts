@@ -5,6 +5,7 @@ import {
   type CelebrationCard,
 } from "#lib/celebration-card.js";
 import type { TFunction } from "#lib/i18n.js";
+import { CELEBRATION_TEXT_LIMIT } from "#lib/post-card.js";
 import { truncate } from "#lib/text.js";
 import { ACCENT, CONFETTI } from "../rendering/theme.js";
 import {
@@ -123,7 +124,8 @@ export interface WishMessage {
  */
 function splitWish(
   userIds: string[],
-  wish: (userIds: string[]) => string
+  wish: (userIds: string[]) => string,
+  limit = MESSAGE_LIMIT
 ): WishMessage[] {
   const messages: WishMessage[] = [];
   let current: string[] = [];
@@ -131,7 +133,7 @@ function splitWish(
     const next = [...current, userId];
     if (
       current.length > 0 &&
-      (next.length > MENTION_LIMIT || wish(next).length > MESSAGE_LIMIT)
+      (next.length > MENTION_LIMIT || wish(next).length > limit)
     ) {
       messages.push({ content: wish(current), userIds: current });
       current = [userId];
@@ -145,20 +147,23 @@ function splitWish(
   return messages;
 }
 
-/** Text posted with the card: the mentions, which an image cannot carry. */
+/** Text under the card: the mentions, which an image cannot carry. */
 export function cardMessages(
-  t: TFunction,
   locale: string,
-  userIds: string[]
+  userIds: string[],
+  limit = CELEBRATION_TEXT_LIMIT
 ): WishMessage[] {
-  return splitWish(userIds, (some) =>
-    t("announce.card", { users: formatList(some.map(mention), locale) })
+  return splitWish(
+    userIds,
+    (some) => formatList(some.map(mention), locale),
+    limit
   );
 }
 
 /**
  * The text wish, when the card is not posted. Too many members to wish them
- * together in one message: the card's wording, split as it is.
+ * together in one message: « Happy birthday @a, @b! », split over as many
+ * messages as Discord needs.
  */
 export function wishMessages(
   t: TFunction,
@@ -171,7 +176,10 @@ export function wishMessages(
   if (userIds.length <= MENTION_LIMIT && content.length <= MESSAGE_LIMIT) {
     return [{ content, userIds }];
   }
-  return cardMessages(t, locale, userIds);
+  // Too many to wish together: one sentence a message, as many as needed.
+  return splitWish(userIds, (some) =>
+    t("announce.card", { users: formatList(some.map(mention), locale) })
+  );
 }
 
 const ALT_LIMIT = 1024;

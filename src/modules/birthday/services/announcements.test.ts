@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { createT } from "#lib/i18n.js";
+import { CELEBRATION_TEXT_LIMIT } from "#lib/post-card.js";
 import { initTestI18n } from "#lib/testing.js";
 import en from "../i18n/en.json" with { type: "json" };
 import fr from "../i18n/fr.json" with { type: "json" };
@@ -133,25 +134,36 @@ describe("wishMessages", () => {
 
 describe("cardMessages", () => {
   it("mentions every member celebrating", () => {
-    expect(cardMessages(t(), "fr", ["1", "2"])).toEqual([
-      { content: "🎂 Joyeux anniversaire <@1> et <@2> !", userIds: ["1", "2"] },
+    expect(cardMessages("fr", ["1", "2"])).toEqual([
+      // Under the card and its heading: the mentions alone.
+      { content: "<@1> et <@2>", userIds: ["1", "2"] },
     ]);
   });
 
   it("splits the mentions over messages Discord accepts", () => {
     const everyone = ids(250);
-    const messages = cardMessages(t(), "fr", everyone);
+    const messages = cardMessages("fr", everyone);
     for (const { content, userIds } of messages) {
-      expect(content.length).toBeLessThanOrEqual(2000);
+      // 4000 characters in a message laid out with components, the
+      // heading's included.
+      expect(content.length).toBeLessThanOrEqual(CELEBRATION_TEXT_LIMIT);
       expect(userIds.length).toBeLessThanOrEqual(100);
     }
     expect(messages.flatMap(({ userIds }) => userIds)).toEqual(everyone);
   });
 
+  it("cuts on length too, within the given limit", () => {
+    const short = Array.from({ length: 20 }, (_, i) => String(1000 + i));
+    const messages = cardMessages("fr", short, 40);
+    expect(messages.length).toBeGreaterThan(1);
+    expect(messages.every(({ content }) => content.length <= 40)).toBe(true);
+    expect(messages.flatMap(({ userIds }) => userIds)).toEqual(short);
+  });
+
   it("allows no more than 100 mentions per message, however short", () => {
     const short = Array.from({ length: 101 }, (_, i) => String(i));
     expect(
-      cardMessages(t(), "fr", short).map(({ userIds }) => userIds.length)
+      cardMessages("fr", short).map(({ userIds }) => userIds.length)
     ).toEqual([100, 1]);
   });
 });
