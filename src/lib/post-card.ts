@@ -60,6 +60,8 @@ export interface Celebration {
   card?: AttachmentBuilder;
   /** Under the card: whom, with their mentions. */
   text?: string;
+  /** Mentions that notify without a push notification. */
+  silent?: boolean;
 }
 
 /**
@@ -68,7 +70,12 @@ export interface Celebration {
  * mentions notify as the caller's `allowedMentions` say, in a text display as
  * in a message's content.
  */
-export function celebrationMessage({ heading, card, text }: Celebration) {
+export function celebrationMessage({
+  heading,
+  card,
+  text,
+  silent = false,
+}: Celebration) {
   const components: (TextDisplayBuilder | MediaGalleryBuilder)[] = [];
   if (heading) {
     components.push(new TextDisplayBuilder().setContent(heading));
@@ -91,6 +98,8 @@ export function celebrationMessage({ heading, card, text }: Celebration) {
   return {
     components,
     ...(card && { files: [card] }),
-    flags: MessageFlags.IsComponentsV2,
+    flags: silent
+      ? MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications
+      : MessageFlags.IsComponentsV2,
   } as const;
 }

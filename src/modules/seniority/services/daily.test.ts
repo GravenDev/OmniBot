@@ -167,12 +167,15 @@ describe("runGuildDay", () => {
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
 
     const [members, server] = sent(send);
-    // The heading, the card full width, then the groups.
+    // The heading, the card full width, then the groups: mentions without a
+    // push notification.
     expect(messageText(members!)).toBe(
       "🎉 **Ancienneté sur le serveur**\n**3 ans** · <@alice>\n**1 an** · <@bob> <@quiet>"
     );
     expect(members!.files).toEqual([memberCard]);
-    expect(members!.flags).toBe(MessageFlags.IsComponentsV2);
+    expect(members!.flags).toBe(
+      MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications
+    );
     expect(members!.allowedMentions).toEqual({ users: ["alice", "bob"] });
     expect(messageText(server!)).toBe("🎂 Le serveur fête ses 5 ans !");
     expect(server!.files).toEqual([serverCard]);
@@ -198,7 +201,9 @@ describe("runGuildDay", () => {
       "🎉 **Ancienneté sur le serveur**\n**3 ans** · <@alice>\n**1 an** · <@bob> <@quiet>"
     );
     expect(members!).not.toHaveProperty("files");
-    expect(members!.flags).toBe(MessageFlags.IsComponentsV2);
+    expect(members!.flags).toBe(
+      MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications
+    );
     expect(members!.allowedMentions).toEqual({ users: ["alice", "bob"] });
     expect(server).toEqual({
       content: "🎂 **Le serveur fête ses 5 ans aujourd'hui !**\n5 membres",
@@ -370,8 +375,10 @@ describe("runGuildDay", () => {
     expect(messages.filter(({ files }) => files)).toHaveLength(1);
     expect(messages[0]!.files).toBeDefined();
     for (const message of messages) {
-      // Every message is laid out with components, not the first only.
-      expect(message.flags).toBe(MessageFlags.IsComponentsV2);
+      // Every message mentions without a push notification, not the first only.
+      expect(message.flags).toBe(
+        MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications
+      );
       expect(message.allowedMentions.users.length).toBeLessThanOrEqual(100);
       for (const id of message.allowedMentions.users) {
         expect(messageText(message)).toContain(`<@${id}>`);

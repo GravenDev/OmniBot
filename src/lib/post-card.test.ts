@@ -89,6 +89,17 @@ describe("celebrationMessage", () => {
       { type: 10, content: "**5 ans** · <@1>" },
     ]);
   });
+
+  it("can mention without a push notification", () => {
+    const message = celebrationMessage({ text: "<@1>", silent: true });
+    expect(message.flags).toBe(
+      MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications
+    );
+    expect(message).not.toHaveProperty("files");
+    expect(message.components.map((c) => c.toJSON())).toEqual([
+      { type: 10, content: "<@1>" },
+    ]);
+  });
 });
 
 describe("celebrationMessage, card name", () => {

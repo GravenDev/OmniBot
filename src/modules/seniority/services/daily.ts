@@ -97,7 +97,8 @@ async function announceMembers(
     return;
   }
   // The heading, the card, then the members grouped by years; more messages
-  // carry the groups only.
+  // carry the groups only. Mentioned without a push notification: nobody
+  // signed up for it, and a large server celebrates dozens a day.
   const [first, ...others] = memberAnniversaryMessages(
     config.t,
     celebrated.map(({ member, years }) => ({ userId: member.id, years }))
@@ -111,7 +112,12 @@ async function announceMembers(
       send(
         channel,
         guild.id,
-        celebrationMessage({ heading, card, text: first!.content }),
+        celebrationMessage({
+          heading,
+          card,
+          text: first!.content,
+          silent: true,
+        }),
         first!.userIds
       )
   );
@@ -119,7 +125,7 @@ async function announceMembers(
     await send(
       channel,
       guild.id,
-      celebrationMessage({ heading, text: first!.content }),
+      celebrationMessage({ heading, text: first!.content, silent: true }),
       first!.userIds
     );
   }
@@ -127,7 +133,7 @@ async function announceMembers(
     await send(
       channel,
       guild.id,
-      celebrationMessage({ text: content }),
+      celebrationMessage({ text: content, silent: true }),
       userIds
     );
   }
