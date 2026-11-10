@@ -239,8 +239,15 @@ interface Verified {
   linked: boolean;
 }
 
-function mayCheck(guildId: string, userId: string): boolean {
-  const key = `${guildId}:${userId}`;
+// The cooldown is kept per source: a member who links their account is
+// checked on rngdle.com at once, even if the calculator checked a result a
+// minute before.
+function mayCheck(
+  guildId: string,
+  userId: string,
+  source: "rngdle" | "calculator"
+): boolean {
+  const key = `${guildId}:${userId}:${source}`;
   const now = Date.now();
   if (now - (lastChecks.get(key) ?? -Infinity) < CHECK_COOLDOWN_MS) {
     return false;
@@ -288,7 +295,7 @@ async function calculatorRoll(pasted: CardRoll): Promise<CardRoll | null> {
 
 // Checks a pasted result against the rolls rngdle.com recorded (linked
 // member) or against the calculator (unlinked member), at most once per
-// member every 10 minutes. An unlinked member's result is
+// member and per source every 10 minutes. An unlinked member's result is
 // checked only before the day's card; a linked member's, until the day's
 // roll is downloaded: rngdle.com records one a day, so another number cannot
 // be found there. A card drawn before linking does not count, the member's
@@ -309,7 +316,10 @@ async function verify(
   const settled = account
     ? recent.some((roll) => roll.rolledAt >= today)
     : await store.hasCard(guildId, userId, today);
-  if (settled || !mayCheck(guildId, userId)) {
+  if (
+    settled ||
+    !mayCheck(guildId, userId, account ? "rngdle" : "calculator")
+  ) {
     return null;
   }
   if (account) {
