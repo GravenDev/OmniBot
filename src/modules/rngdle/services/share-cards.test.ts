@@ -232,17 +232,35 @@ describe("answerShare", () => {
     );
   });
 
-  it("sends no request once the member has a card today", async () => {
-    mocks.store.account.mockResolvedValue(ACCOUNT);
+  it("sends no request once an unlinked member has a card today", async () => {
     mocks.store.hasCard.mockResolvedValue(true);
     const message = shareMessage();
     await answerShare(message as never, configWith(SHARING) as never);
 
     expect(mocks.store.hasCard).toHaveBeenCalledWith("g1", "u1", DAY);
+    expect(mocks.fetchBadges).not.toHaveBeenCalled();
+    expect(mocks.store.claimCard).not.toHaveBeenCalled();
+    expect(message.reply).toHaveBeenCalled();
+  });
+
+  it("sends no request once a linked member's roll of today is recorded", async () => {
+    mocks.store.account.mockResolvedValue(ACCOUNT);
+    mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
+      filter?.from && filter.userId ? [roll("u1", 500)] : []
+    );
+    const message = shareMessage();
+    await answerShare(message as never, configWith(SHARING) as never);
+
+    expect(mocks.store.hasCard).not.toHaveBeenCalled();
     expect(mocks.refreshAccount).not.toHaveBeenCalled();
     expect(mocks.fetchBadges).not.toHaveBeenCalled();
     expect(mocks.store.claimCard).not.toHaveBeenCalled();
     expect(message.reply).toHaveBeenCalled();
+    const [[data]] = mocks.render.mock.calls as unknown as [
+      [{ subtitle: string; number: number }],
+    ];
+    expect(data.number).toBe(111883);
+    expect(data.subtitle).toContain("card.notLinked");
   });
 
   it("checks a member's results at most once every 10 minutes", async () => {
@@ -256,6 +274,16 @@ describe("answerShare", () => {
     vi.setSystemTime(clock + 10 * MINUTE);
     await answerShare(shareMessage() as never, config);
     expect(mocks.refreshAccount).toHaveBeenCalledTimes(2);
+  });
+
+  it("still checks a linked member whose last recorded roll is yesterday's", async () => {
+    mocks.store.account.mockResolvedValue(ACCOUNT);
+    mocks.store.rolls.mockResolvedValue([
+      roll("u1", 500, new Date("2026-10-21T23:00:00Z")),
+    ]);
+    await answerShare(shareMessage() as never, configWith(SHARING) as never);
+
+    expect(mocks.refreshAccount).toHaveBeenCalledWith(ACCOUNT);
   });
 
   it.each([
@@ -427,6 +455,48 @@ describe("answerShare", () => {
       expect(message.reply).toHaveBeenCalled();
     }
   );
+
+  describe("for a member who links after a card of the day", () => {
+    const LINKED_SHARE = "RNGdle 🎲 222222\n\n🟦 RARE • Top 12%\n\n52 000 EP";
+
+    async function pasteThenLink(minutesLater: number) {
+      const config = configWith(SHARING) as never;
+      // Not linked yet: the calculator verifies the result, the day is claimed.
+      mocks.fetchBadges.mockResolvedValue(CALCULATOR);
+      await answerShare(shareMessage() as never, config);
+      expect(mocks.store.claimCard).toHaveBeenCalledWith("g1", "u1", DAY);
+
+      // Linked now: a new roll, recorded on rngdle.com but not downloaded yet.
+      let synced = false;
+      mocks.refreshAccount.mockImplementation(async () => {
+        synced = true;
+      });
+      mocks.store.account.mockResolvedValue(ACCOUNT);
+      mocks.store.hasCard.mockResolvedValue(true);
+      mocks.store.claimCard.mockResolvedValue(false);
+      mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
+        synced && filter?.from && filter.userId
+          ? [{ ...roll("u1", 52000), number: 222222 }]
+          : []
+      );
+      mocks.render.mockClear();
+      vi.setSystemTime(clock + minutesLater * MINUTE);
+      await answerShare(shareMessage(LINKED_SHARE) as never, config);
+
+      const [[data]] = mocks.render.mock.calls as unknown as [
+        [{ subtitle: string; number: number }],
+      ];
+      return data;
+    }
+
+    it("downloads the new roll despite the card already drawn today", async () => {
+      const data = await pasteThenLink(30);
+
+      expect(mocks.refreshAccount).toHaveBeenCalledWith(ACCOUNT);
+      expect(data.number).toBe(222222);
+      expect(data.subtitle).not.toContain("card.notLinked");
+    });
+  });
 
   it("draws a result whose score does not match its number as pasted", async () => {
     mocks.fetchBadges.mockResolvedValue({ ...CALCULATOR, score: 41730 });

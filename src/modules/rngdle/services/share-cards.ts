@@ -249,21 +249,25 @@ function mayCheck(guildId: string, userId: string): boolean {
   return true;
 }
 
-async function storedRoll(
-  account: Account,
-  pasted: CardRoll
-): Promise<StoredRoll | null> {
-  const today = startOfUtcDay(pasted.rolledAt);
-  const recent = await store.rolls(account.guildId, {
+// The member's rolls of the pasted result's day and of the day before.
+function recentRolls(account: Account, today: Date): Promise<StoredRoll[]> {
+  return store.rolls(account.guildId, {
     userId: account.userId,
     from: new Date(today.getTime() - DAY_MS),
   });
-  return recent.find((roll) => roll.number === pasted.number) ?? null;
+}
+
+function findPasted(
+  recent: StoredRoll[],
+  pasted: CardRoll
+): StoredRoll | undefined {
+  return recent.find((roll) => roll.number === pasted.number);
 }
 
 async function refreshedRoll(
   account: Account,
-  pasted: CardRoll
+  pasted: CardRoll,
+  today: Date
 ): Promise<StoredRoll | null> {
   try {
     await sync.refreshAccount(account);
@@ -274,7 +278,7 @@ async function refreshedRoll(
     );
     return null;
   }
-  return storedRoll(account, pasted);
+  return findPasted(await recentRolls(account, today), pasted) ?? null;
 }
 
 async function calculatorRoll(pasted: CardRoll): Promise<CardRoll | null> {
@@ -283,28 +287,33 @@ async function calculatorRoll(pasted: CardRoll): Promise<CardRoll | null> {
 }
 
 // Checks a pasted result against the rolls rngdle.com recorded (linked
-// member) or against the calculator (unlinked member). Only the first result
-// of the day is checked, at most once per member every 10 minutes: any other
-// one gets an unverified card, drawn without a single request.
+// member) or against the calculator (unlinked member), at most once per
+// member every 10 minutes. An unlinked member's result is
+// checked only before the day's card; a linked member's, until the day's
+// roll is downloaded: rngdle.com records one a day, so another number cannot
+// be found there. A card drawn before linking does not count, the member's
+// roll is still to be downloaded. Any other result gets an unverified card,
+// drawn without a single request.
 async function verify(
   guildId: string,
   userId: string,
   pasted: CardRoll
 ): Promise<Verified | null> {
   const account = await store.account(guildId, userId);
-  const known = account ? await storedRoll(account, pasted) : null;
+  const today = startOfUtcDay(pasted.rolledAt);
+  const recent = account ? await recentRolls(account, today) : [];
+  const known = findPasted(recent, pasted);
   if (known) {
     return { roll: known, linked: true };
   }
-  const today = startOfUtcDay(pasted.rolledAt);
-  if (
-    (await store.hasCard(guildId, userId, today)) ||
-    !mayCheck(guildId, userId)
-  ) {
+  const settled = account
+    ? recent.some((roll) => roll.rolledAt >= today)
+    : await store.hasCard(guildId, userId, today);
+  if (settled || !mayCheck(guildId, userId)) {
     return null;
   }
   if (account) {
-    const roll = await refreshedRoll(account, pasted);
+    const roll = await refreshedRoll(account, pasted, today);
     return roll && { roll, linked: true };
   }
   const roll = await calculatorRoll(pasted);
