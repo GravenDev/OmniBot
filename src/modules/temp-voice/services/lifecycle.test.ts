@@ -1,8 +1,10 @@
 import {
   Collection,
+  DiscordAPIError,
   OverwriteType,
   PermissionFlagsBits,
   PermissionsBitField,
+  RESTJSONErrorCodes,
   type PermissionOverwriteOptions,
 } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -34,6 +36,17 @@ silenceLogs();
 const config = { t: (key: string) => key } as any;
 const hub = { channelId: "hub", nameTemplate: "Salon de {user}", userLimit: 0 };
 const CONNECT = PermissionFlagsBits.Connect;
+
+function apiError(code: number) {
+  return new DiscordAPIError(
+    { code, message: "error" },
+    code,
+    404,
+    "PUT",
+    "/channels/temp/permissions/ghost",
+    {}
+  );
+}
 
 function permissions(bits: bigint, missing: string[] = []) {
   return {
@@ -230,6 +243,22 @@ describe("joinHub", () => {
     await joinHub(freshMember(member), hubChannel, hub, config);
     expect(created.permissionOverwrites.cache.has("ghost")).toBe(false);
   });
+
+  it("forgets remembered blocks and trusts of members who left the guild", async () => {
+    const { hubChannel, member, guild, created } = setup();
+    guild.members.fetch.mockRejectedValue(
+      apiError(RESTJSONErrorCodes.UnknownMember)
+    );
+    store.preference.mockResolvedValue(
+      preference({ blocked: ["gone"], trusted: ["left"] })
+    );
+    await joinHub(freshMember(member), hubChannel, hub, config);
+    expect(created.delete).not.toHaveBeenCalled();
+    expect(store.createChannel).toHaveBeenCalledWith(
+      expect.objectContaining({ blocked: [], trusted: [] })
+    );
+    expect(member.voice.setChannel).toHaveBeenCalledWith(created);
+  });
 });
 
 describe("applyAccess", () => {
@@ -245,6 +274,28 @@ describe("applyAccess", () => {
     await expect(applyAccess(created, "hub", state)).rejects.toThrow();
     expect(created.permissionOverwrites.create).toHaveBeenCalled();
     expect([...created.permissionOverwrites.cache.keys()]).toEqual([]);
+  });
+
+  it("skips a member overwrite Discord no longer knows", async () => {
+    const { created } = setup();
+    const overwrites = created.permissionOverwrites;
+    const write = overwrites.create.getMockImplementation();
+    overwrites.create.mockImplementation(async (id: string, ...rest: any[]) => {
+      if (id === "ghost") {
+        throw apiError(RESTJSONErrorCodes.UnknownPermissionOverwrite);
+      }
+      return write(id, ...rest);
+    });
+    const state = {
+      ownerId: "alice",
+      locked: false,
+      hidden: false,
+      trusted: [],
+      blocked: ["ghost"],
+    };
+    await applyAccess(created, "hub", state);
+    expect(overwrites.cache.has("alice")).toBe(true);
+    expect(overwrites.cache.has("ghost")).toBe(false);
   });
 
   it("diffs against the channel fetched from Discord, not a stale cache", async () => {

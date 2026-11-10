@@ -1,5 +1,6 @@
 import {
   ChannelType,
+  OverwriteType,
   PermissionsBitField,
   RESTJSONErrorCodes,
   type CategoryChannel,
@@ -14,6 +15,7 @@ import { isApiError } from "#lib/discord-errors.js";
 import type { TFunction } from "#lib/i18n.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
+import { fetchMember } from "#lib/moderation.js";
 import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
 import { RenameLimiter, renderName } from "./naming.js";
 import {
@@ -107,6 +109,22 @@ async function grantable(
   return bits;
 }
 
+async function stillInGuild(guild: Guild, ids: string[]): Promise<string[]> {
+  const kept: string[] = [];
+  for (const id of ids) {
+    const present =
+      guild.members.cache.has(id) ||
+      (await fetchMember(guild, id).then(
+        (member) => member !== null,
+        () => true
+      ));
+    if (present) {
+      kept.push(id);
+    }
+  }
+  return kept;
+}
+
 function staffRoles(guild: Guild): Set<string> {
   return new Set(
     guild.roles.cache
@@ -121,9 +139,24 @@ async function writeOverwrite(
   overwrite: Overwrite | undefined
 ): Promise<void> {
   if (overwrite) {
-    await channel.permissionOverwrites.create(id, overwriteOptions(overwrite), {
-      type: overwrite.type,
-    });
+    try {
+      await channel.permissionOverwrites.create(
+        id,
+        overwriteOptions(overwrite),
+        { type: overwrite.type }
+      );
+    } catch (err) {
+      if (
+        overwrite.type !== OverwriteType.Member ||
+        !isApiError(err, RESTJSONErrorCodes.UnknownPermissionOverwrite)
+      ) {
+        throw err;
+      }
+      logger.debug(
+        { err },
+        `Overwrite of a departed member skipped | channelId = ${channel.id} | id = ${id}`
+      );
+    }
   } else {
     await channel.permissionOverwrites.delete(id);
   }
@@ -309,11 +342,13 @@ export function joinHub(
       ownerId: member.id,
       locked: preference?.locked ?? false,
       hidden: preference?.hidden ?? false,
-      trusted: preference?.trusted ?? [],
-      blocked: (preference?.blocked ?? []).filter((id) => {
-        const blocked = guild.members.cache.get(id);
-        return !blocked || !isProtected(blocked, hubChannel);
-      }),
+      trusted: await stillInGuild(guild, preference?.trusted ?? []),
+      blocked: (await stillInGuild(guild, preference?.blocked ?? [])).filter(
+        (id) => {
+          const blocked = guild.members.cache.get(id);
+          return !blocked || !isProtected(blocked, hubChannel);
+        }
+      ),
     };
     lastCreation.set(key, now);
     setTimeout(() => {
