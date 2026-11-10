@@ -18,13 +18,6 @@
   "config.belowThreshold.name": "Below threshold",
   "config.belowThreshold.description": "What happens to a reposted message when its reactions fall below the threshold.",
 
-  "header": "{{author}} in {{channel}} · {{sentAt}}",
-  "reply": "↪ Replying to {{author}}: {{excerpt}}",
-  "forwarded": "↪ Forwarded message",
-  "sticker": "Sticker: {{name}}",
-  "moreFiles_one": "… and {{count}} more file",
-  "moreFiles_other": "… and {{count}} more files",
   "total_one": "**{{count}}** member",
-  "total_other": "**{{count}}** members",
-  "jump": "Go to message"
+  "total_other": "**{{count}}** members"
 }

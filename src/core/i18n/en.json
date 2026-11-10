@@ -175,5 +175,13 @@
   "guild.welcome.title": "# Thanks for inviting me!",
   "guild.welcome.body": "Admins, start with `/modules` to enable modules and `/config` to configure them.",
   "guild.welcome.hint": "Your previous configuration will be restored automatically if I have been here before.",
-  "guild.welcome.dmPrefix": "(System channel unavailable) "
+  "guild.welcome.dmPrefix": "(System channel unavailable) ",
+
+  "reportedMessage.header": "{{author}} in {{channel}} · {{sentAt}}",
+  "reportedMessage.reply": "↪ Replying to {{author}}: {{excerpt}}",
+  "reportedMessage.forwarded": "↪ Forwarded message",
+  "reportedMessage.sticker": "Sticker: {{name}}",
+  "reportedMessage.moreFiles_one": "… and {{count}} more file",
+  "reportedMessage.moreFiles_other": "… and {{count}} more files",
+  "reportedMessage.jump": "Go to message"
 }

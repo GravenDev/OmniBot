@@ -105,6 +105,7 @@ Shared code lives in `src/lib/` (imported as `#lib/…`), plus `src/core/utils/`
 | `#lib/post-card.js`        | `postCard` (image, text if refused), `celebrationMessage`                                                            |
 | `#lib/preview.js`          | sample images for `pnpm render-preview`                                                                              |
 | `#lib/registry.js`         | a module's declarations                                                                                              |
+| `#lib/reported-message.js` | a message quoted elsewhere (message-quote, starboard): `reportedMessage`, `sendWithMediaFallback`                    |
 | `#lib/revision-cache.js`   | `RevisionCache`, `RevisionCounter`: caches invalidated by key                                                        |
 | `#lib/service.js`          | `declareService`                                                                                                     |
 | `#lib/stat-card.js`        | stat cards: panels, trends, fitted text                                                                              |
