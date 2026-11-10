@@ -2,23 +2,38 @@ import {
   ButtonStyle,
   ChannelType,
   Collection,
+  ComponentType,
+  DiscordAPIError,
   MessageFlags,
   PermissionFlagsBits,
   PermissionsBitField,
-  type ButtonComponent,
+  RESTJSONErrorCodes,
   type GuildBasedChannel,
   type GuildMember,
   type Message,
 } from "discord.js";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
+import core from "#core/i18n/en.json" with { type: "json" };
 import { isNsfw, widensAudience } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { COMPONENTS_TEXT_LIMIT } from "#lib/format.js";
+import { createT } from "#lib/i18n.js";
+import { NO_MENTIONS_REPLY } from "#lib/mentions.js";
+import {
+  COMPONENTS_LIMIT,
+  componentCount,
+  initTestI18n,
+  silenceLogs,
+  textLength,
+} from "#lib/testing.js";
+import en from "#modules/message-quote/i18n/en.json" with { type: "json" };
 import type { MessageQuoteConfigSchema } from "#modules/message-quote/message-quote.config.js";
 import {
+  ACCENT,
   canRead,
   MAX_QUOTES,
   parseMessageLinks,
-  quoteEmbed,
+  quoteContainer,
   quoteLinks,
   quoteReply,
   resolveQuote,
@@ -26,8 +41,13 @@ import {
 
 const GUILD = "100";
 
-const t = (key: string, options?: Record<string, unknown>) =>
-  options ? `${key} ${JSON.stringify(options)}` : key;
+const t = createT("en", "message-quote");
+
+beforeAll(async () => {
+  await initTestI18n("core", { en: core });
+  await initTestI18n("message-quote", { en });
+  silenceLogs();
+});
 
 const READ = [
   PermissionFlagsBits.ViewChannel,
@@ -99,7 +119,11 @@ function fakeQuoted(
       contentType: string;
       spoiler: boolean;
     }>[];
-    snapshot?: { content: string; embeds?: unknown[]; components?: unknown[] };
+    snapshot?: {
+      content: string;
+      embeds?: unknown[];
+      components?: unknown[];
+    };
     embeds?: unknown[];
     authorId?: string;
     withMember?: boolean;
@@ -116,6 +140,7 @@ function fakeQuoted(
   );
   const author = {
     id: options.authorId ?? "2",
+    username: "author",
     displayName: "Author",
     displayAvatarURL: () => "https://cdn/avatar.png",
   };
@@ -130,6 +155,7 @@ function fakeQuoted(
               {
                 embeds: [],
                 components: [],
+                stickers: new Collection(),
                 ...options.snapshot,
                 attachments: new Collection(),
               },
@@ -138,21 +164,36 @@ function fakeQuoted(
         : []
     ),
     embeds: options.embeds ?? [],
+    stickers: new Collection(),
     author,
+    webhookId: null,
     member:
       options.withMember === false
         ? null
-        : { ...author, displayName: "Nick", displayColor: 0xff0000 },
+        : {
+            ...author,
+            displayName: "Nick",
+            displayColor: 0xff0000,
+            displayAvatarURL: () => "https://cdn/member-avatar.png",
+          },
     url: "https://discord.com/channels/100/200/300",
     createdAt: new Date("2026-10-14T19:58:00Z"),
+    channelId: "200",
     channel: { name: "general" },
     client: { user: { id: "bot" } },
     components: options.components
       ? options.components
       : options.buttonIds
         ? [
+            // An action row below an embed, as discord.js gives it.
             {
-              components: options.buttonIds.map((customId) => ({ customId })),
+              toJSON: () => ({
+                type: 1,
+                components: options.buttonIds!.map((custom_id) => ({
+                  type: 2,
+                  custom_id,
+                })),
+              }),
             },
           ]
         : [],
@@ -433,6 +474,17 @@ describe("resolveQuote", () => {
     ).toBe(announcement);
   });
 
+  it("does not quote its own quotes, laid out with components", async () => {
+    const ownQuote = fakeQuoted({
+      authorId: "bot",
+      components: [quoteReply([quoted], member, t).components[0]!.toJSON()],
+    });
+    const { message } = fakeSource("", {
+      "200": fakeChannel({ messages: { "300": ownQuote } }),
+    });
+    expect(await resolveQuote(message, member, target, new Set())).toBeNull();
+  });
+
   it("quotes a member's message even if it carries a quote button id", async () => {
     const lookalike = fakeQuoted({
       authorId: "2",
@@ -469,26 +521,99 @@ describe("resolveQuote", () => {
   });
 });
 
-describe("quoteEmbed", () => {
+interface Json {
+  type: number;
+  content?: string;
+  accent_color?: number;
+  components?: Json[];
+  accessory?: Json & { media?: { url: string } };
+  items?: { media: { url: string }; spoiler?: boolean }[];
+  style?: number;
+  url?: string;
+  label?: string;
+  custom_id?: string;
+}
+
+function render(quoted: Message<true>) {
+  const json = quoteContainer(quoted, member, t).toJSON() as unknown as Json;
+  const section = json.components!.find(
+    (component) => component.type === ComponentType.Section
+  )!;
+  const texts = json
+    .components!.filter(
+      (component) => component.type === ComponentType.TextDisplay
+    )
+    .map((component) => component.content);
+  const gallery =
+    json.components!.find(
+      (component) => component.type === ComponentType.MediaGallery
+    )?.items ?? [];
+  return {
+    json,
+    // The header and the text, beside the avatar.
+    main: section.components![0]!.content!,
+    avatar: section.accessory?.media?.url,
+    // The text displays after it: the extras, then the footer.
+    texts,
+    gallery: gallery.map((item) => ({
+      url: item.media.url,
+      spoiler: item.spoiler ?? false,
+    })),
+  };
+}
+
+describe("quoteContainer", () => {
+  it("shows the author, the channel and the date above the text", () => {
+    const { json, main, avatar, texts } = render(
+      fakeQuoted({ content: "hello" })
+    );
+    expect(main).toMatch(/^-# <@2> in <#200> · <t:\d+:R>\n\nhello$/);
+    expect(avatar).toBe("https://cdn/member-avatar.png");
+    expect(json.accent_color).toBe(0xff0000);
+    expect(texts).toEqual(["-# 💬 Quoted by <@1>"]);
+  });
+
+  it("ends with the quoter above a link to the message", () => {
+    const { json } = render(fakeQuoted({ content: "hello" }));
+    expect(json.components!.slice(-3)).toMatchObject([
+      { type: ComponentType.Separator },
+      { type: ComponentType.TextDisplay, content: "-# 💬 Quoted by <@1>" },
+      {
+        type: ComponentType.ActionRow,
+        components: [
+          {
+            style: ButtonStyle.Link,
+            url: "https://discord.com/channels/100/200/300",
+            label: "Go to message",
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("uses a soft lavender when the author has no role colour", () => {
+    const { json, avatar } = render(fakeQuoted({ withMember: false }));
+    expect(json.accent_color).toBe(ACCENT);
+    expect(avatar).toBe("https://cdn/avatar.png");
+  });
+
   it("reads a message laid out with components, text and image", () => {
     // Without content or attachments: its text displays and gallery instead.
-    const embed = quoteEmbed(
+    const { main, gallery } = render(
       fakeQuoted({
         components: [
           { type: 10, content: "🎂 **Joyeux anniversaire !**" },
           { type: 12, items: [{ media: { url: "https://cdn/card.webp" } }] },
           { type: 10, content: "<@1>" },
         ],
-      }),
-      member,
-      t
-    ).data;
-    expect(embed.description).toBe("🎂 **Joyeux anniversaire !**\n<@1>");
-    expect(embed.image?.url).toBe("https://cdn/card.webp");
+      })
+    );
+    expect(main).toMatch(/\n\n🎂 \*\*Joyeux anniversaire !\*\*\n<@1>$/);
+    expect(gallery).toEqual([{ url: "https://cdn/card.webp", spoiler: false }]);
   });
 
   it("reads a forwarded message laid out with components", () => {
-    const embed = quoteEmbed(
+    const { main, gallery } = render(
       fakeQuoted({
         snapshot: {
           content: "",
@@ -497,21 +622,19 @@ describe("quoteEmbed", () => {
             { type: 12, items: [{ media: { url: "https://cdn/card.webp" } }] },
           ],
         },
-      }),
-      member,
-      t
-    ).data;
-    expect(embed.description).toBe("🎂 forwarded");
-    expect(embed.image?.url).toBe("https://cdn/card.webp");
+      })
+    );
+    expect(main).toMatch(/\n-# ↪ Forwarded message\n\n🎂 forwarded$/);
+    expect(gallery).toEqual([{ url: "https://cdn/card.webp", spoiler: false }]);
   });
 
-  it("links the other uploads of a gallery, the spoilered one included", () => {
+  it("shows each upload of a gallery once, with its spoiler", () => {
     const upload = (name: string) => ({
       name,
       url: `https://cdn/${name}`,
       contentType: "image/png",
     });
-    const embed = quoteEmbed(
+    const { gallery, texts } = render(
       fakeQuoted({
         attachments: [upload("a.png"), upload("b.png"), upload("c.png")],
         components: [
@@ -526,18 +649,18 @@ describe("quoteEmbed", () => {
             })),
           },
         ],
-      }),
-      member,
-      t
-    ).data;
-    expect(embed.image?.url).toBe("https://cdn/b.png");
-    expect(embed.description).toBe(
-      "📎 [a.png](https://cdn/a.png)\n📎 [c.png](https://cdn/c.png)"
+      })
     );
+    expect(gallery).toEqual([
+      { url: "https://cdn/a.png", spoiler: true },
+      { url: "https://cdn/b.png", spoiler: false },
+      { url: "https://cdn/c.png", spoiler: false },
+    ]);
+    expect(texts.join("\n")).not.toContain("📎");
   });
 
   it("keeps hidden an uploaded thumbnail inside a spoiler container", () => {
-    const embed = quoteEmbed(
+    const { gallery } = render(
       fakeQuoted({
         attachments: [
           { name: "t.png", url: "https://cdn/t.png", contentType: "image/png" },
@@ -558,15 +681,13 @@ describe("quoteEmbed", () => {
             ],
           },
         ],
-      }),
-      member,
-      t
-    ).data;
-    expect(embed.image).toBeUndefined();
+      })
+    );
+    expect(gallery).toEqual([{ url: "https://cdn/t.png", spoiler: true }]);
   });
 
-  it("does not take a gallery video for the image", () => {
-    const embed = quoteEmbed(
+  it("shows a gallery's videos with its images", () => {
+    const { gallery } = render(
       fakeQuoted({
         components: [
           {
@@ -582,16 +703,17 @@ describe("quoteEmbed", () => {
             ],
           },
         ],
-      }),
-      member,
-      t
-    ).data;
-    expect(embed.image?.url).toBe("https://cdn/card.webp");
+      })
+    );
+    expect(gallery.map((item) => item.url)).toEqual([
+      "https://cdn/clip.mp4",
+      "https://cdn/card.webp",
+    ]);
   });
 
   it("keeps hidden the uploaded image a gallery shows as a spoiler", () => {
     // Its gallery item holds the spoiler; the attachment itself does not.
-    const embed = quoteEmbed(
+    const { main, gallery } = render(
       fakeQuoted({
         attachments: [
           {
@@ -612,39 +734,14 @@ describe("quoteEmbed", () => {
             ],
           },
         ],
-      }),
-      member,
-      t
-    ).data;
-    // Linked like a classic spoilered attachment, but not shown.
-    expect(embed.image).toBeUndefined();
-    expect(embed.description).toBe(
-      "the end\n📎 [end.png](https://cdn/end.png)"
+      })
     );
+    expect(main).toMatch(/\n\nthe end$/);
+    expect(gallery).toEqual([{ url: "https://cdn/end.png", spoiler: true }]);
   });
 
-  it("shows the author, the content, the channel and the quoter", () => {
-    const embed = quoteEmbed(fakeQuoted({ content: "hello" }), member, t).data;
-    expect(embed.author).toMatchObject({
-      name: "Nick",
-      url: "https://discord.com/channels/100/200/300",
-    });
-    expect(embed.description).toBe("hello");
-    expect(embed.color).toBe(0xff0000);
-    expect(embed.footer?.text).toBe(
-      'quote.footer {"quoter":"Quoter","channel":"general"}'
-    );
-    expect(embed.timestamp).toBe("2026-10-14T19:58:00.000Z");
-  });
-
-  it("falls back to the user when the author left", () => {
-    const embed = quoteEmbed(fakeQuoted({ withMember: false }), member, t).data;
-    expect(embed.author?.name).toBe("Author");
-    expect(embed.color).toBeUndefined();
-  });
-
-  it("shows the first image and lists the other files", () => {
-    const embed = quoteEmbed(
+  it("shows the images in a gallery and lists the other files", () => {
+    const { gallery, texts } = render(
       fakeQuoted({
         attachments: [
           {
@@ -653,17 +750,19 @@ describe("quoteEmbed", () => {
             contentType: "application/zip",
           },
           { name: "b.png", url: "https://cdn/b.png", contentType: "image/png" },
+          { name: "c.png", url: "https://cdn/c.png", contentType: "image/png" },
         ],
-      }),
-      member,
-      t
-    ).data;
-    expect(embed.image?.url).toBe("https://cdn/b.png");
-    expect(embed.description).toBe("📎 [a.zip](https://cdn/a.zip)");
+      })
+    );
+    expect(gallery.map((item) => item.url)).toEqual([
+      "https://cdn/b.png",
+      "https://cdn/c.png",
+    ]);
+    expect(texts[0]).toBe("📎 [a.zip](https://cdn/a.zip)");
   });
 
-  it("never displays a spoilered image", () => {
-    const embed = quoteEmbed(
+  it("shows a spoilered image blurred", () => {
+    const { gallery } = render(
       fakeQuoted({
         attachments: [
           {
@@ -673,123 +772,164 @@ describe("quoteEmbed", () => {
             spoiler: true,
           },
         ],
-      }),
-      member,
-      t
-    ).data;
-    expect(embed.image).toBeUndefined();
-    expect(embed.description).toContain("SPOILER_b.png");
+      })
+    );
+    expect(gallery).toEqual([{ url: "https://cdn/b.png", spoiler: true }]);
   });
 
   it("quotes the content of a forwarded message", () => {
-    const embed = quoteEmbed(
-      fakeQuoted({ snapshot: { content: "forwarded" } }),
-      member,
-      t
-    ).data;
-    expect(embed.description).toBe("forwarded");
-    expect(embed.footer?.text).toContain("quote.footerForwarded");
+    const { main } = render(fakeQuoted({ snapshot: { content: "forwarded" } }));
+    expect(main).toMatch(/\n-# ↪ Forwarded message\n\nforwarded$/);
   });
 
-  it("uses the embed of a message without text", () => {
-    const embed = quoteEmbed(
+  it("quotes the embed of a message without text", () => {
+    const { main, texts, gallery } = render(
       fakeQuoted({
         embeds: [
-          { description: "from a bot", image: { url: "https://cdn/i" } },
+          {
+            data: { type: "rich" },
+            description: "from a bot",
+            image: { url: "https://cdn/i" },
+          },
         ],
-      }),
-      member,
-      t
-    ).data;
-    expect(embed.description).toBe("from a bot");
-    expect(embed.image?.url).toBe("https://cdn/i");
+      })
+    );
+    expect(main).not.toContain("Message without text");
+    expect(texts[0]).toBe("> from a bot");
+    expect(gallery).toEqual([{ url: "https://cdn/i", spoiler: false }]);
   });
 
   it("does not reveal a link preview hidden behind a spoiler", () => {
-    const embed = quoteEmbed(
+    const { gallery, texts } = render(
       fakeQuoted({
         content: "||https://example.com/i.png||",
-        embeds: [{ image: { url: "https://example.com/i.png" } }],
-      }),
-      member,
-      t
-    ).data;
-    expect(embed.image).toBeUndefined();
-  });
-
-  it("uses the embed of a forwarded message without text", () => {
-    const embed = quoteEmbed(
-      fakeQuoted({
-        snapshot: { content: "", embeds: [{ description: "forwarded embed" }] },
-      }),
-      member,
-      t
-    ).data;
-    expect(embed.description).toBe("forwarded embed");
-  });
-
-  it("says when there is nothing to show", () => {
-    expect(quoteEmbed(fakeQuoted(), member, t).data.description).toBe(
-      "quote.noContent"
+        embeds: [
+          {
+            data: { type: "rich" },
+            title: "reveal",
+            image: { url: "https://example.com/i.png" },
+          },
+        ],
+      })
     );
+    expect(gallery).toEqual([
+      { url: "https://example.com/i.png", spoiler: true },
+    ]);
+    expect(texts.join("\n")).not.toContain("reveal");
   });
 
-  it("truncates to the embed description limit", () => {
-    const description = quoteEmbed(
-      fakeQuoted({ content: "a".repeat(5000) }),
-      member,
-      t
-    ).data.description!;
-    expect(description).toHaveLength(4096);
-    expect(description.endsWith("…")).toBe(true);
+  it("quotes the embed of a forwarded message without text", () => {
+    const { texts } = render(
+      fakeQuoted({
+        snapshot: {
+          content: "",
+          embeds: [{ data: { type: "rich" }, description: "forwarded embed" }],
+        },
+      })
+    );
+    expect(texts[0]).toBe("> forwarded embed");
+  });
+
+  it("says when there is nothing to read", () => {
+    expect(render(fakeQuoted()).main).toMatch(/\n\n\*Message without text\*$/);
+  });
+
+  it("truncates to the text it may hold", () => {
+    const { json, main } = render(fakeQuoted({ content: "a".repeat(5000) }));
+    expect(main.endsWith("…")).toBe(true);
+    expect(textLength([{ toJSON: () => json as never }])).toBeLessThanOrEqual(
+      COMPONENTS_TEXT_LIMIT
+    );
   });
 });
 
 describe("quoteReply", () => {
-  it("adds a jump button per quote and a delete button for the people involved", () => {
+  it("gives each quote its container, and the last one the delete button", () => {
     const reply = quoteReply(
       [fakeQuoted({ authorId: "2" }), fakeQuoted({ authorId: "2" })],
       member,
       t
     );
-    const buttons = reply.components[0]!.toJSON().components as unknown as (
-      | ButtonComponent["data"]
-      | { custom_id: string; style: ButtonStyle }
-    )[];
-    expect(reply.embeds).toHaveLength(2);
-    expect(buttons.map((button) => button.style)).toEqual([
-      ButtonStyle.Link,
-      ButtonStyle.Link,
-      ButtonStyle.Secondary,
-    ]);
-    expect((buttons[2] as { custom_id: string }).custom_id).toBe(
-      "message-quote:1:2"
+    expect(reply).not.toHaveProperty("content");
+    expect(reply.flags).toBe(MessageFlags.IsComponentsV2);
+    expect(reply.allowedMentions).toBe(NO_MENTIONS_REPLY);
+    const rows = reply.components.map((container) =>
+      (container.toJSON() as unknown as Json).components!.at(-1)!
     );
-    expect(reply.allowedMentions).toEqual({ parse: [], repliedUser: false });
+    expect(rows.map((row) => row.components!.map((b) => b.style))).toEqual([
+      [ButtonStyle.Link],
+      [ButtonStyle.Link, ButtonStyle.Secondary],
+    ]);
+    expect(rows[1]!.components![1]!.custom_id).toBe("message-quote:1:2");
   });
 
-  it("keeps several long quotes under Discord's total embed size", () => {
-    const longQuoter = {
-      id: "1",
-      displayName: "q".repeat(32),
-    } as unknown as GuildMember;
+  it("keeps several full quotes within Discord's limits", () => {
+    const file = (name: string) => ({
+      name,
+      url: `https://cdn/${name}?${"x".repeat(500)}`,
+      contentType: "application/pdf",
+    });
+    const image = (name: string) => ({
+      name,
+      url: `https://cdn/${name}`,
+      contentType: "image/png",
+    });
+    const embed = {
+      data: { type: "rich" },
+      title: "T",
+      description: "line\n".repeat(300),
+      image: { url: "https://cdn/e.png" },
+    };
     const reply = quoteReply(
-      [1, 2, 3].map(() => fakeQuoted({ content: "a".repeat(4000) })),
-      longQuoter,
+      [1, 2, 3].map(() =>
+        fakeQuoted({
+          content: "a".repeat(4000),
+          attachments: [
+            file("a.pdf"),
+            file("b.pdf"),
+            file("c.pdf"),
+            file("d.pdf"),
+            ...Array.from({ length: 12 }, (_, i) => image(`${i}.png`)),
+          ],
+          embeds: [embed, embed],
+        })
+      ),
+      member,
       t
     );
-    const total = reply.embeds
-      .map((embed) => embed.data)
-      .reduce(
-        (sum, data) =>
-          sum +
-          (data.title?.length ?? 0) +
-          (data.description?.length ?? 0) +
-          (data.footer?.text.length ?? 0) +
-          (data.author?.name.length ?? 0),
-        0
-      );
-    expect(total).toBeLessThanOrEqual(6000);
+    expect(reply.components).toHaveLength(3);
+    expect(textLength(reply.components)).toBeLessThanOrEqual(
+      COMPONENTS_TEXT_LIMIT
+    );
+    expect(componentCount(reply.components)).toBeLessThanOrEqual(
+      COMPONENTS_LIMIT
+    );
+    // Each one still shows a good part of its text.
+    for (const container of reply.components) {
+      expect(JSON.stringify(container.toJSON())).toContain("a".repeat(300));
+    }
+  });
+
+  it("leaves the media out when asked to", () => {
+    const reply = quoteReply(
+      [
+        fakeQuoted({
+          attachments: [
+            {
+              name: "b.png",
+              url: "https://cdn/b.png",
+              contentType: "image/png",
+            },
+          ],
+        }),
+      ],
+      member,
+      t,
+      false
+    );
+    const json = JSON.stringify(reply.components[0]!.toJSON());
+    expect(json).not.toContain('"type":12');
+    expect(json).toContain("📎 [b.png](https://cdn/b.png)");
   });
 });
 
@@ -807,11 +947,58 @@ describe("quoteLinks", () => {
     await quoteLinks(message, fakeConfig());
     expect(reply).toHaveBeenCalledOnce();
     const [payload] = reply.mock.calls[0] as unknown as [
-      { embeds: unknown[]; flags: number },
+      { content?: string; components: unknown[]; flags: number },
     ];
-    expect(payload.embeds).toHaveLength(1);
+    expect(payload.components).toHaveLength(1);
+    expect(payload.content).toBeUndefined();
     // The message with the link already notified the channel.
-    expect(payload.flags).toBe(MessageFlags.SuppressNotifications);
+    expect(payload.flags).toBe(
+      MessageFlags.IsComponentsV2 | MessageFlags.SuppressNotifications
+    );
+  });
+
+  it("retries without media when Discord refuses one", async () => {
+    const withImage = fakeQuoted({
+      content: "hello",
+      embeds: [
+        { data: { type: "rich" }, image: { url: "https://bad.example/i" } },
+      ],
+    });
+    const { message, reply } = fakeSource(link("200", "300"), {
+      "200": fakeChannel({ messages: { "300": withImage } }),
+    });
+    reply.mockRejectedValueOnce(
+      new DiscordAPIError(
+        {
+          code: RESTJSONErrorCodes.InvalidFormBodyOrContentType,
+          message: "Invalid Form Body",
+        },
+        RESTJSONErrorCodes.InvalidFormBodyOrContentType,
+        400,
+        "POST",
+        "https://discord.com/api/v10/channels/1/messages",
+        {}
+      )
+    );
+    await quoteLinks(message, fakeConfig());
+    expect(reply).toHaveBeenCalledTimes(2);
+    const calls = reply.mock.calls as unknown as [
+      { components: { toJSON(): unknown }[] },
+    ][];
+    const sent = (index: number) =>
+      JSON.stringify(calls[index]![0].components.map((c) => c.toJSON()));
+    expect(sent(0)).toContain("https://bad.example/i");
+    expect(sent(1)).not.toContain("https://bad.example/i");
+    expect(sent(1)).toContain("hello");
+  });
+
+  it("does not retry another error", async () => {
+    const { message, reply } = fakeSource(link("200", "300"), {
+      "200": fakeChannel({ messages: { "300": quoted } }),
+    });
+    reply.mockRejectedValueOnce(new Error("boom"));
+    await expect(quoteLinks(message, fakeConfig())).rejects.toThrow("boom");
+    expect(reply).toHaveBeenCalledOnce();
   });
 
   it("stays silent when nothing can be quoted", async () => {

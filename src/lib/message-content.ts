@@ -1,5 +1,3 @@
-import type { Message } from "discord.js";
-
 // What a message laid out with components (Components V2) reads and shows:
 // it has no content of its own, and the files it uploads only show through
 // its components, so the modules that render someone else's message (quotes,
@@ -20,6 +18,7 @@ interface Media {
 interface Node {
   type?: number;
   content?: string;
+  custom_id?: string;
   spoiler?: boolean;
   components?: Node[];
   accessory?: Node;
@@ -37,15 +36,17 @@ export interface ComponentMedia {
   attachmentId?: string;
 }
 
-type WithComponents = Partial<Pick<Message, "components">>;
+// A message, or any list of components: discord.js's objects or their JSON.
+type WithComponents = { components?: readonly unknown[] };
 
 /** The components as Discord sends them, from discord.js's objects. */
 function nodes(message: WithComponents): Node[] {
-  return (message.components ?? []).map((component) =>
-    "toJSON" in component && typeof component.toJSON === "function"
-      ? (component.toJSON() as Node)
-      : (component as Node)
-  );
+  return (message.components ?? []).map((component) => {
+    const json = (component as { toJSON?: unknown }).toJSON;
+    return (
+      typeof json === "function" ? json.call(component) : component
+    ) as Node;
+  });
 }
 
 /** Visits every component, telling whether a spoiler container hides it. */
@@ -62,6 +63,14 @@ function walk(
       walk([node.accessory], visit, inside);
     }
   }
+}
+
+/** Visits each component of a message, nested ones included. */
+export function forEachComponent(
+  message: WithComponents,
+  visit: (node: Readonly<Node>) => void
+): void {
+  walk(nodes(message), visit);
 }
 
 /** The text displays of a message, one per line; empty without any. */

@@ -1,5 +1,13 @@
-import { Collection, type Message, StickerFormatType } from "discord.js";
+import {
+  ButtonStyle,
+  Collection,
+  ComponentType,
+  type Message,
+  MessageFlags,
+  StickerFormatType,
+} from "discord.js";
 import { beforeAll, describe, expect, it } from "vitest";
+import core from "#core/i18n/en.json" with { type: "json" };
 import { createT } from "#lib/i18n.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import { initTestI18n } from "#lib/testing.js";
@@ -9,6 +17,7 @@ import { counterLine, starboardMessage } from "./view.js";
 const t = createT("en", "starboard");
 
 beforeAll(async () => {
+  await initTestI18n("core", { en: core });
   await initTestI18n("starboard", { en });
 });
 
@@ -215,6 +224,27 @@ describe("starboardMessage", () => {
       })
     );
     expect(json).toContain('"spoiler":true');
+  });
+
+  it("ends with the counter above a link to the message", () => {
+    const { payload } = render(fakeMessage());
+    expect(payload.flags).toBe(MessageFlags.IsComponentsV2);
+    const json = payload.components[0]!.toJSON();
+    expect(json.accent_color).toBe(0xf5c518);
+    expect(json.components.slice(-3)).toMatchObject([
+      { type: ComponentType.Separator },
+      { type: ComponentType.TextDisplay, content: "⭐ **4**" },
+      {
+        type: ComponentType.ActionRow,
+        components: [
+          {
+            style: ButtonStyle.Link,
+            url: "https://discord.com/channels/g/general/m1",
+            label: "Go to message",
+          },
+        ],
+      },
+    ]);
   });
 
   it("never pings anyone", () => {

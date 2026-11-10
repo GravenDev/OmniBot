@@ -27,9 +27,10 @@ function fakeInteraction(userId: string, canManageMessages = false) {
 describe("deleteButton", () => {
   it("encodes each allowed member once", () => {
     const button = deleteButton((key) => key, ["1", "2", "1"]).toJSON();
-    expect((button as { custom_id: string }).custom_id).toBe(
-      "message-quote:1:2"
-    );
+    expect(button).toMatchObject({
+      custom_id: "message-quote:1:2",
+      emoji: { name: "🗑️" },
+    });
   });
 });
 
@@ -52,11 +53,15 @@ describe("delete handler", () => {
     const { interaction, remove, reply } = fakeInteraction("9");
     await handler.execute(interaction, ["1", "2"], config);
     expect(remove).not.toHaveBeenCalled();
-    expect(reply).toHaveBeenCalledWith(
-      expect.objectContaining({
-        content: "delete.notAllowed",
-        flags: MessageFlags.Ephemeral,
-      })
+    const [payload] = reply.mock.calls[0] as unknown as [
+      { content?: string; components: { toJSON(): unknown }[]; flags: number },
+    ];
+    expect(payload.content).toBeUndefined();
+    expect(payload.flags).toBe(
+      MessageFlags.Ephemeral | MessageFlags.IsComponentsV2
     );
+    expect(payload.components.map((component) => component.toJSON())).toEqual([
+      { type: 10, content: "delete.notAllowed" },
+    ]);
   });
 });

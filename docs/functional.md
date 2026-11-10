@@ -404,7 +404,7 @@ Reposte dans un salon dédié les messages qui reçoivent assez de réactions, e
 ### Comportement automatique
 
 - Un message est reposté quand assez de membres différents ont réagi avec l'un des emojis configurés. Les super réactions comptent comme les autres, et un membre qui réagit avec plusieurs de ces emojis ne compte qu'une fois ; les bots ne comptent jamais, l'auteur du message seulement si l'auto-star est activé.
-- Le repost reprend l'auteur, le salon, la date, le texte (1500 caractères au plus), les images et vidéos, les stickers, les embeds (titre, description, image), la liste des autres fichiers, le message auquel il répond, et le contenu d'un message transféré. Un bouton renvoie au message d'origine. Personne n'est mentionné : ni l'auteur affiché, ni les mentions du texte. Un aperçu de lien caché sous un spoiler reste flouté, sans son titre ni sa description.
+- Le repost reprend l'auteur, le salon, la date, le texte (1500 caractères au plus), les images et vidéos, les stickers, les embeds (titre, description, image), la liste des autres fichiers, le message auquel il répond, et le contenu d'un message transféré. Il a la même mise en page que les citations du module Message Quote, avec un liseré jaune : l'auteur, le salon et la date en petit au-dessus du texte, l'avatar de l'auteur à côté, les médias en galerie, puis, sous un trait, le compteur et un bouton « Aller au message ». Personne n'est mentionné : ni l'auteur affiché, ni les mentions du texte. Un aperçu de lien caché sous un spoiler (son lien ou son image) reste flouté, sans son titre ni sa description ; dès que le texte contient un spoiler, un aperçu dont le lien n'y figure pas en clair (lien raccourci ou redirigé, embed d'un bot) l'est aussi, et un fichier sous spoiler est listé sous spoiler. Un message de webhook est signé du nom du webhook.
 - Le compteur du repost suit chaque réaction ajoutée ou retirée, la suppression d'un emoji ou de toutes les réactions, et la modification du message d'origine. Les réactions sur le repost lui-même ne comptent pas. Une rafale de réactions ne déclenche qu'un recomptage à la fois par message.
 - Quand les réactions repassent sous le seuil, le repost est conservé avec son compteur, ou supprimé si `belowThreshold` vaut `remove` ; dans ce cas, il peut revenir si le seuil est de nouveau atteint.
 - Si le message d'origine est supprimé, son repost l'est aussi. Si un modérateur supprime le repost, le message n'est plus jamais reposté.
@@ -749,9 +749,16 @@ Cite les messages Discord dont le lien est posté sur le serveur.
 
 ### Comportement automatique
 
-Quand un membre poste un lien vers un message (`https://discord.com/channels/…`, y compris `ptb.` et `canary.`), le bot répond avec une citation : auteur et avatar, texte, première image, autres pièces jointes en liens, salon d'origine, membre qui cite et date du message. Un bouton « Aller au message » ouvre l'original. Un message mis en page avec des composants (Components V2) est cité avec le texte et la première image de ses composants. Les mentions présentes dans le message cité ne notifient personne, et la citation part en @silent : le message qui contient le lien a déjà notifié le salon.
+Quand un membre poste un lien vers un message (`https://discord.com/channels/…`, y compris `ptb.` et `canary.`), le bot répond avec une citation, mise en page comme les reposts du starboard :
 
-Un message transféré est cité avec son contenu transféré. Un message sans texte reprend la description (ou le titre) de son premier embed, à défaut le bot indique qu'il n'a pas de texte.
+- en petit, l'auteur, le salon d'origine et la date du message (« il y a 2 heures »), puis le texte, avec l'avatar de l'auteur à côté ;
+- les embeds (titre et description, cités), les stickers animés et les autres fichiers en liens (3 au plus) ;
+- les images, vidéos et stickers en galerie (10 au plus), y compris l'image des embeds ;
+- sous un trait, « 💬 Cité par @membre », un bouton « Aller au message » qui ouvre l'original et le bouton « 🗑️ Supprimer ».
+
+Le liseré de la citation prend la couleur de rôle de l'auteur, à défaut un lavande clair. Un message mis en page avec des composants (Components V2) est cité avec le texte et les médias de ses composants. Ni l'auteur affiché, ni le membre qui cite, ni les mentions présentes dans le message cité ne notifient personne, et la citation part en @silent : le message qui contient le lien a déjà notifié le salon. Un message de webhook est signé du nom du webhook.
+
+Un message transféré est cité avec son contenu transféré, signalé par « ↪ Message transféré ». Un message sans texte montre ses embeds, ses fichiers ou ses médias ; s'il n'a rien de tout cela, le bot indique qu'il n'a pas de texte.
 
 **Ce qui n'est pas cité :**
 
@@ -763,7 +770,7 @@ Un message transféré est cité avec son contenu transféré. Un message sans t
 - Les messages des salons et catégories exclus, et les liens postés dans un salon exclu
 - Les liens postés par des bots
 
-Au plus 3 messages sont cités par message, les doublons sont ignorés. Un texte trop long est coupé, sans jamais laisser un spoiler à moitié ouvert. Si le message contenant le lien a été supprimé entre-temps, la citation est publiée sans y répondre. Si aucun lien n'est citable, le bot ne répond pas. Une pièce jointe image sous spoiler n'est jamais affichée, seulement listée en lien. Dès que le texte cité contient un spoiler (`||`), l'aperçu de lien n'est pas repris.
+Au plus 3 messages sont cités par message, les doublons sont ignorés ; chacun a son cadre et son bouton « Aller au message », le bouton « Supprimer » n'apparaît que sous le dernier. Les citations se partagent les 4000 caractères d'un message : un texte trop long est coupé, sans jamais laisser un spoiler à moitié ouvert. Si le message contenant le lien a été supprimé entre-temps, la citation est publiée sans y répondre. Si aucun lien n'est citable, le bot ne répond pas. Une image ou une vidéo sous spoiler reste floutée dans la galerie, et un aperçu de lien dont le lien (ou l'image) est sous spoiler reste flouté, sans son titre ni sa description ; dès que le texte cité contient un spoiler, un aperçu dont le lien n'y figure pas en clair (lien raccourci ou redirigé, embed d'un bot) l'est aussi. Un fichier sous spoiler est listé sous spoiler. Si Discord refuse l'un des médias, la citation est publiée sans galerie, ses images et vidéos listées en liens et ses stickers nommés.
 
 ### Bouton « Supprimer »
 
