@@ -32,9 +32,20 @@ const logger = loggerMaker("rngdle");
 const AVERAGE_MIN_ROLLS = 5;
 const RANK_ICONS = ["🥇", "🥈", "🥉"];
 const CARD_NAME = "rngdle-roll.png";
-const CHECK_COOLDOWN_MS = 10 * 60 * 1000;
+const CHECK_WINDOW_MS = 10 * 60 * 1000;
+// Checks of rngdle.com a member may trigger in a window, back to back: a roll
+// made logged out, maybe another, then the recorded one. The calculator gets
+// one, as an unlinked member's result is checked only before the day's card.
+const CHECKS_PER_WINDOW = { rngdle: 3, calculator: 1 } as const;
 
-const lastChecks = new Map<string, number>();
+/**
+ * Each member's current window of checks, per source: when it started, how
+ * many checks it allowed, and the rolls rngdle.com was asked for in vain.
+ */
+const checkWindows = new Map<
+  string,
+  { start: number; count: number; missed: Set<number> }
+>();
 
 type Config = ConfigProvider<RngdleConfigSchema>;
 
@@ -239,21 +250,50 @@ interface Verified {
   linked: boolean;
 }
 
-// The cooldown is kept per source: a member who links their account is
+type Source = keyof typeof CHECKS_PER_WINDOW;
+
+const checkKey = (guildId: string, userId: string, source: Source) =>
+  `${guildId}:${userId}:${source}`;
+
+function windowOf(guildId: string, userId: string, source: Source) {
+  const key = checkKey(guildId, userId, source);
+  const now = Date.now();
+  let current = checkWindows.get(key);
+  if (!current || now - current.start >= CHECK_WINDOW_MS) {
+    current = { start: now, count: 0, missed: new Set() };
+    checkWindows.set(key, current);
+  }
+  return current;
+}
+
+// The windows are kept per source: a member who links their account is
 // checked on rngdle.com at once, even if the calculator checked a result a
 // minute before.
-function mayCheck(
-  guildId: string,
-  userId: string,
-  source: "rngdle" | "calculator"
-): boolean {
-  const key = `${guildId}:${userId}:${source}`;
-  const now = Date.now();
-  if (now - (lastChecks.get(key) ?? -Infinity) < CHECK_COOLDOWN_MS) {
+function mayCheck(guildId: string, userId: string, source: Source): boolean {
+  const current = windowOf(guildId, userId, source);
+  if (current.count >= CHECKS_PER_WINDOW[source]) {
     return false;
   }
-  lastChecks.set(key, now);
+  current.count++;
   return true;
+}
+
+/**
+ * rngdle.com answered without the pasted roll: pasted again by mistake, it is
+ * not asked for again, and the window's other checks are kept for the
+ * member's recorded roll.
+ */
+function rememberMiss(guildId: string, userId: string, number: number): void {
+  windowOf(guildId, userId, "rngdle").missed.add(number);
+}
+
+function alreadyMissed(guildId: string, userId: string, number: number) {
+  return windowOf(guildId, userId, "rngdle").missed.has(number);
+}
+
+/** rngdle.com did not answer: not asked again before the window ends. */
+function closeWindow(guildId: string, userId: string): void {
+  windowOf(guildId, userId, "rngdle").count = CHECKS_PER_WINDOW.rngdle;
 }
 
 // The member's rolls of the pasted result's day and of the day before.
@@ -271,11 +311,13 @@ function findPasted(
   return recent.find((roll) => roll.number === pasted.number);
 }
 
+// The pasted roll once the member's rolls are downloaded, null when
+// rngdle.com did not record it, undefined when it could not be asked.
 async function refreshedRoll(
   account: Account,
   pasted: CardRoll,
   today: Date
-): Promise<StoredRoll | null> {
+): Promise<StoredRoll | null | undefined> {
   try {
     await sync.refreshAccount(account);
   } catch (err) {
@@ -283,7 +325,7 @@ async function refreshedRoll(
       { err },
       `Could not check a shared roll | guildId = ${account.guildId} | username = ${account.username}`
     );
-    return null;
+    return undefined;
   }
   return findPasted(await recentRolls(account, today), pasted) ?? null;
 }
@@ -294,13 +336,14 @@ async function calculatorRoll(pasted: CardRoll): Promise<CardRoll | null> {
 }
 
 // Checks a pasted result against the rolls rngdle.com recorded (linked
-// member) or against the calculator (unlinked member), at most once per
-// member and per source every 10 minutes. An unlinked member's result is
-// checked only before the day's card; a linked member's, until the day's
-// roll is downloaded: rngdle.com records one a day, so another number cannot
-// be found there. A card drawn before linking does not count, the member's
-// roll is still to be downloaded. Any other result gets an unverified card,
-// drawn without a single request.
+// member), up to 3 times in 10 minutes, or against the calculator (unlinked
+// member), once in 10 minutes. A roll rngdle.com was just asked for in vain
+// is not asked for again, and a request that fails closes the window. An
+// unlinked member's result is checked only before the day's card; a linked
+// member's, until the day's roll is downloaded: rngdle.com records one a
+// day, so another number cannot be found there. A card drawn before linking
+// does not count, the member's roll is still to be downloaded. Any other
+// result gets an unverified card, drawn without a single request.
 async function verify(
   guildId: string,
   userId: string,
@@ -318,13 +361,19 @@ async function verify(
     : await store.hasCard(guildId, userId, today);
   if (
     settled ||
+    (account && alreadyMissed(guildId, userId, pasted.number)) ||
     !mayCheck(guildId, userId, account ? "rngdle" : "calculator")
   ) {
     return null;
   }
   if (account) {
     const roll = await refreshedRoll(account, pasted, today);
-    return roll && { roll, linked: true };
+    if (roll === null) {
+      rememberMiss(guildId, userId, pasted.number);
+    } else if (roll === undefined) {
+      closeWindow(guildId, userId);
+    }
+    return roll ? { roll, linked: true } : null;
   }
   const roll = await calculatorRoll(pasted);
   return roll && { roll, linked: false };
