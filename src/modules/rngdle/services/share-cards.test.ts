@@ -286,6 +286,17 @@ describe("answerShare", () => {
     expect(mocks.refreshAccount).toHaveBeenCalledWith(ACCOUNT);
   });
 
+  it("keeps the cooldown when the member links another username", async () => {
+    mocks.store.account.mockResolvedValue(ACCOUNT);
+    const config = configWith(SHARING) as never;
+    await answerShare(shareMessage() as never, config);
+    mocks.store.account.mockResolvedValue({ ...ACCOUNT, username: "Bob" });
+    vi.setSystemTime(clock + 2 * MINUTE);
+    await answerShare(shareMessage() as never, config);
+
+    expect(mocks.refreshAccount).toHaveBeenCalledTimes(1);
+  });
+
   it.each([
     [
       "the feature is off",
@@ -494,6 +505,13 @@ describe("answerShare", () => {
 
       expect(mocks.refreshAccount).toHaveBeenCalledWith(ACCOUNT);
       expect(data.number).toBe(222222);
+      expect(data.subtitle).not.toContain("card.notLinked");
+    });
+
+    it("does not wait for the cooldown of the check made before linking", async () => {
+      const data = await pasteThenLink(2);
+
+      expect(mocks.refreshAccount).toHaveBeenCalledWith(ACCOUNT);
       expect(data.subtitle).not.toContain("card.notLinked");
     });
   });
