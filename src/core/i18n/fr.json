@@ -175,5 +175,13 @@
   "guild.welcome.title": "# Merci de m'avoir invité !",
   "guild.welcome.body": "Admins, commencez par `/modules` pour activer des modules et `/config` pour les configurer.",
   "guild.welcome.hint": "Votre configuration précédente sera restaurée automatiquement si je suis déjà venu ici.",
-  "guild.welcome.dmPrefix": "(Salon système indisponible) "
+  "guild.welcome.dmPrefix": "(Salon système indisponible) ",
+
+  "reportedMessage.header": "{{author}} dans {{channel}} · {{sentAt}}",
+  "reportedMessage.reply": "↪ En réponse à {{author}} : {{excerpt}}",
+  "reportedMessage.forwarded": "↪ Message transféré",
+  "reportedMessage.sticker": "Sticker : {{name}}",
+  "reportedMessage.moreFiles_one": "… et {{count}} autre fichier",
+  "reportedMessage.moreFiles_other": "… et {{count}} autres fichiers",
+  "reportedMessage.jump": "Aller au message"
 }

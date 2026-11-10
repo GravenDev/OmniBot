@@ -8,7 +8,7 @@
  * them. Forgetting the `#core/runtime.js` mock leaves `modules` empty and
  * `client` undefined, forgetting the database mock hits a real database.
  */
-import { ChannelType } from "discord.js";
+import { ChannelType, ComponentType } from "discord.js";
 import { vi } from "vitest";
 import {
   ConfigProvider,
@@ -17,6 +17,7 @@ import {
 } from "./config.js";
 import { addTranslations, initI18n } from "./i18n.js";
 import baseLogger from "./logger.js";
+import { forEachComponent } from "./message-content.js";
 import type { Module } from "./module.js";
 
 let i18nReady = false;
@@ -151,4 +152,25 @@ export function messageText(message: {
     walk(component);
   }
   return texts.join("\n");
+}
+
+/** Discord's limit on the components of a message, nested ones included. */
+export const COMPONENTS_LIMIT = 40;
+
+/** The text of every text display, which Discord caps per message. */
+export function textLength(components: readonly unknown[]): number {
+  let length = 0;
+  forEachComponent({ components }, (node) => {
+    if (node.type === ComponentType.TextDisplay) {
+      length += node.content?.length ?? 0;
+    }
+  });
+  return length;
+}
+
+/** Every component, nested ones included, which Discord caps per message. */
+export function componentCount(components: readonly unknown[]): number {
+  let count = 0;
+  forEachComponent({ components }, () => count++);
+  return count;
 }

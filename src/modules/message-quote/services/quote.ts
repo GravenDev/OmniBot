@@ -1,10 +1,6 @@
 import {
-  ActionRowBuilder,
-  type Attachment,
-  ButtonBuilder,
-  ButtonStyle,
   ChannelType,
-  EmbedBuilder,
+  type ContainerBuilder,
   type GuildBasedChannel,
   type GuildMember,
   type Message,
@@ -18,16 +14,17 @@ import {
   READ_PERMISSIONS,
 } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { COMPONENTS_TEXT_LIMIT } from "#lib/format.js";
 import { stripHiddenText } from "#lib/hidden-text.js";
 import type { TFunction } from "#lib/i18n.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS_REPLY } from "#lib/mentions.js";
+import { forEachComponent } from "#lib/message-content.js";
 import {
-  componentsMedia,
-  componentsText,
-  hiddenAttachments,
-} from "#lib/message-content.js";
-import { truncate } from "#lib/text.js";
+  type ReportOptions,
+  reportedMessage,
+  sendWithMediaFallback,
+} from "#lib/reported-message.js";
 import {
   deleteButton,
   QUOTE_CUSTOM_ID,
@@ -38,11 +35,8 @@ const logger = loggerMaker("message-quote");
 
 export const MAX_QUOTES = 3;
 
-const DESCRIPTION_LIMIT = 4096;
-
-const EMBEDS_LIMIT = 6000;
-
-const EMBED_OVERHEAD = 300;
+// A soft lavender, for a quoted member without a role colour.
+export const ACCENT = 0xa0a4ff;
 
 const LINK_PATTERN =
   /(<)?https?:\/\/(?:(?:ptb|canary)\.)?discord(?:app)?\.com\/channels\/(\d+)\/(\d+)\/(\d+)(>)?/g;
@@ -78,20 +72,17 @@ export function parseMessageLinks(
   return links;
 }
 
+// A quote is a container with the delete button inside; an older one, an
+// embed with the button in an action row below it.
 function isOwnQuote(quoted: Message<true>): boolean {
-  return (
-    quoted.author.id === quoted.client.user.id &&
-    quoted.components.some(
-      (row) =>
-        "components" in row &&
-        row.components.some(
-          (component) =>
-            "customId" in component &&
-            typeof component.customId === "string" &&
-            component.customId.startsWith(`${QUOTE_CUSTOM_ID}:`)
-        )
-    )
-  );
+  if (quoted.author.id !== quoted.client.user.id) {
+    return false;
+  }
+  let found = false;
+  forEachComponent(quoted, (node) => {
+    found ||= !!node.custom_id?.startsWith(`${QUOTE_CUSTOM_ID}:`);
+  });
+  return found;
 }
 
 export async function canRead(
@@ -149,120 +140,46 @@ export async function resolveQuote(
   return isOwnQuote(quoted) ? skip("message is already a quote") : quoted;
 }
 
-function isImage(attachment: Attachment): boolean {
-  return !attachment.spoiler && !!attachment.contentType?.startsWith("image/");
-}
-
-export function quoteEmbed(
+/** The quote's container: the quoted message, then who quoted it. */
+export function quoteContainer(
   quoted: Message<true>,
   quoter: GuildMember,
   t: TFunction,
-  descriptionLimit = DESCRIPTION_LIMIT
-): EmbedBuilder {
-  const snapshot = quoted.messageSnapshots.first();
-  const attachments = [
-    ...quoted.attachments.values(),
-    ...(snapshot?.attachments.values() ?? []),
-  ];
-  // A message laid out with components sets the spoiler of its uploads on
-  // the components showing them, not on the attachments.
-  const hidden = new Set([
-    ...hiddenAttachments(quoted),
-    ...(snapshot ? hiddenAttachments(snapshot) : []),
-  ]);
-  const image = attachments.find(
-    (attachment) => isImage(attachment) && !hidden.has(attachment.id)
-  );
-  // Its galleries can also show media from a link, which are not uploads.
-  const linked = [
-    ...componentsMedia(quoted),
-    ...(snapshot ? componentsMedia(snapshot) : []),
-  ].filter((item) => !item.attachmentId);
-  const files = attachments
-    .filter((attachment) => attachment !== image)
-    .map((attachment) => `📎 [${attachment.name}](${attachment.url})`);
-  const firstEmbed = quoted.embeds[0] ?? snapshot?.embeds[0];
-  const text =
-    quoted.content ||
-    // A message laid out with components has no content: its text displays.
-    componentsText(quoted) ||
-    snapshot?.content ||
-    (snapshot ? componentsText(snapshot) : "") ||
-    firstEmbed?.description ||
-    firstEmbed?.title ||
-    "";
-  const description = [text, ...files].filter(Boolean).join("\n");
-  const imageUrl =
-    image?.url ??
-    linked.find(
-      (item) =>
-        !item.spoiler && (item.contentType?.startsWith("image/") ?? true)
-    )?.url ??
-    (text.includes("||")
-      ? undefined
-      : (firstEmbed?.image?.url ?? firstEmbed?.thumbnail?.url));
-
-  const author = quoted.member ?? quoted.author;
-  const embed = new EmbedBuilder()
-    .setAuthor({
-      name: author.displayName,
-      iconURL: author.displayAvatarURL(),
-      url: quoted.url,
-    })
-    .setDescription(
-      description
-        ? truncate(description, descriptionLimit)
-        : t("quote.noContent")
-    )
-    .setFooter({
-      text: t(snapshot ? "quote.footerForwarded" : "quote.footer", {
-        quoter: quoter.displayName,
-        channel: quoted.channel.name,
-      }),
-    })
-    .setTimestamp(quoted.createdAt);
-  if (imageUrl) {
-    embed.setImage(imageUrl);
-  }
-  if (quoted.member?.displayColor) {
-    embed.setColor(quoted.member.displayColor);
-  }
-  return embed;
+  options: Pick<ReportOptions, "textLimit" | "buttons" | "withMedia"> = {}
+): ContainerBuilder {
+  return reportedMessage(quoted, t, {
+    accent: quoted.member?.displayColor || ACCENT,
+    footer: `-# ${t("quote.by", { quoter: `<@${quoter.id}>` })}`,
+    emptyText: t("quote.noContent"),
+    ...options,
+  });
 }
 
+/**
+ * The reply quoting `quotes`, one container each, sharing Discord's text
+ * limit; the last one carries the delete button, for the people involved.
+ */
 export function quoteReply(
   quotes: Message<true>[],
   quoter: GuildMember,
-  t: TFunction
+  t: TFunction,
+  withMedia = true
 ) {
-  const jumpButtons = quotes.map((quoted, index) =>
-    new ButtonBuilder()
-      .setStyle(ButtonStyle.Link)
-      .setURL(quoted.url)
-      .setLabel(
-        quotes.length > 1
-          ? t("quote.jumpNumbered", { number: index + 1 })
-          : t("quote.jump")
-      )
-  );
-  const descriptionLimit = Math.min(
-    DESCRIPTION_LIMIT,
-    Math.floor(EMBEDS_LIMIT / quotes.length) - EMBED_OVERHEAD
-  );
+  const textLimit = Math.floor(COMPONENTS_TEXT_LIMIT / quotes.length);
   const allowedUserIds = [
     quoter.id,
     ...quotes.map((quoted) => quoted.author.id),
   ];
   return {
-    embeds: quotes.map((quoted) =>
-      quoteEmbed(quoted, quoter, t, descriptionLimit)
+    components: quotes.map((quoted, index) =>
+      quoteContainer(quoted, quoter, t, {
+        textLimit,
+        withMedia,
+        buttons:
+          index === quotes.length - 1 ? [deleteButton(t, allowedUserIds)] : [],
+      })
     ),
-    components: [
-      new ActionRowBuilder<ButtonBuilder>().addComponents(
-        ...jumpButtons,
-        deleteButton(t, allowedUserIds)
-      ),
-    ],
+    flags: MessageFlags.IsComponentsV2 as const,
     allowedMentions: NO_MENTIONS_REPLY,
   };
 }
@@ -309,10 +226,20 @@ export async function quoteLinks(
     return;
   }
 
-  await message.reply({
-    ...quoteReply(quotes, member, config.t),
-    failIfNotExists: false,
-    // The message with the link already notified the channel: no second push.
-    flags: MessageFlags.SuppressNotifications,
-  });
+  const send = (withMedia: boolean) => {
+    const reply = quoteReply(quotes, member, config.t, withMedia);
+    return message.reply({
+      ...reply,
+      failIfNotExists: false,
+      // The message with the link already notified the channel: no second
+      // push.
+      flags: reply.flags | MessageFlags.SuppressNotifications,
+    });
+  };
+  await sendWithMediaFallback(send, (err) =>
+    logger.warn(
+      { err },
+      `Quote refused by Discord, retrying without media | guildId = ${message.guildId} | messageId = ${message.id}`
+    )
+  );
 }
