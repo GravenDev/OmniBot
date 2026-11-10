@@ -114,6 +114,28 @@ describe("searchGuildMessagesPage", () => {
     expect(sleep).not.toHaveBeenCalled();
   });
 
+  it("takes a body without results for one not ready yet", async () => {
+    // Another 202 code than 110000: no page to read, so no firm answer.
+    const get = vi.fn().mockResolvedValue({ code: 110001, retry_after: 60 });
+    expect(
+      await searchGuildMessagesPage(
+        { get } as unknown as REST,
+        "g",
+        new URLSearchParams(),
+        Date.now() + 1000
+      )
+    ).toBeNull();
+  });
+
+  it("refuses a body that is not a page rather than reading no result", async () => {
+    for (const body of [{}, { total_results: 0 }, new ArrayBuffer(0)]) {
+      const get = vi.fn().mockResolvedValue(body);
+      await expect(
+        searchGuildMessagesPage(rest(get), "g", new URLSearchParams())
+      ).rejects.toThrow("not a page of results");
+    }
+  });
+
   it("tells a page read while Discord indexes old history", async () => {
     const get = vi.fn().mockResolvedValue({
       ...page,
