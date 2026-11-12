@@ -1,28 +1,23 @@
-import type { Message } from "discord.js";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { ChannelType, type Message } from "discord.js";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import { initTestI18n, makeTestConfig } from "#lib/testing.js";
 import { honeypotConfigSchema } from "#modules/honeypot/honeypot.config.js";
 import en from "#modules/honeypot/i18n/en.json" with { type: "json" };
-
-const audience = vi.hoisted(() => ({ widensAudience: vi.fn() }));
-vi.mock("#lib/channel-audience.js", () => audience);
-
-const { logTrap, trapLog } = await import("./log.js");
+import { logTrap, trapLog } from "./log.js";
 
 beforeAll(async () => {
   await initTestI18n("honeypot", { en });
 });
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  audience.widensAudience.mockReturnValue(false);
-});
-
-function fakeMessage(content: string, attachments: string[] = []) {
+function fakeMessage(
+  content: string,
+  attachments: string[] = [],
+  channelType = ChannelType.GuildText
+) {
   return {
     guildId: "g1",
     channelId: "trap",
-    channel: { id: "trap" },
+    channel: { id: "trap", type: channelType },
     content,
     attachments: new Map(attachments.map((name) => [name, { name }])),
     author: {
@@ -52,8 +47,7 @@ describe("trapLog", () => {
       fakeMessage("free nitro\nclick here", ["scam.png"]),
       t,
       softbanned,
-      3600,
-      true
+      3600
     );
     expect(embed.data.description).toBe(
       "**🍯 Trap triggered by <@u1> in <#trap>**\n" +
@@ -68,8 +62,7 @@ describe("trapLog", () => {
       fakeMessage("[free nitro](https://phish.example) ||**hi**||"),
       t,
       softbanned,
-      3600,
-      true
+      3600
     );
     expect(embed.data.description).toContain(
       "> \\[free nitro](https://phish.example) \\|\\|\\*\\*hi\\*\\*\\|\\|"
@@ -81,8 +74,7 @@ describe("trapLog", () => {
       fakeMessage(""),
       t,
       { outcome: "failed", messageKept: false },
-      3600,
-      true
+      3600
     );
     expect(embed.data.description).toContain("*No text*");
   });
@@ -92,8 +84,7 @@ describe("trapLog", () => {
       fakeMessage("spam"),
       t,
       { outcome: "notBannable", messageKept: true },
-      3600,
-      true
+      3600
     );
     expect(embed.data.description).toMatch(
       /could not be deleted: delete it by hand\.$/
@@ -104,16 +95,10 @@ describe("trapLog", () => {
     ["emoji", "😀".repeat(3000)],
     ["short lines", "a\n".repeat(1999)],
   ])("stays within Discord's limit for %s", (_label, content) => {
-    const embed = trapLog(fakeMessage(content), t, softbanned, 3600, true);
+    const embed = trapLog(fakeMessage(content), t, softbanned, 3600);
     const description = embed.data.description!;
     expect(description.length).toBeLessThanOrEqual(4096);
     expect(description).toMatch(/were deleted\.$/);
-  });
-
-  it("hides the content when asked", () => {
-    const embed = trapLog(fakeMessage("secret"), t, softbanned, 3600, false);
-    expect(embed.data.description).not.toContain("secret");
-    expect(embed.data.description).toContain("Content hidden");
   });
 });
 
@@ -129,15 +114,17 @@ describe("logTrap", () => {
     );
   });
 
-  it("hides the content from a wider audience", async () => {
-    audience.widensAudience.mockReturnValue(true);
+  // No audience rule: the log channel is staff-only (docs/functional.md), so
+  // a message from a private thread of a trap is quoted like any other.
+  it("quotes a message from a private thread of a trap", async () => {
     const channel = fakeLogChannel();
     const config = makeTestConfig("honeypot", honeypotConfigSchema, {
       logChannel: channel,
     } as never);
-    await logTrap(fakeMessage("secret"), config, softbanned, 3600);
+    const message = fakeMessage("secret", [], ChannelType.PrivateThread);
+    await logTrap(message, config, softbanned, 3600);
     const embed = channel.send.mock.calls[0]![0].embeds[0];
-    expect(embed.data.description).not.toContain("secret");
+    expect(embed.data.description).toContain("> secret");
   });
 
   it("skips a log channel the bot cannot post in", async () => {

@@ -14,7 +14,6 @@
 
   "log.title": "🍯 Trap triggered by {{author}} in {{channel}}",
   "log.empty": "*No text*",
-  "log.hidden": "🔒 *Content hidden: the log channel is visible to more people than the trap channel.*",
   "log.messageKept": "⚠️ The trap message could not be deleted: delete it by hand.",
   "log.footer": "Author ID: {{authorId}}",
 

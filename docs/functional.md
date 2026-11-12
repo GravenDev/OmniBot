@@ -723,7 +723,7 @@ Les fils d'un salon piège sont piégés eux aussi ; la raison du journal d'audi
 
 ### Log
 
-Si un salon des logs est défini, chaque déclenchement y est consigné : l'auteur, le salon piège, le message en citation (texte et nom des pièces jointes) et le résultat de la sanction, avec l'ID de l'auteur en pied. Un message trop long est coupé pour tenir dans le log. Les mentions ne notifient personne. Quand un rôle voit le salon des logs sans pouvoir lire le salon piège (ou que le message vient d'un fil privé), le log est publié sans le contenu, avec la mention « Contenu masqué ». Le bot y a besoin de _Voir le salon_, d'_Envoyer des messages_ et d'_Intégrer des liens_ ; sans elles, la sanction s'applique sans log.
+Si un salon des logs est défini, chaque déclenchement y est consigné : l'auteur, le salon piège, le message en citation (texte et nom des pièces jointes) et le résultat de la sanction, avec l'ID de l'auteur en pied. Un message trop long est coupé pour tenir dans le log. Les mentions ne notifient personne. Le bot y a besoin de _Voir le salon_, d'_Envoyer des messages_ et d'_Intégrer des liens_ ; sans elles, la sanction s'applique sans log. Le salon des logs doit être réservé au staff : le message piégé y est cité quel que soit le salon d'origine, fils privés compris.
 
 ### Compteur
 

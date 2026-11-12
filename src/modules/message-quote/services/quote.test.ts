@@ -11,7 +11,7 @@ import {
   type Message,
 } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
-import { isNsfw, widensAudience } from "#lib/channel-audience.js";
+import { isNsfw } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { MessageQuoteConfigSchema } from "#modules/message-quote/message-quote.config.js";
 import {
@@ -382,8 +382,13 @@ describe("resolveQuote", () => {
       true
     );
     const general = withAudience(fakeChannel({ id: "999" }), false);
-    expect(widensAudience(staff, general)).toBe(true);
-
+    // The premise: @everyone cannot see the source, and sees the destination.
+    const hiddenFromEveryone = (channel: GuildBasedChannel) =>
+      (channel as any).permissionOverwrites.cache
+        .get(GUILD)
+        ?.deny.has(PermissionFlagsBits.ViewChannel) ?? false;
+    expect(hiddenFromEveryone(staff)).toBe(true);
+    expect(hiddenFromEveryone(general)).toBe(false);
     const { message } = fakeSource("", { "200": staff }, general);
     expect(await resolveQuote(message, member, target, new Set())).toBe(quoted);
   });

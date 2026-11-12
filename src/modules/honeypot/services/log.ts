@@ -4,7 +4,6 @@ import {
   PermissionFlagsBits,
   type Message,
 } from "discord.js";
-import { widensAudience } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { formatDuration } from "#lib/duration.js";
 import type { TFunction } from "#lib/i18n.js";
@@ -51,8 +50,7 @@ export function trapLog(
   message: Message<true>,
   t: TFunction,
   result: TrapResult,
-  purgeSeconds: number,
-  withContent: boolean
+  purgeSeconds: number
 ): EmbedBuilder {
   const title = t("log.title", {
     author: `<@${message.author.id}>`,
@@ -63,7 +61,7 @@ export function trapLog(
     t(`outcome.${result.outcome}`, { window: formatDuration(purgeSeconds) }),
     ...(result.messageKept ? [t("log.messageKept")] : []),
   ].join("\n");
-  const body = withContent ? quoted(message, t) : t("log.hidden");
+  const body = quoted(message, t);
   const room = DESCRIPTION_LIMIT - header.length - footer.length - 2;
   return new EmbedBuilder()
     .setColor(result.outcome === "softbanned" ? SANCTIONED_COLOR : FAILED_COLOR)
@@ -104,15 +102,7 @@ export async function logTrap(
   }
   try {
     await channel.send({
-      embeds: [
-        trapLog(
-          message,
-          config.t,
-          result,
-          purgeSeconds,
-          !widensAudience(message.channel, channel)
-        ),
-      ],
+      embeds: [trapLog(message, config.t, result, purgeSeconds)],
       allowedMentions: NO_MENTIONS,
     });
   } catch (error) {
