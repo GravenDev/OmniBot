@@ -118,6 +118,7 @@ export class ThreadCreationQueue {
   ): void {
     if (error instanceof Error && "code" in error) {
       const code = (error as { code: number }).code;
+      // oxlint-disable-next-line omnibot/discord-error-codes -- codes to check against their names: fixed separately
       if (code === 160004) {
         logger.warn(
           { err: error },
@@ -125,6 +126,7 @@ export class ThreadCreationQueue {
         );
         return;
       }
+      // oxlint-disable-next-line omnibot/discord-error-codes -- codes to check against their names: fixed separately
       if (code === 160005) {
         logger[warnings.level(`${code}:${message.channelId}`)](
           { err: error },
@@ -132,6 +134,7 @@ export class ThreadCreationQueue {
         );
         return;
       }
+      // oxlint-disable-next-line omnibot/discord-error-codes -- codes to check against their names: fixed separately
       if (code === 50013) {
         logger[warnings.level(`${code}:${message.channelId}`)](
           { err: error },
