@@ -1,9 +1,9 @@
 import {
-  DiscordAPIError,
   MessageFlags,
   RESTJSONErrorCodes,
   type ModalSubmitInteraction,
 } from "discord.js";
+import { isApiError } from "#lib/discord-errors.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { loggerMaker } from "#lib/logger.js";
 import { REPORT_MODAL_ID } from "../commands/report-message.command.js";
@@ -45,10 +45,11 @@ export default declareInteractionHandler<
       }
       message = await channel.messages.fetch(messageId);
     } catch (err) {
-      const noAccess =
-        err instanceof DiscordAPIError &&
-        (err.code === RESTJSONErrorCodes.MissingAccess ||
-          err.code === RESTJSONErrorCodes.MissingPermissions);
+      const noAccess = isApiError(
+        err,
+        RESTJSONErrorCodes.MissingAccess,
+        RESTJSONErrorCodes.MissingPermissions
+      );
       const context = `noAccess = ${noAccess} | guildId = ${interaction.guildId} | channelId = ${channelId} | messageId = ${messageId} | userId = ${interaction.user.id}`;
       if (noAccess) {
         logger.warn({ err }, `Reported message unreadable | ${context}`);

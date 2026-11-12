@@ -1,10 +1,9 @@
 import {
-  DiscordAPIError,
   MessageFlags,
   RESTJSONErrorCodes,
   type GuildTextBasedChannel,
 } from "discord.js";
-import { isApiError } from "#lib/discord-errors.js";
+import { apiErrorCode, isApiError } from "#lib/discord-errors.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
@@ -15,7 +14,7 @@ const logger = loggerMaker("sticky");
 
 const PAUSE_MS = 10 * 60_000;
 
-const PAUSING_ERRORS = new Set<number | string>([
+const PAUSING_ERRORS = new Set<number>([
   RESTJSONErrorCodes.MissingAccess,
   RESTJSONErrorCodes.MissingPermissions,
 ]);
@@ -84,7 +83,7 @@ export class StickyPoster implements Service {
     try {
       return await this.repost(channel);
     } catch (err) {
-      const code = err instanceof DiscordAPIError ? err.code : undefined;
+      const code = apiErrorCode(err);
       const paused = code !== undefined && PAUSING_ERRORS.has(code);
       if (paused) {
         this.pausedUntil.set(channel.id, Date.now() + PAUSE_MS);

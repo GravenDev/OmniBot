@@ -1,9 +1,5 @@
-import {
-  DiscordAPIError,
-  RESTJSONErrorCodes,
-  type Guild,
-  type GuildMember,
-} from "discord.js";
+import { RESTJSONErrorCodes, type Guild, type GuildMember } from "discord.js";
+import { isApiError } from "./discord-errors.js";
 
 export const MAX_BAN_PURGE_SECONDS = 7 * 24 * 60 * 60;
 
@@ -23,9 +19,11 @@ export async function fetchMember(
     );
   } catch (error) {
     if (
-      error instanceof DiscordAPIError &&
-      (error.code === RESTJSONErrorCodes.UnknownMember ||
-        error.code === RESTJSONErrorCodes.UnknownUser)
+      isApiError(
+        error,
+        RESTJSONErrorCodes.UnknownMember,
+        RESTJSONErrorCodes.UnknownUser
+      )
     ) {
       return null;
     }
@@ -38,10 +36,7 @@ export async function isBanned(guild: Guild, userId: string): Promise<boolean> {
     await guild.bans.fetch({ user: userId, force: true });
     return true;
   } catch (error) {
-    if (
-      error instanceof DiscordAPIError &&
-      error.code === RESTJSONErrorCodes.UnknownBan
-    ) {
+    if (isApiError(error, RESTJSONErrorCodes.UnknownBan)) {
       return false;
     }
     throw error;

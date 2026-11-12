@@ -1,13 +1,12 @@
 import {
   type Client,
-  DiscordAPIError,
   type Message,
   MessageType,
   type PartialMessage,
   RESTJSONErrorCodes,
 } from "discord.js";
 import { type ConfigProvider, matchesEmoji } from "#lib/config.js";
-import { isApiError } from "#lib/discord-errors.js";
+import { isApiError, isDiscordApiError } from "#lib/discord-errors.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
@@ -31,13 +30,13 @@ type AnyMessage = Message | PartialMessage;
 const GONE = [
   RESTJSONErrorCodes.UnknownMessage,
   RESTJSONErrorCodes.UnknownChannel,
-];
+] as const;
 const BULK_DELETE_LIMIT = 100;
 
 const FORBIDDEN = [
   RESTJSONErrorCodes.MissingAccess,
   RESTJSONErrorCodes.MissingPermissions,
-];
+] as const;
 
 const REFUSAL_LEVEL: Record<Ineligibility, "debug" | "info" | "warn"> = {
   starboard: "debug",
@@ -170,7 +169,7 @@ class StarboardService implements Service {
         const deleted = await channel.bulkDelete(batch, true);
         remaining = batch.filter((id) => !deleted.has(id));
       } catch (err) {
-        if (!(err instanceof DiscordAPIError)) {
+        if (!isDiscordApiError(err)) {
           throw err;
         }
       }
