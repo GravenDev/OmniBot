@@ -1,4 +1,5 @@
-import { DiscordAPIError, RESTJSONErrorCodes, type Message } from "discord.js";
+import { RESTJSONErrorCodes, type Message } from "discord.js";
+import { apiErrorCode } from "#lib/discord-errors.js";
 import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
 import store from "#modules/autoreact/services/store.js";
@@ -9,7 +10,7 @@ const PAUSE_MS = 10 * 60_000;
 
 const CUSTOM_EMOJI = /^<a?:\w+:\d+>$/;
 
-const PAUSING_ERRORS = new Set<number | string>([
+const PAUSING_ERRORS = new Set<number>([
   RESTJSONErrorCodes.MissingAccess,
   RESTJSONErrorCodes.MissingPermissions,
   RESTJSONErrorCodes.UnknownEmoji,
@@ -51,7 +52,7 @@ export default declareEventListener<"messageCreate">({
     try {
       await message.react(emoji);
     } catch (err) {
-      const code = err instanceof DiscordAPIError ? err.code : undefined;
+      const code = apiErrorCode(err);
       if (code === RESTJSONErrorCodes.ReactionWasBlocked) {
         logger.debug(
           `Reaction blocked by the author | guildId = ${guildId} | channelId = ${channelId}`

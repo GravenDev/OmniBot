@@ -1,10 +1,10 @@
 import {
-  DiscordAPIError,
   MediaGalleryBuilder,
   MessageFlags,
   TextDisplayBuilder,
   type AttachmentBuilder,
 } from "discord.js";
+import { isDiscordApiError } from "./discord-errors.js";
 import { COMPONENTS_TEXT_LIMIT } from "./format.js";
 import type { loggerMaker } from "./logger.js";
 
@@ -35,7 +35,7 @@ export async function postCard<T>(
     await post(card);
     return true;
   } catch (err) {
-    if (!(err instanceof DiscordAPIError)) {
+    if (!isDiscordApiError(err)) {
       throw err;
     }
     logger.warn(

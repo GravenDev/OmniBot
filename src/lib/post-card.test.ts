@@ -25,6 +25,23 @@ describe("postCard", () => {
     expect(post).toHaveBeenCalledWith("png");
   });
 
+  it("leaves the text when Discord refuses the card without a code", async () => {
+    // @discordjs/rest takes the code from a JSON body's `error` when it has no
+    // `code`: still Discord refusing, not a bug to rethrow.
+    const codeless = new DiscordAPIError(
+      { message: "refused" } as never,
+      undefined as never,
+      400,
+      "POST",
+      "/channels/chan/messages",
+      {}
+    );
+    const post = vi.fn().mockRejectedValue(codeless);
+    expect(
+      await postCard(logger, "the card", () => Promise.resolve("png"), post)
+    ).toBe(false);
+  });
+
   it("leaves the text when the card cannot be drawn", async () => {
     const post = vi.fn();
     expect(

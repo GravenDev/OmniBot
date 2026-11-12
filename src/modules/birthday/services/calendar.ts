@@ -13,6 +13,7 @@ import type { ConfigProvider } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
 import { fetchAvatar } from "#lib/imaging.js";
 import { loggerMaker } from "#lib/logger.js";
+import { NO_MENTIONS } from "#lib/mentions.js";
 import { truncate } from "#lib/text.js";
 import type { BirthdayConfigSchema } from "../birthday.config.js";
 import {
@@ -175,7 +176,7 @@ export async function postMonthlyCalendar(
         ),
       }),
     ],
-    allowedMentions: { parse: [] },
+    allowedMentions: NO_MENTIONS,
   });
   logger.info(
     `Monthly calendar posted | guildId = ${guildId} | channelId = ${channel.id} | count = ${days.reduce((total, day) => total + day.length, 0)}`

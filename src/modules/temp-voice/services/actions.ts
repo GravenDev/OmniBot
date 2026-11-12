@@ -1,5 +1,6 @@
 import type { Guild, GuildMember, VoiceBasedChannel } from "discord.js";
 import { loggerMaker } from "#lib/logger.js";
+import { NO_MENTIONS } from "#lib/mentions.js";
 import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
 import { accessMode, modeFlags, type AccessMode } from "./access-mode.js";
 import {
@@ -378,7 +379,7 @@ export async function notify(
           guild: ctx.guild.name,
           channel: ctx.channel.url,
         }),
-        allowedMentions: { parse: [] },
+        allowedMentions: NO_MENTIONS,
       });
       setTimeout(() => invited.delete(key), INVITE_COOLDOWN_MS).unref();
       sent.push(member.id);
