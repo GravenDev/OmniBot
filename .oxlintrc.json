@@ -142,7 +142,9 @@
       "files": ["src/**/*.ts"],
       "rules": {
         "omnibot/no-whole-guild-member-fetch": "error",
-        "omnibot/discord-rest-in-polyfills": "error"
+        "omnibot/discord-rest-in-polyfills": "error",
+        "omnibot/discord-error-codes": "error",
+        "omnibot/shared-no-mentions": "error"
       }
     },
     {
@@ -153,6 +155,17 @@
       ],
       "rules": {
         "omnibot/discord-rest-in-polyfills": "off"
+      }
+    },
+    {
+      "files": [
+        "src/lib/mentions.ts",
+        "src/**/*.test.ts",
+        "src/modules/latex/**"
+      ],
+      "rules": {
+        "omnibot/shared-no-mentions": "off",
+        "omnibot/discord-error-codes": "off"
       }
     },
     {

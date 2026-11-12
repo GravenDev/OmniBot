@@ -421,10 +421,145 @@ const discordRestInPolyfills = {
   },
 };
 
+/**
+ * Whether `node` reads an error code: `code`, `err.code`, `(err as X).code`,
+ * `apiErrorCode(err)`.
+ * Discord's JSON error codes have 5 or 6 digits (10003, 50013, 160004); HTTP
+ * statuses (404, 429) and gateway close codes (4014) are left alone.
+ */
+function isCodeRead(node) {
+  node = unwrap(node);
+  // `err?.code`: the optional chain wraps the member read.
+  if (node?.type === "ChainExpression") {
+    node = unwrap(node.expression);
+  }
+  return (
+    (node?.type === "Identifier" && node.name === "code") ||
+    propertyName(node) === "code" ||
+    (node?.type === "CallExpression" && calleeName(node) === "apiErrorCode")
+  );
+}
+
+/** The name a call is made by: `f(…)` and `ns.f(…)` both give "f". */
+function calleeName(call) {
+  const callee = unwrap(call.callee);
+  return callee?.type === "Identifier" ? callee.name : propertyName(callee);
+}
+
+const isDiscordCode = (node) =>
+  node?.type === "Literal" &&
+  typeof node.value === "number" &&
+  node.value >= 10000 &&
+  node.value <= 999999;
+
+const COMPARISONS = new Set(["===", "!==", "==", "!="]);
+
+const discordErrorCodes = {
+  meta: {
+    type: "suggestion",
+    docs: {
+      description:
+        "Recognise a Discord error through #lib/discord-errors.js and RESTJSONErrorCodes, never with instanceof or a number written by hand.",
+    },
+    messages: {
+      helper:
+        "Use isDiscordApiError(err), isApiError(err, …codes) or apiErrorCode(err) from #lib/discord-errors.js instead of instanceof DiscordAPIError.",
+      named:
+        "Name the Discord error code with RESTJSONErrorCodes: a number written by hand is easily the wrong one (160004 is ThreadAlreadyCreatedForMessage, not a deleted message).",
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      // `err instanceof DiscordAPIError`, `err instanceof Discord.DiscordAPIError`
+      BinaryExpression(node) {
+        if (
+          node.operator === "instanceof" &&
+          ((node.right.type === "Identifier" &&
+            node.right.name === "DiscordAPIError") ||
+            propertyName(node.right) === "DiscordAPIError")
+        ) {
+          context.report({ node, messageId: "helper" });
+          return;
+        }
+        // `code === 50013`, `err.code !== 10008`
+        if (
+          COMPARISONS.has(node.operator) &&
+          ((isCodeRead(node.left) && isDiscordCode(node.right)) ||
+            (isCodeRead(node.right) && isDiscordCode(node.left)))
+        ) {
+          context.report({ node, messageId: "named" });
+        }
+      },
+      // `switch (err.code) { case 50013: … }`
+      SwitchCase(node) {
+        if (isCodeRead(node.parent.discriminant) && isDiscordCode(node.test)) {
+          context.report({ node: node.test, messageId: "named" });
+        }
+      },
+      // `isApiError(err, 50013)`, `errors.isApiError(err, 50013)`
+      CallExpression(node) {
+        if (calleeName(node) === "isApiError") {
+          for (const arg of node.arguments.slice(1)) {
+            if (isDiscordCode(arg)) {
+              context.report({ node: arg, messageId: "named" });
+            }
+          }
+        }
+      },
+    };
+  },
+};
+
+/** Whether `node` is `[]`. */
+const isEmptyArray = (node) =>
+  node?.type === "ArrayExpression" && node.elements.length === 0;
+
+const sharedNoMentions = {
+  meta: {
+    type: "suggestion",
+    docs: {
+      description:
+        "Silence mentions with NO_MENTIONS or NO_MENTIONS_REPLY from #lib/mentions.js, not an object written on the spot.",
+    },
+    messages: {
+      shared:
+        "Use NO_MENTIONS (or NO_MENTIONS_REPLY with repliedUser: false) from #lib/mentions.js.",
+    },
+    schema: [],
+  },
+  create(context) {
+    return {
+      // `{ parse: [] }` and `{ parse: [], repliedUser: false }`: exactly the
+      // shared constants. With `users` or `roles` beside, it is a choice.
+      ObjectExpression(node) {
+        const keys = node.properties.map(keyName);
+        const parse = node.properties.find((p) => keyName(p) === "parse");
+        if (!parse || !isEmptyArray(parse.value)) {
+          return;
+        }
+        const replied = node.properties.find(
+          (p) => keyName(p) === "repliedUser"
+        );
+        const onlyParse = keys.length === 1;
+        const reply =
+          keys.length === 2 &&
+          replied?.value.type === "Literal" &&
+          replied.value.value === false;
+        if (onlyParse || reply) {
+          context.report({ node, messageId: "shared" });
+        }
+      },
+    };
+  },
+};
+
 export default {
   meta: { name: "omnibot" },
   rules: {
     "no-whole-guild-member-fetch": noWholeGuildMemberFetch,
     "discord-rest-in-polyfills": discordRestInPolyfills,
+    "discord-error-codes": discordErrorCodes,
+    "shared-no-mentions": sharedNoMentions,
   },
 };

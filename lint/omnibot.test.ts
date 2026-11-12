@@ -100,8 +100,48 @@ const ROUTE_ALLOWED = [
   'type Api = "https://discord.com/api/v10";',
 ];
 
+const ERROR_CODE_REPORTED = [
+  "const a = err instanceof DiscordAPIError;",
+  "if (code === 50013) {}",
+  "if (err.code !== 10008) {}",
+  "if (160004 == (err as any).code) {}",
+  "if (err!.code != 50001) {}",
+  "switch (err.code) { case 50013: break; }",
+  "isApiError(err, 50013);",
+  "if (apiErrorCode(err) === 50013) {}",
+  "switch (apiErrorCode(err)) { case 10008: break; }",
+  "const c = err instanceof Discord.DiscordAPIError;",
+  "if (err?.code === 50013) {}",
+  "if ((err as any)?.code === 10008) {}",
+  "errors.isApiError(err, 50013);",
+];
+
+const ERROR_CODE_ALLOWED = [
+  "if (isApiError(err, RESTJSONErrorCodes.MissingAccess)) {}",
+  "if (code === RESTJSONErrorCodes.MissingAccess) {}",
+  "if (res.status === 429) {}",
+  "if (code === 4014) {}",
+  "if (count === 50013) {}",
+  "switch (err.code) { case RESTJSONErrorCodes.UnknownMessage: break; }",
+  "const b = err instanceof Error;",
+];
+
+const MENTIONS_REPORTED = [
+  "send({ allowedMentions: { parse: [] } });",
+  "const quiet = { parse: [], repliedUser: false };",
+  'send({ allowedMentions: { "parse": [] } });',
+];
+
+const MENTIONS_ALLOWED = [
+  "send({ allowedMentions: NO_MENTIONS });",
+  "send({ allowedMentions: { parse: [], roles: [id] } });",
+  "send({ allowedMentions: { users: [id] } });",
+  "const r = { parse: [], repliedUser: true };",
+  'const s = { parse: ["users"] };',
+];
+
 const DECLARATIONS =
-  "declare const guild: any, client: any, interaction: any, rest: any, store: any, config: any, cache: any, thread: any, Routes: any, RouteBases: any, format: any, REST: any, token: string, GatewayOpcodes: any, id: string, api: string, query: string, name: string, options: any, user: string, route: string;";
+  "declare const guild: any, client: any, interaction: any, rest: any, store: any, config: any, cache: any, thread: any, Routes: any, RouteBases: any, format: any, REST: any, token: string, GatewayOpcodes: any, id: string, api: string, query: string, name: string, options: any, user: string, route: string, err: any, code: number, count: number, res: any, DiscordAPIError: any, RESTJSONErrorCodes: any, isApiError: any, apiErrorCode: any, Discord: any, errors: any, send: any, NO_MENTIONS: any;";
 
 /**
  * How many times `rule` reports each line, linting every case at once: case i
@@ -145,6 +185,8 @@ function reportedLines(rule: string, cases: string[]): Map<number, number> {
 describe.each([
   ["no-whole-guild-member-fetch", MEMBER_FETCH_REPORTED, MEMBER_FETCH_ALLOWED],
   ["discord-rest-in-polyfills", ROUTE_REPORTED, ROUTE_ALLOWED],
+  ["discord-error-codes", ERROR_CODE_REPORTED, ERROR_CODE_ALLOWED],
+  ["shared-no-mentions", MENTIONS_REPORTED, MENTIONS_ALLOWED],
 ] as const)("omnibot/%s", (rule, reported, allowed) => {
   let lines: Map<number, number>;
   beforeAll(() => {
