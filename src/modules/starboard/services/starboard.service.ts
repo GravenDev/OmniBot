@@ -10,6 +10,7 @@ import { type ConfigProvider, matchesEmoji } from "#lib/config.js";
 import { isApiError } from "#lib/discord-errors.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
+import { sendWithMediaFallback } from "#lib/reported-message.js";
 import { declareService, type Service } from "#lib/service.js";
 import type { StarboardConfigSchema } from "#modules/starboard/starboard.config.js";
 import {
@@ -453,18 +454,14 @@ class StarboardService implements Service {
         config.t,
         withMedia
       );
-    try {
-      return await send(render(true));
-    } catch (err) {
-      if (!isApiError(err, RESTJSONErrorCodes.InvalidFormBodyOrContentType)) {
-        throw err;
-      }
-      logger.warn(
-        { err },
-        `Repost refused by Discord, retrying without media | messageId = ${message.id}`
-      );
-      return send(render(false));
-    }
+    return sendWithMediaFallback(
+      (withMedia) => send(render(withMedia)),
+      (err) =>
+        logger.warn(
+          { err },
+          `Repost refused by Discord, retrying without media | messageId = ${message.id}`
+        )
+    );
   }
 }
 

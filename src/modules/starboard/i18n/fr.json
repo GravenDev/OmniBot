@@ -18,13 +18,6 @@
   "config.belowThreshold.name": "Sous le seuil",
   "config.belowThreshold.description": "Ce que devient un message reposté quand ses réactions repassent sous le seuil.",
 
-  "header": "{{author}} dans {{channel}} · {{sentAt}}",
-  "reply": "↪ En réponse à {{author}} : {{excerpt}}",
-  "forwarded": "↪ Message transféré",
-  "sticker": "Sticker : {{name}}",
-  "moreFiles_one": "… et {{count}} autre fichier",
-  "moreFiles_other": "… et {{count}} autres fichiers",
   "total_one": "**{{count}}** membre",
-  "total_other": "**{{count}}** membres",
-  "jump": "Aller au message"
+  "total_other": "**{{count}}** membres"
 }

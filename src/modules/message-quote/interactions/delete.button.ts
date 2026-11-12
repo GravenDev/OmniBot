@@ -3,6 +3,7 @@ import {
   ButtonStyle,
   MessageFlags,
   PermissionFlagsBits,
+  TextDisplayBuilder,
   type ButtonInteraction,
 } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
@@ -16,6 +17,7 @@ export const QUOTE_CUSTOM_ID = "message-quote";
 export function deleteButton(t: TFunction, allowedUserIds: string[]) {
   return new ButtonBuilder()
     .setCustomId([QUOTE_CUSTOM_ID, ...new Set(allowedUserIds)].join(":"))
+    .setEmoji("🗑️")
     .setLabel(t("delete.button"))
     .setStyle(ButtonStyle.Secondary);
 }
@@ -34,8 +36,10 @@ export default declareInteractionHandler<ButtonInteraction>({
         `Quote deletion refused | reason = not allowed | guildId = ${interaction.guildId} | messageId = ${interaction.message.id} | userId = ${interaction.user.id}`
       );
       await interaction.reply({
-        content: config.t("delete.notAllowed"),
-        flags: MessageFlags.Ephemeral,
+        components: [
+          new TextDisplayBuilder().setContent(config.t("delete.notAllowed")),
+        ],
+        flags: MessageFlags.Ephemeral | MessageFlags.IsComponentsV2,
       });
       return;
     }
