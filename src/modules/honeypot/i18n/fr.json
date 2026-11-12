@@ -14,7 +14,6 @@
 
   "log.title": "🍯 Piège déclenché par {{author}} dans {{channel}}",
   "log.empty": "*Pas de texte*",
-  "log.hidden": "🔒 *Contenu masqué : le salon des logs est visible par plus de monde que le salon piège.*",
   "log.messageKept": "⚠️ Le message piège n'a pas pu être supprimé : supprimez-le à la main.",
   "log.footer": "ID auteur : {{authorId}}",
 
