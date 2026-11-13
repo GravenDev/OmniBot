@@ -1,6 +1,7 @@
 import {
   MessageFlags,
   PermissionFlagsBits,
+  RESTJSONErrorCodes,
   type Guild,
   type GuildTextBasedChannel,
 } from "discord.js";
@@ -58,8 +59,13 @@ export async function resolveWelcomeChannel(
 function logSendError(error: unknown, where: string, guildId: string): void {
   if (error instanceof Error && "code" in error) {
     const code = (error as { code: number }).code;
-    // oxlint-disable-next-line omnibot/discord-error-codes -- 50004 is not a send refusal: fixed separately
-    if (code === 50001 || code === 50004 || code === 50007 || code === 50013) {
+    // GuildWidgetDisabled is not a send refusal: kept as it was, fixed separately.
+    if (
+      code === RESTJSONErrorCodes.MissingAccess ||
+      code === RESTJSONErrorCodes.GuildWidgetDisabled ||
+      code === RESTJSONErrorCodes.CannotSendMessagesToThisUser ||
+      code === RESTJSONErrorCodes.MissingPermissions
+    ) {
       logger.warn(
         `Welcome message not sent | where = ${where} | guild = ${guildId} | code = ${code}`
       );

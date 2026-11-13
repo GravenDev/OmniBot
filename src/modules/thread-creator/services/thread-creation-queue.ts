@@ -1,4 +1,4 @@
-import type { Message } from "discord.js";
+import { type Message, RESTJSONErrorCodes } from "discord.js";
 import { LogThrottle } from "#lib/log-throttle.js";
 import { loggerMaker } from "#lib/logger.js";
 
@@ -118,24 +118,23 @@ export class ThreadCreationQueue {
   ): void {
     if (error instanceof Error && "code" in error) {
       const code = (error as { code: number }).code;
-      // oxlint-disable-next-line omnibot/discord-error-codes -- codes to check against their names: fixed separately
-      if (code === 160004) {
+      // The reasons logged for this code and the next do not match their
+      // names: kept as they were, fixed separately.
+      if (code === RESTJSONErrorCodes.ThreadAlreadyCreatedForMessage) {
         logger.warn(
           { err: error },
           `Thread not created | reason = message deleted | code = ${code} | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
         );
         return;
       }
-      // oxlint-disable-next-line omnibot/discord-error-codes -- codes to check against their names: fixed separately
-      if (code === 160005) {
+      if (code === RESTJSONErrorCodes.ThreadLocked) {
         logger[warnings.level(`${code}:${message.channelId}`)](
           { err: error },
           `Thread not created | reason = thread limit reached | code = ${code} | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
         );
         return;
       }
-      // oxlint-disable-next-line omnibot/discord-error-codes -- codes to check against their names: fixed separately
-      if (code === 50013) {
+      if (code === RESTJSONErrorCodes.MissingPermissions) {
         logger[warnings.level(`${code}:${message.channelId}`)](
           { err: error },
           `Thread not created | reason = missing permissions | code = ${code} | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
