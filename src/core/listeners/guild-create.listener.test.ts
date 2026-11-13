@@ -1,4 +1,4 @@
-import { MessageFlags } from "discord.js";
+import { DiscordAPIError, MessageFlags, RESTJSONErrorCodes } from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   fakeChannel,
@@ -39,8 +39,21 @@ vi.mock("#core/loaders/command-loader.js", () => ({
   installModuleCommandsIn,
 }));
 
-const { default: listener, resolveWelcomeChannel } =
-  await import("./guild-create.listener.js");
+const apiError = (code: number) =>
+  new DiscordAPIError(
+    { code, message: "refused" },
+    code,
+    403,
+    "POST",
+    "/channels/chan/messages",
+    {}
+  );
+
+const {
+  default: listener,
+  isWelcomeRefusal,
+  resolveWelcomeChannel,
+} = await import("./guild-create.listener.js");
 
 const welcomeBundle = {
   "guild.welcome.title": "title",
@@ -209,7 +222,7 @@ describe("guildCreate", () => {
 
   it("falls back to the owner DM when the system channel send is forbidden", async () => {
     const channel = fakeChannel(async () => {
-      throw Object.assign(new Error("forbidden"), { code: 50013 });
+      throw apiError(RESTJSONErrorCodes.MissingPermissions);
     });
     const ownerSend = vi.fn(async () => ({}));
     const { guild } = fakeGuild({ channel, ownerSend });
@@ -222,7 +235,7 @@ describe("guildCreate", () => {
 
   it("stays silent when the owner also blocks DMs", async () => {
     const ownerSend = vi.fn(async () => {
-      throw Object.assign(new Error("no dm"), { code: 50007 });
+      throw apiError(RESTJSONErrorCodes.CannotSendMessagesToThisUser);
     });
     const { guild } = fakeGuild({
       ownerSend,
@@ -255,5 +268,33 @@ describe("resolveWelcomeChannel", () => {
   it("returns the channel when readable and writable", async () => {
     const { guild, channel } = fakeGuild();
     await expect(resolveWelcomeChannel(guild)).resolves.toBe(channel);
+  });
+});
+
+describe("isWelcomeRefusal", () => {
+  it("recognises Discord refusing the welcome message", () => {
+    for (const code of [
+      RESTJSONErrorCodes.MissingAccess,
+      RESTJSONErrorCodes.MissingPermissions,
+      RESTJSONErrorCodes.CannotSendMessagesToThisUser,
+      // The bot left the guild before the DM: no guild left in common.
+      RESTJSONErrorCodes.CannotSendMessagesToThisUserDueToHavingNoMutualGuilds,
+    ]) {
+      expect(isWelcomeRefusal(apiError(code))).toBe(true);
+    }
+  });
+
+  it("leaves other errors to the error log", () => {
+    // A disabled server widget has nothing to do with sending a message.
+    expect(
+      isWelcomeRefusal(apiError(RESTJSONErrorCodes.GuildWidgetDisabled))
+    ).toBe(false);
+    expect(
+      isWelcomeRefusal(
+        Object.assign(new Error("x"), {
+          code: RESTJSONErrorCodes.MissingPermissions,
+        })
+      )
+    ).toBe(false);
   });
 });
