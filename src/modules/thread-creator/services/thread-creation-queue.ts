@@ -1,4 +1,5 @@
 import { type Message, RESTJSONErrorCodes } from "discord.js";
+import { apiErrorCode, isGuildSetupError } from "#lib/discord-errors.js";
 import { LogThrottle } from "#lib/log-throttle.js";
 import { loggerMaker } from "#lib/logger.js";
 
@@ -14,6 +15,38 @@ export interface ThreadJob {
   message: Message;
   threadName: string;
   welcomeMessage: string | undefined;
+}
+
+export interface CreationFailure {
+  reason: string;
+  level: "debug" | "throttled";
+}
+
+/**
+ * Why Discord refused to start a thread under a message, from the code of its
+ * error, when that is an expected outcome rather than a bug; null otherwise.
+ */
+export function creationFailure(
+  code: number | undefined
+): CreationFailure | null {
+  switch (code) {
+    // Deleted while waiting in the queue, by its author or a moderator.
+    case RESTJSONErrorCodes.UnknownMessage:
+      return { reason: "message deleted", level: "debug" };
+    // The channel was deleted while its messages waited in the queue.
+    case RESTJSONErrorCodes.UnknownChannel:
+      return { reason: "channel deleted", level: "debug" };
+    // Someone, or another bot, opened a thread first: nothing is lost.
+    case RESTJSONErrorCodes.ThreadAlreadyCreatedForMessage:
+      return { reason: "thread already exists", level: "debug" };
+    case RESTJSONErrorCodes.MaximumActiveThreads:
+      return { reason: "thread limit reached", level: "throttled" };
+    case RESTJSONErrorCodes.MissingAccess:
+    case RESTJSONErrorCodes.MissingPermissions:
+      return { reason: "missing permissions", level: "throttled" };
+    default:
+      return null;
+  }
 }
 
 /**
@@ -94,57 +127,61 @@ export class ThreadCreationQueue {
 
   private async createThread(guildId: string, job: ThreadJob): Promise<void> {
     const { message, threadName, welcomeMessage } = job;
+    let thread;
     try {
-      const thread = await message.startThread({
+      thread = await message.startThread({
         name: threadName,
         reason: "Création automatique de fil par ThreadCreator",
       });
-      if (welcomeMessage) {
-        await thread.send(welcomeMessage);
-      }
-      logger.info(
-        `Thread created | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id} | threadId = ${thread.id}`
-      );
     } catch (error) {
       this.logCreationError(error, message, guildId);
+      return;
+    }
+    const context = `guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id} | threadId = ${thread.id}`;
+    logger.info(`Thread created | ${context}`);
+    if (!welcomeMessage) {
+      return;
+    }
+    try {
+      await thread.send(welcomeMessage);
+    } catch (error) {
+      // The thread exists: a refusal here is about posting in threads (or
+      // the thread was deleted meanwhile), which fails until an admin acts,
+      // hence the throttle. Anything else (a message Discord rejects, a
+      // network failure) is an error.
+      const code = apiErrorCode(error);
+      const level = isGuildSetupError(error)
+        ? warnings.level(`welcome:${message.channelId}`)
+        : "error";
+      logger[level](
+        { err: error },
+        `Thread created without its welcome message | ${code === undefined ? "" : `code = ${code} | `}${context}`
+      );
     }
   }
 
-  /** Logs Discord-specific failures at warn level, anything else at error level. */
+  /** Logs an expected refusal from Discord in debug or as a throttled warning, anything else as an error. */
   private logCreationError(
     error: unknown,
     message: Message,
     guildId: string
   ): void {
-    if (error instanceof Error && "code" in error) {
-      const code = (error as { code: number }).code;
-      // The reasons logged for this code and the next do not match their
-      // names: kept as they were, fixed separately.
-      if (code === RESTJSONErrorCodes.ThreadAlreadyCreatedForMessage) {
-        logger.warn(
-          { err: error },
-          `Thread not created | reason = message deleted | code = ${code} | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
-        );
-        return;
-      }
-      if (code === RESTJSONErrorCodes.ThreadLocked) {
-        logger[warnings.level(`${code}:${message.channelId}`)](
-          { err: error },
-          `Thread not created | reason = thread limit reached | code = ${code} | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
-        );
-        return;
-      }
-      if (code === RESTJSONErrorCodes.MissingPermissions) {
-        logger[warnings.level(`${code}:${message.channelId}`)](
-          { err: error },
-          `Thread not created | reason = missing permissions | code = ${code} | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
-        );
-        return;
-      }
+    const context = `guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id}`;
+    const code = apiErrorCode(error);
+    const failure = creationFailure(code);
+    if (!failure) {
+      logger.error({ err: error }, `Thread creation failed | ${context}`);
+      return;
     }
-    logger.error(
+    // A full channel or a lost permission fails every message until an admin
+    // acts: one warning an hour per channel and cause, the rest in debug.
+    const level =
+      failure.level === "throttled"
+        ? warnings.level(`${failure.reason}:${message.channelId}`)
+        : failure.level;
+    logger[level](
       { err: error },
-      `Thread creation failed | guildId = ${guildId} | channelId = ${message.channelId} | messageId = ${message.id}`
+      `Thread not created | reason = ${failure.reason} | code = ${code} | ${context}`
     );
   }
 }

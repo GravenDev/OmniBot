@@ -647,8 +647,13 @@ Dès qu'un message est posté dans le salon configuré :
 **Erreurs gérées silencieusement :**
 
 - Message supprimé avant création du fil
-- Limite de fils atteinte sur le salon
+- Salon supprimé alors que des messages attendaient leur fil
+- Fil déjà ouvert sur le message (par un membre ou un autre bot)
+- Limite de fils actifs atteinte
 - Permissions insuffisantes
+
+Si le bot peut créer des fils mais pas y écrire, le fil est créé sans son
+message de bienvenue : un avertissement par heure et par salon dans les logs.
 
 ### Configuration — `/config thread-creator`
 
