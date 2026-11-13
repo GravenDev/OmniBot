@@ -59,8 +59,70 @@ jobs:
       - uses: $/.github/actions/setup
       - name: Build
         run: pnpm build
+      # Coverage only where the sonarcloud job reads it: not on tags, which
+      # it skips, so a release does not wait on the instrumentation.
       - name: Run tests
+        if: startsWith(github.ref, 'refs/tags/')
         run: pnpm test
+      - name: Run tests with coverage
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        run: pnpm test:coverage
+      # The coverage report, and the generated Prisma client for its types.
+      # Same condition as the sonarcloud job, which alone reads them.
+      - name: Keep what SonarCloud needs
+        if: >-
+          !startsWith(github.ref, 'refs/tags/') &&
+          (github.event_name != 'pull_request' ||
+          github.event.pull_request.head.repo.full_name == github.repository)
+        uses: actions/upload-artifact@v7
+        with:
+          name: sonarcloud-inputs
+          path: |
+            coverage/lcov.info
+            src/generated/
+          # Long enough to re-run the analysis alone after a SonarCloud outage.
+          retention-days: 7
+
+  # SonarCloud, in a job of its own for two reasons. Its token never shares a
+  # job with the project's dependencies, which `build` installs and runs: a
+  # malicious package there could redirect the analysis and take the token.
+  # And no release waits on it (`publish` does not need it): SonarCloud down
+  # or a token expired must not hold back a tag. A fork's pull request gets no
+  # secrets, so it is skipped there, and so are tags.
+  sonarcloud:
+    needs: build
+    if: >-
+      !startsWith(github.ref, 'refs/tags/') &&
+      (github.event_name != 'pull_request' ||
+      github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-26.04
+    permissions: *read-only
+
+    steps:
+      # The whole history: SonarCloud tells new code from old by it.
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      # The dependencies are installed for their type declarations only:
+      # without them, the analysis reads every discord.js or Node type as
+      # `any`. --ignore-scripts, and nothing of the project is run, so no
+      # package code executes in the job that holds the token.
+      - name: Set up Node.js and pnpm
+        uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          install_args: node pnpm
+          cache: false
+      - name: Install the dependencies without running them
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - uses: actions/download-artifact@v8
+        with:
+          name: sonarcloud-inputs
+      # Reads coverage/lcov.info and sonar-project.properties.
+      - name: Analyse with SonarCloud
+        uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   # Checks every version in the lockfile, dev dependencies included, against
   # OSV's malicious-packages advisories (`MAL-…`): versions published to do

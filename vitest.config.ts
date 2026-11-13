@@ -8,6 +8,21 @@ export default defineConfig({
     conditions: ["development"],
   },
   test: {
+    // Off unless asked (`pnpm test:coverage`): CI turns it on for SonarCloud,
+    // which reads coverage/lcov.info.
+    coverage: {
+      provider: "v8",
+      reporter: ["text-summary", "lcovonly"],
+      include: ["src/**/*.ts", "scripts/**/*.ts", "lint/**/*.js"],
+      exclude: [
+        "**/*.test.ts",
+        "**/*.preview.ts",
+        // Fakes for the tests, not code of the bot.
+        "src/lib/testing.ts",
+        "src/generated/**",
+        "src/**/*.d.ts",
+      ],
+    },
     projects: [
       {
         test: {
