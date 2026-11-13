@@ -1,4 +1,5 @@
 import {
+  CannotSendMessagesToThisUserErrorCodes,
   MessageFlags,
   PermissionFlagsBits,
   RESTJSONErrorCodes,
@@ -10,6 +11,7 @@ import { modules } from "#core/runtime.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import { guildWelcomeMessage } from "#core/utils/core-messages.js";
+import { apiErrorCode, isApiError } from "#lib/discord-errors.js";
 import { createT, type TFunction } from "#lib/i18n.js";
 import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
@@ -56,21 +58,25 @@ export async function resolveWelcomeChannel(
   return asSendableChannel(guild, channel);
 }
 
+// Discord refusing the welcome message: no access to the system channel, no
+// right to post there, or an owner who does not accept DMs (or shares no
+// guild with the bot any more). Expected, so a warning; anything else is an
+// error.
+export function isWelcomeRefusal(error: unknown): boolean {
+  return isApiError(
+    error,
+    RESTJSONErrorCodes.MissingAccess,
+    RESTJSONErrorCodes.MissingPermissions,
+    ...CannotSendMessagesToThisUserErrorCodes
+  );
+}
+
 function logSendError(error: unknown, where: string, guildId: string): void {
-  if (error instanceof Error && "code" in error) {
-    const code = (error as { code: number }).code;
-    // GuildWidgetDisabled is not a send refusal: kept as it was, fixed separately.
-    if (
-      code === RESTJSONErrorCodes.MissingAccess ||
-      code === RESTJSONErrorCodes.GuildWidgetDisabled ||
-      code === RESTJSONErrorCodes.CannotSendMessagesToThisUser ||
-      code === RESTJSONErrorCodes.MissingPermissions
-    ) {
-      logger.warn(
-        `Welcome message not sent | where = ${where} | guild = ${guildId} | code = ${code}`
-      );
-      return;
-    }
+  if (isWelcomeRefusal(error)) {
+    logger.warn(
+      `Welcome message not sent | where = ${where} | guild = ${guildId} | code = ${apiErrorCode(error)}`
+    );
+    return;
   }
   logger.error(
     { err: error },
