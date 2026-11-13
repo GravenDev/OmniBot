@@ -9,6 +9,7 @@ orientation for humans).
 pnpm dev                  # run the bot with tsx
 pnpm build                # prisma:generate + tsc
 pnpm format               # oxfmt + oxlint --fix
+pnpm test:coverage        # tests with coverage (coverage/lcov.info, read by SonarCloud in CI)
 pnpm render-preview <file.preview.ts> [--before <ref>]  # draw sample images, before and after a change
 
 pnpm prisma:generate      # generate Prisma client (required before build)
