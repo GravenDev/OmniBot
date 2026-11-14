@@ -278,11 +278,21 @@ export async function checkCommandsForVersionChange(
       );
       continue;
     }
-    await moduleService.updateModuleActivation(
-      module.id,
-      guild.id,
-      module.version
-    );
+    try {
+      await moduleService.updateModuleActivation(
+        module.id,
+        guild.id,
+        module.version
+      );
+    } catch (err) {
+      // The commands are already up to date: the next boot re-registers them
+      // and retries the bump, without holding back the remaining guilds.
+      logger.error(
+        { err },
+        `Failed to record the module version, will retry next boot | module = ${module.id} | guild = ${guild.id}`
+      );
+      continue;
+    }
     logger.info(
       `\tSuccessfully updated commands in guild "${guild.id}" for module "${module.id}"`
     );
@@ -308,7 +318,8 @@ export async function checkCommandsForVersionChange(
  * - **Production**: per module, commands are re-registered only on a version
  *   change, and {@link checkCommandsForVersionChange} bumps `activatedVersion`
  *   itself — only after a successful registration, so a failed one retries next
- *   boot. Core commands are then registered globally.
+ *   boot. A module that fails is skipped; core commands are then registered
+ *   globally.
  */
 export async function syncCommands(client: Client<true>, modules: Module[]) {
   if (isDevMode()) {
@@ -319,8 +330,18 @@ export async function syncCommands(client: Client<true>, modules: Module[]) {
     return;
   }
 
+  // One module's failure (its database reads, say) must neither hold back the
+  // others nor the core commands: its guilds keep their version and retry on
+  // the next boot.
   for (const module of modules) {
-    await checkCommandsForVersionChange(client, module);
+    try {
+      await checkCommandsForVersionChange(client, module);
+    } catch (err) {
+      logger.error(
+        { err },
+        `Failed to check commands for version change, will retry next boot | module = ${module.id}`
+      );
+    }
   }
   await loadGlobalCommands(client);
 }
