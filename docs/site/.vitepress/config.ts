@@ -61,8 +61,79 @@ export default defineConfig({
         nav: [
           { text: "Accueil", link: "/fr/" },
           { text: "Guide", link: "/fr/guide/getting-started" },
+          { text: "Utiliser le bot", link: "/fr/usage/reference/modules/" },
         ],
         sidebar: {
+          "/fr/usage/": [
+            {
+              text: "Référence",
+              items: [
+                { text: "Commandes du bot", link: "/fr/usage/reference/core" },
+                {
+                  text: "Liste des modules",
+                  link: "/fr/usage/reference/modules/",
+                },
+                {
+                  text: "Ancienneté",
+                  link: "/fr/usage/reference/modules/seniority",
+                },
+                {
+                  text: "Anniversaires",
+                  link: "/fr/usage/reference/modules/birthday",
+                },
+                {
+                  text: "Citation de messages",
+                  link: "/fr/usage/reference/modules/message-quote",
+                },
+                {
+                  text: "Clash of Code",
+                  link: "/fr/usage/reference/modules/clash-of-code",
+                },
+                {
+                  text: "Création de fils",
+                  link: "/fr/usage/reference/modules/thread-creator",
+                },
+                {
+                  text: "Honeypot",
+                  link: "/fr/usage/reference/modules/honeypot",
+                },
+                {
+                  text: "Jeu des 4h",
+                  link: "/fr/usage/reference/modules/four-hour-game",
+                },
+                {
+                  text: "Journal des messages",
+                  link: "/fr/usage/reference/modules/message-log",
+                },
+                { text: "LaTeX", link: "/fr/usage/reference/modules/latex" },
+                {
+                  text: "Messages collants",
+                  link: "/fr/usage/reference/modules/sticky",
+                },
+                {
+                  text: "Réactions automatiques",
+                  link: "/fr/usage/reference/modules/autoreact",
+                },
+                { text: "RNGdle", link: "/fr/usage/reference/modules/rngdle" },
+                {
+                  text: "Salons vocaux temporaires",
+                  link: "/fr/usage/reference/modules/temp-voice",
+                },
+                {
+                  text: "Signalements",
+                  link: "/fr/usage/reference/modules/reports",
+                },
+                {
+                  text: "Starboard",
+                  link: "/fr/usage/reference/modules/starboard",
+                },
+                {
+                  text: "Statistiques du serveur",
+                  link: "/fr/usage/reference/modules/server-stats",
+                },
+              ],
+            },
+          ],
           "/fr/guide/": [
             {
               text: "Guide",
@@ -117,9 +188,80 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: "Guide", link: "/en/guide/getting-started" },
+          { text: "Using the bot", link: "/en/usage/reference/modules/" },
           { text: "Home", link: "/en/" },
         ],
         sidebar: {
+          "/en/usage/": [
+            {
+              text: "Reference",
+              items: [
+                { text: "Bot commands", link: "/en/usage/reference/core" },
+                {
+                  text: "List of modules",
+                  link: "/en/usage/reference/modules/",
+                },
+                {
+                  text: "4h Game",
+                  link: "/en/usage/reference/modules/four-hour-game",
+                },
+                {
+                  text: "Auto React",
+                  link: "/en/usage/reference/modules/autoreact",
+                },
+                {
+                  text: "Birthdays",
+                  link: "/en/usage/reference/modules/birthday",
+                },
+                {
+                  text: "Clash of Code",
+                  link: "/en/usage/reference/modules/clash-of-code",
+                },
+                {
+                  text: "Honeypot",
+                  link: "/en/usage/reference/modules/honeypot",
+                },
+                { text: "LaTeX", link: "/en/usage/reference/modules/latex" },
+                {
+                  text: "Member anniversaries",
+                  link: "/en/usage/reference/modules/seniority",
+                },
+                {
+                  text: "Message Log",
+                  link: "/en/usage/reference/modules/message-log",
+                },
+                {
+                  text: "Message Quote",
+                  link: "/en/usage/reference/modules/message-quote",
+                },
+                {
+                  text: "Reports",
+                  link: "/en/usage/reference/modules/reports",
+                },
+                { text: "RNGdle", link: "/en/usage/reference/modules/rngdle" },
+                {
+                  text: "Server Stats",
+                  link: "/en/usage/reference/modules/server-stats",
+                },
+                {
+                  text: "Starboard",
+                  link: "/en/usage/reference/modules/starboard",
+                },
+                {
+                  text: "Sticky Messages",
+                  link: "/en/usage/reference/modules/sticky",
+                },
+                {
+                  text: "Temporary Voice Channels",
+                  link: "/en/usage/reference/modules/temp-voice",
+                },
+                {
+                  text: "Thread Creator",
+                  link: "/en/usage/reference/modules/thread-creator",
+                },
+              ],
+            },
+          ],
           "/en/guide/": [
             {
               text: "Guide",
