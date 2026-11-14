@@ -51,6 +51,7 @@ const {
   loadDevGuildCommands,
   installModuleCommandsIn,
   checkCommandsForVersionChange,
+  syncCommands,
 } = await import("./command-loader.js");
 const { installModule, uninstallModule } =
   await import("./module-installer.js");
@@ -301,6 +302,21 @@ describe("checkCommandsForVersionChange", () => {
     );
   });
 
+  it("updates the next guilds when one guild's version bump fails", async () => {
+    vi.mocked(moduleService.updateModuleActivation).mockRejectedValueOnce(
+      new Error("database is down")
+    );
+
+    await checkCommandsForVersionChange(versionedClient(), versionedModule());
+
+    expect(restPost).toHaveBeenCalledTimes(2);
+    expect(moduleService.updateModuleActivation).toHaveBeenCalledWith(
+      "mod-a",
+      "guild-2",
+      "2.0.0"
+    );
+  });
+
   it("deletes the commands a module retired, and only those", async () => {
     const remove = vi.fn();
     const guild = {
@@ -400,5 +416,37 @@ describe("uninstallModule", () => {
     );
     expect(fetchCommands).not.toHaveBeenCalled();
     expect(moduleService.disableModule).not.toHaveBeenCalled();
+  });
+});
+
+describe("syncCommands in production", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    restPut.mockResolvedValue(undefined);
+    restPost.mockResolvedValue(undefined);
+    vi.stubEnv("NODE_ENV", "production");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("checks the next modules and the core commands when one module fails", async () => {
+    vi.mocked(moduleService.getGuildsWhereVersionDoesNotMatch)
+      .mockRejectedValueOnce(new Error("database is down"))
+      .mockResolvedValueOnce([]);
+
+    await syncCommands(client, [
+      fakeModule("mod-a", ["alpha"]),
+      fakeModule("mod-b", ["beta"]),
+    ]);
+
+    expect(
+      moduleService.getGuildsWhereVersionDoesNotMatch
+    ).toHaveBeenCalledTimes(2);
+    expect(restPut).toHaveBeenCalledWith(
+      Routes.applicationCommands("app-1"),
+      expect.anything()
+    );
   });
 });
