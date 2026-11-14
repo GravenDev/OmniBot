@@ -112,6 +112,15 @@ Shared code lives in `src/lib/` (imported as `#lib/…`), plus `src/core/utils/`
 | `#lib/text.js`             | `truncate`                                                                                                           |
 | `#lib/version.js`          | the `Version` type                                                                                                   |
 
+## Commits
+
+Pull requests are merged by rebase, and every commit subject becomes a line of the release's changelog: `cliff.toml` groups them by type: `feat` → Nouveautés, `fix` → Corrections, `perf` → Performances, `refactor` → Refactorisation, `docs` → Documentation, `test` → Tests, `build` and `ci` → Build et CI, `chore` with any scope and `style` → Maintenance, `revert:` → Retours en arrière (the « Revert "…" » title of GitHub's button does not match it and lands in Autres). Two exceptions come first: the `deps` scope goes to Dépendances and a breaking change (`!`, `BREAKING CHANGE`) to Changements incompatibles, whatever the type. Shape the history a branch ends with for that reader; how you get there is up to you.
+
+- One commit per change that can be read or reverted on its own. A behaviour fix gets its own `fix(<scope>)` commit, even inside a refactor branch, so that it shows under Corrections.
+- The subject, in French, says what changes, never the work step: no « suites de la revue », « corrections diverses », « wip ». commitlint refuses those (`lint/commit-subject.js`), locally and on every pull request.
+- Rework asked in review goes into the commits it changes before the merge, not into commits of its own.
+- Each pull request gets a comment previewing its changelog lines, updated on every push (from a fork, the preview is in the CI run's summary instead): read it as the release's reader will.
+
 ## Environment
 
 Copy `.env.example` to `.env`:

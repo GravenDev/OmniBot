@@ -15,7 +15,7 @@ git checkout -b feat/ma-fonctionnalite
 
 ## Conventional Commits
 
-Les messages de commit doivent suivre le format [Conventional Commits](https://www.conventionalcommits.org/). Ceci est imposé par **commitlint** via un hook lefthook commit-msg.
+Les messages de commit doivent suivre le format [Conventional Commits](https://www.conventionalcommits.org/). Ceci est imposé par **commitlint**, via un hook lefthook commit-msg et sur chaque pull request. Les pull requests sont fusionnées par rebase : chaque titre devient une ligne du changelog de la release. Il dit ce que le commit change, jamais l'étape de travail (« wip », « suites de la revue » sont refusés). Les lignes de changelog qu'une pull request ajoutera s'affichent en commentaire, ou dans le résumé de son exécution CI quand elle vient d'un fork.
 
 ```
 type(scope): description
