@@ -1,4 +1,4 @@
-import { MessageFlags, type Client } from "discord.js";
+import { MessageFlags } from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
 import { initTestI18n, makeTestConfig, silenceLogs } from "#lib/testing.js";
@@ -89,9 +89,6 @@ describe("buildDailyPointEmbed", () => {
 
 describe("closeAllDays", () => {
   const send = vi.fn();
-  const client = {
-    guilds: { fetch: vi.fn(async () => ({ id: "guild" })) },
-  } as unknown as Client;
   const module = {
     id: "four-hour-game",
   } as unknown as Module<FourHourGameConfigSchema>;
@@ -108,7 +105,13 @@ describe("closeAllDays", () => {
     fetchWinnerAvatar.mockResolvedValue(null);
     getConfigForModuleIn.mockResolvedValue({
       ...config("fr"),
-      get: () => ({ id: "game", isSendable: () => true, send }),
+      get: () => ({
+        id: "game",
+        guild: { id: "guild" },
+        isSendable: () => true,
+        isDMBased: () => false,
+        send,
+      }),
     });
   });
 
@@ -118,7 +121,7 @@ describe("closeAllDays", () => {
       { day: "2026-10-13", userId: "bob", heldSeconds: 7200 },
     ]);
 
-    await closeAllDays(client, module);
+    await closeAllDays(module);
 
     expect(closeDays).toHaveBeenCalledWith("guild", "game");
     expect(send).toHaveBeenCalledTimes(2);
@@ -140,7 +143,7 @@ describe("closeAllDays", () => {
       rank: { rank: 1, total: 1 },
     }));
 
-    await closeAllDays(client, module);
+    await closeAllDays(module);
 
     expect(getDailyRank).toHaveBeenCalledWith("guild", "alice", "2026-10-12");
     expect(getDailyRank).toHaveBeenCalledWith("guild", "alice", "2026-10-13");
@@ -160,9 +163,33 @@ describe("closeAllDays", () => {
     ]);
     send.mockRejectedValueOnce(new Error("Missing Permissions"));
 
-    await closeAllDays(client, module);
+    await closeAllDays(module);
 
     expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it("takes the avatar through the game channel's guild", async () => {
+    closeDays.mockResolvedValue([
+      { day: "2026-10-13", userId: "bob", heldSeconds: 7200 },
+    ]);
+    const guild = { id: "guild" };
+    getConfigForModuleIn.mockResolvedValue({
+      ...config("fr"),
+      get: () => ({
+        id: "game",
+        guild,
+        isSendable: () => true,
+        isDMBased: () => false,
+        send,
+      }),
+    });
+    fetchWinnerAvatar.mockResolvedValue("https://cdn/bob.png");
+    await closeAllDays(module);
+
+    expect(fetchWinnerAvatar).toHaveBeenCalledWith(guild, "bob");
+    expect(send.mock.calls[0]![0].embeds[0].toJSON().thumbnail).toEqual({
+      url: "https://cdn/bob.png",
+    });
   });
 
   it("still closes the days when the game channel cannot be used", async () => {
@@ -174,7 +201,7 @@ describe("closeAllDays", () => {
       { day: "2026-10-13", userId: "bob", heldSeconds: 7200 },
     ]);
 
-    await closeAllDays(client, module);
+    await closeAllDays(module);
 
     expect(closeDays).toHaveBeenCalledWith("guild", "game");
     expect(send).not.toHaveBeenCalled();
@@ -189,7 +216,7 @@ describe("closeAllDays", () => {
       return [];
     });
 
-    await closeAllDays(client, module);
+    await closeAllDays(module);
 
     expect(closeDays).toHaveBeenCalledWith("guild", "game");
   });
@@ -197,7 +224,7 @@ describe("closeAllDays", () => {
   it("stays silent when no day was closed", async () => {
     closeDays.mockResolvedValue([]);
 
-    await closeAllDays(client, module);
+    await closeAllDays(module);
 
     expect(send).not.toHaveBeenCalled();
   });
