@@ -8,6 +8,7 @@ import {
   dueDay,
   formatDate,
   formatDayOfYear,
+  isLeapYear,
   isValidDayOfYear,
   localTime,
   upcoming,
@@ -50,10 +51,22 @@ describe("isValidDayOfYear", () => {
     [30, 2, false],
     [31, 4, false],
     [0, 5, false],
+    [1, 0, false],
     [1, 13, false],
     [1.5, 3, false],
   ])("day %s of month %s → %s", (day, month, valid) => {
     expect(isValidDayOfYear({ day, month })).toBe(valid);
+  });
+});
+
+describe("isLeapYear", () => {
+  it.each([
+    [2024, true],
+    [2026, false],
+    [1900, false],
+    [2000, true],
+  ])("%s → %s", (year, leap) => {
+    expect(isLeapYear(year)).toBe(leap);
   });
 });
 
@@ -69,11 +82,26 @@ describe("celebratesOn", () => {
     ).toBe(false);
   });
 
+  it("moves no other day of February or of the 29th", () => {
+    expect(
+      celebratesOn({ day: 14, month: 2 }, { year: 2027, month: 2, day: 14 })
+    ).toBe(true);
+    expect(
+      celebratesOn({ day: 29, month: 3 }, { year: 2027, month: 3, day: 29 })
+    ).toBe(true);
+  });
+
   it("celebrates 29 February on the 28th outside leap years", () => {
     expect(celebratesOn(leapling, { year: 2027, month: 2, day: 28 })).toBe(
       true
     );
     expect(celebratesOn(leapling, { year: 2027, month: 3, day: 1 })).toBe(
+      false
+    );
+    expect(celebratesOn(leapling, { year: 2027, month: 3, day: 28 })).toBe(
+      false
+    );
+    expect(celebratesOn(leapling, { year: 2027, month: 2, day: 27 })).toBe(
       false
     );
   });
@@ -143,6 +171,12 @@ describe("upcoming", () => {
       ["soon", 3],
       ["later", 21],
     ]);
+  });
+
+  it("stops before the last day of the window", () => {
+    const today = { year: 2026, month: 1, day: 1 };
+    expect(upcoming([{ day: 2, month: 1 }], today, 1)).toEqual([]);
+    expect(upcoming([{ day: 1, month: 1 }], today, 1)).toHaveLength(1);
   });
 });
 
