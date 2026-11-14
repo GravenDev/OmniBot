@@ -7,15 +7,18 @@
 // server's history): beside « retours / remarques de la revue », a phrase
 // only counts at the subject's start (or after a separator) or at its end,
 // where it stands for the whole subject.
-const STEP = `(?:la |l'|une |les )?(?:revue|relecture|review)(?: de code)?`;
+const STEP = `(?:la |l'|une |les |des )?(?:revues?|relectures?|reviews?)(?: de code)?`;
 // A word on its own, not part of a path or a name (`wip/animated-webp`).
 const WORD = (word) =>
   new RegExp(String.raw`(?<![\w/.-])${word}(?![\w/-]|\.\w)`, "i");
 const ENDS = String.raw`(?: \p{L}+)?$`;
 
 const PROCESS = [
-  new RegExp(String.raw`(?<=^|[,:;—–] )suites? (?:de|à) ${STEP}\b`, "iu"),
-  new RegExp(String.raw`\b(?:retours?|remarques?) (?:de|sur) ${STEP}\b`, "iu"),
+  new RegExp(String.raw`(?<=^|[,:;—–] )suites? (?:des?|à|aux) ${STEP}\b`, "iu"),
+  new RegExp(
+    String.raw`\b(?:retours?|remarques?) (?:des?|sur) ${STEP}\b`,
+    "iu"
+  ),
   new RegExp(
     `^(?:corrections?|corrige[rs]?|correctifs?|applique[rs]?|prise en compte) (?:(?:les )?retours )?(?:de |sur )?${STEP}${ENDS}`,
     "iu"
@@ -24,7 +27,7 @@ const PROCESS = [
     String.raw`\b(?:après|suite à) (?:la |une |l')?(?:\p{L}+ )?${STEP}${ENDS}`,
     "iu"
   ),
-  /\bpost-(?:revue|relecture|review)\b/i,
+  /\bpost-(?:revues?|relectures?|reviews?)\b/i,
   /\bsuite aux retours\b/i,
   /\bcorrections? diverses\b/i,
   /^(?:ajustements?|divers|corrections?|fixes|revue|relecture|review)$/i,

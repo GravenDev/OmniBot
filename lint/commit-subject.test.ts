@@ -42,6 +42,10 @@ describe("processWords", () => {
     "render-preview : suites de revue",
     "render-preview — suites de la revue",
     "misc. tweaks",
+    "suites des revues",
+    "corrections des revues",
+    "après les revues de code",
+    "retours des relectures",
   ])("refuses « %s », which names a work step", (subject) => {
     expect(processWords(subject)).not.toBeNull();
   });
@@ -58,6 +62,7 @@ describe("processWords", () => {
     "relecture complète de l'arrêt et points des 4h rattrapés",
     "affiche la suite de la revue",
     "corrige la revue des messages signalés",
+    "corrige les revues des messages signalés",
     "tweak the cooldown to 30 s",
     "mentionne la branche wip/animated-webp",
     "range les aides de src/lib/misc.ts",
