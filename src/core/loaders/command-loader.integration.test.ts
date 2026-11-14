@@ -51,6 +51,7 @@ const {
   loadDevGuildCommands,
   installModuleCommandsIn,
   checkCommandsForVersionChange,
+  syncCommands,
 } = await import("./command-loader.js");
 const { installModule, uninstallModule } =
   await import("./module-installer.js");
@@ -205,6 +206,21 @@ describe("installModule", () => {
     expect(moduleService.enableModule).not.toHaveBeenCalled();
   });
 
+  it("touches neither Discord nor the DB when an async onInstall rejects", async () => {
+    const module = {
+      ...fakeModule("mod-a", ["alpha"]),
+      onInstall: async () => {
+        throw new Error("hook blew up");
+      },
+    } as unknown as Module;
+
+    await expect(installModule(module, fakeGuild("guild-1"))).rejects.toThrow(
+      "hook blew up"
+    );
+    expect(restPost).not.toHaveBeenCalled();
+    expect(moduleService.enableModule).not.toHaveBeenCalled();
+  });
+
   it("enables the module when registration succeeds", async () => {
     await installModule(fakeModule("mod-a", ["alpha"]), fakeGuild("guild-1"));
 
@@ -279,6 +295,21 @@ describe("checkCommandsForVersionChange", () => {
     await checkCommandsForVersionChange(versionedClient(), versionedModule());
 
     expect(moduleService.updateModuleActivation).toHaveBeenCalledTimes(1);
+    expect(moduleService.updateModuleActivation).toHaveBeenCalledWith(
+      "mod-a",
+      "guild-2",
+      "2.0.0"
+    );
+  });
+
+  it("updates the next guilds when one guild's version bump fails", async () => {
+    vi.mocked(moduleService.updateModuleActivation).mockRejectedValueOnce(
+      new Error("database is down")
+    );
+
+    await checkCommandsForVersionChange(versionedClient(), versionedModule());
+
+    expect(restPost).toHaveBeenCalledTimes(2);
     expect(moduleService.updateModuleActivation).toHaveBeenCalledWith(
       "mod-a",
       "guild-2",
@@ -368,5 +399,54 @@ describe("uninstallModule", () => {
     );
     expect(fetchCommands).not.toHaveBeenCalled();
     expect(moduleService.disableModule).not.toHaveBeenCalled();
+  });
+
+  it("keeps commands and DB state when an async onUninstall rejects", async () => {
+    const guild = fakeGuild("guild-1");
+    const fetchCommands = vi.spyOn(guild.commands, "fetch");
+    const module = {
+      ...fakeModule("mod-a", ["alpha"]),
+      onUninstall: async () => {
+        throw new Error("hook blew up");
+      },
+    } as unknown as Module;
+
+    await expect(uninstallModule(module, guild)).rejects.toThrow(
+      "hook blew up"
+    );
+    expect(fetchCommands).not.toHaveBeenCalled();
+    expect(moduleService.disableModule).not.toHaveBeenCalled();
+  });
+});
+
+describe("syncCommands in production", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    restPut.mockResolvedValue(undefined);
+    restPost.mockResolvedValue(undefined);
+    vi.stubEnv("NODE_ENV", "production");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("checks the next modules and the core commands when one module fails", async () => {
+    vi.mocked(moduleService.getGuildsWhereVersionDoesNotMatch)
+      .mockRejectedValueOnce(new Error("database is down"))
+      .mockResolvedValueOnce([]);
+
+    await syncCommands(client, [
+      fakeModule("mod-a", ["alpha"]),
+      fakeModule("mod-b", ["beta"]),
+    ]);
+
+    expect(
+      moduleService.getGuildsWhereVersionDoesNotMatch
+    ).toHaveBeenCalledTimes(2);
+    expect(restPut).toHaveBeenCalledWith(
+      Routes.applicationCommands("app-1"),
+      expect.anything()
+    );
   });
 });

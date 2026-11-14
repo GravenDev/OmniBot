@@ -48,13 +48,11 @@ const fourHourGameModule = defineModule({
       );
   },
 
-  onInstall(_client, guild) {
+  // A failure cancels the install, rather than enabling the module on the
+  // round left from its previous install.
+  async onInstall(_client, guild) {
+    await fourHourGameService.resetRound(guild.id);
     logger.info(`Module installed | guildId = ${guild.id}`);
-    fourHourGameService
-      .resetRound(guild.id)
-      .catch((err: unknown) =>
-        logger.error({ err }, `Failed to reset round | guildId = ${guild.id}`)
-      );
   },
 
   onUninstall(_client, guild) {

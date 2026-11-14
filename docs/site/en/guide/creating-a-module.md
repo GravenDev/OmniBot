@@ -124,9 +124,17 @@ interface ModuleDeclaration {
   devOnly?: boolean; // Only loaded in dev mode
   config?: ConfigSchema; // Configuration schema
 
-  onLoad: (client: Client, registry: Registry) => void;
-  onInstall: (client: Client, guild: Guild, registry: Registry) => void;
-  onUninstall: (client: Client, guild: Guild, registry: Registry) => void;
+  onLoad: (client: Client, registry: Registry) => void | Promise<void>;
+  onInstall: (
+    client: Client,
+    guild: Guild,
+    registry: Registry
+  ) => void | Promise<void>;
+  onUninstall: (
+    client: Client,
+    guild: Guild,
+    registry: Registry
+  ) => void | Promise<void>;
   maintenanceTasks?: () => ScheduledTask[];
   deleteMemberData?: (guildId: string, userId: string) => Promise<void>;
   uninstallWarning?: (guildId: string, t: TFunction) => Promise<string | null>;
@@ -142,6 +150,8 @@ interface ModuleDeclaration {
 | `onUninstall`      | Module disabled on a guild                 | Clean up data, remove roles, delete configurations                   |
 | `deleteMemberData` | A member runs `/privacy delete` on a guild | Delete every row the module keeps about that member on that guild    |
 | `uninstallWarning` | An admin clicks **Disable** in `/modules`  | Say what disabling would delete on the guild, before it happens      |
+
+`onInstall` and `onUninstall` may be async, and the core awaits them before it touches the guild's commands or the module's state: one that throws or rejects cancels the install or the uninstall, and `/modules` shows the administrator that it failed. Await the work they start (clearing the guild's data, say) instead of firing it and logging its failure, or the module is disabled while its data stays. What a hook wrote before it failed is not undone: keep its writes in one transaction, or safe to run again on the next attempt.
 
 A module that stores anything tied to a member's ID must implement `deleteMemberData`, and say what it stores in the privacy policy (`docs/site/*/legal/privacy.md`). It runs whether or not the module is enabled on the guild, and also for a module skipped because Discord has not granted its privileged intent.
 
@@ -243,7 +253,7 @@ Before your module reaches production guilds:
 
 - **Keep `onLoad` lean** — register artifacts and log, move logic to services
 - **Use kebab-case** for module IDs and folder names
-- **Handle errors in lifecycle hooks** — use try/catch in `onInstall`/`onUninstall`
+- **Let lifecycle hooks fail** — an error thrown by `onInstall`/`onUninstall` cancels the operation; catch only what may fail without consequence
 - **Keep files organized** — one artifact per file, use subdirectories
 - **Declare only needed intents** — minimize privileged intent usage
 

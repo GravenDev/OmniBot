@@ -122,9 +122,17 @@ interface ModuleDeclaration {
   devOnly?: boolean; // Chargé seulement en mode dev
   config?: ConfigSchema; // Schéma de configuration
 
-  onLoad: (client: Client, registry: Registry) => void;
-  onInstall: (client: Client, guild: Guild, registry: Registry) => void;
-  onUninstall: (client: Client, guild: Guild, registry: Registry) => void;
+  onLoad: (client: Client, registry: Registry) => void | Promise<void>;
+  onInstall: (
+    client: Client,
+    guild: Guild,
+    registry: Registry
+  ) => void | Promise<void>;
+  onUninstall: (
+    client: Client,
+    guild: Guild,
+    registry: Registry
+  ) => void | Promise<void>;
   maintenanceTasks?: () => ScheduledTask[];
   deleteMemberData?: (guildId: string, userId: string) => Promise<void>;
   uninstallWarning?: (guildId: string, t: TFunction) => Promise<string | null>;
@@ -140,6 +148,8 @@ interface ModuleDeclaration {
 | `onUninstall`      | Module désactivé sur un serveur                    | Nettoyer les données, supprimer les rôles, effacer les configurations            |
 | `deleteMemberData` | Un membre lance `/privacy delete` sur un serveur   | Supprimer tout ce que le module garde sur ce membre sur ce serveur               |
 | `uninstallWarning` | Un admin clique sur **Désactiver** dans `/modules` | Dire ce que la désactivation supprimerait sur ce serveur, avant qu'elle ait lieu |
+
+`onInstall` et `onUninstall` peuvent être asynchrones, et le cœur les attend avant de toucher aux commandes du serveur ou à l'état du module : un hook qui lève une erreur ou dont la promesse est rejetée annule l'activation ou la désactivation, et `/modules` signale l'échec à l'administrateur. Attendez le travail qu'ils lancent (l'effacement des données du serveur, par exemple) au lieu de le lancer sans l'attendre et d'en journaliser l'échec, sinon le module est désactivé alors que ses données restent. Ce qu'un hook a écrit avant d'échouer n'est pas annulé : gardez ses écritures dans une seule transaction, ou faites qu'elles puissent être rejouées à la tentative suivante.
 
 Un module qui enregistre quoi que ce soit lié à l'ID d'un membre doit implémenter `deleteMemberData`, et décrire ce qu'il enregistre dans la politique de confidentialité (`docs/site/*/legal/privacy.md`). Il est appelé que le module soit activé ou non sur le serveur, et aussi pour un module écarté parce que Discord n'a pas accordé son intention privilégiée.
 
@@ -241,7 +251,7 @@ Avant que votre module n'atteigne des serveurs de production :
 
 - **Gardez `onLoad` léger** — enregistrez les artefacts et loggez, déplacez la logique dans les services
 - **Utilisez le kebab-case** pour les IDs de module et les noms de dossiers
-- **Gérez les erreurs dans les hooks de cycle de vie** — utilisez try/catch dans `onInstall`/`onUninstall`
+- **Laissez échouer les hooks de cycle de vie** — une erreur levée par `onInstall`/`onUninstall` annule l'opération ; n'interceptez que ce qui peut échouer sans conséquence
 - **Organisez les fichiers** — un artefact par fichier, utilisez des sous-dossiers
 - **Déclarez uniquement les intentions nécessaires** — minimisez l'utilisation des intentions privilégiées
 
