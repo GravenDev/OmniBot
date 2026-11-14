@@ -284,7 +284,9 @@ Contributions are welcome — staff and members alike.
   interactions, services, images, the Prisma schema. The user-facing behaviour
   is in [`docs/functional.md`](docs/functional.md).
 - **Conventional Commits** are enforced (commitlint, via a lefthook `commit-msg`
-  hook). A lefthook `pre-commit` hook runs oxfmt + oxlint on staged files —
+  hook and on every PR). Each subject becomes a line of the release's
+  changelog: it says what changes, not « wip » or « suites de la revue » (see
+  the « Commits » section of [`AGENTS.md`](AGENTS.md)). A lefthook `pre-commit` hook runs oxfmt + oxlint on staged files —
   `pnpm install` sets the hooks up for you.
 - **Before opening a PR**, make sure `pnpm build`, `pnpm test`, `pnpm exec oxlint
   --deny-warnings` and `pnpm exec oxfmt --check` all pass (CI runs the same).
