@@ -23,7 +23,8 @@
 //      PostgreSQL of compose.prod.yaml. Left to the technical changelog for
 //      the summary: their effect, if any, comes with a commit of its own;
 //   5. the technical changelog: `git cliff <previous tag>..<tag>`, grouped by
-//      conventional-commit type (cliff.toml), then a compare link.
+//      conventional-commit type (cliff.toml), the dependency updates folded,
+//      then a compare link.
 //
 // The previous tag of a release is the previous release (prereleases are
 // skipped, so a release lists everything since the last one); a prerelease
@@ -1332,6 +1333,30 @@ export function summarySection(summary: Summary): string {
 // ---------------------------------------------------------------------------
 // Assembly
 
+/**
+ * The « Dépendances » group of the technical changelog in a folded block:
+ * dependency updates outnumber the other commits of most releases.
+ */
+export function foldDependencies(technical: string): string {
+  return technical.replace(
+    /^### Dépendances\n\n([\s\S]*?)(?=\n\n### |(?![\s\S]))/m,
+    (_, list: string) => {
+      const count = list
+        .split("\n")
+        .filter((line) => line.startsWith("- ")).length;
+      const label = count === 1 ? "mise à jour" : "mises à jour";
+      return [
+        "<details>",
+        `<summary>Dépendances (${count} ${label})</summary>`,
+        "",
+        list.trimEnd(),
+        "",
+        "</details>",
+      ].join("\n");
+    }
+  );
+}
+
 export interface NotesParts {
   githubRepository: string;
   tag: string;
@@ -1361,7 +1386,7 @@ export function assembleNotes(parts: NotesParts): string {
       "",
       `Commits ${since}, par type.`,
       "",
-      parts.technical || "_Aucun commit._",
+      foldDependencies(parts.technical) || "_Aucun commit._",
     ].join("\n")
   );
   if (parts.previous) {

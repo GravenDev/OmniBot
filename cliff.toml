@@ -3,9 +3,10 @@
 # scripts/release-notes.ts runs `git cliff <previous tag>..<tag>` and wraps the
 # output with the image references, the dependency vulnerabilities the release
 # fixes, the major upgrades and, when an API key is set, a summary for server
-# admins. git-cliff only turns the commits of that range into a list grouped
-# by conventional-commit type: the range is chosen by the script, so
-# every tag is ignored here and the range always comes out as one section.
+# admins; it folds the « Dépendances » group below. git-cliff only turns the
+# commits of that range into a list grouped by conventional-commit type: the
+# range is chosen by the script, so every tag is ignored here and the range
+# always comes out as one section.
 #
 # Reference: https://git-cliff.org/docs/configuration
 
@@ -50,6 +51,8 @@ commit_preprocessors = [
 # included.
 commit_parsers = [
   { message = "^Merge ", skip = true },
+  # The group name is read by scripts/release-notes.ts (foldDependencies, and
+  # the groups left out of the summary): rename it there too.
   { message = '^[a-z]+\(deps\)', group = "<!-- 90 -->Dépendances" },
   { message = '^[a-z]+(\(.*\))?!:', group = "<!-- 00 -->Changements incompatibles" },
   { body = "BREAKING[ -]CHANGE", group = "<!-- 00 -->Changements incompatibles" },
