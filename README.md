@@ -13,6 +13,13 @@ Most contributors are part of the staff, but members are welcome to contribute t
   <img src="https://img.shields.io/badge/State-In_development-orange?style=for-the-badge">
   <img src="https://img.shields.io/github/issues/GravenDev/OmniBot?style=for-the-badge">
   <img src="https://img.shields.io/github/issues-pr/GravenDev/OmniBot?style=for-the-badge">
+  <br/>
+  <a href="https://github.com/GravenDev/OmniBot/actions/workflows/ci.yml?query=branch%3Amaster"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/GravenDev/OmniBot/ci.yml?branch=master&label=CI&style=for-the-badge"></a>
+  <a href="https://sonarcloud.io/summary/new_code?id=GravenDev_OmniBot"><img alt="SonarCloud quality gate" src="https://img.shields.io/sonar/quality_gate/GravenDev_OmniBot?server=https%3A%2F%2Fsonarcloud.io&style=for-the-badge"></a>
+  <a href="https://sonarcloud.io/component_measures?id=GravenDev_OmniBot&metric=coverage"><img alt="Coverage" src="https://img.shields.io/sonar/coverage/GravenDev_OmniBot?server=https%3A%2F%2Fsonarcloud.io&style=for-the-badge"></a>
+  <a href="https://dashboard.stryker-mutator.io/reports/github.com/GravenDev/OmniBot/master"><img alt="Mutation score" src="https://img.shields.io/endpoint?style=for-the-badge&url=https%3A%2F%2Fbadge-api.stryker-mutator.io%2Fgithub.com%2FGravenDev%2FOmniBot%2Fmaster"></a>
+  <a href="https://github.com/GravenDev/OmniBot/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/GravenDev/OmniBot?style=for-the-badge"></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/badge/License-GPL--3.0--or--later-blue?style=for-the-badge"></a>
 </p>
 
 ---
