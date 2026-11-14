@@ -244,6 +244,32 @@ describe("recordCatch", () => {
     });
   });
 
+  it("keeps the counter while its channel lacks permissions, then edits it again", async () => {
+    const channel = fakeChannel("counter");
+    const guild = fakeGuild(channel);
+    await recordCatch(guild, config(channel));
+    const messageId = db.state.row!.messageId;
+
+    let allowed = false;
+    channel.permissionsFor = () => ({ has: () => allowed });
+    await recordCatch(guild, config(channel));
+    expect(channel.messages.delete).not.toHaveBeenCalled();
+    expect(db.state.row).toMatchObject({
+      count: 2,
+      channelId: "counter",
+      messageId,
+    });
+
+    allowed = true;
+    await recordCatch(guild, config(channel));
+    expect(channel.send).toHaveBeenCalledOnce();
+    expect(channel.messages.edit).toHaveBeenLastCalledWith(
+      messageId,
+      expect.anything()
+    );
+    expect(db.state.row!.count).toBe(3);
+  });
+
   it("never throws, and keeps the catches it could not store", async () => {
     db.state.fail = true;
     const channel = fakeChannel("counter");
