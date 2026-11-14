@@ -50,16 +50,10 @@ const birthdayModule = defineModule({
   },
 
   // Unlike the core configuration, birthdays are not kept for a reinstall.
-  onUninstall(_client, guild) {
+  // A failure cancels the uninstall: the module stays enabled with them.
+  async onUninstall(_client, guild) {
+    await birthdayService.clearGuild(guild.id);
     logger.info(`Module uninstalled | guildId = ${guild.id}`);
-    birthdayService
-      .clearGuild(guild.id)
-      .catch((err: unknown) =>
-        logger.error(
-          { err },
-          `Failed to clear the birthdays | guildId = ${guild.id}`
-        )
-      );
   },
 
   uninstallWarning,
