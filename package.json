@@ -25,6 +25,7 @@
     "format": "oxfmt --write && oxlint --fix --fix-suggestions",
     "new-module": "node scripts/new-module.ts",
     "render-preview": "node scripts/render-preview.ts",
+    "copy-check": "node scripts/copy-check.ts",
     "prisma:generate": "prisma generate --no-hints",
     "prisma:migrate": "prisma migrate dev && prisma generate --no-hints",
     "prisma:studio": "prisma studio --no-hints"

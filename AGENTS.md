@@ -11,6 +11,7 @@ pnpm build                # prisma:generate + tsc
 pnpm format               # oxfmt + oxlint --fix
 pnpm test:coverage        # tests with coverage (coverage/lcov.info, read by SonarCloud in CI)
 pnpm render-preview <file.preview.ts> [--before <ref>]  # draw sample images, before and after a change
+pnpm copy-check --staged  # code a change copies from another module (pre-commit and CI run it)
 
 pnpm prisma:generate      # generate Prisma client (required before build)
 pnpm prisma:migrate       # create and apply a migration
@@ -58,8 +59,8 @@ The docs are also published as a VitePress site (sources in `docs/site/`) — ru
 - Fetch a whole guild's members with `allMembers(guild)` (or `loadAllMembers(guild)` to only fill the cache) from `#lib/guild-members.js`, never `guild.members.fetch()` or a direct API call: Discord rate limits those requests per guild, and the helper shares one between modules. The `omnibot/no-whole-guild-member-fetch` lint rule (`lint/omnibot.js`) enforces it across `src/`.
 - Reach Discord through discord.js's methods. A call to Discord's REST API (`client.rest` with `Routes`) for what discord.js does not implement yet goes in `src/lib/discord-polyfills/`, one file per feature, with a test that fails once discord.js ships it, so the polyfill gets deleted then. The `omnibot/discord-rest-in-polyfills` lint rule (`lint/omnibot.js`) rejects such a call, a route or a Discord API URL anywhere else in `src/`; only the core loaders (command registration, the intent check before login) and tests are exempt.
 - Recognise a Discord API error with `isDiscordApiError(err)`, `isApiError(err, …codes)` or `apiErrorCode(err)` from `#lib/discord-errors.js`, and name codes with `RESTJSONErrorCodes`: never `instanceof DiscordAPIError` nor a number written by hand. Silence mentions with `NO_MENTIONS` / `NO_MENTIONS_REPLY` from `#lib/mentions.js`. The `omnibot/discord-error-codes` and `omnibot/shared-no-mentions` lint rules enforce both.
-- Before writing a helper, look for it in the shared layer below: a function copied into a module drifts from the original, and the next fix lands in one copy only.
-- Import across directories with `#…` subpath imports (e.g. `#lib/config.js`, `#core/…`), not deep relative paths (`../../…`); keep same-directory imports relative (`./x.js`). Always keep the `.js` extension (NodeNext).
+- Before writing a helper, look for it in the shared layer below: a function copied into a module drifts from the original, and the next fix lands in one copy only. `pnpm copy-check` refuses lines copied from another module, in the pre-commit hook and in CI; a copy kept on purpose takes a `// copy-check: allow — <reason>` comment.
+- Import across directories with `#…` subpath imports (e.g. `#lib/config.js`, `#core/…`), not deep relative paths (`../../…`); keep same-directory imports relative (`./x.js`). Always keep the `.js` extension (NodeNext). Scripts in `scripts/`, which node runs without a build, import their siblings with `.ts`.
 
 ## Shared helpers
 

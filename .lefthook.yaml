@@ -7,6 +7,9 @@ pre-commit:
     code:
       glob: "*.{js,mjs,cjs,ts,mts,cts}"
       run: pnpm exec oxfmt --check {staged_files} && pnpm exec oxlint --deny-warnings {staged_files}
+    copies:
+      glob: "*.ts"
+      run: node scripts/copy-check.ts --staged
     docs:
       glob: "*.{md,json}"
       run: pnpm exec oxfmt --check {staged_files}
