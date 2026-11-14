@@ -32,10 +32,12 @@ jobs:
       contents: read
 
     steps:
-      - &checkout
-        uses: actions/checkout@v7
+      # Two commits deep: the copy check compares a pull request's merge
+      # commit with its first parent, the base branch.
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
+          fetch-depth: 2
       - name: Check that mise and the Docker image run the same Node
         run: |
           mise=$(sed -nE 's/^node = "([^"]+)"$/\1/p' .mise.toml)
@@ -49,13 +51,21 @@ jobs:
         run: pnpm exec oxfmt --check .
       - name: Run linter
         run: pnpm exec oxlint --deny-warnings
+      # Only what the pull request adds: the copies already on master are
+      # listed by the subsystem review, not refused here.
+      - name: Check for code copied between modules
+        if: github.event_name == 'pull_request'
+        run: node scripts/copy-check.ts HEAD^1
 
   build:
     runs-on: ubuntu-26.04
     permissions: *read-only
 
     steps:
-      - *checkout
+      - &checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
       - uses: $/.github/actions/setup
       - name: Build
         run: pnpm build
