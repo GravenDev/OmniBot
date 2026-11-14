@@ -11,9 +11,9 @@ runs:
     # (osv-scanner, git-cliff).
     #
     # zizmor flags both caches below (cache-poisoning) in a workflow that also
-    # publishes. The jobs using this action publish nothing themselves, though,
-    # and a pull request's caches stay scoped to its own ref: no tag or master
-    # run reads them.
+    # publishes. A run reads only the caches of its own ref and of master, and
+    # a pull request's stay scoped to it: no tag or master run, such as the
+    # mutation job that sends its report to the Stryker Dashboard, reads them.
     - name: Set up Node.js and pnpm
       uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5 # zizmor: ignore[cache-poisoning]
       with:

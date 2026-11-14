@@ -1,0 +1,78 @@
+name: Mutation testing
+
+# Stryker (`pnpm mutation`, configured in stryker.config.js) changes the shared
+# helpers and the dev scripts one operator at a time and checks that a unit
+# test fails each time. A mutant that survives is code the tests run without
+# checking it. The score and the report go to the Stryker Dashboard, behind the
+# README badge.
+#
+# Weekly rather than on every pull request: a full run takes far longer than
+# the rest of the CI, and a score is a trend to watch, not a gate. Saturday
+# night, away from CodeQL (Sunday), Trivy and Renovate (Monday morning).
+
+on:
+  schedule:
+    - cron: "17 3 * * 6"
+  workflow_dispatch:
+
+permissions: {}
+
+# One run at a time per branch: two runs of master would restore then save the
+# same incremental file. A run dispatched from another branch saves its cache
+# under that branch only, so it neither waits for master's nor, pending,
+# cancels the weekly run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  stryker:
+    # Forks have no dashboard key, and their score is not this project's.
+    if: github.repository == 'GravenDev/OmniBot'
+    runs-on: ubuntu-26.04
+    timeout-minutes: 90
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup
+      # The tests import the generated Prisma client's types and enums.
+      - name: Generate the Prisma client
+        run: pnpm prisma:generate
+
+      # Stryker's incremental file: the mutants whose code and tests have not
+      # changed since the last run keep their result, so a weekly run only
+      # tests what changed. A new key every run and every re-run of it, since a
+      # cache entry is never overwritten; the prefix restores the latest one.
+      # GitHub drops an entry left unread for 7 days, about a week's gap: a
+      # late schedule may find none and test everything again.
+      - name: Restore the last results
+        uses: actions/cache@v6
+        with:
+          path: reports/stryker-incremental.json
+          key: stryker-incremental-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: stryker-incremental-
+
+      # The key only on master: the dashboard holds the score of master, and a
+      # run dispatched from another branch must not replace it. Without a key,
+      # stryker.config.js leaves the dashboard reporter out. The ref check is a
+      # guard against mistakes, not a lock: the workflow file of a dispatched
+      # branch is that branch's own.
+      - name: Run Stryker
+        run: pnpm mutation
+        env:
+          STRYKER_DASHBOARD_API_KEY: ${{ github.ref == 'refs/heads/master' && secrets.STRYKER_DASHBOARD_API_KEY || '' }}
+
+      # The same report as the dashboard's, kept a little while for a run
+      # without a key, or to compare two weeks.
+      - name: Keep the HTML report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: mutation-report
+          path: reports/mutation/mutation.html
+          if-no-files-found: warn
+          retention-days: 14

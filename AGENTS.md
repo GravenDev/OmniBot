@@ -10,6 +10,7 @@ pnpm dev                  # run the bot with tsx
 pnpm build                # prisma:generate + tsc
 pnpm format               # oxfmt + oxlint --fix
 pnpm test:coverage        # tests with coverage (coverage/lcov.info, read by SonarCloud in CI)
+pnpm mutation             # Stryker mutation testing of src/lib/, the commit subject rule and the dev scripts (reports/mutation/; weekly in CI, not a gate)
 pnpm render-preview <file.preview.ts> [--before <ref>]  # draw sample images, before and after a change
 pnpm find-similar <file> [<function>...]  # existing functions that look like those of <file>
 pnpm copy-check --staged  # code a change copies from another module (pre-commit and CI run it)

@@ -42,11 +42,15 @@ pitchfork.local.toml
 .idea
 .vscode
 commitlint.config.js
+stryker.config.js
 vitest.config.ts
+vitest.stryker.config.ts
 
 # Tests & project meta
 **/*.test.ts
 coverage
+reports
+.stryker-tmp
 AUDIT.md
 AGENTS.md
 README.md
