@@ -76,6 +76,52 @@ jobs:
       - name: Check the commit messages
         run: pnpm exec commitlint --from HEAD^1 --to HEAD^2 --verbose
 
+  # The changelog lines a pull request will add, as a comment on it, updated
+  # on every push: a fix hidden in a chore, or a title naming a work step,
+  # shows there before the merge. No dependency is installed: only git-cliff
+  # runs, with the pull request's own cliff.toml and .mise.toml. The write
+  # token goes to a pull request from this repository only, whose author can
+  # already change this workflow; a fork's preview stays in the job summary.
+  changelog-preview:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Set up git-cliff
+        uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
+        with:
+          install_args: git-cliff
+          cache: false
+      - name: Preview the changelog
+        env:
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          marker='<!-- changelog-preview -->'
+          lines=$(git cliff --config cliff.toml -- HEAD^1..HEAD^2)
+          body=$(printf '%s\n## Aperçu du changelog\n\nLes lignes que cette pull request ajoutera aux notes de la prochaine release, une par commit :\n%s\n' "$marker" "${lines:-_Aucune._}")
+          printf '%s\n' "$body" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$SAME_REPO" != true ]; then exit 0; fi
+          # Only this workflow's own comment: the token cannot edit anyone
+          # else's, and a copied marker must not break the job.
+          id=$(gh api "repos/$REPO/issues/$PR/comments" --paginate \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | startswith(\"$marker\"))) | .id" |
+            sed -n 1p)
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -f body="$body" > /dev/null
+          else
+            gh api "repos/$REPO/issues/$PR/comments" -f body="$body" > /dev/null
+          fi
+
   build:
     runs-on: ubuntu-26.04
     permissions: *read-only
