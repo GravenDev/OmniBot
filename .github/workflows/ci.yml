@@ -67,16 +67,19 @@ jobs:
       - name: Run tests with coverage
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         run: pnpm test:coverage
+      # A missing report fails here rather than reaching SonarCloud as 0 %
+      # coverage: the upload below would still find src/generated/.
+      - name: Check the coverage report
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        run: test -s coverage/lcov.info
       # The coverage report, and the generated Prisma client for its types.
-      # Same condition as the sonarcloud job, which alone reads them.
+      # Kept in this repository only, where the sonarcloud job reads them.
       - name: Keep what SonarCloud needs
-        if: >-
-          !startsWith(github.ref, 'refs/tags/') &&
-          (github.event_name != 'pull_request' ||
-          github.event.pull_request.head.repo.full_name == github.repository)
+        if: github.repository == 'GravenDev/OmniBot' && !startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v7
         with:
           name: sonarcloud-inputs
+          if-no-files-found: error
           path: |
             coverage/lcov.info
             src/generated/
@@ -87,11 +90,13 @@ jobs:
   # job with the project's dependencies, which `build` installs and runs: a
   # malicious package there could redirect the analysis and take the token.
   # And no release waits on it (`publish` does not need it): SonarCloud down
-  # or a token expired must not hold back a tag. A fork's pull request gets no
-  # secrets, so it is skipped there, and so are tags.
+  # or a token expired must not hold back a tag. Only in this repository: a
+  # fork has no token, whether through its pull request here or a push to its
+  # own branches. Skipped on tags too.
   sonarcloud:
     needs: build
     if: >-
+      github.repository == 'GravenDev/OmniBot' &&
       !startsWith(github.ref, 'refs/tags/') &&
       (github.event_name != 'pull_request' ||
       github.event.pull_request.head.repo.full_name == github.repository)
@@ -113,8 +118,9 @@ jobs:
         with:
           install_args: node pnpm
           cache: false
+      # The bot's own dependencies only, not the docs site or the migrator.
       - name: Install the dependencies without running them
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter omni-bot
       - uses: actions/download-artifact@v8
         with:
           name: sonarcloud-inputs
