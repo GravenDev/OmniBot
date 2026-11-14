@@ -16,6 +16,10 @@ on:
   schedule:
     - cron: "33 4 * * 0"
 
+# Every job declares the permissions it needs; a job that forgets gets none,
+# rather than the repository's default token scope.
+permissions: {}
+
 jobs:
   # One job per language, but a single upload: the pull request check is
   # computed as soon as an analysis arrives. Uploaded by each job, the quicker
