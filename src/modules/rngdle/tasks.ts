@@ -149,7 +149,11 @@ export function rngdleTasks(module: Module<RngdleConfigSchema>) {
       id: "daily-leaderboard",
       schedule: "0 1 * * *",
       async run(client) {
-        await sync.syncAll();
+        await sync
+          .syncAll()
+          .catch((err: unknown) =>
+            logger.warn({ err }, "Sync before the daily leaderboard failed")
+          );
         for (const guildId of await moduleService.getActivatedGuildIds(
           module.id
         )) {

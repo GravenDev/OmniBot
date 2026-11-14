@@ -57,19 +57,34 @@ class RngdleSync implements Service {
       updated: 0,
       failed: 0,
     };
+    const failed = new Map<string, unknown>();
     for (const guildId of await moduleService.getActivatedGuildIds("rngdle")) {
-      const report = await this.start(guildId, full);
-      logger.info(
-        `Guild sync done | guildId = ${guildId} | full = ${full} | accounts = ${report.accounts} | inserted = ${report.inserted} | updated = ${report.updated} | failed = ${report.failed}`
-      );
-      total.accounts += report.accounts;
-      total.inserted += report.inserted;
-      total.updated += report.updated;
-      total.failed += report.failed;
+      try {
+        const report = await this.start(guildId, full);
+        logger.info(
+          `Guild sync done | guildId = ${guildId} | full = ${full} | accounts = ${report.accounts} | inserted = ${report.inserted} | updated = ${report.updated} | failed = ${report.failed}`
+        );
+        total.accounts += report.accounts;
+        total.inserted += report.inserted;
+        total.updated += report.updated;
+        total.failed += report.failed;
+      } catch (err) {
+        logger.error({ err }, `Guild sync failed | guildId = ${guildId}`);
+        failed.set(guildId, err);
+      }
     }
     logger.info(
-      `Sync done | accounts = ${total.accounts} | inserted = ${total.inserted} | updated = ${total.updated} | failed = ${total.failed}`
+      `Sync done | accounts = ${total.accounts} | inserted = ${total.inserted} | updated = ${total.updated} | failed = ${total.failed} | failedGuilds = ${failed.size}`
     );
+    // One guild's failure does not stop the others, but the caller still
+    // learns of it: the "sync" task fails in the scheduler, the leaderboard
+    // and the reminders go on from the stored rolls.
+    if (failed.size > 0) {
+      throw new AggregateError(
+        [...failed.values()],
+        `Sync failed | guildIds = ${[...failed.keys()].join(", ")}`
+      );
+    }
     return total;
   }
 
