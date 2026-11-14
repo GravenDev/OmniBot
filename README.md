@@ -248,8 +248,9 @@ Once the images of a tag are published, CI creates its GitHub Release
    is marked as such, and a 0.x → 0.y bump is left out.
 5. **Changelog technique** — the commits since the previous release, grouped
    by conventional-commit type by [git-cliff](https://git-cliff.org)
-   (`cliff.toml`, version pinned in `.mise.toml`). A release counts from the
-   previous release, a prerelease from the previous tag of any kind.
+   (`cliff.toml`, version pinned in `.mise.toml`), the dependency updates
+   folded in a `<details>` block. A release counts from the previous release,
+   a prerelease from the previous tag of any kind.
 
 A tag with a `-` gets a prerelease. Re-running the workflow on a tag replaces
 the notes of its release; nothing ever creates or moves a tag (`gh release

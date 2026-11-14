@@ -8,6 +8,7 @@ import {
   compareTags,
   extractJson,
   fixedAdvisories,
+  foldDependencies,
   imageRefs,
   imagesSection,
   directVersions,
@@ -1293,5 +1294,61 @@ importers:
         "- **typescript** 6.0.3 → 7.0.2 (outillage de développement)",
       ].join("\n")
     );
+  });
+});
+
+describe("foldDependencies", () => {
+  it("folds the dependency updates, the other groups left as they are", () => {
+    const technical = [
+      "### Corrections",
+      "",
+      "- a",
+      "",
+      "### Dépendances",
+      "",
+      "- **deps** : Update x",
+      "- **deps** : Update y",
+      "",
+      "### Autres",
+      "",
+      "- b",
+    ].join("\n");
+    expect(foldDependencies(technical)).toBe(
+      [
+        "### Corrections",
+        "",
+        "- a",
+        "",
+        "<details>",
+        "<summary>Dépendances (2 mises à jour)</summary>",
+        "",
+        "- **deps** : Update x",
+        "- **deps** : Update y",
+        "",
+        "</details>",
+        "",
+        "### Autres",
+        "",
+        "- b",
+      ].join("\n")
+    );
+    expect(foldDependencies("### Dépendances\n\n- **deps** : Update x")).toBe(
+      "<details>\n<summary>Dépendances (1 mise à jour)</summary>\n\n- **deps** : Update x\n\n</details>"
+    );
+    expect(foldDependencies("### Corrections\n\n- a")).toBe(
+      "### Corrections\n\n- a"
+    );
+  });
+
+  it("is what the notes show", () => {
+    const notes = assembleNotes({
+      githubRepository: "GravenDev/OmniBot",
+      tag: "v1.1.0",
+      previous: "v1.0.0",
+      technical: "### Dépendances\n\n- **deps** : Update x",
+      images: [],
+    });
+    expect(notes).toContain("<summary>Dépendances (1 mise à jour)</summary>");
+    expect(notes).not.toContain("### Dépendances");
   });
 });
