@@ -118,11 +118,22 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: sonarcloud-inputs
+      # The last release, from the tags: releases are tags, and package.json
+      # carries no version. The tag, not `git describe` in full: a version
+      # that changed with every commit would restart SonarCloud's "new code"
+      # period each time.
+      - name: Find the last release
+        id: version
+        run: |
+          tag=$(git describe --tags --abbrev=0 --match 'v[0-9]*')
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
       # Reads coverage/lcov.info and sonar-project.properties.
       - name: Analyse with SonarCloud
         uses: SonarSource/sonarqube-scan-action@e805d875275f728fac1885b413934be6d7c63f65 # v8.4.1
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: -Dsonar.projectVersion=${{ steps.version.outputs.version }}
 
   # Checks every version in the lockfile, dev dependencies included, against
   # OSV's malicious-packages advisories (`MAL-…`): versions published to do
