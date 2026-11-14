@@ -28,7 +28,7 @@ const fourHourGameModule = defineModule({
 
   partials: [Partials.Message],
 
-  onLoad(client, registry) {
+  onLoad(_client, registry) {
     registry.register(messageCreateListener);
     registry.register(messageDeleteListener);
     registry.register(messageDeleteBulkListener);
@@ -42,7 +42,7 @@ const fourHourGameModule = defineModule({
     const { reserved, done } = syncAllRounds(fourHourGameModule);
     fourHourGameService.waitForStartup(reserved);
     done
-      .then(() => closeAllDays(client, fourHourGameModule))
+      .then(() => closeAllDays(fourHourGameModule))
       .catch((err: unknown) =>
         logger.error({ err }, "Failed to sync rounds and close days at startup")
       );
