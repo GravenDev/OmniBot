@@ -100,6 +100,14 @@ describe("daily leaderboard task", () => {
       "rngdle-nav:overall",
     ]);
   });
+
+  it("still posts the leaderboard from the stored rolls when the sync fails", async () => {
+    syncAll.mockRejectedValue(new Error("database down"));
+
+    await task("daily-leaderboard").run({} as Client<true>);
+
+    expect(send).toHaveBeenCalledOnce();
+  });
 });
 
 describe("reminders task", () => {

@@ -153,7 +153,7 @@ Chaque tirage est classé selon le percentile de son score parmi tous les tirage
 
 ### Synchronisation
 
-Les tirages sont téléchargés à 06:00 et 18:00 UTC (juste avant le rappel quotidien), avant le classement quotidien, et au plus toutes les 5 minutes par serveur quand un joueur lance une commande `/rngdle`. Si rngdle.com est lent, la commande n'attend pas plus de 10 secondes et affiche les données déjà enregistrées. Un compte qui a déjà un tirage enregistré pour le jour en cours n'est pas re-téléchargé. Un pseudo qui n'existe plus sur rngdle.com est signalé dans les journaux et ignoré.
+Les tirages sont téléchargés à 06:00 et 18:00 UTC (juste avant le rappel quotidien), avant le classement quotidien, et au plus toutes les 5 minutes par serveur quand un joueur lance une commande `/rngdle`. Si rngdle.com est lent, la commande n'attend pas plus de 10 secondes et affiche les données déjà enregistrées. Un compte qui a déjà un tirage enregistré pour le jour en cours n'est pas re-téléchargé. Un pseudo qui n'existe plus sur rngdle.com est signalé dans les journaux et ignoré. Si la synchronisation d'un serveur échoue, les autres serveurs sont synchronisés quand même, et le classement quotidien comme le rappel sont publiés à partir des tirages déjà enregistrés.
 
 ### `/rngdle leaderboard`
 
