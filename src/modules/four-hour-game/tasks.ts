@@ -1,4 +1,4 @@
-import type { Client, EmbedBuilder } from "discord.js";
+import type { EmbedBuilder } from "discord.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import type { ConfigProvider } from "#lib/config.js";
@@ -53,7 +53,6 @@ export function buildDailyPointEmbed(
 }
 
 async function closeDays(
-  client: Client,
   module: Module<FourHourGameConfigSchema>,
   guildId: string
 ): Promise<void> {
@@ -67,7 +66,9 @@ async function closeDays(
     logger.debug(`No daily point to announce | guildId = ${guildId}`);
     return;
   }
-  if (!channel?.isSendable()) {
+  // A configured channel is always a guild channel: isDMBased() only narrows
+  // the type, so the avatars can be taken through channel.guild.
+  if (!channel?.isSendable() || channel.isDMBased()) {
     logger[channel ? "warn" : "debug"](
       `Daily points not announced | reason = ${channel ? "game channel not sendable" : "no game channel"} | guildId = ${guildId} | channelId = ${channel?.id ?? "none"} | count = ${points.length}`
     );
@@ -77,7 +78,6 @@ async function closeDays(
     `Closing days | guildId = ${guildId} | channelId = ${channel.id} | count = ${points.length}`
   );
 
-  const guild = await client.guilds.fetch(guildId);
   for (const point of points) {
     try {
       // The standings at the end of that day, not today's.
@@ -93,7 +93,7 @@ async function closeDays(
               ...point,
               total: score,
               rank,
-              avatarUrl: await fetchWinnerAvatar(guild, point.userId),
+              avatarUrl: await fetchWinnerAvatar(channel.guild, point.userId),
             },
             config
           ),
@@ -113,11 +113,10 @@ async function closeDays(
 }
 
 export async function closeAllDays(
-  client: Client,
   module: Module<FourHourGameConfigSchema>
 ): Promise<void> {
   for (const guildId of await moduleService.getActivatedGuildIds(module.id)) {
-    await closeDays(client, module, guildId).catch((err: unknown) =>
+    await closeDays(module, guildId).catch((err: unknown) =>
       logger.error({ err }, `Failed to close the day | guildId = ${guildId}`)
     );
   }
@@ -129,7 +128,7 @@ export function fourHourGameTasks(module: Module<FourHourGameConfigSchema>) {
       id: "daily-point",
       schedule: "0 0 * * *",
       timezone: GAME_TIME_ZONE,
-      run: (client) => closeAllDays(client, module),
+      run: () => closeAllDays(module),
     }),
   ];
 }

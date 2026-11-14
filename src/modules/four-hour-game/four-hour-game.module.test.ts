@@ -42,7 +42,7 @@ describe("fourHourGameModule.onLoad", () => {
     await vi.waitFor(() => expect(closeAllDays).toHaveBeenCalled());
 
     expect(events).toEqual(["sync", "close"]);
-    expect(closeAllDays).toHaveBeenCalledWith(client, fourHourGameModule);
+    expect(closeAllDays).toHaveBeenCalledWith(fourHourGameModule);
   });
 
   it("holds live messages until every guild's queue is taken", async () => {
