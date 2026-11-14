@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
   sleep: vi.fn((): Promise<void> => new Promise(() => {})),
   activated: vi.fn(async (_module: string): Promise<string[]> => []),
   accounts: vi.fn(),
@@ -10,10 +11,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("node:timers/promises", () => ({ setTimeout: mocks.sleep }));
-vi.mock("#lib/logger.js", () => {
-  const logger = { info: vi.fn(), warn: vi.fn() };
-  return { loggerMaker: () => logger };
-});
+vi.mock("#lib/logger.js", () => ({ loggerMaker: () => mocks.logger }));
 vi.mock("#core/services/module.service.js", () => ({
   default: { getActivatedGuildIds: mocks.activated },
 }));
@@ -176,6 +174,31 @@ describe("syncAll", () => {
       other,
     ]);
     expect(report).toEqual({ accounts: 4, inserted: 4, updated: 8, failed: 0 });
+  });
+
+  it("syncs the other guilds when one guild's sync fails, then reports the failure", async () => {
+    const other = `${guildId}-b`;
+    mocks.activated.mockResolvedValue([guildId, other]);
+    mocks.accounts.mockImplementation(async (id: string) => {
+      if (id === guildId) {
+        throw new Error("database down");
+      }
+      return accountsOf(id, 2);
+    });
+
+    await expect(sync.syncAll()).rejects.toThrow(
+      `Sync failed | guildIds = ${guildId}`
+    );
+
+    expect(mocks.accounts.mock.calls.map(([id]) => id)).toEqual([
+      guildId,
+      other,
+    ]);
+    expect(mocks.fetchUserRolls).toHaveBeenCalledTimes(2);
+    expect(mocks.logger.error).toHaveBeenCalledWith(
+      { err: expect.any(Error) },
+      `Guild sync failed | guildId = ${guildId}`
+    );
   });
 });
 
