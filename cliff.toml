@@ -61,6 +61,7 @@ commit_parsers = [
   # A `chore(ci)` touches the pipeline as much as a `ci:` does.
   { message = '^(build|ci|chore\(ci\))', group = "<!-- 70 -->Build et CI" },
   { message = "^(chore|style)", group = "<!-- 80 -->Maintenance" },
-  { message = "^revert", group = "<!-- 85 -->Retours en arrière" },
+  # GitHub's revert button writes `Revert "<title>"`, not `revert:`.
+  { message = '^(revert|Revert ")', group = "<!-- 85 -->Retours en arrière" },
   { message = ".*", group = "<!-- 99 -->Autres" },
 ]
