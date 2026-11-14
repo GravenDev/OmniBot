@@ -241,7 +241,12 @@ Once the images of a tag are published, CI creates its GitHub Release
    section.
 3. **Images Docker** — `ghcr.io/gravendev/omnibot` and `omnibot-migrator` at the
    version's tag, pinned by digest.
-4. **Changelog technique** — the commits since the previous release, grouped
+4. **Montées de version majeures** — the direct dependencies of the workspace
+   packages (resolved versions read from `pnpm-lock.yaml`, catalog included),
+   the Node.js of `.mise.toml` and the PostgreSQL of `compose.prod.yaml` that
+   moved to a higher major version since the previous tag; development tooling
+   is marked as such, and a 0.x → 0.y bump is left out.
+5. **Changelog technique** — the commits since the previous release, grouped
    by conventional-commit type by [git-cliff](https://git-cliff.org)
    (`cliff.toml`, version pinned in `.mise.toml`). A release counts from the
    previous release, a prerelease from the previous tag of any kind.
