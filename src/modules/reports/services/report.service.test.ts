@@ -67,6 +67,10 @@ const db = vi.hoisted(() => {
       }
     ),
     authorHistory: vi.fn(async () => ({ total: 0, sanctioned: 0 })),
+    delete: vi.fn(async (id: number) => {
+      const index = reports.findIndex((r) => r.id === id);
+      if (index !== -1) reports.splice(index, 1);
+    }),
   };
   return { reports, store };
 });
@@ -154,6 +158,37 @@ describe("report", () => {
       allowedMentions: { parse: [], roles: ["role-9"] },
     });
     expect(db.store.setAlert).toHaveBeenCalledWith(1, "alerts", "alert-1");
+  });
+
+  it("deletes the alert it could not record, so the next report posts one", async () => {
+    const { client, config, alertChannel } = setup();
+    const sent = {
+      channelId: "alerts",
+      id: "alert-1",
+      delete: vi.fn(async () => ({})),
+    };
+    alertChannel.send.mockResolvedValueOnce(sent);
+    db.store.setAlert.mockRejectedValueOnce(new Error("database down"));
+
+    await expect(
+      service.report(client, config, snapshot, reporter("r1"), false)
+    ).rejects.toThrow("database down");
+
+    expect(sent.delete).toHaveBeenCalledOnce();
+  });
+
+  it("forgets a report whose alert could not be posted, so reporting again files it", async () => {
+    const { client, config, alertChannel } = setup();
+    alertChannel.send.mockRejectedValueOnce(new Error("Discord down"));
+
+    await expect(
+      service.report(client, config, snapshot, reporter("r1"), false)
+    ).rejects.toThrow("Discord down");
+
+    expect(
+      await service.report(client, config, snapshot, reporter("r1"), false)
+    ).toBe("created");
+    expect(alertChannel.send).toHaveBeenCalledTimes(2);
   });
 
   it("adds later reporters to the same alert instead of a new one", async () => {
