@@ -38,7 +38,7 @@ export default defineModule({
   version: "1.1.1",
   intents: [GatewayIntentBits.Guilds],
   config: coreConfigSchema satisfies CoreConfig,
-  onLoad(_, registry) {
+  async onLoad(_, registry) {
     // Register the core module's commands and events in the provided registry
     registry.register(moduleCommand);
     registry.register(configCommand);
@@ -62,8 +62,10 @@ export default defineModule({
     registry.register(resetConfigButton);
     registry.register(resetConfigSelect);
 
-    for (const [, handler] of Object.entries(configTypeHandlers)) {
-      handler?.registerEditionInteractionHandlers(registry);
+    // Awaited, so that an editor failing to register fails the core's load
+    // (and the boot) instead of leaving its interactions unanswered.
+    for (const handler of Object.values(configTypeHandlers)) {
+      await handler?.registerEditionInteractionHandlers(registry);
     }
 
     registerScalarListEditorHandlers(registry);
