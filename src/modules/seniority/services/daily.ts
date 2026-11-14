@@ -26,7 +26,12 @@ import {
   memberAnniversaryMessages,
   serverAnniversaryMessage,
 } from "./announcements.js";
-import { celebratedMembers, seniorityCard, serverCard } from "./cards.js";
+import {
+  celebratedMembers,
+  seniorityCard,
+  serverCard,
+  serverFacts,
+} from "./cards.js";
 import { overrides } from "./overrides.js";
 import * as state from "./state.js";
 
@@ -170,10 +175,11 @@ async function announceServer(
       channel,
       guild.id,
       {
-        content: serverAnniversaryMessage(config.t, {
-          years,
-          members: guild.memberCount,
-        }),
+        content: serverAnniversaryMessage(
+          config.t,
+          config.locale,
+          serverFacts(guild, config, members?.values() ?? [], years, recomputed)
+        ),
       },
       []
     );

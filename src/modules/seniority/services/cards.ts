@@ -201,10 +201,7 @@ export function serverCardText(
   };
 }
 
-/**
- * The server's anniversary card, with its longest-standing member (bots
- * excluded), counted like the members' anniversaries.
- */
+/** The server's anniversary card. */
 export async function serverCard(
   guild: Guild,
   config: Config,
@@ -212,6 +209,34 @@ export async function serverCard(
   years: number,
   overrides: ReadonlyMap<string, Date> = new Map()
 ): Promise<AttachmentBuilder> {
+  const { card, alt } = serverCardText(
+    config.t,
+    config.locale,
+    serverFacts(guild, config, members, years, overrides)
+  );
+  const icon = await fetchImage(guild.iconURL({ extension: "png", size: 256 }));
+  const image = await renderCelebrationImage(
+    { ...card, avatars: [icon] },
+    { loop: config.get("loopCard") }
+  );
+  return new AttachmentBuilder(image.data, {
+    name: `server-anniversary.${image.extension}`,
+    description: alt,
+  });
+}
+
+/**
+ * What the server's anniversary tells, card or text: its age, creation date,
+ * member count and longest-standing member (bots excluded), counted like the
+ * members' anniversaries.
+ */
+export function serverFacts(
+  guild: Guild,
+  config: Config,
+  members: Iterable<GuildMember>,
+  years: number,
+  overrides: ReadonlyMap<string, Date> = new Map()
+): ServerFacts {
   const timeZone = config.get("timeZone");
   let eldest: { member: GuildMember; since: Date } | null = null;
   for (const member of members) {
@@ -223,7 +248,7 @@ export async function serverCard(
       eldest = { member, since };
     }
   }
-  const { card, alt } = serverCardText(config.t, config.locale, {
+  return {
     years,
     createdOn: formatDate(guild.createdAt, config.locale, timeZone),
     members: guild.memberCount,
@@ -231,14 +256,5 @@ export async function serverCard(
       name: eldest.member.displayName,
       since: formatDate(eldest.since, config.locale, timeZone),
     },
-  });
-  const icon = await fetchImage(guild.iconURL({ extension: "png", size: 256 }));
-  const image = await renderCelebrationImage(
-    { ...card, avatars: [icon] },
-    { loop: config.get("loopCard") }
-  );
-  return new AttachmentBuilder(image.data, {
-    name: `server-anniversary.${image.extension}`,
-    description: alt,
-  });
+  };
 }

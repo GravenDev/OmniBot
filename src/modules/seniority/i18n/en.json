@@ -24,8 +24,6 @@
 
   "server.headline_one": "🎂 **The server is {{count}} year old today!**",
   "server.headline_other": "🎂 **The server is {{count}} years old today!**",
-  "server.members_one": "{{count}} member",
-  "server.members_other": "{{count}} members",
 
   "membersCard.kicker": "Member anniversaries",
   "membersCard.title_one": "Happy join anniversary!",
