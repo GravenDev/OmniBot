@@ -15,9 +15,14 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "lcovonly"],
-      // Not lint/: its rules run inside oxlint, which Node's coverage cannot
-      // follow.
-      include: ["src/**/*.ts", "scripts/**/*.ts", "bootstrap/**/*.ts"],
+      // Not lint/omnibot.js: its rules run inside oxlint, which Node's
+      // coverage cannot follow. The commitlint rule is a plain module.
+      include: [
+        "src/**/*.ts",
+        "scripts/**/*.ts",
+        "bootstrap/**/*.ts",
+        "lint/commit-subject.js",
+      ],
       exclude: [
         "**/*.test.ts",
         "**/*.preview.ts",
