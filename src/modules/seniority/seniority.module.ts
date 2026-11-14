@@ -37,15 +37,11 @@ const seniorityModule = defineModule({
     logger.info(`Module installed | guildId = ${guild.id}`);
   },
 
-  // Recomputed seniorities are not kept for a reinstall.
-  onUninstall(_client, guild) {
+  // Recomputed seniorities are not kept for a reinstall. A failure cancels
+  // the uninstall: the module stays enabled with them.
+  async onUninstall(_client, guild) {
+    await clearGuild(guild.id);
     logger.info(`Module uninstalled | guildId = ${guild.id}`);
-    clearGuild(guild.id).catch((err: unknown) =>
-      logger.error(
-        { err },
-        `Failed to clear the recomputed seniorities | guildId = ${guild.id}`
-      )
-    );
   },
 
   uninstallWarning,

@@ -1,4 +1,4 @@
-import type { Client } from "discord.js";
+import type { Client, Guild } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
 import type { Registry } from "#lib/registry.js";
 
@@ -26,8 +26,9 @@ vi.mock("#modules/four-hour-game/tasks.js", () => ({
 }));
 
 const waitForStartup = vi.hoisted(() => vi.fn());
+const resetRound = vi.hoisted(() => vi.fn(async (_guildId: string) => {}));
 vi.mock("#modules/four-hour-game/services/four-hour-game.service.js", () => ({
-  default: { waitForStartup },
+  default: { waitForStartup, resetRound },
 }));
 
 const { default: fourHourGameModule } =
@@ -52,5 +53,21 @@ describe("fourHourGameModule.onLoad", () => {
 
     // Not `done`: a guild would otherwise wait for the slowest replay.
     expect(waitForStartup.mock.calls.at(-1)![0]).toBe(reserved);
+  });
+});
+
+describe("fourHourGameModule.onInstall", () => {
+  // The installer awaits the hook before registering the commands: a failure
+  // must reach it, so the module is not enabled on a round left as it was.
+  it("fails when the round cannot be reset", async () => {
+    resetRound.mockRejectedValueOnce(new Error("database is down"));
+
+    await expect(
+      fourHourGameModule.onInstall?.(
+        {} as Client,
+        { id: "guild-1" } as Guild,
+        fourHourGameModule.registry
+      )
+    ).rejects.toThrow("database is down");
   });
 });

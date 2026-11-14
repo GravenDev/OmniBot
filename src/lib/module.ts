@@ -65,20 +65,34 @@ export interface ModuleDeclaration<ConfigType extends ConfigSchema = {}> {
   onLoad?: (client: Client, registry: Registry) => void | Promise<void>;
 
   /**
-   * Called when the module is installed in a guild.
+   * Called when the module is installed in a guild, before its commands are
+   * registered. May be async, and is awaited: a throwing or rejecting
+   * onInstall cancels the install: the core neither registers the commands
+   * nor enables the module. What the hook itself wrote before failing stays,
+   * so keep its writes atomic (one transaction) or safe to repeat.
    *
    * @param client The Discord client instance.
    * @param guild The guild where the module is being installed.
    */
-  onInstall?: (client: Client, guild: Guild, registry: Registry) => void;
+  onInstall?: (
+    client: Client,
+    guild: Guild,
+    registry: Registry
+  ) => void | Promise<void>;
 
   /**
-   * Called when the module is uninstalled from a guild.
+   * Called when the module is uninstalled from a guild, before its commands
+   * are removed. May be async, and is awaited: a throwing or rejecting
+   * onUninstall cancels the uninstall, so the module stays enabled.
    *
    * @param client The Discord client instance.
    * @param guild The guild from which the module is being uninstalled.
    */
-  onUninstall?: (client: Client, guild: Guild, registry: Registry) => void;
+  onUninstall?: (
+    client: Client,
+    guild: Guild,
+    registry: Registry
+  ) => void | Promise<void>;
 
   /**
    * Tasks that keep stored data within its retention period, such as purges.
