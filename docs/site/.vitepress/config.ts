@@ -61,10 +61,72 @@ export default defineConfig({
         nav: [
           { text: "Accueil", link: "/fr/" },
           { text: "Guide", link: "/fr/guide/getting-started" },
-          { text: "Utiliser le bot", link: "/fr/usage/reference/modules/" },
+          { text: "Utiliser le bot", link: "/fr/usage/" },
         ],
         sidebar: {
           "/fr/usage/": [
+            {
+              text: "Tutoriel",
+              items: [
+                {
+                  text: "Vos premiers pas",
+                  link: "/fr/usage/tutorials/first-module",
+                },
+              ],
+            },
+            {
+              text: "Guides pratiques",
+              items: [
+                {
+                  text: "Activer et configurer un module",
+                  link: "/fr/usage/how-to/enable-module",
+                },
+                {
+                  text: "Désactiver un module",
+                  link: "/fr/usage/how-to/disable-module",
+                },
+                {
+                  text: "Remettre des réglages par défaut",
+                  link: "/fr/usage/how-to/reset-settings",
+                },
+                {
+                  text: "Régler un module salon par salon",
+                  link: "/fr/usage/how-to/channel-settings",
+                },
+                {
+                  text: "Changer la langue du bot",
+                  link: "/fr/usage/how-to/change-language",
+                },
+                {
+                  text: "Ne plus être mentionné",
+                  link: "/fr/usage/how-to/stop-pings",
+                },
+                {
+                  text: "Supprimer ses données",
+                  link: "/fr/usage/how-to/delete-data",
+                },
+                {
+                  text: "Enregistrer son anniversaire",
+                  link: "/fr/usage/how-to/set-birthday",
+                },
+                {
+                  text: "Signaler un message",
+                  link: "/fr/usage/how-to/report-message",
+                },
+                {
+                  text: "Lier son compte RNGdle",
+                  link: "/fr/usage/how-to/link-rngdle",
+                },
+                {
+                  text: "Lier son compte Clash of Code",
+                  link: "/fr/usage/how-to/link-clash-of-code",
+                },
+                {
+                  text: "Créer et gérer son salon vocal temporaire",
+                  link: "/fr/usage/how-to/temp-voice",
+                },
+              ],
+            },
             {
               text: "Référence",
               items: [
@@ -133,6 +195,23 @@ export default defineConfig({
                 },
               ],
             },
+            {
+              text: "Explications",
+              items: [
+                {
+                  text: "Les modules, serveur par serveur",
+                  link: "/fr/usage/explanation/modules",
+                },
+                {
+                  text: "Les données gardées par le bot",
+                  link: "/fr/usage/explanation/data",
+                },
+                {
+                  text: "Les annonces et les mentions",
+                  link: "/fr/usage/explanation/mentions",
+                },
+              ],
+            },
           ],
           "/fr/guide/": [
             {
@@ -188,11 +267,73 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: "Guide", link: "/en/guide/getting-started" },
-          { text: "Using the bot", link: "/en/usage/reference/modules/" },
+          { text: "Using the bot", link: "/en/usage/" },
           { text: "Home", link: "/en/" },
         ],
         sidebar: {
           "/en/usage/": [
+            {
+              text: "Tutorial",
+              items: [
+                {
+                  text: "Your first steps",
+                  link: "/en/usage/tutorials/first-module",
+                },
+              ],
+            },
+            {
+              text: "How-to guides",
+              items: [
+                {
+                  text: "Enable and configure a module",
+                  link: "/en/usage/how-to/enable-module",
+                },
+                {
+                  text: "Disable a module",
+                  link: "/en/usage/how-to/disable-module",
+                },
+                {
+                  text: "Reset settings to their default",
+                  link: "/en/usage/how-to/reset-settings",
+                },
+                {
+                  text: "Configure a module channel by channel",
+                  link: "/en/usage/how-to/channel-settings",
+                },
+                {
+                  text: "Change the bot's language",
+                  link: "/en/usage/how-to/change-language",
+                },
+                {
+                  text: "Stop being pinged",
+                  link: "/en/usage/how-to/stop-pings",
+                },
+                {
+                  text: "Delete your data",
+                  link: "/en/usage/how-to/delete-data",
+                },
+                {
+                  text: "Save your birthday",
+                  link: "/en/usage/how-to/set-birthday",
+                },
+                {
+                  text: "Report a message",
+                  link: "/en/usage/how-to/report-message",
+                },
+                {
+                  text: "Link your RNGdle account",
+                  link: "/en/usage/how-to/link-rngdle",
+                },
+                {
+                  text: "Link your Clash of Code account",
+                  link: "/en/usage/how-to/link-clash-of-code",
+                },
+                {
+                  text: "Create and manage your temporary voice channel",
+                  link: "/en/usage/how-to/temp-voice",
+                },
+              ],
+            },
             {
               text: "Reference",
               items: [
@@ -258,6 +399,23 @@ export default defineConfig({
                 {
                   text: "Thread Creator",
                   link: "/en/usage/reference/modules/thread-creator",
+                },
+              ],
+            },
+            {
+              text: "Explanation",
+              items: [
+                {
+                  text: "Modules, server by server",
+                  link: "/en/usage/explanation/modules",
+                },
+                {
+                  text: "The data the bot keeps",
+                  link: "/en/usage/explanation/data",
+                },
+                {
+                  text: "Announcements and pings",
+                  link: "/en/usage/explanation/mentions",
                 },
               ],
             },
