@@ -54,9 +54,19 @@ function fakeReaction(
 
 const user = { id: "reporter", bot: false } as any;
 
+function alertChannel(canSend = true) {
+  return {
+    id: "alerts",
+    isSendable: () => true,
+    isDMBased: () => false,
+    guild: { members: { me: { id: "bot" } } },
+    permissionsFor: () => ({ has: () => canSend }),
+  } as any;
+}
+
 function config(values: Record<string, unknown> = {}) {
   return makeTestConfig("reports", reportsConfigSchema, {
-    alertChannel: { id: "alerts", isSendable: () => true } as any,
+    alertChannel: alertChannel(),
     ...values,
   });
 }
@@ -129,6 +139,20 @@ describe("messageReactionAdd", () => {
       user,
       {} as any,
       makeTestConfig("reports", reportsConfigSchema, {})
+    );
+
+    expect(reaction.users.remove).not.toHaveBeenCalled();
+    expect(report).not.toHaveBeenCalled();
+  });
+
+  it("keeps the reaction while the bot cannot post in the alert channel", async () => {
+    const reaction = fakeReaction();
+
+    await listener.execute(
+      reaction,
+      user,
+      {} as any,
+      config({ alertChannel: alertChannel(false) })
     );
 
     expect(reaction.users.remove).not.toHaveBeenCalled();

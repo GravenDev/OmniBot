@@ -296,7 +296,7 @@ Permet aux membres de signaler un message aux modérateurs, qui reçoivent une a
 
 ### Signaler un message
 
-- **Par réaction** : réagir avec l'emoji configuré (🚩 par défaut). Le bot retire la réaction aussitôt, pour que personne ne voie qui a signalé ; elle reste visible le temps que le bot la retire. Celui qui signale ne reçoit aucune confirmation.
+- **Par réaction** : réagir avec l'emoji configuré (🚩 par défaut). Le bot retire la réaction aussitôt, pour que personne ne voie qui a signalé ; elle reste visible le temps que le bot la retire. Celui qui signale ne reçoit aucune confirmation. Tant que le bot ne peut pas voir le salon des alertes ou y écrire, il ne retire pas la réaction et rien n'est signalé.
 - **Par le menu contextuel** : clic droit sur le message, _Applications_ → _Signaler le message_. Une fenêtre propose un motif facultatif, puis une confirmation visible de soi seul s'affiche.
 
 Ne peuvent pas être signalés : ses propres messages, les messages de bots et du système, et ceux du salon des alertes et de ses fils. Un même membre ne compte qu'une fois par message.
