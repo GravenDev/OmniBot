@@ -432,8 +432,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   # The notes of the GitHub Release: the image references by digest, the
-  # changelog since the previous release (git-cliff, cliff.toml) and, above it,
-  # a summary for server admins written by an AI model, through any
+  # changelog since the previous release (git-cliff, cliff.toml), the
+  # vulnerabilities of the dependencies the release fixes (osv-scanner on the
+  # lockfile of both tags; only fixed ones are printed, never one the release
+  # brings in, the log being public) and, above them, a summary for server
+  # admins written by an AI model, through any
   # OpenAI-compatible Chat Completions API: the AI_API_KEY secret, the AI_MODEL
   # variable and, for another provider than OpenAI, the AI_BASE_URL variable.
   # Without the key or the model, or when the call fails, the notes go out
@@ -459,10 +462,11 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Set up Node.js and git-cliff
+      # osv-scanner at the version the malware job runs, pinned in .mise.toml.
+      - name: Set up Node.js, git-cliff and osv-scanner
         uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5
         with:
-          install_args: node git-cliff
+          install_args: node git-cliff osv-scanner
           cache: false
 
       - name: Write the release notes
