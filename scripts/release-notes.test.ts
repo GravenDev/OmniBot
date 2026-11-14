@@ -7,20 +7,34 @@ import {
   explainingParagraph,
   compareTags,
   extractJson,
+  fixedAdvisories,
+  foldDependencies,
   imageRefs,
   imagesSection,
+  directVersions,
   lookupDigest,
+  majorUpgrades,
+  majorsSection,
   moduleGlossary,
   neutralizeMentions,
   parseArgs,
+  parseLockfile,
+  parseScan,
   parseSummary,
   previousTag,
+  productionPackages,
+  runtimeVersions,
+  securityFixes,
+  securityInput,
+  securitySection,
   sortTags,
   summaryInput,
   unknownCommands,
   writeSummary,
+  type FixedAdvisory,
   type ImageRef,
 } from "./release-notes.js";
+import { captureOutput } from "./test-support.js";
 
 const TAGS = [
   "v0.6.1-rc.10",
@@ -346,6 +360,24 @@ describe("writeSummary", () => {
     );
   });
 
+  it("takes no command from an advisory's title", async () => {
+    const { fetchImpl } = stub(() =>
+      completion(
+        "stop",
+        JSON.stringify({ visible: true, fr: "- `/files` corrigé", en: "- b" })
+      )
+    );
+    const spy = vi
+      .spyOn(process.stderr, "write")
+      .mockImplementation(() => true);
+    await expect(
+      writeSummary("v1.0.0", technical, settings, fetchImpl, {
+        security: "- a 1.0.0 → 1.1.0 : Path traversal in /files handler",
+      })
+    ).resolves.toBeNull();
+    spy.mockRestore();
+  });
+
   it("gives up on an HTTP error, a truncated answer, bad JSON or a timeout", async () => {
     const stderr = vi
       .spyOn(process.stderr, "write")
@@ -447,7 +479,7 @@ describe("images", () => {
 describe("assembleNotes", () => {
   const images: ImageRef[] = [];
 
-  it("puts the summary first and the technical changelog last", () => {
+  it("puts the summary first, then security, and the technical changelog last", () => {
     const notes = assembleNotes({
       githubRepository: "GravenDev/OmniBot",
       tag: "v1.1.0",
@@ -455,10 +487,28 @@ describe("assembleNotes", () => {
       technical: "### Nouveautés\n\n- x",
       images,
       summary: { visible: true, fr: "- a", en: "- b" },
+      security: [
+        {
+          name: "undici",
+          from: ["7.1.0"],
+          to: ["7.2.0"],
+          production: true,
+          advisory: {
+            ids: ["GHSA-aaaa-bbbb-cccc"],
+            summary: "s",
+            severity: null,
+          },
+        },
+      ],
+      majors: [
+        { name: "typescript", from: "6.0.0", to: "7.0.0", kind: "development" },
+      ],
     });
     const order = [
       "## Quoi de neuf",
+      "## Sécurité",
       "## Images Docker",
+      "## Montées de version majeures",
       "## Changelog technique",
     ].map((title) => notes.indexOf(title));
     expect(order).toEqual([...order].sort((a, b) => a - b));
@@ -477,6 +527,8 @@ describe("assembleNotes", () => {
       summary: { visible: false, fr: "Rien ne change.", en: "Nothing." },
     });
     expect(notes).not.toContain("Quoi de neuf");
+    expect(notes).not.toContain("## Sécurité");
+    expect(notes).not.toContain("## Montées de version majeures");
     expect(notes).not.toContain("compare/");
     expect(notes).toContain("depuis le début du projet");
     expect(notes).toContain("_Aucun commit._");
@@ -574,5 +626,729 @@ describe("escapeHtml", () => {
     expect(escapeHtml("a <b> ` /cmd <date> ` c")).toBe(
       "a &lt;b&gt; `/cmd <date>` c"
     );
+  });
+});
+
+// A pnpm lockfile cut down to what the script reads: two YAML documents (the
+// first holds pnpm itself, as pnpm 11 and later write it), the importers and
+// the snapshots.
+const LOCKFILE = `---
+lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    packageManagerDependencies:
+      pnpm:
+        specifier: 12.17.0
+        version: 12.17.0
+
+snapshots:
+
+  pnpm@12.17.0: {}
+
+---
+lockfileVersion: '9.0'
+
+importers:
+
+  .:
+    dependencies:
+      '@scope/app':
+        specifier: ^1.0.0
+        version: 1.0.0(peer@3.0.0)
+      aliased:
+        specifier: npm:real@^4.0.0
+        version: real@4.0.0
+    devDependencies:
+      tool:
+        specifier: 'catalog:'
+        version: 5.0.0
+
+  docs/site:
+    dependencies:
+      site:
+        specifier: ^2.0.0
+        version: 2.0.0
+
+packages:
+
+  '@scope/app@1.0.0':
+    resolution: {integrity: sha512-x}
+
+snapshots:
+
+  '@scope/app@1.0.0(peer@3.0.0)':
+    dependencies:
+      lib: 2.0.0
+      alias: real@4.0.0
+    optionalDependencies:
+      peer: 3.0.0
+    transitivePeerDependencies:
+      - other
+
+  lib@2.0.0: {}
+
+  real@4.0.0: {}
+
+  peer@3.0.0: {}
+
+  tarball@https://example.test/t.tgz:
+    dependencies:
+      lib: 1.0.0
+
+  tool@5.0.0:
+    dependencies:
+      lib: 1.0.0
+
+  lib@1.0.0: {}
+
+  site@2.0.0: {}
+`;
+
+describe("lockfile", () => {
+  it("reads the importers and the snapshots of every document", () => {
+    const lock = parseLockfile(LOCKFILE);
+    expect(lock.importers["."]).toMatchObject({
+      dependencies: {
+        "@scope/app": "1.0.0(peer@3.0.0)",
+        aliased: "real@4.0.0",
+      },
+      devDependencies: { tool: "5.0.0" },
+      packageManagerDependencies: { pnpm: "12.17.0" },
+    });
+    expect(lock.importers["docs/site"]).toEqual({
+      dependencies: { site: "2.0.0" },
+    });
+    expect(lock.snapshots["@scope/app@1.0.0(peer@3.0.0)"]).toEqual({
+      lib: "2.0.0",
+      alias: "real@4.0.0",
+      peer: "3.0.0",
+    });
+    expect(lock.snapshots["lib@2.0.0"]).toEqual({});
+    // A key holding a colon, unquoted: its dependencies stay its own.
+    expect(lock.snapshots["peer@3.0.0"]).toEqual({});
+    expect(lock.snapshots["tarball@https://example.test/t.tgz"]).toEqual({
+      lib: "1.0.0",
+    });
+  });
+
+  it("follows what the images ship, not the tooling nor the docs", () => {
+    expect([...productionPackages(parseLockfile(LOCKFILE))].sort()).toEqual([
+      "@scope/app@1.0.0",
+      "lib@2.0.0",
+      "peer@3.0.0",
+      "real@4.0.0",
+    ]);
+  });
+});
+
+/** What osv-scanner --all-packages --format json prints, cut down. */
+function osvOutput(
+  packages: Array<[name: string, version: string, ...ids: string[][]]>
+): unknown {
+  return {
+    results: [
+      {
+        source: { path: "/tmp/x/pnpm-lock.yaml", type: "lockfile" },
+        packages: packages.map(([name, version, ...groups]) => ({
+          package: { name, version, ecosystem: "npm" },
+          ...(groups.length > 0
+            ? {
+                vulnerabilities: groups.map((ids) => ({
+                  id: ids[0],
+                  aliases: ids.slice(1),
+                  summary: `Faille de ${name}`,
+                  database_specific: { severity: "HIGH" },
+                })),
+                groups: groups.map((ids) => ({ ids: [ids[0]], aliases: ids })),
+              }
+            : {}),
+        })),
+      },
+    ],
+  };
+}
+
+describe("security fixes", () => {
+  const FIXED = ["GHSA-fix0-0000-0000", "CVE-2099-0001", "PYSEC-2099-1"];
+  const KEPT = ["GHSA-kept-0000-0000"];
+  const NEW = ["GHSA-new0-0000-0000"];
+
+  it("reads every package of a scan, advisories grouped with their aliases", () => {
+    expect(
+      parseScan(
+        osvOutput([
+          ["a", "1.0.0", FIXED],
+          ["b", "2.0.0"],
+        ])
+      )
+    ).toEqual([
+      {
+        name: "a",
+        version: "1.0.0",
+        advisories: [
+          {
+            ids: ["GHSA-fix0-0000-0000", "CVE-2099-0001", "PYSEC-2099-1"],
+            summary: "Faille de a",
+            severity: "HIGH",
+          },
+        ],
+      },
+      { name: "b", version: "2.0.0", advisories: [] },
+    ]);
+    expect(() => parseScan({ nothing: true })).toThrow();
+  });
+
+  it("lists an advisory gone after the release, with the versions it moved between", () => {
+    const before = parseScan(
+      osvOutput([
+        ["a", "1.0.0", FIXED, KEPT],
+        ["b", "1.0.0"],
+      ])
+    );
+    const after = parseScan(
+      osvOutput([
+        ["a", "1.1.0", KEPT],
+        ["b", "1.0.0"],
+      ])
+    );
+    expect(fixedAdvisories(before, after, new Set(["a@1.0.0"]))).toEqual([
+      {
+        name: "a",
+        from: ["1.0.0"],
+        to: ["1.1.0"],
+        production: true,
+        advisory: {
+          ids: FIXED,
+          summary: "Faille de a",
+          severity: "HIGH",
+        },
+      },
+    ]);
+  });
+
+  it("never lists an advisory still there, or new in the release", () => {
+    const before = parseScan(
+      osvOutput([
+        ["a", "1.0.0", KEPT],
+        ["b", "1.0.0"],
+      ])
+    );
+    const after = parseScan(
+      osvOutput([
+        ["a", "1.0.1", KEPT],
+        ["b", "2.0.0", NEW],
+      ])
+    );
+    expect(fixedAdvisories(before, after, new Set())).toEqual([]);
+  });
+
+  it("never lists an advisory still there against another package", () => {
+    const before = parseScan(
+      osvOutput([
+        ["a", "1.0.0", FIXED],
+        ["b", "1.0.0", FIXED],
+      ])
+    );
+    const after = parseScan(
+      osvOutput([
+        ["a", "1.1.0"],
+        ["b", "1.0.0", FIXED],
+      ])
+    );
+    expect(fixedAdvisories(before, after, new Set())).toEqual([]);
+  });
+
+  it("says when the package is gone, and keeps a package's versions apart", () => {
+    const before = parseScan(
+      osvOutput([
+        ["gone", "1.0.0", FIXED],
+        ["gone", "1.0.0-rc.1", FIXED],
+        ["dual", "1.0.0", KEPT],
+        ["dual", "2.0.0"],
+      ])
+    );
+    // 3.0.0 comes with another dependency: the versions after are all shown,
+    // never one picked as the fix.
+    const after = parseScan(
+      osvOutput([
+        ["dual", "3.0.0"],
+        ["dual", "2.0.0"],
+      ])
+    );
+    const fixes = fixedAdvisories(before, after, new Set());
+    expect(fixes.map(({ name, from, to }) => [name, from, to])).toEqual([
+      ["dual", ["1.0.0"], ["2.0.0", "3.0.0"]],
+      ["gone", ["1.0.0-rc.1", "1.0.0"], []],
+    ]);
+  });
+
+  it("runs the scanner on both lockfiles, and goes on without a section when it fails", () => {
+    const scanned: string[] = [];
+    const fixes = securityFixes("before", "after", (lockfile) => {
+      scanned.push(lockfile);
+      return osvOutput(
+        lockfile === "before" ? [["a", "1.0.0", FIXED]] : [["a", "1.1.0"]]
+      );
+    });
+    expect(scanned).toEqual(["before", "after"]);
+    expect(fixes?.map((fix) => fix.name)).toEqual(["a"]);
+
+    for (const scanner of [
+      () => {
+        throw new Error("spawnSync osv-scanner ENOENT");
+      },
+      () => ({ results: "nope" }),
+    ]) {
+      const { stderr } = captureOutput(() => {
+        expect(securityFixes("before", "after", scanner)).toBeNull();
+      });
+      expect(stderr).toMatch(/^security section skipped: /);
+    }
+  });
+
+  const fix = (overrides: Partial<FixedAdvisory> = {}): FixedAdvisory => ({
+    name: "undici",
+    from: ["7.1.0"],
+    to: ["7.2.0"],
+    production: true,
+    advisory: {
+      ids: [
+        "PYSEC-2099-1",
+        "CVE-2099-0001",
+        "MAL-2099-1",
+        "GHSA-fix0-0000-0000",
+      ],
+      summary: "Contournement <b>de</b> @someone",
+      severity: "HIGH",
+    },
+    ...overrides,
+  });
+
+  it("writes a line per advisory under its package, GHSA then CVE then MAL, each linked", () => {
+    const section = securitySection([
+      fix(),
+      fix({
+        advisory: { ids: ["GHSA-two0-0000-0000"], summary: "", severity: null },
+      }),
+      fix({
+        name: "esbuild",
+        from: ["0.1.0", "0.2.0"],
+        to: [],
+        production: false,
+        advisory: { ids: ["OSV-2099-1"], summary: "", severity: "MODERATE" },
+      }),
+    ]);
+    expect(section).toBe(
+      [
+        "## Sécurité",
+        "",
+        "Failles connues des dépendances, directes ou non, que cette version corrige (base [OSV](https://osv.dev)) :",
+        "",
+        "- **undici** 7.1.0 → 7.2.0",
+        "  - Contournement &lt;b&gt;de&lt;/b&gt; `@someone` (gravité haute) : [GHSA-fix0-0000-0000](https://osv.dev/vulnerability/GHSA-fix0-0000-0000), [CVE-2099-0001](https://osv.dev/vulnerability/CVE-2099-0001), [MAL-2099-1](https://osv.dev/vulnerability/MAL-2099-1)",
+        "  - [GHSA-two0-0000-0000](https://osv.dev/vulnerability/GHSA-two0-0000-0000)",
+        "- **esbuild** 0.1.0, 0.2.0 → retiré (outillage de développement)",
+        "  - (gravité modérée) : [OSV-2099-1](https://osv.dev/vulnerability/OSV-2099-1)",
+      ].join("\n")
+    );
+  });
+
+  it("keeps an advisory's title from linking anywhere", () => {
+    const section = securitySection([
+      fix({
+        advisory: {
+          ids: ["GHSA-fix0-0000-0000"],
+          summary: "See #412, [here](https://e.test/a) and `#1`",
+          severity: null,
+        },
+      }),
+    ]);
+    expect(section).toContain(
+      "  - See \\#412, \\[here\\](`https://e.test/a`) and `#1` : "
+    );
+  });
+
+  it("keeps an advisory's title from formatting, and a scoped package from mentioning", () => {
+    const section = securitySection([
+      fix({
+        name: "@scope/pkg",
+        advisory: {
+          ids: ["GHSA-fix0-0000-0000"],
+          summary:
+            "Pollution via __proto__ in **/*.js or ~x~, see www.example.test, a_b@example.test and `__x__`",
+          severity: null,
+        },
+      }),
+    ]);
+    expect(section).toContain("- **`@scope/pkg`** 7.1.0 → 7.2.0");
+    expect(section).toContain(
+      "  - Pollution via \\_\\_proto\\_\\_ in \\*\\*/\\*.js or \\~x\\~, see `www.example.test`, `a_b@example.test` and `__x__` : "
+    );
+  });
+
+  it("keeps a stray backtick from freeing a mention or a link", () => {
+    const line = (summary: string) =>
+      securitySection([
+        fix({
+          advisory: { ids: ["GHSA-fix0-0000-0000"], summary, severity: null },
+        }),
+      ]).split("\n")[5];
+    expect(line("Bypass of ` check reported by @someone")).toBe(
+      "  - Bypass of ' check reported by `@someone` : [GHSA-fix0-0000-0000](https://osv.dev/vulnerability/GHSA-fix0-0000-0000)"
+    );
+    expect(line("Unclosed ` then see https://e.test/x")).toBe(
+      "  - Unclosed ' then see `https://e.test/x` : [GHSA-fix0-0000-0000](https://osv.dev/vulnerability/GHSA-fix0-0000-0000)"
+    );
+    // Backtick runs of unequal lengths pair up no better.
+    expect(line("`@octocat```")).toBe(
+      "  - '`@octocat`''' : [GHSA-fix0-0000-0000](https://osv.dev/vulnerability/GHSA-fix0-0000-0000)"
+    );
+    // Any scheme GitHub links, any case; entities that would decode to @ or #.
+    expect(line("see HTTPS://e.test/x, ftp://e.test/y and &#x40;octocat")).toBe(
+      "  - see `HTTPS://e.test/x`, `ftp://e.test/y` and \\&#x40;octocat : [GHSA-fix0-0000-0000](https://osv.dev/vulnerability/GHSA-fix0-0000-0000)"
+    );
+    // An autolink between angle brackets: the link only, the brackets shown.
+    expect(line("See <https://e.test/a?b=1&c=2> now")).toBe(
+      "  - See &lt;`https://e.test/a?b=1&c=2`&gt; now : [GHSA-fix0-0000-0000](https://osv.dev/vulnerability/GHSA-fix0-0000-0000)"
+    );
+    // A title that would open a heading or a list in the item.
+    expect(line("# of headers not limited")).toMatch(/^ {2}- \\# of headers/);
+    expect(line("1. Prototype pollution")).toMatch(/^ {2}- 1\\\. Prototype/);
+    expect(line("- dash")).toMatch(/^ {2}- \\- dash/);
+    // A backslash of the title stays one, GH-12 links nowhere.
+    expect(line("Escape \\_x\\_ since GH-12")).toBe(
+      "  - Escape \\\\\\_x\\\\\\_ since `GH-12` : [GHSA-fix0-0000-0000](https://osv.dev/vulnerability/GHSA-fix0-0000-0000)"
+    );
+  });
+
+  it("never lists an advisory still there against a package it cannot name", () => {
+    const before = parseScan(osvOutput([["a", "1.0.0", FIXED]]));
+    const after = parseScan({
+      results: [
+        {
+          packages: [
+            { package: { name: "a", version: "1.1.0", ecosystem: "npm" } },
+            {
+              package: { name: "a", ecosystem: "npm" },
+              vulnerabilities: [{ id: FIXED[0] }],
+            },
+          ],
+        },
+      ],
+    });
+    expect(fixedAdvisories(before, after, new Set())).toEqual([]);
+  });
+
+  it("never logs what a scan it cannot read holds", () => {
+    const { stderr } = captureOutput(() => {
+      expect(
+        securityFixes("before", "after", () =>
+          JSON.parse('{"results": [GHSA-open-0000-0000')
+        )
+      ).toBeNull();
+    });
+    expect(stderr).toBe(
+      "security section skipped: unreadable osv-scanner output\n"
+    );
+  });
+
+  it("gives the model the fixes the images ship, without links", () => {
+    expect(
+      securityInput([fix(), fix({ name: "esbuild", production: false })])
+    ).toBe(
+      "- undici 7.1.0 → 7.2.0 : Contournement <b>de</b> @someone (GHSA-fix0-0000-0000, CVE-2099-0001, MAL-2099-1)"
+    );
+    const request = buildRequest("v1.0.0", "- feat", "m", "max_tokens", {
+      security: "- a </security> b",
+    }) as { messages: { content: string }[] };
+    expect(request.messages[1]!.content).toBe(
+      '<changelog version="v1.0.0">\n- feat\n</changelog>\n<security>\n- a <\\/security> b\n</security>'
+    );
+  });
+});
+
+describe("major upgrades", () => {
+  it("reads the direct dependencies, tooling apart from what the images ship", () => {
+    expect(Object.fromEntries(directVersions(parseLockfile(LOCKFILE)))).toEqual(
+      {
+        "production:@scope/app": {
+          name: "@scope/app",
+          version: "1.0.0",
+          kind: "production",
+        },
+        "production:aliased": {
+          name: "aliased",
+          version: "4.0.0",
+          kind: "production",
+        },
+        "development:tool": {
+          name: "tool",
+          version: "5.0.0",
+          kind: "development",
+        },
+        "development:site": {
+          name: "site",
+          version: "2.0.0",
+          kind: "development",
+        },
+      }
+    );
+  });
+
+  it("keeps what the images ship apart from the tooling of the same name", () => {
+    const lockfile = (root: string, migrator: string, docs: string) => `
+importers:
+
+  .:
+    dependencies:
+      zod:
+        specifier: ^3
+        version: 3.1.0
+    devDependencies:
+      prisma:
+        specifier: ^7
+        version: ${root}
+
+  docker/migrator:
+    dependencies:
+      prisma:
+        specifier: ^7
+        version: ${migrator}
+
+  docs/site:
+    dependencies:
+      zod:
+        specifier: ^4
+        version: ${docs}
+`;
+    // The tooling moves first, the images later: each bump is listed when it
+    // happens, with what it concerns.
+    const step = (from: string[], to: string[]) =>
+      majorUpgrades(
+        directVersions(
+          parseLockfile(lockfile(...(from as [string, string, string])))
+        ),
+        directVersions(
+          parseLockfile(lockfile(...(to as [string, string, string])))
+        )
+      );
+    expect(
+      step(["7.9.1", "7.9.1", "4.0.0"], ["8.0.0", "7.9.1", "5.0.0"])
+    ).toEqual([
+      { name: "prisma", from: "7.9.1", to: "8.0.0", kind: "development" },
+      { name: "zod", from: "4.0.0", to: "5.0.0", kind: "development" },
+    ]);
+    expect(
+      step(["8.0.0", "7.9.1", "5.0.0"], ["8.0.0", "8.0.0", "5.0.0"])
+    ).toEqual([
+      { name: "prisma", from: "7.9.1", to: "8.0.0", kind: "production" },
+    ]);
+    // Moved from the tooling to the images with its bump: listed all the same.
+    expect(
+      majorUpgrades(
+        new Map([
+          [
+            "development:x",
+            { name: "x", version: "1.0.0", kind: "development" },
+          ],
+        ]),
+        new Map([
+          ["production:x", { name: "x", version: "2.0.0", kind: "production" }],
+        ])
+      )
+    ).toEqual([{ name: "x", from: "1.0.0", to: "2.0.0", kind: "production" }]);
+    // Added to the images while the tooling keeps its own: no upgrade.
+    expect(
+      majorUpgrades(
+        new Map([
+          [
+            "development:zod",
+            { name: "zod", version: "3.0.0", kind: "development" },
+          ],
+        ]),
+        new Map([
+          [
+            "development:zod",
+            { name: "zod", version: "3.0.0", kind: "development" },
+          ],
+          [
+            "production:zod",
+            { name: "zod", version: "4.0.0", kind: "production" },
+          ],
+        ])
+      )
+    ).toEqual([]);
+    // Both at once: one line, for the images.
+    expect(
+      step(["7.9.1", "7.9.1", "4.0.0"], ["8.0.0", "8.0.0", "4.0.0"])
+    ).toEqual([
+      { name: "prisma", from: "7.9.1", to: "8.0.0", kind: "production" },
+    ]);
+  });
+
+  it("never writes a scoped package as a mention", () => {
+    expect(
+      majorsSection([
+        {
+          name: "@types/node",
+          from: "24.0.0",
+          to: "26.0.0",
+          kind: "development",
+        },
+      ])
+    ).toContain("- **`@types/node`** 24.0.0 → 26.0.0");
+  });
+
+  it("reads the Node.js and PostgreSQL a self-hoster runs", () => {
+    expect(
+      Object.fromEntries(
+        runtimeVersions(
+          '[tools]\nnode = "24.22.2"\npnpm = "12.17.0"\n',
+          "    image: postgres:18-alpine@sha256:abc\n"
+        )
+      )
+    ).toEqual({
+      "Node.js": { name: "Node.js", version: "24.22.2", kind: "runtime" },
+      PostgreSQL: { name: "PostgreSQL", version: "18", kind: "runtime" },
+    });
+    expect(runtimeVersions(null, null).size).toBe(0);
+    // The image of the service, not a commented-out one, registry or not.
+    expect(
+      runtimeVersions(
+        null,
+        "    # image: postgres:15\n    image: docker.io/library/postgres:18-alpine\n"
+      ).get("PostgreSQL")?.version
+    ).toBe("18");
+    // Any TOML spelling: single quotes, a comment after the value.
+    expect(
+      runtimeVersions(
+        "[tools]\nnode = '26.1.0' # as the Dockerfile\n",
+        null
+      ).get("Node.js")?.version
+    ).toBe("26.1.0");
+  });
+
+  const versions = (
+    entries: Record<string, string>,
+    kind: "production" | "development" | "runtime" = "production"
+  ) =>
+    new Map(
+      Object.entries(entries).map(([name, version]) => [
+        name,
+        { name, version, kind },
+      ])
+    );
+
+  it("lists a major bump only: not a minor one, a downgrade, an added or a removed dependency", () => {
+    expect(
+      majorUpgrades(
+        versions({
+          major: "1.9.0",
+          minor: "1.0.0",
+          down: "3.0.0",
+          removed: "1.0.0",
+          zero: "0.35.5",
+          stable: "0.9.0",
+          bare: "17.11",
+        }),
+        versions({
+          major: "2.0.0-rc.1",
+          minor: "1.5.0",
+          down: "2.0.0",
+          added: "1.0.0",
+          zero: "0.36.0",
+          stable: "1.0.0",
+          bare: "18",
+        })
+      )
+    ).toEqual([
+      { name: "bare", from: "17.11", to: "18", kind: "production" },
+      { name: "major", from: "1.9.0", to: "2.0.0-rc.1", kind: "production" },
+      { name: "stable", from: "0.9.0", to: "1.0.0", kind: "production" },
+    ]);
+  });
+
+  it("puts the runtime first, then what the images ship, then the tooling", () => {
+    const majors = majorUpgrades(
+      new Map([
+        ...versions({ typescript: "6.0.3" }, "development"),
+        ...versions({ "discord.js": "14.27.0" }),
+        ...versions({ "Node.js": "24.22.2" }, "runtime"),
+      ]),
+      new Map([
+        ...versions({ typescript: "7.0.2" }, "development"),
+        ...versions({ "discord.js": "15.0.0" }),
+        ...versions({ "Node.js": "26.1.0" }, "runtime"),
+      ])
+    );
+    expect(majorsSection(majors)).toBe(
+      [
+        "## Montées de version majeures",
+        "",
+        "Environnement d'exécution et dépendances directes passés à une version majeure supérieure :",
+        "",
+        "- **Node.js** 24.22.2 → 26.1.0",
+        "- **discord.js** 14.27.0 → 15.0.0",
+        "- **typescript** 6.0.3 → 7.0.2 (outillage de développement)",
+      ].join("\n")
+    );
+  });
+});
+
+describe("foldDependencies", () => {
+  it("folds the dependency updates, the other groups left as they are", () => {
+    const technical = [
+      "### Corrections",
+      "",
+      "- a",
+      "",
+      "### Dépendances",
+      "",
+      "- **deps** : Update x",
+      "- **deps** : Update y",
+      "",
+      "### Autres",
+      "",
+      "- b",
+    ].join("\n");
+    expect(foldDependencies(technical)).toBe(
+      [
+        "### Corrections",
+        "",
+        "- a",
+        "",
+        "<details>",
+        "<summary>Dépendances (2 mises à jour)</summary>",
+        "",
+        "- **deps** : Update x",
+        "- **deps** : Update y",
+        "",
+        "</details>",
+        "",
+        "### Autres",
+        "",
+        "- b",
+      ].join("\n")
+    );
+    expect(foldDependencies("### Dépendances\n\n- **deps** : Update x")).toBe(
+      "<details>\n<summary>Dépendances (1 mise à jour)</summary>\n\n- **deps** : Update x\n\n</details>"
+    );
+    expect(foldDependencies("### Corrections\n\n- a")).toBe(
+      "### Corrections\n\n- a"
+    );
+  });
+
+  it("is what the notes show", () => {
+    const notes = assembleNotes({
+      githubRepository: "GravenDev/OmniBot",
+      tag: "v1.1.0",
+      previous: "v1.0.0",
+      technical: "### Dépendances\n\n- **deps** : Update x",
+      images: [],
+    });
+    expect(notes).toContain("<summary>Dépendances (1 mise à jour)</summary>");
+    expect(notes).not.toContain("### Dépendances");
   });
 });
