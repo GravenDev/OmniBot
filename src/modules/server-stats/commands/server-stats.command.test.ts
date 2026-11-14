@@ -8,6 +8,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
 import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
+import { RETENTION_DAYS } from "#modules/server-stats/services/day.js";
 
 const mocks = vi.hoisted(() => ({
   startedAt: vi.fn(),
@@ -91,6 +92,16 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+});
+
+describe("/server-stats day", () => {
+  it("announces the days that are kept", () => {
+    const day = command.data
+      .toJSON()
+      .options!.find((option) => option.name === "day")!;
+    expect(day.description).toContain(`${RETENTION_DAYS}`);
+    expect(day.description_localizations?.fr).toContain(`${RETENTION_DAYS}`);
+  });
 });
 
 describe("/server-stats access", () => {
