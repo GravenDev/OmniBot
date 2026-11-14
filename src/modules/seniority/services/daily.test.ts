@@ -60,7 +60,12 @@ const { runGuildDay } = await import("./daily.js");
 const module = { id: "seniority" } as unknown as Module<SeniorityConfigSchema>;
 
 function member(id: string, joinedAt: string, bot = false) {
-  return { id, joinedAt: new Date(joinedAt), user: { bot } } as GuildMember;
+  return {
+    id,
+    displayName: id,
+    joinedAt: new Date(joinedAt),
+    user: { bot },
+  } as unknown as GuildMember;
 }
 
 function setup(values: Partial<ConfigData<SeniorityConfigSchema>> = {}) {
@@ -120,6 +125,13 @@ const memberCard = new AttachmentBuilder(Buffer.from("m"), {
 const serverCard = new AttachmentBuilder(Buffer.from("s"), {
   name: "server.webp",
 });
+
+// The server's card as text: the same facts, alice the longest-standing.
+const SERVER_TEXT = [
+  "🎂 **Le serveur fête ses 5 ans aujourd'hui !**",
+  "Créé le 16 octobre 2021 · 5 membres",
+  "Plus ancienne présence : alice, depuis le 16 octobre 2023",
+].join("\n");
 
 // 16 October 2026, 09:00 in Paris.
 const NINE_IN_PARIS = new Date("2026-10-16T07:00:00Z");
@@ -206,7 +218,7 @@ describe("runGuildDay", () => {
     );
     expect(members!.allowedMentions).toEqual({ users: ["alice", "bob"] });
     expect(server).toEqual({
-      content: "🎂 **Le serveur fête ses 5 ans aujourd'hui !**\n5 membres",
+      content: SERVER_TEXT,
       allowedMentions: { users: [] },
     });
   });
@@ -234,7 +246,7 @@ describe("runGuildDay", () => {
       "🎉 **Ancienneté sur le serveur**\n**3 ans** · <@alice>\n**1 an** · <@bob> <@quiet>",
       "🎉 **Ancienneté sur le serveur**\n**3 ans** · <@alice>\n**1 an** · <@bob> <@quiet>",
       "🎂 Le serveur fête ses 5 ans !",
-      "🎂 **Le serveur fête ses 5 ans aujourd'hui !**\n5 membres",
+      SERVER_TEXT,
     ]);
   });
 

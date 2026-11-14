@@ -120,9 +120,28 @@ describe("memberAnniversaryMessages", () => {
 });
 
 describe("serverAnniversaryMessage", () => {
-  it("gives the age and the member count", () => {
-    expect(serverAnniversaryMessage(t(), { years: 5, members: 1200 })).toBe(
-      "🎂 **Le serveur fête ses 5 ans aujourd'hui !**\n1200 membres"
+  const facts = {
+    years: 10,
+    createdOn: "1er novembre 2016",
+    members: 12480,
+    eldest: { name: "nora_", since: "3 mars 2017" },
+  };
+
+  it("says what the card says: creation, members, longest-standing member", () => {
+    expect(serverAnniversaryMessage(t(), "fr", facts)).toBe(
+      [
+        "🎂 **Le serveur fête ses 10 ans aujourd'hui !**",
+        "Créé le 1er novembre 2016 · 12 480 membres",
+        "Plus ancienne présence : nora\\_, depuis le 3 mars 2017",
+      ].join("\n")
+    );
+  });
+
+  it("leaves the longest-standing member out on a server of bots only", () => {
+    expect(
+      serverAnniversaryMessage(t(), "fr", { ...facts, years: 1, eldest: null })
+    ).toBe(
+      "🎂 **Le serveur fête son premier anniversaire aujourd'hui !**\nCréé le 1er novembre 2016 · 12 480 membres"
     );
   });
 });

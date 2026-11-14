@@ -3,6 +3,7 @@ import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { ReportsConfigSchema } from "../reports.config.js";
 import reportService, {
+  canPost,
   ineligibility,
   snapshotOf,
 } from "../services/report.service.js";
@@ -19,10 +20,12 @@ export default declareEventListener<"messageReactionAdd", ReportsConfigSchema>({
     if (!matchesEmoji(config.get("emoji"), reaction.emoji)) {
       return;
     }
+    // Checked like the report itself: a reaction removed for a report that
+    // cannot be filed would be lost without a trace.
     const alertChannel = config.get("alertChannel");
-    if (!alertChannel?.isSendable()) {
+    if (!canPost(alertChannel)) {
       logger.debug(
-        `Reaction ignored | reason = alert channel missing or not sendable | guildId = ${reaction.message.guildId} | messageId = ${reaction.message.id}`
+        `Reaction ignored | reason = alert channel missing or not usable | guildId = ${reaction.message.guildId} | messageId = ${reaction.message.id}`
       );
       return;
     }
