@@ -1,4 +1,5 @@
 import { GatewayIntentBits, Partials } from "discord.js";
+import configService from "#core/services/config.service.js";
 import { loggerMaker } from "#lib/logger.js";
 import { defineModule } from "#lib/module.js";
 import { birthdayConfigSchema } from "./birthday.config.js";
@@ -7,6 +8,8 @@ import birthdayCommand from "./commands/birthday.command.js";
 import announceButton from "./interactions/announce.button.js";
 import guildMemberRemoveListener from "./listeners/guild-member-remove.listener.js";
 import birthdayService from "./services/birthday.service.js";
+import { logFailure } from "./services/failures.js";
+import { dropBirthdayRole } from "./services/role.js";
 import { uninstallWarning } from "./services/uninstall.js";
 import { birthdayTasks } from "./tasks.js";
 
@@ -64,8 +67,24 @@ const birthdayModule = defineModule({
 
   uninstallWarning,
 
+  // Like /birthday remove: a birthday no longer announced takes its role back.
+  // The role is best effort, the daily run takes it back otherwise: only the
+  // deletion decides whether /privacy delete succeeded.
   async deleteMemberData(guildId, userId) {
-    await birthdayService.remove(guildId, userId);
+    if (await birthdayService.remove(guildId, userId)) {
+      try {
+        const config = await configService.getConfigForModuleIn(
+          birthdayModule,
+          guildId
+        );
+        await dropBirthdayRole(config, guildId, userId);
+      } catch (err) {
+        logFailure(
+          err,
+          `Failed to load the config to take back the birthday role | guildId = ${guildId}`
+        );
+      }
+    }
   },
 });
 
