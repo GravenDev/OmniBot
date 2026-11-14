@@ -101,6 +101,11 @@
       "automerge": false
     },
     {
+      "description": "Stryker runs only in the weekly mutation workflow, which no pull request triggers, and its config works around 10.1.1 (stryker.config.js): a bump the CI cannot judge, reviewed by hand with a `pnpm mutation` run",
+      "matchPackageNames": ["@stryker-mutator/*"],
+      "automerge": false
+    },
+    {
       "description": "A Postgres major needs a data migration (pg_upgrade or dump/restore): only on request from the dependency dashboard",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["postgres"],

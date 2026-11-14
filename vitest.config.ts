@@ -1,12 +1,30 @@
-import { configDefaults, defineConfig } from "vitest/config";
+import {
+  configDefaults,
+  defineConfig,
+  type TestProjectInlineConfiguration,
+} from "vitest/config";
 
 const integrationGlob = "src/**/*.integration.test.ts";
 
-export default defineConfig({
-  // Resolve `#*` subpath imports to ./src (mirrors tsconfig customConditions).
-  resolve: {
-    conditions: ["development"],
+// Exported for vitest.stryker.config.ts: mutation testing runs these tests
+// alone, the integration ones needing PostgreSQL.
+export const unitProject = {
+  test: {
+    name: "unit",
+    environment: "node",
+    include: ["src/**/*.test.ts", "scripts/**/*.test.ts", "lint/**/*.test.ts"],
+    exclude: [...configDefaults.exclude, integrationGlob],
   },
+} satisfies TestProjectInlineConfiguration;
+
+// Shared with vitest.stryker.config.ts too.
+export const resolve = {
+  // Resolve `#*` subpath imports to ./src (mirrors tsconfig customConditions).
+  conditions: ["development"],
+};
+
+export default defineConfig({
+  resolve,
   test: {
     // Off unless asked (`pnpm test:coverage`): CI turns it on for SonarCloud,
     // which reads coverage/lcov.info.
@@ -33,18 +51,7 @@ export default defineConfig({
       ],
     },
     projects: [
-      {
-        test: {
-          name: "unit",
-          environment: "node",
-          include: [
-            "src/**/*.test.ts",
-            "scripts/**/*.test.ts",
-            "lint/**/*.test.ts",
-          ],
-          exclude: [...configDefaults.exclude, integrationGlob],
-        },
-      },
+      unitProject,
       {
         test: {
           name: "integration",

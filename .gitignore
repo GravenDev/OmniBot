@@ -153,3 +153,7 @@ pitchfork.local.toml
 # Data
 /*.db
 /*.sql
+
+# Stryker (pnpm mutation): its sandbox and its reports
+.stryker-tmp/
+/reports/

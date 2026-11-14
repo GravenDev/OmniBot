@@ -284,6 +284,7 @@ pnpm dev                 # run with tsx
 pnpm build               # prisma:generate + tsc → dist/
 pnpm test                # run the full test suite (unit + integration)
 pnpm test:unit           # unit tests only (also test:integration)
+pnpm mutation            # mutation testing with Stryker (reports/mutation/mutation.html)
 pnpm format              # oxfmt + oxlint --fix
 pnpm new-module          # scaffold a module
 pnpm render-preview <file.preview.ts> [--before <ref>]   # draw sample images, before and after a change
@@ -308,6 +309,16 @@ Contributions are welcome — staff and members alike.
   `pnpm install` sets the hooks up for you.
 - **Before opening a PR**, make sure `pnpm build`, `pnpm test`, `pnpm exec oxlint
   --deny-warnings` and `pnpm exec oxfmt --check` all pass (CI runs the same).
+- **Mutation testing** runs weekly (`.github/workflows/mutation.yml`), not on
+  pull requests and never as a gate: Stryker alters the shared helpers of
+  `src/lib/` (minus the canvas drawing, the logger, the Prisma client and the
+  test fakes), the commit subject rule and the dev scripts one operator at a
+  time and checks that a unit test fails. The score and the surviving mutants
+  are on the
+  [Stryker Dashboard](https://dashboard.stryker-mutator.io/reports/github.com/GravenDev/OmniBot/master),
+  and the HTML report is kept two weeks as an artifact of the run. Locally,
+  `pnpm mutation` (it takes a while the first time, then only re-tests what
+  changed).
 - **Agent instructions** live in [`AGENTS.md`](AGENTS.md), which coding agents
   read on their own — a concise orientation that is handy for humans too.
 - **Known tech-debt and follow-ups** are tracked in [`AUDIT.md`](AUDIT.md).

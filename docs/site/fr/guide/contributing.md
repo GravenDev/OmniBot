@@ -126,6 +126,27 @@ pnpm test -- --watch         # Mode watch
 - Les tests utilisent `vi.mock()` pour isoler les dépendances
 - Consultez les tests existants pour les modèles et conventions
 
+### Tests de mutation
+
+[Stryker](https://stryker-mutator.io/) modifie le code un opérateur à la fois
+(`<` devient `<=`, une condition devient `true`…) et vérifie qu'un test
+unitaire échoue : un mutant qui survit, c'est du code que les tests exécutent
+sans le vérifier. Le périmètre est `src/lib/` (sauf le dessin sur canvas, le
+logger, le client Prisma et les faux objets des tests), `lint/commit-subject.js` et les scripts de
+développement `copy-check`, `find-similar`, `release-notes` et `source-files`,
+fixé dans `stryker.config.js`.
+
+```bash
+pnpm mutation                # rapport HTML dans reports/mutation/mutation.html
+```
+
+Le premier passage est long ; les suivants ne retestent que les mutants dont
+le code ou les tests ont changé (`reports/stryker-incremental.json`). La CI le
+lance chaque semaine sur `master`, pas sur les pull requests : ce n'est pas un
+critère de fusion. Le score et les mutants survivants sont sur le
+[Stryker Dashboard](https://dashboard.stryker-mutator.io/reports/github.com/GravenDev/OmniBot/master),
+et chaque passage garde son rapport HTML deux semaines en artefact.
+
 ## Trouver des tâches
 
 - **[AUDIT.md](https://github.com/GravenDev/OmniBot/blob/master/AUDIT.md)** — suit la dette technique, les problèmes connus et les suivis
