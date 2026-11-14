@@ -17,7 +17,12 @@
 //      missing or fails, the notes go on without the section;
 //   3. the Docker images of the version, by tag and digest, looked up on GHCR
 //      (an image not found there is said so);
-//   4. the technical changelog: `git cliff <previous tag>..<tag>`, grouped by
+//   4. the major upgrades between the tags: the direct dependencies of every
+//      workspace package (resolved versions, from the importers of
+//      pnpm-lock.yaml, catalog included), the Node.js of .mise.toml and the
+//      PostgreSQL of compose.prod.yaml. Left to the technical changelog for
+//      the summary: their effect, if any, comes with a commit of its own;
+//   5. the technical changelog: `git cliff <previous tag>..<tag>`, grouped by
 //      conventional-commit type (cliff.toml), then a compare link.
 //
 // The previous tag of a release is the previous release (prereleases are
@@ -709,6 +714,152 @@ export function securityInput(fixes: FixedAdvisory[]): string {
     .join("\n");
 }
 
+export interface PinnedVersion {
+  name: string;
+  version: string;
+  /**
+   * runtime: what a self-hoster runs beside the images (Node.js, PostgreSQL);
+   * production: a direct dependency the images ship; development: tooling.
+   */
+  kind: "runtime" | "production" | "development";
+}
+
+function majorOf(version: string): number | null {
+  const match = /^(\d+)(?:\.|-|$)/.exec(version);
+  return match ? Number(match[1]) : null;
+}
+
+/**
+ * The direct dependencies of every workspace package, keyed `kind:name`:
+ * what the images ship apart from the tooling, so a bump of one is never
+ * hidden by, nor mistaken for, the other. With several versions, the highest
+ * is kept.
+ */
+export function directVersions(lock: Lockfile): Map<string, PinnedVersion> {
+  const direct = new Map<string, PinnedVersion>();
+  for (const [importer, kinds] of Object.entries(lock.importers)) {
+    for (const [kind, dependencies] of Object.entries(kinds)) {
+      if (![...SHIPPED_KINDS, "devDependencies"].includes(kind)) continue;
+      const shipped =
+        SHIPPED_IMPORTERS.includes(importer) && SHIPPED_KINDS.includes(kind);
+      const pinned = shipped ? "production" : "development";
+      for (const [name, resolved] of Object.entries(dependencies)) {
+        // An alias (`real@1.0.0`) is at the real package's version.
+        const version = withoutPeers(resolved).replace(/^.+@/, "");
+        if (majorOf(version) === null) continue;
+        const key = `${pinned}:${name}`;
+        const known = direct.get(key);
+        if (known && compareVersions(known.version, version) >= 0) continue;
+        direct.set(key, { name, version, kind: pinned });
+      }
+    }
+  }
+  return direct;
+}
+
+/**
+ * The Node.js of .mise.toml (CI checks the Dockerfile runs the same) and the
+ * PostgreSQL of compose.prod.yaml: what a self-hoster runs.
+ */
+export function runtimeVersions(
+  mise: string | null,
+  compose: string | null
+): Map<string, PinnedVersion> {
+  const runtime = new Map<string, PinnedVersion>();
+  const node = mise && /^node\s*=\s*(["'])([^"']+)\1/m.exec(mise)?.[2];
+  if (node)
+    runtime.set("Node.js", { name: "Node.js", version: node, kind: "runtime" });
+  const postgres =
+    compose &&
+    /^\s*image:\s*(?:[\w.-]+\/)*postgres:(\d[\d.]*)/m.exec(compose)?.[1];
+  if (postgres)
+    runtime.set("PostgreSQL", {
+      name: "PostgreSQL",
+      version: postgres,
+      kind: "runtime",
+    });
+  return runtime;
+}
+
+export interface MajorUpgrade {
+  name: string;
+  kind: PinnedVersion["kind"];
+  from: string;
+  to: string;
+}
+
+const KIND_ORDER = ["runtime", "production", "development"];
+
+/**
+ * What moved to a higher major version between the tags. A dependency added
+ * or removed is no upgrade; a 0.x → 0.y bump is left out, being routine
+ * (oxfmt, sharp), while 0.x → 1.0 is listed. A package bumped in the images
+ * and the tooling at once is listed once, for the images.
+ */
+export function majorUpgrades(
+  before: Map<string, PinnedVersion>,
+  after: Map<string, PinnedVersion>
+): MajorUpgrade[] {
+  const upgrades: MajorUpgrade[] = [];
+  for (const [key, current] of after) {
+    // A package moved between the tooling and the images keeps its history;
+    // one added to either while the other keeps its own is no upgrade.
+    const other = `${current.kind === "production" ? "development" : "production"}:${current.name}`;
+    const old =
+      before.get(key) ??
+      (current.kind !== "runtime" && !after.has(other)
+        ? before.get(other)
+        : undefined);
+    const from = old ? majorOf(old.version) : null;
+    const to = majorOf(current.version);
+    if (from === null || to === null || to <= from) continue;
+    upgrades.push({
+      name: current.name,
+      from: old!.version,
+      to: current.version,
+      kind: current.kind,
+    });
+  }
+  const listed = new Set<string>();
+  return upgrades
+    .sort(
+      (a, b) =>
+        KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) ||
+        a.name.localeCompare(b.name)
+    )
+    .filter((upgrade) => {
+      if (listed.has(upgrade.name)) return false;
+      listed.add(upgrade.name);
+      return true;
+    });
+}
+
+export function majorsSection(majors: MajorUpgrade[]): string {
+  return [
+    "## Montées de version majeures",
+    "",
+    "Environnement d'exécution et dépendances directes passés à une version majeure supérieure :",
+    "",
+    ...majors.map(
+      (major) =>
+        `- **${neutralizeMentions(major.name)}** ${major.from} → ${major.to}${major.kind === "development" ? " (outillage de développement)" : ""}`
+    ),
+  ].join("\n");
+}
+
+/** Every version a release can move, from the files at a tag. */
+export function pinnedVersions(tag: string): Map<string, PinnedVersion> {
+  const lock = fileAt(tag, "pnpm-lock.yaml");
+  if (!lock) warn(`majors: no pnpm-lock.yaml at ${tag}`);
+  return new Map([
+    ...runtimeVersions(
+      fileAt(tag, ".mise.toml"),
+      fileAt(tag, "compose.prod.yaml")
+    ),
+    ...(lock ? directVersions(parseLockfile(lock)) : []),
+  ]);
+}
+
 // ---------------------------------------------------------------------------
 // Summary written by an AI model
 
@@ -1190,6 +1341,8 @@ export interface NotesParts {
   summary?: Summary | null;
   /** The advisories the release fixes; null or empty, no section. */
   security?: FixedAdvisory[] | null;
+  /** The major upgrades of the release; none, no section. */
+  majors?: MajorUpgrade[];
 }
 
 export function assembleNotes(parts: NotesParts): string {
@@ -1198,6 +1351,7 @@ export function assembleNotes(parts: NotesParts): string {
   if (parts.summary?.visible) sections.push(summarySection(parts.summary));
   if (parts.security?.length) sections.push(securitySection(parts.security));
   sections.push(imagesSection(parts.githubRepository, parts.images));
+  if (parts.majors?.length) sections.push(majorsSection(parts.majors));
   const since = parts.previous
     ? `depuis ${parts.previous}`
     : "depuis le début du projet";
@@ -1247,6 +1401,9 @@ export async function buildNotes(options: BuildOptions): Promise<string> {
       ? securityFixes(lockBefore, lockAfter, options.scanner)
       : null;
   if (security) warn(`security: ${security.length} advisories fixed`);
+  const majors = previous
+    ? majorUpgrades(pinnedVersions(previous), pinnedVersions(options.tag))
+    : [];
   const summary = options.ai
     ? await writeSummary(
         options.tag,
@@ -1273,6 +1430,7 @@ export async function buildNotes(options: BuildOptions): Promise<string> {
     images,
     summary,
     security,
+    majors,
   });
 }
 

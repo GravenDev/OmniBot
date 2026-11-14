@@ -10,7 +10,10 @@ import {
   fixedAdvisories,
   imageRefs,
   imagesSection,
+  directVersions,
   lookupDigest,
+  majorUpgrades,
+  majorsSection,
   moduleGlossary,
   neutralizeMentions,
   parseArgs,
@@ -19,6 +22,7 @@ import {
   parseSummary,
   previousTag,
   productionPackages,
+  runtimeVersions,
   securityFixes,
   securityInput,
   securitySection,
@@ -495,11 +499,15 @@ describe("assembleNotes", () => {
           },
         },
       ],
+      majors: [
+        { name: "typescript", from: "6.0.0", to: "7.0.0", kind: "development" },
+      ],
     });
     const order = [
       "## Quoi de neuf",
       "## Sécurité",
       "## Images Docker",
+      "## Montées de version majeures",
       "## Changelog technique",
     ].map((title) => notes.indexOf(title));
     expect(order).toEqual([...order].sort((a, b) => a - b));
@@ -519,6 +527,7 @@ describe("assembleNotes", () => {
     });
     expect(notes).not.toContain("Quoi de neuf");
     expect(notes).not.toContain("## Sécurité");
+    expect(notes).not.toContain("## Montées de version majeures");
     expect(notes).not.toContain("compare/");
     expect(notes).toContain("depuis le début du projet");
     expect(notes).toContain("_Aucun commit._");
@@ -647,6 +656,9 @@ importers:
       '@scope/app':
         specifier: ^1.0.0
         version: 1.0.0(peer@3.0.0)
+      aliased:
+        specifier: npm:real@^4.0.0
+        version: real@4.0.0
     devDependencies:
       tool:
         specifier: 'catalog:'
@@ -697,7 +709,10 @@ describe("lockfile", () => {
   it("reads the importers and the snapshots of every document", () => {
     const lock = parseLockfile(LOCKFILE);
     expect(lock.importers["."]).toMatchObject({
-      dependencies: { "@scope/app": "1.0.0(peer@3.0.0)" },
+      dependencies: {
+        "@scope/app": "1.0.0(peer@3.0.0)",
+        aliased: "real@4.0.0",
+      },
       devDependencies: { tool: "5.0.0" },
       packageManagerDependencies: { pnpm: "12.17.0" },
     });
@@ -1049,6 +1064,234 @@ describe("security fixes", () => {
     }) as { messages: { content: string }[] };
     expect(request.messages[1]!.content).toBe(
       '<changelog version="v1.0.0">\n- feat\n</changelog>\n<security>\n- a <\\/security> b\n</security>'
+    );
+  });
+});
+
+describe("major upgrades", () => {
+  it("reads the direct dependencies, tooling apart from what the images ship", () => {
+    expect(Object.fromEntries(directVersions(parseLockfile(LOCKFILE)))).toEqual(
+      {
+        "production:@scope/app": {
+          name: "@scope/app",
+          version: "1.0.0",
+          kind: "production",
+        },
+        "production:aliased": {
+          name: "aliased",
+          version: "4.0.0",
+          kind: "production",
+        },
+        "development:tool": {
+          name: "tool",
+          version: "5.0.0",
+          kind: "development",
+        },
+        "development:site": {
+          name: "site",
+          version: "2.0.0",
+          kind: "development",
+        },
+      }
+    );
+  });
+
+  it("keeps what the images ship apart from the tooling of the same name", () => {
+    const lockfile = (root: string, migrator: string, docs: string) => `
+importers:
+
+  .:
+    dependencies:
+      zod:
+        specifier: ^3
+        version: 3.1.0
+    devDependencies:
+      prisma:
+        specifier: ^7
+        version: ${root}
+
+  docker/migrator:
+    dependencies:
+      prisma:
+        specifier: ^7
+        version: ${migrator}
+
+  docs/site:
+    dependencies:
+      zod:
+        specifier: ^4
+        version: ${docs}
+`;
+    // The tooling moves first, the images later: each bump is listed when it
+    // happens, with what it concerns.
+    const step = (from: string[], to: string[]) =>
+      majorUpgrades(
+        directVersions(
+          parseLockfile(lockfile(...(from as [string, string, string])))
+        ),
+        directVersions(
+          parseLockfile(lockfile(...(to as [string, string, string])))
+        )
+      );
+    expect(
+      step(["7.9.1", "7.9.1", "4.0.0"], ["8.0.0", "7.9.1", "5.0.0"])
+    ).toEqual([
+      { name: "prisma", from: "7.9.1", to: "8.0.0", kind: "development" },
+      { name: "zod", from: "4.0.0", to: "5.0.0", kind: "development" },
+    ]);
+    expect(
+      step(["8.0.0", "7.9.1", "5.0.0"], ["8.0.0", "8.0.0", "5.0.0"])
+    ).toEqual([
+      { name: "prisma", from: "7.9.1", to: "8.0.0", kind: "production" },
+    ]);
+    // Moved from the tooling to the images with its bump: listed all the same.
+    expect(
+      majorUpgrades(
+        new Map([
+          [
+            "development:x",
+            { name: "x", version: "1.0.0", kind: "development" },
+          ],
+        ]),
+        new Map([
+          ["production:x", { name: "x", version: "2.0.0", kind: "production" }],
+        ])
+      )
+    ).toEqual([{ name: "x", from: "1.0.0", to: "2.0.0", kind: "production" }]);
+    // Added to the images while the tooling keeps its own: no upgrade.
+    expect(
+      majorUpgrades(
+        new Map([
+          [
+            "development:zod",
+            { name: "zod", version: "3.0.0", kind: "development" },
+          ],
+        ]),
+        new Map([
+          [
+            "development:zod",
+            { name: "zod", version: "3.0.0", kind: "development" },
+          ],
+          [
+            "production:zod",
+            { name: "zod", version: "4.0.0", kind: "production" },
+          ],
+        ])
+      )
+    ).toEqual([]);
+    // Both at once: one line, for the images.
+    expect(
+      step(["7.9.1", "7.9.1", "4.0.0"], ["8.0.0", "8.0.0", "4.0.0"])
+    ).toEqual([
+      { name: "prisma", from: "7.9.1", to: "8.0.0", kind: "production" },
+    ]);
+  });
+
+  it("never writes a scoped package as a mention", () => {
+    expect(
+      majorsSection([
+        {
+          name: "@types/node",
+          from: "24.0.0",
+          to: "26.0.0",
+          kind: "development",
+        },
+      ])
+    ).toContain("- **`@types/node`** 24.0.0 → 26.0.0");
+  });
+
+  it("reads the Node.js and PostgreSQL a self-hoster runs", () => {
+    expect(
+      Object.fromEntries(
+        runtimeVersions(
+          '[tools]\nnode = "24.22.2"\npnpm = "12.17.0"\n',
+          "    image: postgres:18-alpine@sha256:abc\n"
+        )
+      )
+    ).toEqual({
+      "Node.js": { name: "Node.js", version: "24.22.2", kind: "runtime" },
+      PostgreSQL: { name: "PostgreSQL", version: "18", kind: "runtime" },
+    });
+    expect(runtimeVersions(null, null).size).toBe(0);
+    // The image of the service, not a commented-out one, registry or not.
+    expect(
+      runtimeVersions(
+        null,
+        "    # image: postgres:15\n    image: docker.io/library/postgres:18-alpine\n"
+      ).get("PostgreSQL")?.version
+    ).toBe("18");
+    // Any TOML spelling: single quotes, a comment after the value.
+    expect(
+      runtimeVersions(
+        "[tools]\nnode = '26.1.0' # as the Dockerfile\n",
+        null
+      ).get("Node.js")?.version
+    ).toBe("26.1.0");
+  });
+
+  const versions = (
+    entries: Record<string, string>,
+    kind: "production" | "development" | "runtime" = "production"
+  ) =>
+    new Map(
+      Object.entries(entries).map(([name, version]) => [
+        name,
+        { name, version, kind },
+      ])
+    );
+
+  it("lists a major bump only: not a minor one, a downgrade, an added or a removed dependency", () => {
+    expect(
+      majorUpgrades(
+        versions({
+          major: "1.9.0",
+          minor: "1.0.0",
+          down: "3.0.0",
+          removed: "1.0.0",
+          zero: "0.35.5",
+          stable: "0.9.0",
+          bare: "17.11",
+        }),
+        versions({
+          major: "2.0.0-rc.1",
+          minor: "1.5.0",
+          down: "2.0.0",
+          added: "1.0.0",
+          zero: "0.36.0",
+          stable: "1.0.0",
+          bare: "18",
+        })
+      )
+    ).toEqual([
+      { name: "bare", from: "17.11", to: "18", kind: "production" },
+      { name: "major", from: "1.9.0", to: "2.0.0-rc.1", kind: "production" },
+      { name: "stable", from: "0.9.0", to: "1.0.0", kind: "production" },
+    ]);
+  });
+
+  it("puts the runtime first, then what the images ship, then the tooling", () => {
+    const majors = majorUpgrades(
+      new Map([
+        ...versions({ typescript: "6.0.3" }, "development"),
+        ...versions({ "discord.js": "14.27.0" }),
+        ...versions({ "Node.js": "24.22.2" }, "runtime"),
+      ]),
+      new Map([
+        ...versions({ typescript: "7.0.2" }, "development"),
+        ...versions({ "discord.js": "15.0.0" }),
+        ...versions({ "Node.js": "26.1.0" }, "runtime"),
+      ])
+    );
+    expect(majorsSection(majors)).toBe(
+      [
+        "## Montées de version majeures",
+        "",
+        "Environnement d'exécution et dépendances directes passés à une version majeure supérieure :",
+        "",
+        "- **Node.js** 24.22.2 → 26.1.0",
+        "- **discord.js** 14.27.0 → 15.0.0",
+        "- **typescript** 6.0.3 → 7.0.2 (outillage de développement)",
+      ].join("\n")
     );
   });
 });
