@@ -11,6 +11,10 @@ on:
   # fixed, without moving the tag.
   workflow_dispatch:
 
+# Every job declares the permissions it needs; a job that forgets gets none,
+# rather than the repository's default token scope.
+permissions: {}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   # A superseded branch run is worth cancelling; a release is not — cancelling
