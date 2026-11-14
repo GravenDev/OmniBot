@@ -22,10 +22,8 @@
   "members.group_one": "**{{count}} an**",
   "members.group_other": "**{{count}} ans**",
 
-  "server.headline_one": "🎂 **Le serveur fête ses {{count}} an aujourd'hui !**",
+  "server.headline_one": "🎂 **Le serveur fête son premier anniversaire aujourd'hui !**",
   "server.headline_other": "🎂 **Le serveur fête ses {{count}} ans aujourd'hui !**",
-  "server.members_one": "{{count}} membre",
-  "server.members_other": "{{count}} membres",
 
   "membersCard.kicker": "Ancienneté",
   "membersCard.title_one": "Joyeux anniversaire d'arrivée !",

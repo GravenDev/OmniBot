@@ -1,5 +1,8 @@
+import { escapeMarkdown } from "discord.js";
+import { formatInteger } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
 import { CELEBRATION_TEXT_LIMIT } from "#lib/post-card.js";
+import type { ServerFacts } from "./cards.js";
 
 /** Users a message may allow to mention. */
 const MENTION_LIMIT = 100;
@@ -61,17 +64,29 @@ export function memberAnniversaryMessages(
   return messages;
 }
 
-export interface ServerAnniversary {
-  years: number;
-  members: number;
-}
-
+/**
+ * The server's anniversary as text, when its card cannot be posted: the same
+ * facts as the card, without mentioning anyone.
+ */
 export function serverAnniversaryMessage(
   t: TFunction,
-  anniversary: ServerAnniversary
+  locale: string,
+  { years, createdOn, members, eldest }: ServerFacts
 ): string {
+  const memberCount = t("serverCard.members", {
+    count: members,
+    formatted: formatInteger(members, locale),
+  });
   return [
-    t("server.headline", { count: anniversary.years }),
-    t("server.members", { count: anniversary.members }),
+    t("server.headline", { count: years }),
+    `${t("serverCard.created", { date: createdOn })} · ${memberCount}`,
+    ...(eldest
+      ? [
+          t("serverCard.eldest", {
+            name: escapeMarkdown(eldest.name),
+            date: eldest.since,
+          }),
+        ]
+      : []),
   ].join("\n");
 }
