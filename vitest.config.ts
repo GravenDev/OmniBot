@@ -10,10 +10,14 @@ export default defineConfig({
   test: {
     // Off unless asked (`pnpm test:coverage`): CI turns it on for SonarCloud,
     // which reads coverage/lcov.info.
+    // Every file SonarCloud analyses must be measured here or listed in
+    // sonar.coverage.exclusions (sonar-project.properties), or it reads 0 %.
     coverage: {
       provider: "v8",
       reporter: ["text-summary", "lcovonly"],
-      include: ["src/**/*.ts", "scripts/**/*.ts", "lint/**/*.js"],
+      // Not lint/: its rules run inside oxlint, which Node's coverage cannot
+      // follow.
+      include: ["src/**/*.ts", "scripts/**/*.ts", "bootstrap/**/*.ts"],
       exclude: [
         "**/*.test.ts",
         "**/*.preview.ts",
