@@ -37,11 +37,11 @@ pitchfork.local.toml
 .mise.toml
 .oxlintrc.json
 .oxfmtrc.json
-.commitlintrc
 .lefthook.yaml
 .renovaterc.json
 .idea
 .vscode
+commitlint.config.js
 vitest.config.ts
 
 # Tests & project meta

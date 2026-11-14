@@ -57,6 +57,25 @@ jobs:
         if: github.event_name == 'pull_request'
         run: node scripts/copy-check.ts HEAD^1
 
+  # Pull requests are merged by rebase: each commit becomes a line of the
+  # release's changelog. Their subjects follow commitlint.config.js, as the
+  # commit-msg hook checks locally, which --no-verify skips.
+  commits:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
+    permissions: *read-only
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: $/.github/actions/setup
+      # The merge commit's parents, as the copy check takes them: exactly the
+      # commits the merge adds, whatever base the event payload carries.
+      - name: Check the commit messages
+        run: pnpm exec commitlint --from HEAD^1 --to HEAD^2 --verbose
+
   build:
     runs-on: ubuntu-26.04
     permissions: *read-only
