@@ -112,9 +112,11 @@ export default declareCommand<ServerStatsConfigSchema>({
     .addSubcommand((sub) =>
       sub
         .setName("day")
-        .setDescription("The statistics of a day of the last 30")
+        .setDescription(
+          `The statistics of a day: today or one of the ${RETENTION_DAYS} before`
+        )
         .setDescriptionLocalizations({
-          fr: "Les statistiques d'un jour parmi les 30 derniers",
+          fr: `Les statistiques d'un jour : aujourd'hui ou l'un des ${RETENTION_DAYS} précédents`,
         })
         .addStringOption((option) =>
           dateOption(
