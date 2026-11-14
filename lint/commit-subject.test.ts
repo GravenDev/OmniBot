@@ -46,6 +46,16 @@ describe("processWords", () => {
     "corrections des revues",
     "après les revues de code",
     "retours des relectures",
+    "  suites de la revue",
+    "tidy up WIP",
+    "ajustement",
+    "correction",
+    "review followups",
+    "review follow-up",
+    "address review",
+    "addressed review",
+    "Suites de la revue",
+    "Retours de la revue",
   ])("refuses « %s », which names a work step", (subject) => {
     expect(processWords(subject)).not.toBeNull();
   });
@@ -66,6 +76,7 @@ describe("processWords", () => {
     "tweak the cooldown to 30 s",
     "mentionne la branche wip/animated-webp",
     "range les aides de src/lib/misc.ts",
+    "hide drafts from review requests",
   ])("accepts « %s », which says what changes", (subject) => {
     expect(processWords(subject)).toBeNull();
   });
