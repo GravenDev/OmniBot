@@ -134,7 +134,20 @@ class ReportService implements Service {
         logger.info(
           `Report created | guildId = ${snapshot.guildId} | reportId = ${created.id} | channelId = ${snapshot.channelId} | messageId = ${snapshot.messageId} | reporterId = ${reporter.userId} | source = ${reporter.source}`
         );
-        await this.publish(client, config, snapshot.guildId, created.id, false);
+        try {
+          await this.publish(
+            client,
+            config,
+            snapshot.guildId,
+            created.id,
+            false
+          );
+        } catch (err) {
+          // A report without an alert would answer « already reported » to a
+          // second try while the moderators see nothing.
+          await store.delete(created.id).catch(() => undefined);
+          throw err;
+        }
         return "created";
       }
 
@@ -273,7 +286,14 @@ class ReportService implements Service {
       return;
     }
     const sent = await channel.send(view);
-    await store.setAlert(report.id, sent.channelId, sent.id);
+    try {
+      await store.setAlert(report.id, sent.channelId, sent.id);
+    } catch (err) {
+      // An alert the report does not point to would never be updated, and the
+      // next publish would post a second one.
+      await sent.delete().catch(() => undefined);
+      throw err;
+    }
     logger.info(
       `Alert sent | guildId = ${report.guildId} | reportId = ${report.id} | channelId = ${sent.channelId} | alertMessageId = ${sent.id}`
     );
