@@ -58,7 +58,8 @@ commit_parsers = [
   { message = "^refactor", group = "<!-- 40 -->Refactorisation" },
   { message = "^docs", group = "<!-- 50 -->Documentation" },
   { message = "^test", group = "<!-- 60 -->Tests" },
-  { message = "^(build|ci)", group = "<!-- 70 -->Build et CI" },
+  # A `chore(ci)` touches the pipeline as much as a `ci:` does.
+  { message = '^(build|ci|chore\(ci\))', group = "<!-- 70 -->Build et CI" },
   { message = "^(chore|style)", group = "<!-- 80 -->Maintenance" },
   { message = "^revert", group = "<!-- 85 -->Retours en arrière" },
   { message = ".*", group = "<!-- 99 -->Autres" },
