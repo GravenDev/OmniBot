@@ -294,9 +294,50 @@ export interface Lockfile {
 const SHIPPED_IMPORTERS = [".", "docker/migrator"];
 const SHIPPED_KINDS = ["dependencies", "optionalDependencies"];
 
-// A key ends at the first colon followed by a space or the end of the line:
-// an unquoted one may hold colons (`name@https://…:`).
-const YAML_ENTRY = /^( *)('(?:[^']|'')*'|[^\s'-].*?):(?: +(.*))?$/;
+interface YamlEntry {
+  depth: number;
+  key: string;
+  value: string;
+}
+
+/** The end of a single-quoted key starting at `start` (`''` is a quote). */
+function quotedKeyEnd(line: string, start: number): number {
+  let index = start + 1;
+  while (index < line.length) {
+    if (line[index] !== "'") index += 1;
+    else if (line[index + 1] === "'") index += 2;
+    else return index + 1;
+  }
+  return -1;
+}
+
+/**
+ * One `key: value` line of the lockfile. A key ends at the first colon
+ * followed by a space or the end of the line: an unquoted one may hold colons
+ * (`name@https://…:`). A list item (`- …`) is no entry.
+ */
+export function yamlEntry(line: string): YamlEntry | null {
+  const depth = /^ */.exec(line)![0].length;
+  const first = line[depth];
+  if (first === undefined || first === "-" || /\s/.test(first)) return null;
+  let colon: number;
+  let key: string;
+  if (first === "'") {
+    const end = quotedKeyEnd(line, depth);
+    if (end === -1 || line[end] !== ":") return null;
+    colon = end;
+    key = line.slice(depth + 1, end - 1).replaceAll("''", "'");
+  } else {
+    colon = line.indexOf(":", depth + 1);
+    while (colon !== -1 && colon + 1 < line.length && line[colon + 1] !== " ")
+      colon = line.indexOf(":", colon + 1);
+    if (colon === -1) return null;
+    key = line.slice(depth, colon);
+  }
+  const rest = line.slice(colon + 1);
+  if (rest !== "" && !rest.startsWith(" ")) return null;
+  return { depth, key, value: unquote(rest.trim()) };
+}
 
 function unquote(text: string): string {
   return text.startsWith("'") ? text.slice(1, -1).replaceAll("''", "'") : text;
@@ -309,33 +350,54 @@ function unquote(text: string): string {
  */
 export function parseLockfile(text: string): Lockfile {
   const lock: Lockfile = { importers: {}, snapshots: {} };
-  let section = "";
-  let importer: Record<string, Record<string, string>> = {};
-  let kind = "";
-  let dependency = "";
-  let snapshot: Record<string, string> = {};
+  // Where the line before left off: the keys of the enclosing entries.
+  const at = { section: "", parent: "", kind: "", dependency: "" };
   for (const line of text.split("\n")) {
-    const match = YAML_ENTRY.exec(line);
-    if (!match) continue;
-    const depth = match[1]!.length;
-    const key = unquote(match[2]!);
-    const value = unquote(match[3]?.trim() ?? "");
-    if (depth === 0) {
-      section = key;
-    } else if (section === "importers") {
-      if (depth === 2) importer = lock.importers[key] ??= {};
-      else if (depth === 4) kind = key;
-      else if (depth === 6) dependency = key;
-      else if (depth === 8 && key === "version")
-        (importer[kind] ??= {})[dependency] = value;
-    } else if (section === "snapshots") {
-      if (depth === 2) snapshot = lock.snapshots[key] ??= {};
-      else if (depth === 4) kind = key;
-      else if (depth === 6 && SHIPPED_KINDS.includes(kind))
-        snapshot[key] = value;
-    }
+    const entry = yamlEntry(line);
+    if (!entry) continue;
+    if (entry.depth === 0) at.section = entry.key;
+    else if (at.section === "importers") readImporterLine(lock, at, entry);
+    else if (at.section === "snapshots") readSnapshotLine(lock, at, entry);
   }
   return lock;
+}
+
+interface LockfilePosition {
+  parent: string;
+  kind: string;
+  dependency: string;
+}
+
+/** `importers.<importer>.<kind>.<dependency>.version: <version>` */
+function readImporterLine(
+  lock: Lockfile,
+  at: LockfilePosition,
+  { depth, key, value }: YamlEntry
+): void {
+  if (depth === 2) {
+    at.parent = key;
+    lock.importers[key] ??= {};
+  } else if (depth === 4) at.kind = key;
+  else if (depth === 6) at.dependency = key;
+  else if (depth === 8 && key === "version") {
+    const importer = lock.importers[at.parent]!;
+    importer[at.kind] ??= {};
+    importer[at.kind]![at.dependency] = value;
+  }
+}
+
+/** `snapshots.<package>.<kind>.<dependency>: <version>`, shipped kinds only. */
+function readSnapshotLine(
+  lock: Lockfile,
+  at: LockfilePosition,
+  { depth, key, value }: YamlEntry
+): void {
+  if (depth === 2) {
+    at.parent = key;
+    lock.snapshots[key] ??= {};
+  } else if (depth === 4) at.kind = key;
+  else if (depth === 6 && SHIPPED_KINDS.includes(at.kind))
+    lock.snapshots[at.parent]![key] = value;
 }
 
 /** A version that names another package: `real@1.0.0`, an alias. */
@@ -526,6 +588,25 @@ function compareVersions(a: string, b: string): number {
     : a.localeCompare(b, "en", { numeric: true });
 }
 
+/** Every version of each package after the release, and every advisory id. */
+function scannedAfter(after: ScannedPackage[]): {
+  versionsAfter: Map<string, string[]>;
+  idsAfter: Set<string>;
+} {
+  const versionsAfter = new Map<string, string[]>();
+  const idsAfter = new Set<string>();
+  for (const entry of after) {
+    if (entry.name)
+      versionsAfter.set(entry.name, [
+        ...(versionsAfter.get(entry.name) ?? []),
+        entry.version,
+      ]);
+    for (const advisory of entry.advisories)
+      for (const id of advisory.ids) idsAfter.add(id);
+  }
+  return { versionsAfter, idsAfter };
+}
+
 /**
  * The advisories against a package before the release that no package has
  * after: fixed by the release. One that is still there, against that package
@@ -539,17 +620,7 @@ export function fixedAdvisories(
   after: ScannedPackage[],
   production: Set<string>
 ): FixedAdvisory[] {
-  const versionsAfter = new Map<string, string[]>();
-  const idsAfter = new Set<string>();
-  for (const entry of after) {
-    if (entry.name)
-      versionsAfter.set(entry.name, [
-        ...(versionsAfter.get(entry.name) ?? []),
-        entry.version,
-      ]);
-    for (const advisory of entry.advisories)
-      for (const id of advisory.ids) idsAfter.add(id);
-  }
+  const { versionsAfter, idsAfter } = scannedAfter(after);
   const fixes = new Map<string, FixedAdvisory>();
   for (const entry of before) {
     if (!entry.name) continue;
@@ -602,13 +673,7 @@ export function securityFixes(
   } catch (error) {
     // JSON.parse quotes the text it chokes on: a scan holds the advisories
     // still open, which the public log must never show.
-    const reason =
-      error instanceof SyntaxError
-        ? "unreadable osv-scanner output"
-        : error instanceof Error
-          ? error.message
-          : String(error);
-    warn(`security section skipped: ${reason}`);
+    warn(`security section skipped: ${scanFailure(error)}`);
     return null;
   }
 }
@@ -636,6 +701,13 @@ function versionMove(fix: FixedAdvisory): string {
   return `${fix.from.join(", ")} → ${fix.to.length > 0 ? fix.to.join(", ") : "retiré"}`;
 }
 
+/** Why the scan failed, for the public log: never the scanner's output. */
+function scanFailure(error: unknown): string {
+  if (error instanceof SyntaxError) return "unreadable osv-scanner output";
+  if (error instanceof Error) return error.message;
+  return String(error);
+}
+
 /**
  * An advisory's summary, safe to print: one line, no HTML, no mention, no
  * emphasis (`__proto__`, a `**` glob), no heading or list, no character
@@ -652,19 +724,128 @@ function cleanSummary(summary: string): string {
     text = text.replaceAll("`", "'");
   const clean = escapeHtml(neutralizeMentions(text))
     .split(/(`[^`\n]*`)/)
-    .map((part, index) =>
-      index % 2 === 1
-        ? part
-        : part.replace(
-            /((?:https?:\/\/|ftp:\/\/|www\.)(?:(?!&[lg]t;)[^\s)])*[^\s).,;:!?&]|[\w.+-]+@[\w-]+(?:\.[\w-]+)+|\bGH-\d+)|[[\]*_~\\]|&(?!(?:lt|gt);)|#(?=\d)/gi,
-            (match, link) => (link ? `\`${link}\`` : `\\${match}`)
-          )
-    )
+    .map((part, index) => (index % 2 === 1 ? part : quoteLinks(part)))
     .join("");
   // Printed after a list marker: no heading, quote or list of its own.
   return clean.replace(/^(?:[#>+-]|\d+(?=[.)]))/, (start) =>
     /\d/.test(start) ? `${start}\\` : `\\${start}`
   );
+}
+
+// What GitHub would turn into a link: a URL (cut below), an address, `GH-123`.
+// In order: the first one found at a position wins.
+const URL_START = /(?:https?|ftp):\/\/[^\s)]*/gi;
+const WWW_START = /www\.[^\s)]*/gi;
+const ISSUE_REF = /\bGH-\d+/gi;
+const LOCAL_PART = /[\w.+-]/;
+const DOMAIN_LABEL = /[\w-]/;
+const URL_PREFIX = /^(?:(?:https?|ftp):\/\/|www\.)/i;
+// Markdown that would format the text, a character reference, an issue.
+const MARKUP = /[[\]*_~\\]|&(?!(?:lt|gt);)|#(?=\d)/g;
+
+/**
+ * A URL as GitHub reads it: up to an escaped `<` or `>`, without the
+ * punctuation ending a sentence. Empty when nothing is left after its prefix.
+ */
+function urlIn(candidate: string): string {
+  const prefix = URL_PREFIX.exec(candidate)![0].length;
+  const bracket = candidate.slice(prefix).search(/&[lg]t;/);
+  let url = bracket === -1 ? candidate : candidate.slice(0, prefix + bracket);
+  while (url.length > prefix && ".,;:!?&".includes(url.at(-1)!))
+    url = url.slice(0, -1);
+  return url.length > prefix ? url : "";
+}
+
+/** The first match of `pattern` from `from`, if any. */
+function firstMatch(pattern: RegExp, text: string, from: number) {
+  pattern.lastIndex = from;
+  const match = pattern.exec(text);
+  return match && { index: match.index, text: match[0] };
+}
+
+/** The end of a domain of two labels or more starting at `from`, or -1. */
+function domainEnd(text: string, from: number): number {
+  let end = from;
+  let labels = 0;
+  for (;;) {
+    let label = end;
+    while (label < text.length && DOMAIN_LABEL.test(text[label]!)) label++;
+    if (label === end) break;
+    labels++;
+    end = label;
+    if (text[end] !== "." || !DOMAIN_LABEL.test(text[end + 1] ?? "")) break;
+    end++;
+  }
+  return labels >= 2 ? end : -1;
+}
+
+/**
+ * The first e-mail address from `from`, read from each `@` outwards: no
+ * regular expression that backtracks over a long run of name characters.
+ */
+function firstAddress(text: string, from: number) {
+  for (
+    let at = text.indexOf("@", from);
+    at !== -1;
+    at = text.indexOf("@", at + 1)
+  ) {
+    let start = at;
+    while (start > from && LOCAL_PART.test(text[start - 1]!)) start--;
+    const end = start < at ? domainEnd(text, at + 1) : -1;
+    if (end !== -1) return { index: start, text: text.slice(start, end) };
+  }
+  return null;
+}
+
+/** The next text GitHub would turn into a link, from `from`. */
+export function nextLink(text: string, from: number) {
+  const found = [
+    firstMatch(URL_START, text, from),
+    firstMatch(WWW_START, text, from),
+    firstAddress(text, from),
+    firstMatch(ISSUE_REF, text, from),
+  ];
+  let next = null;
+  for (const link of found)
+    if (link && (!next || link.index < next.index)) next = link;
+  return next;
+}
+
+/** Links put in code spans, where they stay text; markup escaped. */
+function quoteLinks(text: string): string {
+  // Escapes the markup of text[from, to), reading past `to` for the
+  // lookaheads: a `#` just before an address still precedes a digit.
+  const escape = (from: number, to: number) => {
+    let out = "";
+    let last = from;
+    MARKUP.lastIndex = from;
+    for (
+      let mark = MARKUP.exec(text);
+      mark && mark.index < to;
+      mark = MARKUP.exec(text)
+    ) {
+      out += `${text.slice(last, mark.index)}\\${mark[0]}`;
+      last = mark.index + mark[0].length;
+    }
+    return out + text.slice(last, to);
+  };
+  let result = "";
+  let done = 0;
+  let from = 0;
+  for (let match = nextLink(text, from); match; match = nextLink(text, from)) {
+    const start = match.index;
+    const link = URL_PREFIX.test(match.text) ? urlIn(match.text) : match.text;
+    if (!link) {
+      // A URL prefix with nothing after it: plain text, read on from the
+      // next character.
+      from = start + 1;
+      continue;
+    }
+    result += `${escape(done, start)}\`${link}\``;
+    done = start + link.length;
+    from = done;
+  }
+  return result + escape(done, text.length);
 }
 
 /** An advisory's summary on one line. */
@@ -690,10 +871,8 @@ export function securitySection(fixes: FixedAdvisory[]): string {
     const text = [summary, severity ? `(gravité ${severity})` : ""]
       .filter(Boolean)
       .join(" ");
-    packages.set(head, [
-      ...(packages.get(head) ?? []),
-      `  - ${text ? `${text} : ` : ""}${links}`,
-    ]);
+    const line = text ? `  - ${text} : ${links}` : `  - ${links}`;
+    packages.set(head, [...(packages.get(head) ?? []), line]);
   }
   return [
     "## Sécurité",
@@ -738,24 +917,32 @@ function majorOf(version: string): number | null {
  */
 export function directVersions(lock: Lockfile): Map<string, PinnedVersion> {
   const direct = new Map<string, PinnedVersion>();
-  for (const [importer, kinds] of Object.entries(lock.importers)) {
+  for (const [importer, kinds] of Object.entries(lock.importers))
     for (const [kind, dependencies] of Object.entries(kinds)) {
       if (![...SHIPPED_KINDS, "devDependencies"].includes(kind)) continue;
       const shipped =
         SHIPPED_IMPORTERS.includes(importer) && SHIPPED_KINDS.includes(kind);
       const pinned = shipped ? "production" : "development";
-      for (const [name, resolved] of Object.entries(dependencies)) {
-        // An alias (`real@1.0.0`) is at the real package's version.
-        const version = withoutPeers(resolved).replace(/^.+@/, "");
-        if (majorOf(version) === null) continue;
-        const key = `${pinned}:${name}`;
-        const known = direct.get(key);
-        if (known && compareVersions(known.version, version) >= 0) continue;
-        direct.set(key, { name, version, kind: pinned });
-      }
+      for (const [name, resolved] of Object.entries(dependencies))
+        keepHighest(direct, name, resolved, pinned);
     }
-  }
   return direct;
+}
+
+/** Records a direct dependency, unless a higher version of it is known. */
+function keepHighest(
+  direct: Map<string, PinnedVersion>,
+  name: string,
+  resolved: string,
+  kind: "production" | "development"
+): void {
+  // An alias (`real@1.0.0`) is at the real package's version.
+  const version = withoutPeers(resolved).replace(/^.+@/, "");
+  if (majorOf(version) === null) return;
+  const key = `${kind}:${name}`;
+  const known = direct.get(key);
+  if (known && compareVersions(known.version, version) >= 0) return;
+  direct.set(key, { name, version, kind });
 }
 
 /**
@@ -770,9 +957,7 @@ export function runtimeVersions(
   const node = mise && /^node\s*=\s*(["'])([^"']+)\1/m.exec(mise)?.[2];
   if (node)
     runtime.set("Node.js", { name: "Node.js", version: node, kind: "runtime" });
-  const postgres =
-    compose &&
-    /^\s*image:\s*(?:[\w.-]+\/)*postgres:(\d[\d.]*)/m.exec(compose)?.[1];
+  const postgres = compose && postgresVersion(compose);
   if (postgres)
     runtime.set("PostgreSQL", {
       name: "PostgreSQL",
@@ -780,6 +965,18 @@ export function runtimeVersions(
       kind: "runtime",
     });
   return runtime;
+}
+
+/** The version of the first `image: …/postgres:<version>` of a compose file. */
+function postgresVersion(compose: string): string | undefined {
+  for (const line of compose.split("\n")) {
+    const image = /^[ \t]*image:[ \t]*(\S+)/.exec(line)?.[1];
+    if (!image) continue;
+    const [name, tag = ""] = image.split(":");
+    const version = /^\d[\d.]*/.exec(tag)?.[0];
+    if (name!.split("/").at(-1) === "postgres" && version) return version;
+  }
+  return undefined;
 }
 
 export interface MajorUpgrade {
@@ -823,7 +1020,7 @@ export function majorUpgrades(
   }
   const listed = new Set<string>();
   return upgrades
-    .sort(
+    .toSorted(
       (a, b) =>
         KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) ||
         a.name.localeCompare(b.name)

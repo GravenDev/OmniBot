@@ -17,6 +17,7 @@ import {
   majorsSection,
   moduleGlossary,
   neutralizeMentions,
+  nextLink,
   parseArgs,
   parseLockfile,
   parseScan,
@@ -31,6 +32,7 @@ import {
   summaryInput,
   unknownCommands,
   writeSummary,
+  yamlEntry,
   type FixedAdvisory,
   type ImageRef,
 } from "./release-notes.js";
@@ -706,7 +708,51 @@ snapshots:
   site@2.0.0: {}
 `;
 
+describe("links", () => {
+  it("finds links in order, an address read from its @ in linear time", () => {
+    expect(nextLink("see a.b+c@x.example.org.", 0)).toEqual({
+      index: 4,
+      text: "a.b+c@x.example.org",
+    });
+    expect(nextLink("see a.b+c@x.example.org.", 6)).toEqual({
+      index: 6,
+      text: "b+c@x.example.org",
+    });
+    expect(nextLink("x@localhost then gh-12", 0)).toEqual({
+      index: 17,
+      text: "gh-12",
+    });
+    expect(nextLink("www.a@b.c", 0)).toEqual({ index: 0, text: "www.a@b.c" });
+    expect(nextLink("no link here", 0)).toBeNull();
+    const started = performance.now();
+    expect(nextLink(`${"a".repeat(100_000)} @`, 0)).toBeNull();
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+});
+
 describe("lockfile", () => {
+  it("reads an entry the way pnpm writes it, and nothing else", () => {
+    expect(yamlEntry("  'a:b''c': '1.0.0'")).toEqual({
+      depth: 2,
+      key: "a:b'c",
+      value: "1.0.0",
+    });
+    expect(yamlEntry("    name@https://x.test/a.tgz: 2.0.0")).toEqual({
+      depth: 4,
+      key: "name@https://x.test/a.tgz",
+      value: "2.0.0",
+    });
+    expect(yamlEntry("snapshots:")).toEqual({
+      depth: 0,
+      key: "snapshots",
+      value: "",
+    });
+    expect(yamlEntry("#a: b")).toEqual({ depth: 0, key: "#a", value: "b" });
+    // No key, a list item, a tab indent, a colon without its space.
+    for (const line of [":", "  - x: 1", "\tkey: 1", "key:1", ""])
+      expect(yamlEntry(line), line).toBeNull();
+  });
+
   it("reads the importers and the snapshots of every document", () => {
     const lock = parseLockfile(LOCKFILE);
     expect(lock.importers["."]).toMatchObject({
@@ -985,6 +1031,22 @@ describe("security fixes", () => {
     expect(section).toContain("- **`@scope/pkg`** 7.1.0 → 7.2.0");
     expect(section).toContain(
       "  - Pollution via \\_\\_proto\\_\\_ in \\*\\*/\\*.js or \\~x\\~, see `www.example.test`, `a_b@example.test` and `__x__` : "
+    );
+  });
+
+  it("escapes a # before a link, and keeps a URL off its closing punctuation", () => {
+    const section = securitySection([
+      fix({
+        advisory: {
+          ids: ["GHSA-fix0-0000-0000"],
+          summary:
+            "Seen as #1a@example.test, see https://e.test/a&lt;b and www.e.test.",
+          severity: null,
+        },
+      }),
+    ]);
+    expect(section).toContain(
+      "  - Seen as \\#`1a@example.test`, see `https://e.test/a`&lt;b and `www.e.test`. : "
     );
   });
 
