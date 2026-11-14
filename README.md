@@ -228,9 +228,20 @@ Once the images of a tag are published, CI creates its GitHub Release
    Without the key or the model, or when the call fails, the answer is not
    valid JSON or names a command the changelog does not, the release goes out
    without it. Each call is capped at 8000 output tokens.
-2. **Images Docker** — `ghcr.io/gravendev/omnibot` and `omnibot-migrator` at the
+2. **Sécurité** — the known vulnerabilities of the dependencies, transitive
+   ones included, that the version fixes: [osv-scanner](https://google.github.io/osv-scanner/)
+   (version pinned in `.mise.toml`) scans `pnpm-lock.yaml` at the previous tag
+   and at the tag, and an advisory found before and gone after is listed with
+   the package, its versions before and after, and its GHSA, CVE or `MAL-`
+   ids. Those in what the images ship are also given to the summary;
+   development tooling is marked as such. An advisory the version brings in is
+   never printed, the repository being public. Computed when the release is
+   made, never in a commit, so a fix is not announced before the release that
+   ships it. Without fixed advisories, or when osv-scanner fails, there is no
+   section.
+3. **Images Docker** — `ghcr.io/gravendev/omnibot` and `omnibot-migrator` at the
    version's tag, pinned by digest.
-3. **Changelog technique** — the commits since the previous release, grouped
+4. **Changelog technique** — the commits since the previous release, grouped
    by conventional-commit type by [git-cliff](https://git-cliff.org)
    (`cliff.toml`, version pinned in `.mise.toml`). A release counts from the
    previous release, a prerelease from the previous tag of any kind.
@@ -239,7 +250,8 @@ A tag with a `-` gets a prerelease. Re-running the workflow on a tag replaces
 the notes of its release; nothing ever creates or moves a tag (`gh release
 create --verify-tag`).
 
-To preview the notes of a tag locally (`mise install` provides git-cliff):
+To preview the notes of a tag locally (`mise install` provides git-cliff and
+osv-scanner):
 
 ```bash
 node scripts/release-notes.ts --tag v0.22.0 --no-ai
