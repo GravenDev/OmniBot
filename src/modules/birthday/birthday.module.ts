@@ -2,6 +2,7 @@ import { GatewayIntentBits, Partials } from "discord.js";
 import configService from "#core/services/config.service.js";
 import { loggerMaker } from "#lib/logger.js";
 import { defineModule } from "#lib/module.js";
+import type { ScheduledTask } from "#lib/task.js";
 import { birthdayConfigSchema } from "./birthday.config.js";
 import birthdayAdminCommand from "./commands/birthday-admin.command.js";
 import birthdayCommand from "./commands/birthday.command.js";
@@ -11,7 +12,7 @@ import birthdayService from "./services/birthday.service.js";
 import { logFailure } from "./services/failures.js";
 import { dropBirthdayRole } from "./services/role.js";
 import { uninstallWarning } from "./services/uninstall.js";
-import { birthdayTasks } from "./tasks.js";
+import { birthdayMaintenanceTasks, birthdayTasks } from "./tasks.js";
 
 const logger = loggerMaker("birthday");
 
@@ -25,10 +26,11 @@ const birthdayModule = defineModule({
 
   config: birthdayConfigSchema,
 
-  // GuildMembers (privileged) to see departures, to list the members to catch
-  // up on those missed while the bot was down, and those of a role for
-  // `/birthday stats`. GuildVoiceStates (not privileged) for the people in a
-  // voice channel, in `/birthday stats` too.
+  // GuildMembers (privileged) to see departures as they happen (the
+  // `sweep-departures` maintenance task catches up the others, even without
+  // it), to list the members for the daily announcements, and those of a
+  // role for `/birthday stats`. GuildVoiceStates (not privileged) for the
+  // people in a voice channel, in `/birthday stats` too.
   intents: [
     GatewayIntentBits.Guilds,
     GatewayIntentBits.GuildMembers,
@@ -60,6 +62,9 @@ const birthdayModule = defineModule({
   },
 
   uninstallWarning,
+
+  maintenanceTasks: (): ScheduledTask[] =>
+    birthdayMaintenanceTasks(birthdayModule.id),
 
   // Like /birthday remove: a birthday no longer announced takes its role back.
   // The role is best effort, the daily run takes it back otherwise: only the

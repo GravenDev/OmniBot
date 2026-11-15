@@ -15,6 +15,7 @@ describe("maintenance tasks of the shipped modules", async () => {
   // module that fails to import is skipped too, not thrown: its row fails.
   // Deletions done by a listener or on uninstall are not checked here.
   it.each([
+    ["birthday", "sweep-departures"],
     ["reports", "purge"],
     ["rngdle", "cards"],
     ["seniority", "sweep-departures"],

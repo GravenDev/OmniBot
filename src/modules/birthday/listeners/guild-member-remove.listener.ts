@@ -6,7 +6,8 @@ import birthdayService from "../services/birthday.service.js";
 const logger = loggerMaker("birthday");
 
 // A member who leaves takes their birthday with them. Departures the bot
-// misses (while down) are caught by the daily run.
+// misses (while down, or the module skipped) are caught by the daily
+// `sweep-departures` maintenance task.
 export default declareEventListener<"guildMemberRemove", BirthdayConfigSchema>({
   eventType: "guildMemberRemove",
   async execute(member, config) {
