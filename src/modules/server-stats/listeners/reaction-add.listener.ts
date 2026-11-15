@@ -1,6 +1,6 @@
 import { declareEventListener } from "#lib/listener.js";
 import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
-import { collectReaction } from "#modules/server-stats/services/collector.js";
+import { collectReaction } from "#modules/server-stats/services/collector.service.js";
 
 export default declareEventListener<
   "messageReactionAdd",
