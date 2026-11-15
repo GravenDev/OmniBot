@@ -5,7 +5,7 @@ import type {
   ChannelRecordSource,
 } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
-import { missingBotPermissions } from "#lib/permissions.js";
+import { missingBotPermissionNames } from "#lib/permissions.js";
 import { cleanName, parseUserLimit } from "./naming.js";
 import { REQUIRED_PERMISSIONS } from "./permissions.js";
 import store from "./store.js";
@@ -35,19 +35,18 @@ export async function saveHub(
   if (userLimit === null) {
     return { ok: false, message: t("hub.invalidLimit") };
   }
-  const missing = await missingBotPermissions(
+  const missing = await missingBotPermissionNames(
     guild,
     channel.parent ?? channel,
-    REQUIRED_PERMISSIONS
+    REQUIRED_PERMISSIONS,
+    t
   );
-  if (missing.length > 0) {
+  if (missing) {
     return {
       ok: false,
       message: t("hub.missingPermissions", {
         channel: `<#${channel.id}>`,
-        permissions: missing
-          .map((permission) => t(`permission.${permission}`))
-          .join(", "),
+        permissions: missing,
       }),
     };
   }

@@ -16,6 +16,7 @@ import type { TFunction } from "#lib/i18n.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { fetchMember } from "#lib/moderation.js";
+import { missingBotPermissions } from "#lib/permissions.js";
 import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
 import { RenameLimiter, renderName } from "./naming.js";
 import {
@@ -324,11 +325,12 @@ export function joinHub(
       return;
     }
 
-    const me = await botMember(guild);
     const parent = hubChannel.parent;
-    const missing = (parent ?? hubChannel)
-      .permissionsFor(me)
-      ?.missing(REQUIRED_PERMISSIONS) ?? [...REQUIRED_PERMISSIONS];
+    const missing = await missingBotPermissions(
+      guild,
+      parent ?? hubChannel,
+      REQUIRED_PERMISSIONS
+    );
     if (missing.length > 0) {
       logger.warn(
         `Missing permissions | guildId = ${guild.id} | hubId = ${hubChannel.id} | userId = ${member.id} | missing = ${missing.join(",")}`

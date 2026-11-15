@@ -100,7 +100,7 @@ Shared code lives in `src/lib/` (imported as `#lib/…`), plus `src/core/utils/`
 | `#lib/moderation.js`       | `fetchMember` (null when gone), `isBanned`                                                                           |
 | `#lib/module.js`           | `defineModule`                                                                                                       |
 | `#lib/pagination.js`       | `pageRow`: previous / next buttons                                                                                   |
-| `#lib/permissions.js`      | `missingBotPermissions`, `canReplyWithFile`                                                                          |
+| `#lib/permissions.js`      | `missingBotPermissions`, `missingBotPermissionNames` (named for a refusal), `canReplyWithFile`                       |
 | `#lib/players.js`          | `resolvePlayers`: member names and avatars for leaderboards                                                          |
 | `#lib/post-card.js`        | `postCard` (image, text if refused), `celebrationMessage`                                                            |
 | `#lib/preview.js`          | sample images for `pnpm render-preview`                                                                              |
