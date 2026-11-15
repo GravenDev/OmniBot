@@ -18,7 +18,7 @@ vi.mock("#modules/server-stats/services/store.service.js", () => ({
   default: { startedAt: mocks.startedAt },
 }));
 vi.mock("#modules/server-stats/services/views.service.js", () => ({
-  statsReport: mocks.statsReport,
+  default: { statsReport: mocks.statsReport },
 }));
 
 const { default: command } = await import("./server-stats.command.js");

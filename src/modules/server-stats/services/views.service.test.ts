@@ -31,7 +31,7 @@ vi.mock("./report-assets.service.js", () => ({
   default: { fetch: mocks.fetchAssets },
 }));
 
-const { statsReport } = await import("./views.service.js");
+const { default: views } = await import("./views.service.js");
 
 const guild = { id: "guild-1" } as Guild;
 // Friday 30 October 2026, 14:32 in Paris.
@@ -84,7 +84,7 @@ describe("statsReport", () => {
       )
     );
 
-    await statsReport(guild, { from: yesterday, to: yesterday }, options);
+    await views.statsReport(guild, { from: yesterday, to: yesterday }, options);
 
     expect(mocks.dailyStats).toHaveBeenCalledWith("guild-1", yesterday);
     expect(mocks.history).toHaveBeenCalledWith(
@@ -102,7 +102,7 @@ describe("statsReport", () => {
   });
 
   it("compares nothing on a day still going, and says until when it counts", async () => {
-    await statsReport(guild, { from: today, to: today }, options);
+    await views.statsReport(guild, { from: today, to: today }, options);
 
     expect(mocks.dailyStats).toHaveBeenCalledWith("guild-1", today);
     expect(mocks.history).not.toHaveBeenCalled();
@@ -117,7 +117,7 @@ describe("statsReport", () => {
 
   it("adds the days of a period up, without comparing them", async () => {
     const from = new Date("2026-10-23T00:00:00Z");
-    await statsReport(guild, { from, to: yesterday }, options);
+    await views.statsReport(guild, { from, to: yesterday }, options);
 
     expect(mocks.periodStats).toHaveBeenCalledWith("guild-1", from, yesterday);
     expect(mocks.dailyStats).not.toHaveBeenCalled();
@@ -132,14 +132,18 @@ describe("statsReport", () => {
 
   it("counts a period ending today up to now", async () => {
     const from = new Date("2026-10-23T00:00:00Z");
-    await statsReport(guild, { from, to: today }, options);
+    await views.statsReport(guild, { from, to: today }, options);
     expect(context()).toMatchObject({ until: now });
   });
 
   it("returns null before counting started", async () => {
     mocks.dailyStats.mockResolvedValueOnce(null);
     expect(
-      await statsReport(guild, { from: yesterday, to: yesterday }, options)
+      await views.statsReport(
+        guild,
+        { from: yesterday, to: yesterday },
+        options
+      )
     ).toBeNull();
     expect(mocks.renderReport).not.toHaveBeenCalled();
   });
@@ -152,7 +156,7 @@ describe("statsReport", () => {
         count: 10 - index,
       })),
     });
-    await statsReport(
+    await views.statsReport(
       guild,
       { from: yesterday, to: yesterday },
       {
@@ -169,7 +173,7 @@ describe("statsReport", () => {
   it("draws the report with what Discord holds for it, members only when shown", async () => {
     const assets = { icon: null, emojis: new Map(), players: new Map() };
     mocks.fetchAssets.mockResolvedValueOnce(assets);
-    await statsReport(
+    await views.statsReport(
       guild,
       { from: yesterday, to: yesterday },
       { ...options, showTopMembers: false }

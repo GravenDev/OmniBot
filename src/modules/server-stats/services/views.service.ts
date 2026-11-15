@@ -1,5 +1,6 @@
 import type { Guild } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
+import { declareService, type Service } from "#lib/service.js";
 import { dayOf, RETENTION_DAYS } from "#modules/server-stats/day.js";
 import {
   compare,
@@ -44,44 +45,48 @@ async function comparison(
   return { insights: compare(stats, previous), comparedDays: previous.length };
 }
 
-// The report of one day, or of several added up. Only a past day is compared
-// with the days before it: the live counters of a day still going would be
-// set against whole days, and the sums of several days against single ones.
-export async function statsReport(
-  guild: Guild,
-  { from, to }: Selection,
-  { now, channelShown, showTopMembers, t, locale }: ViewOptions
-): Promise<Report | null> {
-  const single = from.getTime() === to.getTime();
-  const counted = single
-    ? await store.dailyStats(guild.id, from)
-    : await store.periodStats(guild.id, from, to);
-  if (!counted) {
-    return null;
+class ViewsService implements Service {
+  // The report of one day, or of several added up. Only a past day is compared
+  // with the days before it: the live counters of a day still going would be
+  // set against whole days, and the sums of several days against single ones.
+  async statsReport(
+    guild: Guild,
+    { from, to }: Selection,
+    { now, channelShown, showTopMembers, t, locale }: ViewOptions
+  ): Promise<Report | null> {
+    const single = from.getTime() === to.getTime();
+    const counted = single
+      ? await store.dailyStats(guild.id, from)
+      : await store.periodStats(guild.id, from, to);
+    if (!counted) {
+      return null;
+    }
+    // Their messages stay in the totals; only their names are left out.
+    const stats = {
+      ...counted,
+      topChannels: counted.topChannels
+        .filter((channel) => channelShown(channel.id))
+        .slice(0, TOP_SIZE),
+    };
+    const going = to.getTime() === dayOf(now).getTime();
+    const context: ReportContext = {
+      day: from,
+      lastDay: to,
+      until: going ? now : null,
+      ...(single && !going
+        ? await comparison(guild.id, from, stats)
+        : { insights: NO_INSIGHTS, comparedDays: 0 }),
+      showTopMembers,
+      t,
+      locale,
+    };
+    return renderReport(
+      guild,
+      stats,
+      context,
+      await reportAssets.fetch(guild, stats, showTopMembers)
+    );
   }
-  // Their messages stay in the totals; only their names are left out.
-  const stats = {
-    ...counted,
-    topChannels: counted.topChannels
-      .filter((channel) => channelShown(channel.id))
-      .slice(0, TOP_SIZE),
-  };
-  const going = to.getTime() === dayOf(now).getTime();
-  const context: ReportContext = {
-    day: from,
-    lastDay: to,
-    until: going ? now : null,
-    ...(single && !going
-      ? await comparison(guild.id, from, stats)
-      : { insights: NO_INSIGHTS, comparedDays: 0 }),
-    showTopMembers,
-    t,
-    locale,
-  };
-  return renderReport(
-    guild,
-    stats,
-    context,
-    await reportAssets.fetch(guild, stats, showTopMembers)
-  );
 }
+
+export default declareService(new ViewsService());
