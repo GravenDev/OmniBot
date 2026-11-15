@@ -10,7 +10,7 @@ import { logFailure } from "./failures.js";
 import announceButton from "./interactions/announce.button.js";
 import guildMemberRemoveListener from "./listeners/guild-member-remove.listener.js";
 import birthdayService from "./services/birthday.service.js";
-import { dropBirthdayRole } from "./services/role.service.js";
+import roleService from "./services/role.service.js";
 import { birthdayMaintenanceTasks, birthdayTasks } from "./tasks.js";
 
 const logger = loggerMaker("birthday");
@@ -76,7 +76,7 @@ const birthdayModule = defineModule({
           birthdayModule,
           guildId
         );
-        await dropBirthdayRole(config, guildId, userId);
+        await roleService.drop(config, guildId, userId);
       } catch (err) {
         logFailure(
           err,

@@ -9,7 +9,7 @@ import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { BirthdayConfigSchema } from "#modules/birthday/birthday.config.js";
 import birthdayService from "#modules/birthday/services/birthday.service.js";
-import { dropBirthdayRole } from "#modules/birthday/services/role.service.js";
+import roleService from "#modules/birthday/services/role.service.js";
 
 const logger = loggerMaker("birthday");
 
@@ -55,7 +55,7 @@ export default declareCommand<BirthdayConfigSchema>({
       logger.info(
         `Birthday removed | guildId = ${interaction.guildId} | userId = ${member.id} | by = ${interaction.user.id}`
       );
-      await dropBirthdayRole(config, interaction.guildId, member.id);
+      await roleService.drop(config, interaction.guildId, member.id);
     }
     await interaction.reply({
       content: config.t(removed ? "admin.remove.done" : "admin.remove.none", {

@@ -28,10 +28,10 @@ import { renderStatsCard } from "#modules/birthday/rendering/stats-card.js";
 import birthdayService, {
   type BirthdayEntry,
 } from "#modules/birthday/services/birthday.service.js";
-import { resolveGroup } from "#modules/birthday/services/group.service.js";
-import { checkMilestones } from "#modules/birthday/services/milestones.service.js";
-import { dropBirthdayRole } from "#modules/birthday/services/role.service.js";
-import { birthdayTwins } from "#modules/birthday/services/twins.service.js";
+import groupService from "#modules/birthday/services/group.service.js";
+import milestonesService from "#modules/birthday/services/milestones.service.js";
+import roleService from "#modules/birthday/services/role.service.js";
+import twinsService from "#modules/birthday/services/twins.service.js";
 import {
   birthdayStats,
   statsCardLabels,
@@ -90,7 +90,7 @@ async function setBirthday(interaction: GuildInteraction, config: Config) {
     `Birthday set | guildId = ${interaction.guildId} | userId = ${entry.userId}`
   );
   if (!entry.announce) {
-    await dropBirthdayRole(config, interaction.guildId, entry.userId);
+    await roleService.drop(config, interaction.guildId, entry.userId);
   }
 
   const entries = await birthdayService.list(interaction.guildId);
@@ -98,18 +98,20 @@ async function setBirthday(interaction: GuildInteraction, config: Config) {
     ...ownBirthdaySheet(
       config,
       entry,
-      await birthdayTwins(interaction, entry, entries),
+      await twinsService.of(interaction, entry, entries),
       "set"
     ),
     allowedMentions: NO_MENTIONS,
   });
 
-  await checkMilestones(interaction.guildId, config).catch((err: unknown) =>
-    logger.error(
-      { err },
-      `Failed to check the paradox milestones | guildId = ${interaction.guildId}`
-    )
-  );
+  await milestonesService
+    .check(interaction.guildId, config)
+    .catch((err: unknown) =>
+      logger.error(
+        { err },
+        `Failed to check the paradox milestones | guildId = ${interaction.guildId}`
+      )
+    );
 }
 
 async function showBirthday(interaction: GuildInteraction, config: Config) {
@@ -129,7 +131,7 @@ async function showBirthday(interaction: GuildInteraction, config: Config) {
     ...ownBirthdaySheet(
       config,
       entry,
-      await birthdayTwins(interaction, entry, entries)
+      await twinsService.of(interaction, entry, entries)
     ),
     allowedMentions: NO_MENTIONS,
   });
@@ -144,7 +146,7 @@ async function removeBirthday(interaction: GuildInteraction, config: Config) {
     logger.info(
       `Birthday removed | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
     );
-    await dropBirthdayRole(config, interaction.guildId, interaction.user.id);
+    await roleService.drop(config, interaction.guildId, interaction.user.id);
   }
   await replyPrivately(
     interaction,
@@ -273,7 +275,7 @@ async function showStats(interaction: GuildInteraction, config: Config) {
     const guild =
       interaction.guild ??
       (await interaction.client.guilds.fetch(interaction.guildId));
-    const resolved = await resolveGroup(guild, selection);
+    const resolved = await groupService.resolve(guild, selection);
     if (!resolved) {
       await reply(config.t("stats.group.missing"));
       return;

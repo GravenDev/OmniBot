@@ -54,7 +54,7 @@ vi.mock("#modules/birthday/rendering/birthday-calendar.js", () => ({
 }));
 vi.mock("#lib/imaging.js", () => ({ fetchAvatar: async () => null }));
 
-const { runAllGuildDays, runGuildDay } = await import("./daily.service.js");
+const { default: daily } = await import("./daily.service.js");
 
 const module = { id: "birthday" } as unknown as Module<BirthdayConfigSchema>;
 
@@ -136,7 +136,7 @@ beforeEach(() => {
 describe("runGuildDay", () => {
   it("waits for the announcement hour", async () => {
     const { client, send } = setup({ hour: 10 });
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(service.claimDay).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
   });
@@ -144,7 +144,7 @@ describe("runGuildDay", () => {
   it("runs once per local day", async () => {
     service.claimDay.mockResolvedValue(false);
     const { client, send } = setup();
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(service.claimDay).toHaveBeenCalledWith("guild-1", "2026-10-16");
     expect(send).not.toHaveBeenCalled();
   });
@@ -153,7 +153,7 @@ describe("runGuildDay", () => {
   // gone: the `sweep-departures` maintenance task decides on deletions.
   it("wishes today's birthdays of the members still here, deleting none", async () => {
     const { client, send } = setup({ messages: ["Bravo {user} !"] });
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
 
     // The service mock has no deletion: calling one would fail the wishes.
     expect(send).toHaveBeenCalledTimes(1);
@@ -188,7 +188,7 @@ describe("runGuildDay", () => {
       extension: "png",
     });
     const { client, send } = setup();
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     const [{ files }] = send.mock.calls[0] as unknown as [
       { files: { name: string }[] },
     ];
@@ -197,12 +197,12 @@ describe("runGuildDay", () => {
 
   it("loops the card, or plays it once when the server asks", async () => {
     const { client } = setup();
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(renderCelebrationImage.mock.calls.at(-1)![1]).toEqual({
       loop: true,
     });
     const once = setup({ loopCard: false });
-    await runGuildDay(once.client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(once.client, module, "guild-1", NINE_IN_PARIS);
     expect(renderCelebrationImage.mock.calls.at(-1)![1]).toEqual({
       loop: false,
     });
@@ -211,7 +211,7 @@ describe("runGuildDay", () => {
   it("falls back to the text wish when the card cannot be drawn", async () => {
     renderCelebrationImage.mockRejectedValue(new Error("no canvas"));
     const { client, send } = setup({ messages: ["Bravo {user} !"] });
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(send).toHaveBeenCalledWith({
       content: "Bravo <@alice> !",
       allowedMentions: { users: ["alice"] },
@@ -230,7 +230,7 @@ describe("runGuildDay", () => {
         {}
       )
     );
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(send).toHaveBeenCalledTimes(2);
     expect(send).toHaveBeenLastCalledWith({
       content: expect.stringContaining("<@alice>"),
@@ -249,7 +249,7 @@ describe("runGuildDay", () => {
     for (const id of ids) {
       members.set(id, member(id, "2024-01-01T08:00:00Z"));
     }
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     const posts = (
       send.mock.calls as unknown as [
         {
@@ -289,7 +289,7 @@ describe("runGuildDay", () => {
     for (const id of ids) {
       members.set(id, member(id, "2024-01-01T08:00:00Z"));
     }
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     const posts = (
       send.mock.calls as unknown as [
         {
@@ -320,7 +320,7 @@ describe("runGuildDay", () => {
       { userId: "quiet", day: 16, month: 10, announce: true },
     ]);
     const { client, send } = setup();
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(send).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({ allowedMentions: { users: [] } })
@@ -345,7 +345,7 @@ describe("runGuildDay", () => {
         "fr"
       )
     );
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(yesterday.roles.remove).toHaveBeenCalledWith(role);
     expect(members.get("alice")!.roles.add).toHaveBeenCalledWith(role);
     expect(members.get("quiet")!.roles.add).not.toHaveBeenCalled();
@@ -367,7 +367,7 @@ describe("runGuildDay", () => {
         "fr"
       )
     );
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(members.get("alice")!.roles.add).toHaveBeenCalledWith(role);
   });
 
@@ -375,7 +375,7 @@ describe("runGuildDay", () => {
     const { client, guild, send } = setup();
     guild.members.fetch.mockRejectedValue(new Error("timeout"));
     await expect(
-      runGuildDay(client, module, "guild-1", NINE_IN_PARIS)
+      daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS)
     ).rejects.toThrow("timeout");
     expect(service.claimDay).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
@@ -388,7 +388,7 @@ describe("runGuildDay", () => {
       firstCollisionCount: null,
     });
     const { client, guild, send } = setup();
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(guild.members.fetch).not.toHaveBeenCalled();
     expect(service.claimDay).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
@@ -399,14 +399,14 @@ describe("runAllGuildDays", () => {
   it("skips a guild the bot left", async () => {
     const { client, send } = setup();
     client.guilds.cache.clear();
-    await runAllGuildDays(client, module, NINE_IN_PARIS);
+    await daily.runAllGuildDays(client, module, NINE_IN_PARIS);
     expect(getConfigForModuleIn).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
   });
 
   it("runs the day of each guild the bot is on", async () => {
     const { client, send } = setup();
-    await runAllGuildDays(client, module, NINE_IN_PARIS);
+    await daily.runAllGuildDays(client, module, NINE_IN_PARIS);
     expect(service.claimDay).toHaveBeenCalledWith("guild-1", "2026-10-16");
     expect(send).toHaveBeenCalled();
   });
@@ -442,7 +442,7 @@ describe("monthly calendar", () => {
 
   it("is posted on the 1st after the wishes, without hidden or departed members", async () => {
     const { client, send } = setup();
-    await runGuildDay(client, module, "guild-1", FIRST_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", FIRST_IN_PARIS);
 
     expect(send).toHaveBeenCalledTimes(2);
     const [{ days }] = renderBirthdayCalendar.mock.calls[0] as [
@@ -461,14 +461,14 @@ describe("monthly calendar", () => {
 
   it("is only posted on the 1st", async () => {
     const { client, send } = setup();
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(renderBirthdayCalendar).not.toHaveBeenCalled();
     expect(calendarPost(send)).toBeUndefined();
   });
 
   it("is not posted when disabled, nor when nobody is shown", async () => {
     const { client, send } = setup({ monthlyCalendar: false });
-    await runGuildDay(client, module, "guild-1", FIRST_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", FIRST_IN_PARIS);
     expect(calendarPost(send)).toBeUndefined();
 
     service.list.mockResolvedValue([
@@ -476,7 +476,7 @@ describe("monthly calendar", () => {
       { userId: "gone", day: 5, month: 11, announce: true },
     ]);
     const other = setup();
-    await runGuildDay(other.client, module, "guild-1", FIRST_IN_PARIS);
+    await daily.runGuildDay(other.client, module, "guild-1", FIRST_IN_PARIS);
     expect(other.send).not.toHaveBeenCalled();
   });
 
@@ -486,7 +486,7 @@ describe("monthly calendar", () => {
     });
     const { client, send } = setup();
     await expect(
-      runGuildDay(client, module, "guild-1", FIRST_IN_PARIS)
+      daily.runGuildDay(client, module, "guild-1", FIRST_IN_PARIS)
     ).resolves.toBeUndefined();
     expect(send).toHaveBeenCalledTimes(1);
     expect(
@@ -499,7 +499,7 @@ describe("monthly calendar", () => {
       .mockResolvedValueOnce({})
       .mockRejectedValueOnce(new Error("refused"));
     await expect(
-      runGuildDay(other.client, module, "guild-1", FIRST_IN_PARIS)
+      daily.runGuildDay(other.client, module, "guild-1", FIRST_IN_PARIS)
     ).resolves.toBeUndefined();
     expect(other.send).toHaveBeenCalledTimes(2);
   });
@@ -511,7 +511,7 @@ describe("monthly calendar", () => {
     });
     const { client, send } = setup();
     send.mockRejectedValueOnce(new Error("network"));
-    await runGuildDay(client, module, "guild-1", FIRST_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", FIRST_IN_PARIS);
     expect(calendarPost(send)).toBeDefined();
   });
 });

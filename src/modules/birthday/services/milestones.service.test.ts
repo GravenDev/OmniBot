@@ -15,7 +15,7 @@ const service = vi.hoisted(() => ({
 }));
 vi.mock("./birthday.service.js", () => ({ default: service }));
 
-const { checkMilestones } = await import("./milestones.service.js");
+const { default: milestones } = await import("./milestones.service.js");
 
 function entries(count: number, shareFirst = false) {
   return Array.from({ length: count }, (_, index) => ({
@@ -55,11 +55,11 @@ beforeEach(() => {
   });
 });
 
-describe("checkMilestones", () => {
+describe("check", () => {
   it("does nothing below the milestones", async () => {
     service.list.mockResolvedValue(entries(5));
     const { config: provider, send } = config();
-    await checkMilestones("guild", provider);
+    await milestones.check("guild", provider);
     expect(service.recordMilestones).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
   });
@@ -67,7 +67,7 @@ describe("checkMilestones", () => {
   it("records and announces the first shared date with its rank", async () => {
     service.list.mockResolvedValue(entries(14, true));
     const { config: provider, send } = config();
-    await checkMilestones("guild", provider);
+    await milestones.check("guild", provider);
     expect(service.recordMilestones).toHaveBeenCalledWith(
       "guild",
       ["first-collision"],
@@ -88,7 +88,7 @@ describe("checkMilestones", () => {
   it("records without announcing when the guild turned it off", async () => {
     service.list.mockResolvedValue(entries(23));
     const { config: provider, send } = config({ paradoxMilestones: false });
-    await checkMilestones("guild", provider);
+    await milestones.check("guild", provider);
     expect(service.recordMilestones).toHaveBeenCalledWith(
       "guild",
       ["half"],

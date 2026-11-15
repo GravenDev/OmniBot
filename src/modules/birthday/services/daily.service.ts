@@ -17,6 +17,7 @@ import { allMembers } from "#lib/guild-members.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { celebrationMessage, postCard } from "#lib/post-card.js";
+import { declareService, type Service } from "#lib/service.js";
 import {
   announcedCelebrants,
   birthdayCard,
@@ -29,7 +30,7 @@ import {
 import type { BirthdayConfigSchema } from "#modules/birthday/birthday.config.js";
 import { logFailure } from "#modules/birthday/failures.js";
 import birthdayService from "./birthday.service.js";
-import { postMonthlyCalendar } from "./calendar.service.js";
+import calendarService from "./calendar.service.js";
 import portraitsService from "./portraits.service.js";
 
 const logger = loggerMaker("birthday");
@@ -205,55 +206,69 @@ async function announceBirthdays(
   );
 }
 
-/**
- * Posts the day's birthdays once the guild's announcement hour is reached, at
- * most once per guild-local day. A day missed while the bot was down is not
- * caught up the next day.
- */
-export async function runGuildDay(
-  client: Client<true>,
-  module: Module<BirthdayConfigSchema>,
-  guildId: string,
-  now: Date
-): Promise<void> {
-  const config = await configService.getConfigForModuleIn(module, guildId);
-  const { lastDay } = await birthdayService.getState(guildId);
-  const day = dueDay(now, config.get("timeZone"), config.get("hour"), lastDay);
-  if (day === null) {
-    return;
+class DailyService implements Service {
+  /**
+   * Posts the day's birthdays once the guild's announcement hour is reached, at
+   * most once per guild-local day. A day missed while the bot was down is not
+   * caught up the next day.
+   */
+  async runGuildDay(
+    client: Client<true>,
+    module: Module<BirthdayConfigSchema>,
+    guildId: string,
+    now: Date
+  ): Promise<void> {
+    const config = await configService.getConfigForModuleIn(module, guildId);
+    const { lastDay } = await birthdayService.getState(guildId);
+    const day = dueDay(
+      now,
+      config.get("timeZone"),
+      config.get("hour"),
+      lastDay
+    );
+    if (day === null) {
+      return;
+    }
+
+    // Fetched before the day is claimed: when Discord does not answer, the
+    // next hour tries again instead of losing the day.
+    const guild = await client.guilds.fetch(guildId);
+    const members = await allMembers(guild);
+    if (!(await birthdayService.claimDay(guildId, day))) {
+      return;
+    }
+    const today = localTime(now, config.get("timeZone"));
+    await announceBirthdays(guild, config, members, today).catch(
+      (err: unknown) =>
+        logFailure(
+          err,
+          `Failed to announce the birthdays | guildId = ${guildId}`
+        )
+    );
+    // After the wishes, and on its own: a calendar is not worth losing them.
+    await calendarService
+      .postMonthly(guildId, config, members, today)
+      .catch((err: unknown) =>
+        logFailure(
+          err,
+          `Failed to post the birthday calendar | guildId = ${guildId}`
+        )
+      );
+    logger.info(`Day announced | guildId = ${guildId} | day = ${day}`);
   }
 
-  // Fetched before the day is claimed: when Discord does not answer, the
-  // next hour tries again instead of losing the day.
-  const guild = await client.guilds.fetch(guildId);
-  const members = await allMembers(guild);
-  if (!(await birthdayService.claimDay(guildId, day))) {
-    return;
+  async runAllGuildDays(
+    client: Client<true>,
+    module: Module<BirthdayConfigSchema>,
+    now = new Date()
+  ): Promise<void> {
+    await forEachGuild(
+      client,
+      await moduleService.getActivatedGuildIds(module.id),
+      (guild) => this.runGuildDay(client, module, guild.id, now),
+      { action: "run the day", logger }
+    );
   }
-  const today = localTime(now, config.get("timeZone"));
-  await announceBirthdays(guild, config, members, today).catch((err: unknown) =>
-    logFailure(err, `Failed to announce the birthdays | guildId = ${guildId}`)
-  );
-  // After the wishes, and on its own: a calendar is not worth losing them.
-  await postMonthlyCalendar(guildId, config, members, today).catch(
-    (err: unknown) =>
-      logFailure(
-        err,
-        `Failed to post the birthday calendar | guildId = ${guildId}`
-      )
-  );
-  logger.info(`Day announced | guildId = ${guildId} | day = ${day}`);
 }
 
-export async function runAllGuildDays(
-  client: Client<true>,
-  module: Module<BirthdayConfigSchema>,
-  now = new Date()
-): Promise<void> {
-  await forEachGuild(
-    client,
-    await moduleService.getActivatedGuildIds(module.id),
-    (guild) => runGuildDay(client, module, guild.id, now),
-    { action: "run the day", logger }
-  );
-}
+export default declareService(new DailyService());

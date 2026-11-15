@@ -2,8 +2,8 @@ import moduleService from "#core/services/module.service.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
 import type { BirthdayConfigSchema } from "./birthday.config.js";
-import { runAllGuildDays } from "./services/daily.service.js";
-import { sweepDepartures } from "./services/departures.service.js";
+import dailyService from "./services/daily.service.js";
+import departuresService from "./services/departures.service.js";
 
 export function birthdayTasks(module: Module<BirthdayConfigSchema>) {
   return [
@@ -13,7 +13,7 @@ export function birthdayTasks(module: Module<BirthdayConfigSchema>) {
       id: "daily-announcements",
       schedule: "0 * * * *",
       runOnStart: true,
-      run: (client) => runAllGuildDays(client, module),
+      run: (client) => dailyService.runAllGuildDays(client, module),
     }),
   ];
 }
@@ -33,7 +33,7 @@ export function birthdayMaintenanceTasks(moduleId: string) {
       // A night missed while the bot was down is caught up at start.
       runOnStart: true,
       async run(client) {
-        await sweepDepartures(client, async (guildId) =>
+        await departuresService.sweep(client, async (guildId) =>
           (await moduleService.getActivatedGuildIds(moduleId)).includes(guildId)
         );
       },

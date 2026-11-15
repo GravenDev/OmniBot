@@ -9,8 +9,8 @@ import {
   sheetNotice,
 } from "#modules/birthday/own-birthday.js";
 import birthdayService from "#modules/birthday/services/birthday.service.js";
-import { dropBirthdayRole } from "#modules/birthday/services/role.service.js";
-import { birthdayTwins } from "#modules/birthday/services/twins.service.js";
+import roleService from "#modules/birthday/services/role.service.js";
+import twinsService from "#modules/birthday/services/twins.service.js";
 
 const logger = loggerMaker("birthday");
 
@@ -53,7 +53,7 @@ export default declareInteractionHandler<
         `Birthday announcement ${state} | guildId = ${guildId} | userId = ${userId}`
       );
       if (!entry.announce) {
-        await dropBirthdayRole(config, guildId, userId);
+        await roleService.drop(config, guildId, userId);
       }
     }
     await interaction.editReply({
@@ -61,7 +61,7 @@ export default declareInteractionHandler<
       ...ownBirthdaySheet(
         config,
         entry,
-        await birthdayTwins(
+        await twinsService.of(
           interaction,
           entry,
           entries.map((other) => (other.userId === userId ? entry : other))

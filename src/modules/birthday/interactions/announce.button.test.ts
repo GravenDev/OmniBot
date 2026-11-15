@@ -16,7 +16,7 @@ vi.mock("#modules/birthday/services/birthday.service.js", () => ({
 }));
 const dropBirthdayRole = vi.hoisted(() => vi.fn());
 vi.mock("#modules/birthday/services/role.service.js", () => ({
-  dropBirthdayRole,
+  default: { drop: dropBirthdayRole },
 }));
 
 const { default: button } = await import("./announce.button.js");
