@@ -12,26 +12,12 @@ const store = vi.hoisted(() => ({
 const lifecycle = vi.hoisted(() => ({
   applyAccess: vi.fn(),
   removeTempChannel: vi.fn(),
-  accessState: (row: any) => ({
-    ownerId: row.ownerId,
-    locked: row.locked,
-    hidden: row.hidden,
-    trusted: row.trusted,
-    blocked: row.blocked,
-  }),
 }));
 
 vi.mock("#lib/database.js", () => ({ default: {} }));
 vi.mock("./store.js", () => ({ default: store }));
-vi.mock("./panel.js", () => ({ refreshPanel: vi.fn() }));
-vi.mock("./lifecycle.js", async () => {
-  const { RenameLimiter } = await import("./naming.js");
-  return {
-    ...lifecycle,
-    queue: new KeyedQueue(),
-    renames: new RenameLimiter(),
-  };
-});
+vi.mock("./panel.service.js", () => ({ default: { refresh: vi.fn() } }));
+vi.mock("./lifecycle.js", () => ({ ...lifecycle, queue: new KeyedQueue() }));
 
 const actions = await import("./actions.js");
 

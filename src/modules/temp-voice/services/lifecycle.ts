@@ -1,13 +1,10 @@
 import {
   ChannelType,
   OverwriteType,
-  PermissionsBitField,
   RESTJSONErrorCodes,
   type CategoryChannel,
   type Guild,
   type GuildMember,
-  type PermissionOverwriteOptions,
-  type PermissionOverwrites,
   type VoiceBasedChannel,
   type VoiceChannel,
 } from "discord.js";
@@ -18,16 +15,19 @@ import { loggerMaker } from "#lib/logger.js";
 import { fetchMember } from "#lib/moderation.js";
 import { missingBotPermissions } from "#lib/permissions.js";
 import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
-import { RenameLimiter, renderName } from "./naming.js";
+import { renderName } from "./naming.js";
 import {
   managedMembers,
   overwriteChanges,
+  overwriteOptions,
   STAFF_PERMISSIONS,
+  toOverwrite,
   type AccessState,
   type Overwrite,
 } from "./overwrites.js";
-import { postPanel, refreshPanel } from "./panel.js";
+import panelService from "./panel.service.js";
 import { isProtected, REQUIRED_PERMISSIONS } from "./permissions.js";
+import renames from "./renames.service.js";
 import store, { type Hub, type TempChannel } from "./store.js";
 
 const logger = loggerMaker("temp-voice");
@@ -37,33 +37,10 @@ const NOTICE_LIFETIME_MS = 10_000;
 const RECONCILE_GRACE_MS = 60_000;
 
 export const queue = new KeyedQueue();
-export const renames = new RenameLimiter();
 const lastCreation = new Map<string, number>();
-
-function toOverwrite(overwrite: PermissionOverwrites): Overwrite {
-  return {
-    id: overwrite.id,
-    type: overwrite.type,
-    allow: overwrite.allow.bitfield,
-    deny: overwrite.deny.bitfield,
-  };
-}
 
 function baseOverwrites(parent: CategoryChannel | null): Overwrite[] {
   return parent ? parent.permissionOverwrites.cache.map(toOverwrite) : [];
-}
-
-export function overwriteOptions(
-  overwrite: Overwrite
-): PermissionOverwriteOptions {
-  const options: PermissionOverwriteOptions = {};
-  for (const name of new PermissionsBitField(overwrite.allow).toArray()) {
-    options[name] = true;
-  }
-  for (const name of new PermissionsBitField(overwrite.deny).toArray()) {
-    options[name] = false;
-  }
-  return options;
 }
 
 async function botMember(guild: Guild): Promise<GuildMember> {
@@ -75,16 +52,6 @@ function botPermissions(
   parent: CategoryChannel | null
 ): bigint {
   return (parent ? parent.permissionsFor(me) : me.permissions).bitfield;
-}
-
-export function accessState(row: TempChannel): AccessState {
-  return {
-    ownerId: row.ownerId,
-    locked: row.locked,
-    hidden: row.hidden,
-    trusted: row.trusted,
-    blocked: row.blocked,
-  };
 }
 
 async function grantable(
@@ -424,7 +391,7 @@ export function joinHub(
     logger.info(
       `Temporary channel created | guildId = ${guild.id} | channelId = ${channel.id} | ownerId = ${member.id}`
     );
-    await postPanel(channel, row, config.t, true);
+    await panelService.post(channel, row, config.t, true);
   });
 }
 
@@ -465,7 +432,7 @@ export function memberLeft(
     if (humanCount(channel) === 0) {
       await removeTempChannel(channel, row, "empty");
     } else if (row.ownerId === userId) {
-      await refreshPanel(channel, row, t);
+      await panelService.refresh(channel, row, t);
     }
   });
 }
@@ -478,7 +445,7 @@ export function ownerMoved(
   return queue.run(channel.id, async () => {
     const row = await store.channel(channel.id);
     if (row?.ownerId === userId) {
-      await refreshPanel(channel, row, t);
+      await panelService.refresh(channel, row, t);
     }
   });
 }
@@ -559,7 +526,7 @@ async function reconcileChannel(
   ) {
     await removeTempChannel(channel, current, "empty");
   } else if (t && !channel.members.has(current.ownerId)) {
-    await refreshPanel(channel, current, t);
+    await panelService.refresh(channel, current, t);
   }
 }
 

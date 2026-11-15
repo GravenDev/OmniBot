@@ -22,11 +22,11 @@ const store = vi.hoisted(() => ({
   removeChannel: vi.fn(),
   updateChannel: vi.fn(),
 }));
-const panel = vi.hoisted(() => ({ postPanel: vi.fn(), refreshPanel: vi.fn() }));
+const panel = vi.hoisted(() => ({ post: vi.fn(), refresh: vi.fn() }));
 
 vi.mock("#lib/database.js", () => ({ default: {} }));
 vi.mock("./store.js", () => ({ default: store }));
-vi.mock("./panel.js", () => panel);
+vi.mock("./panel.service.js", () => ({ default: panel }));
 
 const {
   applyAccess,
@@ -199,7 +199,7 @@ describe("joinHub", () => {
       created.permissionOverwrites.cache.get(member.id).allow.bitfield
     ).toBe(PermissionFlagsBits.ViewChannel | CONNECT);
     expect(member.voice.setChannel).toHaveBeenCalledWith(created);
-    expect(panel.postPanel).toHaveBeenCalled();
+    expect(panel.post).toHaveBeenCalled();
   });
 
   it("creates nothing and warns the member when the bot lacks a permission", async () => {
@@ -348,7 +348,7 @@ describe("memberLeft", () => {
     const channel = channelWith({ id: "music", bot: true });
     await memberLeft(channel, "alice", config.t);
     expect(channel.delete).toHaveBeenCalled();
-    expect(panel.refreshPanel).not.toHaveBeenCalled();
+    expect(panel.refresh).not.toHaveBeenCalled();
     expect(store.removeChannel).toHaveBeenCalledWith("temp");
   });
 
@@ -360,9 +360,9 @@ describe("memberLeft", () => {
     );
     await memberLeft(channel, "carol", config.t);
     expect(channel.delete).not.toHaveBeenCalled();
-    expect(panel.refreshPanel).not.toHaveBeenCalled();
+    expect(panel.refresh).not.toHaveBeenCalled();
     await memberLeft(channel, "alice", config.t);
-    expect(panel.refreshPanel).toHaveBeenCalledTimes(1);
+    expect(panel.refresh).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -371,9 +371,9 @@ describe("ownerMoved", () => {
     const channel = { id: "c1" } as any;
     store.channel.mockResolvedValue({ channelId: "c1", ownerId: "owner" });
     await ownerMoved(channel, "guest", config.t);
-    expect(panel.refreshPanel).not.toHaveBeenCalled();
+    expect(panel.refresh).not.toHaveBeenCalled();
     await ownerMoved(channel, "owner", config.t);
-    expect(panel.refreshPanel).toHaveBeenCalledTimes(1);
+    expect(panel.refresh).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -407,9 +407,9 @@ describe("reconcile", () => {
     store.channels.mockResolvedValue([stored]);
     store.channel.mockResolvedValue(stored);
     await reconcile(guild as any);
-    expect(panel.refreshPanel).not.toHaveBeenCalled();
+    expect(panel.refresh).not.toHaveBeenCalled();
     await reconcile(guild as any, config.t);
-    expect(panel.refreshPanel).toHaveBeenCalledWith(temp, stored, config.t);
+    expect(panel.refresh).toHaveBeenCalledWith(temp, stored, config.t);
   });
 
   it("reconciles the channels together, a slow one holding none back", async () => {
@@ -434,11 +434,11 @@ describe("reconcile", () => {
     );
 
     const done = reconcile(guild as any, config.t);
-    await vi.waitFor(() => expect(panel.refreshPanel).toHaveBeenCalled());
+    await vi.waitFor(() => expect(panel.refresh).toHaveBeenCalled());
 
     release(null);
     await done;
-    expect(panel.refreshPanel).toHaveBeenCalledWith(temp, stored, config.t);
+    expect(panel.refresh).toHaveBeenCalledWith(temp, stored, config.t);
   });
 
   it("still reconciles the other channels when one fails", async () => {
@@ -464,7 +464,7 @@ describe("reconcile", () => {
 
     await expect(reconcile(guild as any, config.t)).resolves.toBeUndefined();
 
-    expect(panel.refreshPanel).toHaveBeenCalledWith(temp, stored, config.t);
+    expect(panel.refresh).toHaveBeenCalledWith(temp, stored, config.t);
   });
 });
 

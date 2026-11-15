@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  cleanName,
-  parseUserLimit,
-  RenameLimiter,
-  renderName,
-} from "./naming.js";
+import { cleanName, parseUserLimit, renderName } from "./naming.js";
 
 const member = { displayName: "Alice", user: { username: "alice42" } };
 
@@ -37,24 +32,5 @@ describe("parseUserLimit", () => {
     expect(parseUserLimit("-1")).toBeNull();
     expect(parseUserLimit("2.5")).toBeNull();
     expect(parseUserLimit("")).toBeNull();
-  });
-});
-
-describe("RenameLimiter", () => {
-  it("allows two renames per 10 minutes", () => {
-    const limiter = new RenameLimiter();
-    limiter.record("c", 0);
-    expect(limiter.retryAt("c", 1)).toBeNull();
-    limiter.record("c", 1_000);
-    expect(limiter.retryAt("c", 2_000)).toBe(600_000);
-    expect(limiter.retryAt("c", 600_001)).toBeNull();
-  });
-
-  it("forgets a channel", () => {
-    const limiter = new RenameLimiter();
-    limiter.record("c", 0);
-    limiter.record("c", 0);
-    limiter.forget("c");
-    expect(limiter.retryAt("c", 1)).toBeNull();
   });
 });

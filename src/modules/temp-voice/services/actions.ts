@@ -3,16 +3,12 @@ import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
 import { accessMode, modeFlags, type AccessMode } from "./access-mode.js";
-import {
-  accessState,
-  applyAccess,
-  queue,
-  removeTempChannel,
-  renames,
-} from "./lifecycle.js";
+import { applyAccess, queue, removeTempChannel } from "./lifecycle.js";
 import { cleanName } from "./naming.js";
-import { refreshPanel } from "./panel.js";
+import { accessState } from "./overwrites.js";
+import panelService from "./panel.service.js";
 import { isModerator, isProtected } from "./permissions.js";
+import renames from "./renames.service.js";
 import store, {
   type ChannelState,
   type PreferenceChange,
@@ -103,7 +99,7 @@ export async function redrawPanel(
   const channel = tempChannelOf(guild, channelId);
   const row = channel ? await store.channel(channelId) : null;
   if (channel && row) {
-    await refreshPanel(channel, row, config.t);
+    await panelService.refresh(channel, row, config.t);
   }
 }
 
@@ -164,7 +160,7 @@ async function commit(
   if (!updated) {
     return null;
   }
-  await refreshPanel(ctx.channel, updated, ctx.config.t);
+  await panelService.refresh(ctx.channel, updated, ctx.config.t);
   if (preference && isOwner(ctx)) {
     await store.savePreference(ctx.guild.id, ctx.actor.id, preference);
   }
@@ -198,7 +194,7 @@ export async function rename(
         .run(channelId, async () => {
           const row = await store.channel(channelId);
           if (row) {
-            await refreshPanel(ctx.channel, row, ctx.config.t);
+            await panelService.refresh(ctx.channel, row, ctx.config.t);
           }
         })
         .catch((err: unknown) =>
@@ -236,7 +232,7 @@ export async function setLimit(
   if (isOwner(ctx)) {
     await store.savePreference(ctx.guild.id, ctx.actor.id, { userLimit });
   }
-  await refreshPanel(ctx.channel, ctx.row, ctx.config.t);
+  await panelService.refresh(ctx.channel, ctx.row, ctx.config.t);
   return done(userLimit > 0 ? "limit.done" : "limit.removed", {
     limit: String(userLimit),
   });

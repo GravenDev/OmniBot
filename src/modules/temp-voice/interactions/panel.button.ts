@@ -13,11 +13,8 @@ import {
   type Outcome,
 } from "#modules/temp-voice/services/actions.js";
 import { queue } from "#modules/temp-voice/services/lifecycle.js";
-import {
-  isPanelAction,
-  PANEL_ID,
-  postPanel,
-} from "#modules/temp-voice/services/panel.js";
+import { isPanelAction, PANEL_ID } from "#modules/temp-voice/services/panel.js";
+import panelService from "#modules/temp-voice/services/panel.service.js";
 import store from "#modules/temp-voice/services/store.js";
 import {
   deleteConfirmation,
@@ -45,7 +42,7 @@ async function replaceOutdatedPanel(
     if (!channel || row?.panelMessageId !== interaction.message.id) {
       return "panel.stale";
     }
-    if (!(await postPanel(channel, row, config.t))) {
+    if (!(await panelService.post(channel, row, config.t))) {
       return "panel.notReplaced";
     }
     await interaction.message.delete().catch(() => undefined);

@@ -9,13 +9,10 @@ import {
   type VoiceBasedChannel,
 } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
-import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import { Colors } from "#utils/colors.js";
 import { ACCESS_MODES, accessMode, type AccessMode } from "./access-mode.js";
-import store, { type TempChannel } from "./store.js";
-
-const logger = loggerMaker("temp-voice");
+import type { TempChannel } from "./store.js";
 
 export const PANEL_ID = "tempvoice";
 export const ACCESS_ID = "tempvoice-access";
@@ -143,40 +140,4 @@ export function panelMessage(
     flags: MessageFlags.IsComponentsV2 as const,
     allowedMentions: NO_MENTIONS,
   };
-}
-
-export async function postPanel(
-  channel: VoiceBasedChannel,
-  row: TempChannel,
-  t: TFunction,
-  ownerPresent?: boolean
-): Promise<boolean> {
-  try {
-    const message = await channel.send(
-      panelMessage(row, channel, t, ownerPresent)
-    );
-    await store.updateChannel(row.channelId, { panelMessageId: message.id });
-    return true;
-  } catch (err) {
-    logger.warn({ err }, `Panel not posted | channelId = ${channel.id}`);
-    return false;
-  }
-}
-
-export async function refreshPanel(
-  channel: VoiceBasedChannel,
-  row: TempChannel,
-  t: TFunction
-): Promise<void> {
-  if (!row.panelMessageId) {
-    return;
-  }
-  try {
-    await channel.messages.edit(row.panelMessageId, {
-      ...panelMessage(row, channel, t),
-      embeds: [],
-    });
-  } catch (err) {
-    logger.debug({ err }, `Panel not refreshed | channelId = ${channel.id}`);
-  }
 }
