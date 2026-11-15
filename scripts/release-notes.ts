@@ -879,6 +879,8 @@ export function securitySection(fixes: FixedAdvisory[]): string {
     "",
     "Failles connues des dépendances, directes ou non, que cette version corrige (base [OSV](https://osv.dev)) :",
     "",
+    "> Cette liste est établie automatiquement : elle signale les failles connues des versions remplacées, sans vérifier qu'elles touchaient OmniBot. La plupart concernent des fonctions que le bot n'utilise pas.",
+    "",
     ...[...packages].flatMap(([head, lines]) => [head, ...lines]),
   ].join("\n");
 }
@@ -1092,12 +1094,12 @@ Règles :
 - Décris l'état à la fin de la version : quand un commit en change un autre de la même version (un bilan d'abord éphémère, puis publié dans le salon), ne garde que le résultat final, sans l'état intermédiaire. Ce qui est ajouté puis retiré dans la même version n'a jamais existé pour les lecteurs : n'en parle pas.
 - Un module nouveau dans cette version tient en une seule puce ✨ qui dit ce qu'il fait, d'après sa description et ses commits : ses retouches et corrections dans la même version en font partie, jamais des 🔧 ou des 🐛 à part. Jamais une puce vide comme « Ajout du module ».
 - Garde ce qu'un administrateur ou un membre peut remarquer : nouveautés, commandes, réglages, corrections visibles. Laisse de côté l'outillage (CI, build, refactorisation, tests, documentation, dépendances, conteneurs), sauf effet visible énoncé par le titre.
-- Les failles de <security> concernent les administrateurs : elles tiennent dans « ### Général » en une seule puce 🐛 qui dit que des failles de sécurité de bibliothèques utilisées par le bot sont corrigées, nomme ces bibliothèques et, en mots simples, ce que chaque faille permettait d'après son titre. Sans identifiant (GHSA, CVE) ni numéro de version, sans chemin ni nom de fichier repris des titres (rien qui commence par /), et sans rien dramatiser ni deviner au-delà du titre.
+- Les failles de <security> tiennent dans « ### Général » en une seule puce 🛡️, la dernière de la section, écrite pour quelqu'un qui ne programme pas : elle dit que des bibliothèques utilisées par le bot ont été mises à jour pour corriger des failles de sécurité connues, et que ces failles sont repérées automatiquement, sans vérifier qu'elles touchaient le bot. Deux phrases courtes au plus, sans jargon. Ne nomme ni les bibliothèques ni les failles, et ne dis pas ce qu'elles permettaient : le détail est dans la section Sécurité des notes. Rien d'alarmant, rien qui laisse entendre que le bot était vulnérable.
 - Écris les commandes Discord exactement comme dans le changelog, entre accents graves (\`/jd4h leaderboard\`).
 
 Structure :
 - Une section par module, titrée « ### » suivi de son nom affiché (le nom anglais dans en). Ce qui ne touche aucun module va dans une dernière section « ### Général » (« ### General » dans en). Les sections vont du module le plus touché au moins touché, jamais dans l'ordre du changelog.
-- Chaque puce commence par sa catégorie : ✨ pour une nouveauté (une commande, un réglage ou une fonctionnalité qui n'existait pas), 🔧 pour une amélioration (un comportement existant qui change ou s'enrichit), 🐛 pour une correction (un défaut visible qui disparaît). Le type du commit est un indice, pas la règle : un « feat » qui ajuste l'existant est une amélioration.
+- Chaque puce commence par sa catégorie : ✨ pour une nouveauté (une commande, un réglage ou une fonctionnalité qui n'existait pas), 🔧 pour une amélioration (un comportement existant qui change ou s'enrichit), 🐛 pour une correction (un défaut visible qui disparaît), 🛡️ pour les failles de <security> et elles seules. Le type du commit est un indice, pas la règle : un « feat » qui ajuste l'existant est une amélioration.
 - Ce qui retire une fonctionnalité ou demande aux administrateurs d'agir commence par ⚠️ et ouvre sa section.
 - Puis les ✨, les 🔧 et les 🐛, chacune de la plus à la moins impactante : une commande ou une fonctionnalité entière avant une option, un détail visuel en dernier.
 - Les petites corrections d'un même module (détails visuels, libellés, validations) tiennent en une seule puce 🐛.

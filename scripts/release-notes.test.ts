@@ -992,6 +992,8 @@ describe("security fixes", () => {
         "",
         "Failles connues des dépendances, directes ou non, que cette version corrige (base [OSV](https://osv.dev)) :",
         "",
+        "> Cette liste est établie automatiquement : elle signale les failles connues des versions remplacées, sans vérifier qu'elles touchaient OmniBot. La plupart concernent des fonctions que le bot n'utilise pas.",
+        "",
         "- **undici** 7.1.0 → 7.2.0",
         "  - Contournement &lt;b&gt;de&lt;/b&gt; `@someone` (gravité haute) : [GHSA-fix0-0000-0000](https://osv.dev/vulnerability/GHSA-fix0-0000-0000), [CVE-2099-0001](https://osv.dev/vulnerability/CVE-2099-0001), [MAL-2099-1](https://osv.dev/vulnerability/MAL-2099-1)",
         "  - [GHSA-two0-0000-0000](https://osv.dev/vulnerability/GHSA-two0-0000-0000)",
@@ -1056,7 +1058,7 @@ describe("security fixes", () => {
         fix({
           advisory: { ids: ["GHSA-fix0-0000-0000"], summary, severity: null },
         }),
-      ]).split("\n")[5];
+      ]).split("\n")[7];
     expect(line("Bypass of ` check reported by @someone")).toBe(
       "  - Bypass of ' check reported by `@someone` : [GHSA-fix0-0000-0000](https://osv.dev/vulnerability/GHSA-fix0-0000-0000)"
     );
