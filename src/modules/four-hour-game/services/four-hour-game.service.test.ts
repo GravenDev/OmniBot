@@ -3,8 +3,8 @@ import type { Guild, TextBasedChannel } from "discord.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
+import type { HistoryReader } from "#modules/four-hour-game/types.js";
 import type { ScoredPoint } from "./four-hour-game.service.js";
-import type { HistoryReader } from "./types.js";
 
 interface LastMessageRow {
   guildId: string;

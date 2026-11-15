@@ -3,7 +3,7 @@ import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { RevisionCounter } from "#lib/revision-cache.js";
 import { declareService, type Service } from "#lib/service.js";
-import { standingOf } from "./channel-history.js";
+import { standingOf } from "#modules/four-hour-game/channel-history.js";
 import {
   dayOf,
   nextDay,
@@ -11,20 +11,23 @@ import {
   splitHold,
   startOfDay,
   type DayHold,
-} from "./daily.js";
+} from "#modules/four-hour-game/daily.js";
 import {
   evaluateMessage,
   type MessageOutcome,
   replayMessages,
-} from "./game-rules.js";
-import { computeProfileStats, type ProfileStats } from "./profile.js";
+} from "#modules/four-hour-game/game-rules.js";
+import {
+  computeProfileStats,
+  type ProfileStats,
+} from "#modules/four-hour-game/profile.js";
 import type {
   ChannelMessage,
   GameMessage,
   HistoryReader,
   LatestMessageFetcher,
   RoundSync,
-} from "./types.js";
+} from "#modules/four-hour-game/types.js";
 
 const logger = loggerMaker("four-hour-game");
 

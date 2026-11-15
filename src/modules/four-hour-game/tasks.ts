@@ -1,7 +1,7 @@
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
+import { GAME_TIME_ZONE } from "./daily.js";
 import type { FourHourGameConfigSchema } from "./four-hour-game.config.js";
-import { GAME_TIME_ZONE } from "./services/daily.js";
 import { closeAllDays } from "./services/daily.service.js";
 
 export function fourHourGameTasks(module: Module<FourHourGameConfigSchema>) {

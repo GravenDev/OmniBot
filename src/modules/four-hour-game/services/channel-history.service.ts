@@ -4,8 +4,8 @@ import {
   oldestOf,
   standingOf,
   toChannelMessages,
-} from "./channel-history.js";
-import type { ChannelMessage } from "./types.js";
+} from "#modules/four-hour-game/channel-history.js";
+import type { ChannelMessage } from "#modules/four-hour-game/types.js";
 
 const HISTORY_DEPTH = 50;
 const PAGE_SIZE = 100;
