@@ -25,7 +25,6 @@ const service = vi.hoisted(() => ({
   claimDay: vi.fn(),
   getState: vi.fn(),
   list: vi.fn(),
-  removeMany: vi.fn(),
 }));
 vi.mock("./birthday.service.js", () => ({ default: service }));
 
@@ -164,11 +163,13 @@ describe("runGuildDay", () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it("purges departed members, then wishes today's birthdays", async () => {
+  // The member list may be incomplete, a member missing from it rather than
+  // gone: the `sweep-departures` maintenance task decides on deletions.
+  it("wishes today's birthdays of the members still here, deleting none", async () => {
     const { client, send } = setup({ messages: ["Bravo {user} !"] });
     await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
 
-    expect(service.removeMany).toHaveBeenCalledWith("guild-1", ["gone"]);
+    // The service mock has no deletion: calling one would fail the wishes.
     expect(send).toHaveBeenCalledTimes(1);
     const [message] = send.mock.calls[0] as unknown as [
       {

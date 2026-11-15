@@ -40,13 +40,6 @@ class BirthdayService implements Service {
     return count > 0;
   }
 
-  /** Deletes the birthdays of members who are no longer on the guild. */
-  async removeMany(guildId: string, userIds: string[]): Promise<void> {
-    await prisma.birthday.deleteMany({
-      where: { guildId, userId: { in: userIds } },
-    });
-  }
-
   async list(guildId: string): Promise<BirthdayEntry[]> {
     return prisma.birthday.findMany({ where: { guildId }, select: ENTRY });
   }
