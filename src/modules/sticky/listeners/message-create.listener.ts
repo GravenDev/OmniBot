@@ -1,7 +1,7 @@
 import type { Message } from "discord.js";
 import { declareEventListener } from "#lib/listener.js";
-import poster from "#modules/sticky/services/poster.js";
-import store from "#modules/sticky/services/store.js";
+import poster from "#modules/sticky/services/poster.service.js";
+import store from "#modules/sticky/services/store.service.js";
 
 export default declareEventListener<"messageCreate">({
   eventType: "messageCreate",

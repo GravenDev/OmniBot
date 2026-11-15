@@ -4,10 +4,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const poster = vi.hoisted(() => ({ set: vi.fn(), unstick: vi.fn() }));
 const store = vi.hoisted(() => ({ list: vi.fn(), remove: vi.fn() }));
 
-vi.mock("./poster.js", () => ({ default: poster }));
-vi.mock("./store.js", () => ({ default: store }));
+vi.mock("./poster.service.js", () => ({ default: poster }));
+vi.mock("./store.service.js", () => ({ default: store }));
 
-const { stickyRecords } = await import("./stickies.js");
+const { stickyRecords } = await import("./stickies.service.js");
 
 function fakeGuild(
   granted: PermissionsString[] = ["ViewChannel", "SendMessages"]

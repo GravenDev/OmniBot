@@ -1,6 +1,6 @@
 import { ChannelType } from "discord.js";
 import { ConfigType, type ConfigSchema } from "#lib/config.js";
-import { stickyRecords } from "./services/stickies.js";
+import { stickyRecords } from "./services/stickies.service.js";
 
 const CONTENT_MAX = 2000;
 

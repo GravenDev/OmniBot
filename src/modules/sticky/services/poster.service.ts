@@ -8,7 +8,7 @@ import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import { declareService, type Service } from "#lib/service.js";
-import store from "./store.js";
+import store from "./store.service.js";
 
 const logger = loggerMaker("sticky");
 

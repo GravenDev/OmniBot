@@ -104,7 +104,7 @@ Un module qui garde quelque chose par salon (un message épinglé, une réaction
 
 ```typescript
 import { removeOnChannelDelete } from "#lib/listener.js";
-import store from "#modules/sticky/services/store.js";
+import store from "#modules/sticky/services/store.service.js";
 
 export default removeOnChannelDelete("sticky", "Sticky", (guildId, channelId) =>
   store.remove(guildId, channelId)

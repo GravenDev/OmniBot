@@ -1,6 +1,6 @@
 import { DiscordAPIError, MessageFlags, RESTJSONErrorCodes } from "discord.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Sticky } from "./store.js";
+import type { Sticky } from "./store.service.js";
 
 const state = vi.hoisted(() => ({
   sticky: null as Sticky | null,
@@ -23,12 +23,12 @@ const store = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock("./store.js", () => ({ default: store }));
+vi.mock("./store.service.js", () => ({ default: store }));
 vi.mock("#lib/logger.js", () => ({
   loggerMaker: () => ({ warn: vi.fn(), info: vi.fn(), debug: vi.fn() }),
 }));
 
-const { StickyPoster } = await import("./poster.js");
+const { StickyPoster } = await import("./poster.service.js");
 
 let poster: InstanceType<typeof StickyPoster>;
 
