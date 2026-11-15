@@ -24,9 +24,8 @@ import {
   type SearchState,
 } from "#modules/clash-of-code/history.js";
 import { parseClashLinks } from "#modules/clash-of-code/links.js";
-import {
+import channelImport, {
   type ImportSummary,
-  importClashes,
   MAX_RATE_LIMIT_PAUSE_MS,
 } from "#modules/clash-of-code/services/channel-import.service.js";
 import codingame from "#modules/clash-of-code/services/codingame.service.js";
@@ -282,7 +281,7 @@ async function importChannel(interaction: Interaction, config: Config) {
       done: previously + progress.done,
       count: clashes.length,
     });
-    const summary = await importClashes(
+    const summary = await channelImport.importClashes(
       guildId,
       clashes.filter((clash) => !state.checked.has(clash.handle)),
       {
