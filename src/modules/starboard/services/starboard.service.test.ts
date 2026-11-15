@@ -29,11 +29,13 @@ vi.mock("#lib/logger.js", async (importOriginal) => ({
   loggerMaker: () => mocks.logger,
 }));
 vi.mock("./store.js", () => ({ default: mocks.store }));
-vi.mock("./tally.js", () => mocks.tally);
+vi.mock("#modules/starboard/tally.js", () => mocks.tally);
 vi.mock("./reactions.service.js", () => ({ default: mocks.reactions }));
-vi.mock("./view.js", () => ({ starboardMessage: mocks.view }));
-vi.mock("./eligibility.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./eligibility.js")>()),
+vi.mock("#modules/starboard/view.js", () => ({ starboardMessage: mocks.view }));
+vi.mock("#modules/starboard/eligibility.js", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("#modules/starboard/eligibility.js")
+  >()),
   ineligibility: mocks.ineligibility,
   leakage: mocks.leakage,
 }));

@@ -5,12 +5,12 @@ import {
 } from "discord.js";
 import { describe, expect, it } from "vitest";
 import { makeTestConfig } from "#lib/testing.js";
-import { starboardConfigSchema } from "#modules/starboard/starboard.config.js";
 import {
   ineligibility,
   starboardChannelOf,
   thresholdOf,
 } from "./eligibility.js";
+import { starboardConfigSchema } from "./starboard.config.js";
 
 type Values = Parameters<
   typeof makeTestConfig<typeof starboardConfigSchema>

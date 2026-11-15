@@ -1,6 +1,6 @@
 import prisma, { Prisma } from "#lib/database.js";
 import { declareService, type Service } from "#lib/service.js";
-import type { Tally } from "./tally.js";
+import type { Tally } from "#modules/starboard/tally.js";
 
 export interface StarboardEntry {
   messageId: string;

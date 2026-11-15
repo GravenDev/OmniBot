@@ -1,6 +1,6 @@
 import { type Message, type MessageReaction, ReactionType } from "discord.js";
 import { declareService, type Service } from "#lib/service.js";
-import { countedReactions, type Reactors } from "./tally.js";
+import { countedReactions, type Reactors } from "#modules/starboard/tally.js";
 
 const PAGE_SIZE = 100;
 const MAX_PAGES = 10;
