@@ -9,7 +9,7 @@ import { formatDuration } from "#lib/duration.js";
 import type { TFunction } from "#lib/i18n.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
-import { truncate } from "#lib/text.js";
+import { quoteEachLine, truncate } from "#lib/text.js";
 import type { HoneypotConfigSchema } from "#modules/honeypot/honeypot.config.js";
 import type { TrapResult } from "./trap.js";
 
@@ -36,14 +36,12 @@ function inert(text: string): string {
 
 function quoted(message: Message<true>, t: TFunction): string {
   const lines = [
-    ...(message.content ? inert(message.content).split("\n") : []),
+    ...(message.content ? [inert(message.content)] : []),
     ...[...message.attachments.values()].map(
       (attachment) => `📎 ${inert(attachment.name)}`
     ),
   ];
-  return lines.length
-    ? lines.map((line) => `> ${line}`).join("\n")
-    : t("log.empty");
+  return lines.length ? quoteEachLine(lines.join("\n")) : t("log.empty");
 }
 
 export function trapLog(

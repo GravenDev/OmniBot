@@ -9,7 +9,7 @@ import {
   type ReadonlyCollection,
 } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
-import { truncate } from "#lib/text.js";
+import { quoteEachLine, truncate } from "#lib/text.js";
 
 const DELETED_COLOR = 0xed4245;
 const EDITED_COLOR = 0xfaa61a;
@@ -44,13 +44,6 @@ function footer(message: Message, t: TFunction) {
   };
 }
 
-function quoteBlock(text: string): string {
-  return text
-    .split("\n")
-    .map((line) => `> ${line}`)
-    .join("\n");
-}
-
 function deletedDescription(
   message: Message,
   t: TFunction,
@@ -72,7 +65,10 @@ function deletedDescription(
     header.push(t("deleted.by", { moderator: `<@${deletedBy}>` }));
   }
   const body = [message.content, ...attachmentLines(message)].filter(Boolean);
-  return [header.join("\n"), body.length > 0 ? quoteBlock(body.join("\n")) : ""]
+  return [
+    header.join("\n"),
+    body.length > 0 ? quoteEachLine(body.join("\n")) : "",
+  ]
     .filter(Boolean)
     .join("\n\n");
 }
