@@ -561,7 +561,7 @@ function render(quoted: Message<true>) {
     // The header and the text, beside the avatar.
     main: section.components![0]!.content!,
     avatar: section.accessory?.media?.url,
-    // The text displays after it: the extras, then the footer.
+    // The text displays after it: the extras (the footer is in a section).
     texts,
     gallery: gallery.map((item) => ({
       url: item.media.url,
@@ -578,23 +578,24 @@ describe("quoteContainer", () => {
     expect(main).toMatch(/^-# <@2> in <#200> · <t:\d+:R>\n\nhello$/);
     expect(avatar).toBe("https://cdn/member-avatar.png");
     expect(json.accent_color).toBe(0xff0000);
-    expect(texts).toEqual(["-# 💬 Quoted by <@1>"]);
+    // The quoter is beside the link, below.
+    expect(texts).toEqual([]);
   });
 
-  it("ends with the quoter above a link to the message", () => {
+  it("ends with the quoter beside a link to the message", () => {
     const { json } = render(fakeQuoted({ content: "hello" }));
-    expect(json.components!.slice(-3)).toMatchObject([
+    expect(json.components!.slice(-2)).toMatchObject([
       { type: ComponentType.Separator },
-      { type: ComponentType.TextDisplay, content: "-# 💬 Quoted by <@1>" },
       {
-        type: ComponentType.ActionRow,
+        type: ComponentType.Section,
         components: [
-          {
-            style: ButtonStyle.Link,
-            url: "https://discord.com/channels/100/200/300",
-            label: "Go to message",
-          },
+          { type: ComponentType.TextDisplay, content: "-# 💬 Quoted by <@1>" },
         ],
+        accessory: {
+          style: ButtonStyle.Link,
+          url: "https://discord.com/channels/100/200/300",
+          label: "Go to message",
+        },
       },
     ]);
   });
@@ -861,14 +862,19 @@ describe("quoteReply", () => {
     expect(reply).not.toHaveProperty("content");
     expect(reply.flags).toBe(MessageFlags.IsComponentsV2);
     expect(reply.allowedMentions).toBe(NO_MENTIONS_REPLY);
-    const rows = reply.components.map((container) =>
+    const [first, last] = reply.components.map((container) =>
       (container.toJSON() as unknown as Json).components!.at(-1)!
     );
-    expect(rows.map((row) => row.components!.map((b) => b.style))).toEqual([
-      [ButtonStyle.Link],
-      [ButtonStyle.Link, ButtonStyle.Secondary],
+    expect(first).toMatchObject({
+      type: ComponentType.Section,
+      accessory: { style: ButtonStyle.Link },
+    });
+    expect(last!.type).toBe(ComponentType.ActionRow);
+    expect(last!.components!.map((b) => b.style)).toEqual([
+      ButtonStyle.Link,
+      ButtonStyle.Secondary,
     ]);
-    expect(rows[1]!.components![1]!.custom_id).toBe("message-quote:1:2");
+    expect(last!.components![1]!.custom_id).toBe("message-quote:1:2");
   });
 
   it("keeps several full quotes within Discord's limits", () => {

@@ -55,14 +55,13 @@ function render(
 }
 
 describe("reportedMessage", () => {
-  it("lays out the header and text beside the avatar, then the footer", () => {
+  it("lays out the header and text beside the avatar, then the footer beside the link", () => {
     const { json } = render(fakeMessage());
     expect(json.accent_color).toBe(0x123456);
     expect(json.components.map((component) => component.type)).toEqual([
       ComponentType.Section,
       ComponentType.Separator,
-      ComponentType.TextDisplay,
-      ComponentType.ActionRow,
+      ComponentType.Section,
     ]);
     const section = json.components[0] as {
       components: { content: string }[];
@@ -75,25 +74,52 @@ describe("reportedMessage", () => {
       type: ComponentType.Thumbnail,
       media: { url: "https://cdn.discordapp.com/avatars/author.png" },
     });
-    expect(json.components[2]).toMatchObject({ content: "-# footer line" });
+    expect(json.components[2]).toMatchObject({
+      components: [
+        { type: ComponentType.TextDisplay, content: "-# footer line" },
+      ],
+      accessory: {
+        type: ComponentType.Button,
+        style: ButtonStyle.Link,
+        url: "https://discord.com/channels/g/general/m1",
+        label: "Go to message",
+      },
+    });
   });
 
-  it("ends with a link to the message, then the module's own buttons", () => {
+  it("keeps the footer beside the link when given no button of its own", () => {
+    const { json } = render(fakeMessage(), { buttons: [] });
+    expect(json.components.at(-1)).toMatchObject({
+      type: ComponentType.Section,
+      accessory: { style: ButtonStyle.Link, label: "Go to message" },
+    });
+    expect(
+      json.components.some(
+        (component) => component.type === ComponentType.ActionRow
+      )
+    ).toBe(false);
+  });
+
+  it("ends with the footer above a link to the message and the module's own buttons", () => {
     const extra = new ButtonBuilder()
       .setCustomId("extra")
       .setLabel("Extra")
       .setStyle(ButtonStyle.Secondary);
     const { json } = render(fakeMessage(), { buttons: [extra] });
-    const row = json.components.at(-1) as {
-      components: { style: number; url?: string; label: string }[];
-    };
-    expect(row.components).toMatchObject([
+    expect(json.components.slice(-3)).toMatchObject([
+      { type: ComponentType.Separator },
+      { type: ComponentType.TextDisplay, content: "-# footer line" },
       {
-        style: ButtonStyle.Link,
-        url: "https://discord.com/channels/g/general/m1",
-        label: "Go to message",
+        type: ComponentType.ActionRow,
+        components: [
+          {
+            style: ButtonStyle.Link,
+            url: "https://discord.com/channels/g/general/m1",
+            label: "Go to message",
+          },
+          { custom_id: "extra" },
+        ],
       },
-      { custom_id: "extra" },
     ]);
   });
 
@@ -511,6 +537,13 @@ describe("reportedMessage", () => {
     expect(textLength([container]) + labels).toBeLessThanOrEqual(1000);
   });
 
+  it("fills the text limit exactly, the text beside the avatar", () => {
+    const { container } = render(fakeMessage({ content: "c".repeat(4000) }), {
+      textLimit: 1000,
+    });
+    expect(textLength([container]) + "Go to message".length).toBe(1000);
+  });
+
   it("fits a share of the text limit, however long the parts", () => {
     const reply = fakeMessage({
       author: { id: "other" },
@@ -555,5 +588,12 @@ describe("the reported container", () => {
     // Container, section, its text and thumbnail, separator, footer text,
     // action row and its two buttons.
     expect(componentCount([container])).toBe(9);
+  });
+
+  it("counts the link beside the footer", () => {
+    const { container } = render(fakeMessage());
+    // Container, section, its text and thumbnail, separator, footer section,
+    // its text and the link.
+    expect(componentCount([container])).toBe(8);
   });
 });
