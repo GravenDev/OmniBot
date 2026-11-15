@@ -73,6 +73,12 @@
       "pinDigests": false
     },
     {
+      "description": "The Trivy version is an input of trivy-action (.github/workflows/trivy.yml): a tag, never a digest. A digest pin there fails the update and takes the whole pin group down with it",
+      "matchManagers": ["github-actions"],
+      "matchDepNames": ["aquasecurity/trivy"],
+      "pinDigests": false
+    },
+    {
       "description": "Our own images follow releases through the latest tag and the deploy webhook: never pinned",
       "matchDatasources": ["docker"],
       "matchPackageNames": ["ghcr.io/gravendev/**"],
