@@ -56,14 +56,11 @@ export const messageDeleteBulkListener = declareEventListener<
     if (!config) {
       return;
     }
-    for (const message of messages.values()) {
-      await reportService.messageChanged(
-        channel.client,
-        config,
-        channel.guildId,
-        message.id,
-        { deleted: true }
-      );
-    }
+    await reportService.messagesDeleted(
+      channel.client,
+      config,
+      channel.guildId,
+      [...messages.keys()]
+    );
   },
 });

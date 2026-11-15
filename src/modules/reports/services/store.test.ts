@@ -33,3 +33,24 @@ describe("report store expiry", () => {
     });
   });
 });
+
+describe("reported messages", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("finds the reported ones among many messages in one query", async () => {
+    findMany.mockResolvedValue([{ messageId: "m2" }]);
+
+    expect(await store.reportedAmong("g1", ["m1", "m2", "m3"])).toEqual(["m2"]);
+    expect(findMany).toHaveBeenCalledOnce();
+    expect(findMany).toHaveBeenCalledWith({
+      where: {
+        guildId: "g1",
+        messageId: { in: ["m1", "m2", "m3"] },
+        messageState: { not: "deleted" },
+      },
+      select: { messageId: true },
+    });
+  });
+});
