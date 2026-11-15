@@ -116,6 +116,17 @@ describe("loadModuleEvents", () => {
     expect(execute.mock.calls[0]).toContain(undefined);
   });
 
+  // The 4-hour game counts on it: its replay must take the guild's queue
+  // before any message of a guild the bot is invited back to.
+  it("runs a guildCreate listener at once, a guild carrying no guild id", () => {
+    const { handler, execute } = setup();
+
+    handler({ id: "guild-9", name: "A guild" });
+
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(getModuleStateFromGuildIdIn).not.toHaveBeenCalled();
+  });
+
   it("skips disabled modules silently", async () => {
     getModuleStateFromGuildIdIn.mockResolvedValue({ activated: false });
     const { handler, execute } = setup();

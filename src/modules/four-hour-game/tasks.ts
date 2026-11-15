@@ -53,7 +53,7 @@ export function buildDailyPointEmbed(
   );
 }
 
-async function closeDays(
+export async function closeDays(
   module: Module<FourHourGameConfigSchema>,
   guildId: string
 ): Promise<void> {

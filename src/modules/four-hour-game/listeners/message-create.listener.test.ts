@@ -220,14 +220,16 @@ describe("buildPointEmbed", () => {
     );
   });
 
-  it("says when a point is caught up on restart", () => {
+  it("says when a point is caught up once the bot is back", () => {
     const embed = buildPointEmbed(
       { ...announcement, rank: null },
       config("fr"),
       { caughtUp: true }
     ).toJSON();
 
-    expect(embed.footer?.text).toBe("Rattrapé au redémarrage · Message posté");
+    expect(embed.footer?.text).toBe(
+      "Rattrapé au retour du bot · Message posté"
+    );
     expect(embed.timestamp).toBe(heldSince.toISOString());
     expect(embed.description).toMatch(/\nTotal : \*\*42 points\*\*$/);
   });
@@ -247,7 +249,7 @@ describe("buildPointEmbed", () => {
     expect(live.footer?.text).toBe("Compté depuis");
     expect(live.timestamp).toBe(countedFrom.toISOString());
     expect(caughtUp.footer?.text).toBe(
-      "Rattrapé au redémarrage · Compté depuis"
+      "Rattrapé au retour du bot · Compté depuis"
     );
     expect(caughtUp.timestamp).toBe(countedFrom.toISOString());
   });
@@ -286,7 +288,7 @@ describe("announcePoint", () => {
       { embeds: EmbedBuilder[] },
     ];
     expect(embeds[0]!.toJSON().footer?.text).toBe(
-      "Caught up on restart · Message posted"
+      "Caught up when the bot came back · Message posted"
     );
   });
 });

@@ -14,12 +14,20 @@ import { announcePoint } from "./point-announcement.js";
 
 const logger = loggerMaker("four-hour-game");
 
-/** Replays the guild's downtime, in its queue, then announces the points. */
+/**
+ * Replays the guild's downtime, in its queue taken on the call, then
+ * announces the points. Nothing is replayed when `activated`, awaited within
+ * the queue, turns out false.
+ */
 export function syncRound(
   module: Module<FourHourGameConfigSchema>,
-  guildId: string
+  guildId: string,
+  activated: Promise<boolean> = Promise.resolve(true)
 ): Promise<void> {
   return fourHourGameService.syncRound(guildId, async () => {
+    if (!(await activated)) {
+      return null;
+    }
     const config = await configService.getConfigForModuleIn(module, guildId);
     const channel = config.get("channel");
     const delaySeconds = config.get("delay");

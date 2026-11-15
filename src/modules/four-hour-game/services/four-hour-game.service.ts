@@ -362,10 +362,11 @@ class FourHourGameService implements Service {
   }
 
   /**
-   * Replays the guild's downtime at startup. Its queue is taken at once,
-   * before `load` reads the configuration, so that no live message of the
-   * guild comes before the replay; the points caught up are announced from
-   * within it, before the next live one.
+   * Replays the guild's downtime, at startup or when the bot is invited back
+   * to the guild. Its queue is taken at once, before `load` reads the
+   * configuration, so that no live message of the guild comes before the
+   * replay; the points caught up are announced from within it, before the
+   * next live one.
    */
   syncRound(
     guildId: string,
@@ -376,7 +377,7 @@ class FourHourGameService implements Service {
       const round = await load();
       if (!round) {
         logger.debug(
-          `Round sync skipped | reason = game channel or delay not usable | guildId = ${guildId}`
+          `Round sync skipped | reason = module off, or game channel or delay not usable | guildId = ${guildId}`
         );
         return;
       }
