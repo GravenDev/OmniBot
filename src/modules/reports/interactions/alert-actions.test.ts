@@ -29,7 +29,7 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock("../services/store.js", () => ({ default: mocks.store }));
+vi.mock("../services/store.service.js", () => ({ default: mocks.store }));
 vi.mock("../services/report.service.js", () => ({ default: mocks.service }));
 
 const { alertButtonHandlers } = await import("./alert-actions.js");

@@ -2,7 +2,7 @@ import { DiscordAPIError } from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { initTestI18n, makeTestConfig, silenceLogs } from "#lib/testing.js";
 import { reportsConfigSchema } from "../reports.config.js";
-import type { MessageSnapshot } from "./store.js";
+import type { MessageSnapshot } from "./store.service.js";
 
 vi.mock("#lib/database.js", () => ({ default: {}, Prisma: {} }));
 
@@ -80,7 +80,7 @@ const db = vi.hoisted(() => {
   return { reports, store };
 });
 
-vi.mock("./store.js", () => ({ default: db.store }));
+vi.mock("./store.service.js", () => ({ default: db.store }));
 
 const { default: service } = await import("./report.service.js");
 

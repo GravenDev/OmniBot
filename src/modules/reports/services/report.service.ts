@@ -15,7 +15,7 @@ import store, {
   type MessageSnapshot,
   type Report,
   type Reporter,
-} from "./store.js";
+} from "./store.service.js";
 
 const logger = loggerMaker("reports");
 

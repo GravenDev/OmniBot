@@ -12,7 +12,7 @@ import {
   type ReportsConfigSchema,
 } from "./reports.config.js";
 import reportService from "./services/report.service.js";
-import store, { type Report } from "./services/store.js";
+import store, { type Report } from "./services/store.service.js";
 
 const logger = loggerMaker("reports");
 

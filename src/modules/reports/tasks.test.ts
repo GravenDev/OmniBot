@@ -25,7 +25,7 @@ vi.mock("#core/services/config.service.js", () => ({
   },
 }));
 vi.mock("#lib/i18n.js", () => ({ createT: () => (key: string) => key }));
-vi.mock("./services/store.js", () => ({
+vi.mock("./services/store.service.js", () => ({
   default: {
     guildIds: mocks.guildIds,
     expired: mocks.expired,
