@@ -10,7 +10,7 @@ import unlinkConfirmButton from "./interactions/unlink-confirm.button.js";
 import messageCreateListener from "./listeners/message-create.listener.js";
 import { rngdleConfigSchema } from "./rngdle.config.js";
 import store from "./services/store.js";
-import { rngdleTasks } from "./tasks.js";
+import { rngdleMaintenanceTasks, rngdleTasks } from "./tasks.js";
 
 const logger = loggerMaker("rngdle");
 
@@ -50,6 +50,8 @@ const rngdleModule = defineModule({
   onUninstall(_client, guild) {
     logger.info(`Module uninstalled | guildId = ${guild.id}`);
   },
+
+  maintenanceTasks: rngdleMaintenanceTasks,
 
   deleteMemberData: (guildId, userId) => store.deleteMember(guildId, userId),
 });

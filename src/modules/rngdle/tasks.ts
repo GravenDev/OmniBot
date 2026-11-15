@@ -127,11 +127,6 @@ export function rngdleTasks(module: Module<RngdleConfigSchema>) {
       },
     }),
     declareTask({
-      id: "cards",
-      schedule: "0 2 * * *",
-      run: () => pruneCards(),
-    }),
-    declareTask({
       id: "score-table",
       schedule: "0 3 * * 1",
       runOnStart: true,
@@ -166,6 +161,23 @@ export function rngdleTasks(module: Module<RngdleConfigSchema>) {
           );
         }
       },
+    }),
+  ];
+}
+
+/**
+ * Run even where the module is skipped (Discord did not grant its Message
+ * Content intent) or its `onLoad` failed: the privacy policy deletes the card
+ * marks two days later in every case.
+ */
+export function rngdleMaintenanceTasks() {
+  return [
+    declareTask({
+      id: "cards",
+      schedule: "0 2 * * *",
+      // A night missed while the bot was down is caught up at start.
+      runOnStart: true,
+      run: () => pruneCards(),
     }),
   ];
 }
