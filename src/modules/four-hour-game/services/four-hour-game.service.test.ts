@@ -1,6 +1,8 @@
 import { setTimeout as sleep } from "node:timers/promises";
-import type { TextBasedChannel } from "discord.js";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { Guild, TextBasedChannel } from "discord.js";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { Module } from "#lib/module.js";
+import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
 import type { ScoredPoint } from "./four-hour-game.service.js";
 import type { HistoryReader } from "./types.js";
 
@@ -334,10 +336,25 @@ vi.mock("#lib/database.js", () => ({
   },
 }));
 
+// For the bot invited back to a guild, which goes through round-sync and the
+// daily close.
+const getConfigForModuleIn = vi.hoisted(() => vi.fn());
+vi.mock("#core/services/config.service.js", () => ({
+  default: { getConfigForModuleIn },
+}));
+const getModuleStateFromGuildIdIn = vi.hoisted(() => vi.fn());
+vi.mock("#core/services/module.service.js", () => ({
+  default: { getModuleStateFromGuildIdIn },
+}));
+const announcePoint = vi.hoisted(() => vi.fn());
+vi.mock("./point-announcement.js", () => ({ announcePoint }));
+
 const { default: prisma } = await import("#lib/database.js");
 const { default: service } = await import("./four-hour-game.service.js");
 const { fetchPlayerMessages, fetchPlayerMessagesSince } =
   await import("./channel-history.js");
+const { default: guildCreateListener } =
+  await import("#modules/four-hour-game/listeners/guild-create.listener.js");
 
 const DELAY = 4 * 60 * 60;
 
@@ -1939,5 +1956,150 @@ describe("daily points", () => {
 
     expect(await service.deleteScore("guild", "alice")).toBe(false);
     expect(dailyBests.size).toBe(0);
+  });
+});
+
+describe("the bot invited back to a guild", () => {
+  const HOUR = 3600;
+  const paris = (iso: string) => new Date(`${iso}+02:00`);
+  const module = {
+    id: "four-hour-game",
+  } as unknown as Module<FourHourGameConfigSchema>;
+
+  // The game channel as Discord shows it, every message on one page.
+  function gameChannel(entries: [authorId: string, iso: string][]) {
+    const messages = entries.map(([authorId, iso]) => {
+      const sentAt = paris(iso);
+      return {
+        id: `${authorId}-${sentAt.getTime()}`,
+        author: { id: authorId, bot: false },
+        system: false,
+        createdTimestamp: sentAt.getTime(),
+        createdAt: sentAt,
+      };
+    });
+    const nobody = async () => {
+      throw new Error("Unknown Member");
+    };
+    return {
+      id: "game",
+      isTextBased: () => true,
+      isDMBased: () => false,
+      isSendable: () => true,
+      send: vi.fn(async () => undefined),
+      messages: {
+        fetch: vi.fn(async () => new Map(messages.map((m) => [m.id, m]))),
+      },
+      guild: {
+        members: { fetch: nobody },
+        client: { users: { fetch: nobody } },
+      },
+    };
+  }
+
+  function invitedBack(channel: ReturnType<typeof gameChannel>) {
+    getConfigForModuleIn.mockResolvedValue({
+      get: (name: string) => (name === "delay" ? DELAY : channel),
+      t: (name: string) => name,
+      locale: "fr",
+    });
+    return guildCreateListener(module).execute(
+      { id: "guild" } as Guild,
+      undefined
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getModuleStateFromGuildIdIn.mockResolvedValue({ activated: true });
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(paris("2026-10-15T09:00:00"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("catches up the absence before the next live message, as after a downtime", async () => {
+    await service.handleMessage(
+      message("alice", paris("2026-10-13T20:00:00")),
+      DELAY
+    );
+    // The bot is kicked; bob then carol reply while it is away.
+    const channel = gameChannel([
+      ["alice", "2026-10-13T20:00:00"],
+      ["bob", "2026-10-14T02:00:00"],
+      ["carol", "2026-10-14T12:00:00"],
+    ]);
+
+    const caughtUp = invitedBack(channel);
+    const live = service.handleMessage(
+      message("dave", paris("2026-10-15T09:00:00")),
+      DELAY
+    );
+    await caughtUp;
+
+    expect(
+      announcePoint.mock.calls.map(([, point, , options]) => [
+        point.winnerId,
+        point.heldSeconds,
+        options,
+      ])
+    ).toEqual([
+      ["alice", 6 * HOUR, { caughtUp: true }],
+      ["bob", 10 * HOUR, { caughtUp: true }],
+    ]);
+    expect(closedDays.get("guild")).toBe("2026-10-14");
+    expect(dailyBests.get(key("guild", "2026-10-13"))).toMatchObject({
+      userId: "alice",
+      heldSeconds: 4 * HOUR,
+    });
+    expect(dailyBests.get(key("guild", "2026-10-14"))).toMatchObject({
+      userId: "carol",
+      heldSeconds: 12 * HOUR,
+    });
+    expect(channel.send).toHaveBeenCalledTimes(2);
+    // Carol held the channel until dave, not alice since before the absence.
+    expect(await live).toMatchObject({
+      kind: "point",
+      winnerId: "carol",
+      heldSeconds: 21 * HOUR,
+    });
+    // The missed days are closed once: midnight finds nothing left.
+    expect(await service.closeDays("guild", "game")).toEqual([]);
+  });
+
+  it("still closes the missed days when the replay fails, as at startup", async () => {
+    await service.handleMessage(
+      message("alice", paris("2026-10-13T20:00:00")),
+      DELAY
+    );
+    const channel = gameChannel([]);
+    channel.messages.fetch.mockRejectedValue(new Error("Missing Access"));
+
+    await invitedBack(channel);
+
+    expect(closedDays.get("guild")).toBe("2026-10-14");
+    expect(channel.send).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves a guild where the module is off as it is", async () => {
+    getModuleStateFromGuildIdIn.mockResolvedValue({ activated: false });
+    await service.handleMessage(
+      message("alice", paris("2026-10-13T20:00:00")),
+      DELAY
+    );
+    const channel = gameChannel([
+      ["alice", "2026-10-13T20:00:00"],
+      ["bob", "2026-10-14T02:00:00"],
+    ]);
+
+    await invitedBack(channel);
+
+    expect(channel.messages.fetch).not.toHaveBeenCalled();
+    expect(channel.send).not.toHaveBeenCalled();
+    expect(announcePoint).not.toHaveBeenCalled();
+    expect(lastMessages.get("guild")?.authorId).toBe("alice");
+    expect(closedDays.get("guild")).toBe("2026-10-12");
   });
 });

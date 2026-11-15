@@ -28,9 +28,10 @@ function footerKey(caughtUp: boolean, counted: boolean): string {
 }
 
 /**
- * `caughtUp`: scored while the bot was down, announced when it restarts. The
- * footer gives the time the duration counts from: the message's own, or for a
- * message back in place, the later one its delay restarted at.
+ * `caughtUp`: scored while the bot was away (stopped, or removed from the
+ * guild), announced once it is back. The footer gives the time the duration
+ * counts from: the message's own, or for a message back in place, the later
+ * one its delay restarted at.
  */
 export function buildPointEmbed(
   announcement: PointAnnouncement,

@@ -10,9 +10,9 @@
   "point.total_one": "Total : **{{count}} point**",
   "point.total_other": "Total : **{{count}} points**",
   "point.postedAt": "Message posté",
-  "point.caughtUpPostedAt": "Rattrapé au redémarrage · Message posté",
+  "point.caughtUpPostedAt": "Rattrapé au retour du bot · Message posté",
   "point.countedFrom": "Compté depuis",
-  "point.caughtUpCountedFrom": "Rattrapé au redémarrage · Compté depuis",
+  "point.caughtUpCountedFrom": "Rattrapé au retour du bot · Compté depuis",
 
   "daily.title": "Point du jour",
   "daily.description": "{{user}} remporte le point du {{date}} : son message est resté sans réponse **{{duration}}**, plus longtemps que tout autre ce jour-là.",
