@@ -114,7 +114,7 @@ Shared code lives in `src/lib/` (imported as `#lib/…`), plus `src/core/utils/`
 | `#lib/table.js`            | leaderboard tables drawn on a canvas                                                                                 |
 | `#lib/task.js`             | `declareTask` for scheduled tasks                                                                                    |
 | `#lib/testing.js`          | test fakes: guilds, channels, messages, config, silenced logs                                                        |
-| `#lib/text.js`             | `truncate`, `quoteEachLine` (Markdown quote)                                                                         |
+| `#lib/text.js`             | `truncate`, `quoteEachLine` (Markdown quote), `stripLineMarkup` (headings, small text, quotes)                       |
 | `#lib/version.js`          | the `Version` type                                                                                                   |
 
 ## Commits

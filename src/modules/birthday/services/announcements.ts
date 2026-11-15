@@ -6,7 +6,7 @@ import {
 } from "#lib/celebration-card.js";
 import type { TFunction } from "#lib/i18n.js";
 import { CELEBRATION_TEXT_LIMIT } from "#lib/post-card.js";
-import { truncate } from "#lib/text.js";
+import { stripLineMarkup, truncate } from "#lib/text.js";
 import { ACCENT, CONFETTI } from "../rendering/theme.js";
 import {
   CERTAIN_GROUP_SIZE,
@@ -36,7 +36,6 @@ export interface MentionNames {
   channel: (id: string) => string | undefined;
 }
 
-const LINE_PREFIX = /^\s*(?:#{1,3}|-#|>{1,3})\s+/gm;
 const PAIRED_MARKS = /\*\*|__|~~|\|\||`/g;
 const EMPHASIS = /([*_])(\S(?:.*?\S)?)\1/g;
 
@@ -52,7 +51,7 @@ export function plainMessage(
 ): string {
   const named = (prefix: string, name: string | undefined) =>
     name === undefined ? "" : prefix + name;
-  return text
+  return stripLineMarkup(text)
     .replace(/<@!?(\d+)>/g, (_, id: string) => named("@", names.user(id)))
     .replace(/<@&(\d+)>/g, (_, id: string) => named("@", names.role(id)))
     .replace(/<#(\d+)>/g, (_, id: string) => named("#", names.channel(id)))
@@ -64,7 +63,6 @@ export function plainMessage(
       )
     )
     .replace(/\[([^\]]+)\]\(<?[^)\s]+>?\)/g, "$1")
-    .replace(LINE_PREFIX, "")
     .replace(PAIRED_MARKS, "")
     .replace(EMPHASIS, "$2")
     .replace(/\\([*_~|`>#\\[\]()-])/g, "$1")
