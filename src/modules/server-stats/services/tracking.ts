@@ -4,19 +4,9 @@ import {
   type GuildBasedChannel,
   PermissionFlagsBits,
 } from "discord.js";
+import { excludedIdsOf, isExcluded } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
-
-export function isExcluded(
-  channel: GuildBasedChannel,
-  excludedIds: ReadonlySet<string>
-): boolean {
-  const ids = [channel.id, channel.parentId];
-  if (channel.isThread()) {
-    ids.push(channel.parent?.parentId ?? null);
-  }
-  return ids.some((id) => id !== null && excludedIds.has(id));
-}
 
 export function isPublic(channel: GuildBasedChannel): boolean {
   if (channel.type === ChannelType.PrivateThread) {
@@ -33,11 +23,9 @@ export function isTracked(
   channel: GuildBasedChannel,
   config: ConfigProvider<ServerStatsConfigSchema>
 ): boolean {
-  const excludedIds = new Set(
-    [
-      ...(config.get("excludedChannels") ?? []),
-      ...(config.get("excludedCategories") ?? []),
-    ].map((excluded) => excluded.id)
+  const excludedIds = excludedIdsOf(
+    config.get("excludedChannels"),
+    config.get("excludedCategories")
   );
   if (isExcluded(channel, excludedIds)) {
     return false;
