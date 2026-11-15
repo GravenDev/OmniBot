@@ -1,7 +1,6 @@
 import {
   type Client,
   type Message,
-  MessageType,
   type PartialMessage,
   RESTJSONErrorCodes,
 } from "discord.js";
@@ -9,7 +8,7 @@ import { type ConfigProvider, matchesEmoji } from "#lib/config.js";
 import { isApiError, isDiscordApiError } from "#lib/discord-errors.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
-import { sendWithMediaFallback } from "#lib/reported-message.js";
+import { repliedTo, sendWithMediaFallback } from "#lib/reported-message.js";
 import { declareService, type Service } from "#lib/service.js";
 import type { StarboardConfigSchema } from "#modules/starboard/starboard.config.js";
 import {
@@ -440,10 +439,7 @@ class StarboardService implements Service {
     config: Config,
     send: (payload: ReturnType<typeof starboardMessage>) => Promise<T>
   ): Promise<T> {
-    const reply =
-      message.type === MessageType.Reply
-        ? await message.fetchReference().catch(() => null)
-        : null;
+    const reply = await repliedTo(message);
     const render = (withMedia: boolean) =>
       starboardMessage(
         message,

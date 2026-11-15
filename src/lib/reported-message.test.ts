@@ -4,12 +4,13 @@ import {
   Collection,
   ComponentType,
   type Message,
+  MessageType,
 } from "discord.js";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import en from "#core/i18n/en.json" with { type: "json" };
 import { COMPONENTS_TEXT_LIMIT } from "./format.js";
 import { createT } from "./i18n.js";
-import { reportedMessage } from "./reported-message.js";
+import { repliedTo, reportedMessage } from "./reported-message.js";
 import { componentCount, initTestI18n, textLength } from "./testing.js";
 
 const t = createT("en", "core");
@@ -694,5 +695,76 @@ describe("the reported container", () => {
     // Container, section, its text and thumbnail, separator, footer section,
     // its text and the link.
     expect(componentCount([container])).toBe(8);
+  });
+});
+
+describe("repliedTo", () => {
+  const replying = (overrides: Record<string, unknown> = {}) => {
+    const original = fakeMessage({ id: "m0" });
+    const fetchReference = vi.fn(async () => original);
+    const message = fakeMessage({
+      type: MessageType.Reply,
+      reference: { channelId: "general", messageId: "m0" },
+      fetchReference,
+      ...overrides,
+    });
+    return { message, original, fetchReference };
+  };
+
+  it("fetches the message replied to", async () => {
+    const { message, original } = replying();
+    expect(await repliedTo(message)).toBe(original);
+  });
+
+  it("gives null when the message replied to is gone", async () => {
+    const { message } = replying({
+      fetchReference: async () => {
+        throw new Error("Unknown Message");
+      },
+    });
+    expect(await repliedTo(message)).toBeNull();
+  });
+
+  it("asks nothing of a message that replies to none", async () => {
+    // A forward has a reference too, but is no reply.
+    const { message, fetchReference } = replying({ type: MessageType.Default });
+    expect(await repliedTo(message)).toBeNull();
+    expect(fetchReference).not.toHaveBeenCalled();
+  });
+
+  it("fetches a thread's starter message, which sits in the parent channel", async () => {
+    const { message, original } = replying({
+      channelId: "thread",
+      channel: { isThread: () => true, parentId: "general" },
+    });
+    expect(await repliedTo(message)).toBe(original);
+  });
+
+  it("does not reach from a thread into a channel other than its parent", async () => {
+    const { message, fetchReference } = replying({
+      channelId: "thread",
+      channel: { isThread: () => true, parentId: "general" },
+      reference: { channelId: "elsewhere", messageId: "m0" },
+    });
+    expect(await repliedTo(message)).toBeNull();
+    expect(fetchReference).not.toHaveBeenCalled();
+  });
+
+  it("gives null rather than fail when the channel is not at hand", async () => {
+    const { message, fetchReference } = replying({
+      reference: { channelId: "elsewhere", messageId: "m0" },
+      channel: null,
+    });
+    expect(await repliedTo(message)).toBeNull();
+    expect(fetchReference).not.toHaveBeenCalled();
+  });
+
+  it("does not reach into another channel", async () => {
+    const { message, fetchReference } = replying({
+      reference: { channelId: "elsewhere", messageId: "m0" },
+      channel: { isThread: () => false },
+    });
+    expect(await repliedTo(message)).toBeNull();
+    expect(fetchReference).not.toHaveBeenCalled();
   });
 });
