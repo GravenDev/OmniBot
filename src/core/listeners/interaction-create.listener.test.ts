@@ -367,6 +367,41 @@ describe("component interactions", () => {
     } as any;
   }
 
+  it("tells the user a button whose handler no longer exists is unavailable", async () => {
+    const t = vi.fn((key: string) => key);
+    getConfigForModuleIn.mockResolvedValueOnce({ t });
+
+    const interaction = fakeButton("gone:1");
+    await listener.execute(interaction, undefined);
+
+    expect(getConfigForModuleIn).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "core" }),
+      "guild-1"
+    );
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: "interaction.unavailable",
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+
+  it("tells the user a button with an empty customId prefix is unavailable", async () => {
+    const interaction = fakeButton(":1");
+    await listener.execute(interaction, undefined);
+
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: "interaction.unavailable",
+      flags: MessageFlags.Ephemeral,
+    });
+  });
+
+  it("stays silent on an unknown button outside a guild", async () => {
+    const interaction = fakeButton("gone", { guild: null, guildId: null });
+    await listener.execute(interaction, undefined);
+
+    expect(getConfigForModuleIn).not.toHaveBeenCalled();
+    expect(interaction.reply).not.toHaveBeenCalled();
+  });
+
   it("tells the user when the handler's module is disabled", async () => {
     const execute = vi.fn(async () => {});
     pushHandler({

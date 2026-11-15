@@ -12,19 +12,27 @@ import { findInteractionHandler } from "./routing.js";
 export async function handleInteraction(interaction: CompatibleInteraction) {
   const [id, ...args] = interaction.customId.split(":");
 
-  if (!id) {
-    logger.warn(
-      `Invalid interaction customId | customId = ${interaction.customId}`
-    );
-    return;
-  }
-
-  const handler = findInteractionHandler(id);
+  const handler = id ? findInteractionHandler(id) : undefined;
 
   if (!handler) {
     logger.warn(
-      `Interaction handler not found | customId = ${interaction.customId}`
+      id
+        ? `Interaction handler not found | customId = ${interaction.customId}`
+        : `Invalid interaction customId | customId = ${interaction.customId}`
     );
+    // A message posted before its module was removed, or a malformed
+    // customId: answer, or Discord shows the member that the interaction
+    // failed.
+    if (interaction.guild && interaction.guildId) {
+      const coreConfig = await configService.getConfigForModuleIn(
+        coreModule,
+        interaction.guildId
+      );
+      await replyEphemeral(
+        interaction,
+        coreConfig.t("interaction.unavailable")
+      );
+    }
     return;
   }
 

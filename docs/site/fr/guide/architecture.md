@@ -103,7 +103,7 @@ interactionCreate
 │   └─ complete(interaction, config)
 ├─ isMessageComponent() ou isModalSubmit()
 │   ├─ diviser customId sur ":" → préfixe + args
-│   ├─ trouver le gestionnaire par préfixe
+│   ├─ trouver le gestionnaire par préfixe (aucun → réponse éphémère « plus disponible »)
 │   ├─ vérifier l'activation du module
 │   ├─ exécuter la garde de type (check())
 │   ├─ vérifier l'accès ("admin", "everyone" ou { permissions })

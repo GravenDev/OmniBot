@@ -16,7 +16,7 @@ async function moduleOf(
   if (!module) {
     await interaction.reply({
       content: coreT(
-        moduleId ? "interaction.moduleNotFound" : "interaction.malformed"
+        moduleId ? "interaction.moduleNotFound" : "interaction.unavailable"
       ),
       flags: MessageFlags.Ephemeral,
     });

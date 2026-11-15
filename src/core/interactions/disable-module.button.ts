@@ -18,7 +18,7 @@ export default declareInteractionHandler({
 
     if (!moduleId) {
       await interaction.reply({
-        content: coreT("interaction.malformed"),
+        content: coreT("interaction.unavailable"),
         flags: MessageFlags.Ephemeral,
       });
       return;
