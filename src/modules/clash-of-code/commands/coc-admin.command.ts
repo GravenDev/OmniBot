@@ -17,27 +17,23 @@ import {
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { ClashOfCodeConfigSchema } from "#modules/clash-of-code/clash-of-code.config.js";
-import {
-  ClashNotFoundError,
-  fetchClashReport,
-} from "#modules/clash-of-code/services/api.js";
+import { ClashNotFoundError } from "#modules/clash-of-code/services/api.js";
 import {
   type ImportSummary,
   importClashes,
   MAX_RATE_LIMIT_PAUSE_MS,
 } from "#modules/clash-of-code/services/channel-import.js";
+import codingame from "#modules/clash-of-code/services/codingame.service.js";
 import {
   newSearchState,
   type SearchProgress,
   type SearchState,
-  searchChannelClashes,
 } from "#modules/clash-of-code/services/history.js";
+import history from "#modules/clash-of-code/services/history.service.js";
 import { parseClashLinks } from "#modules/clash-of-code/services/links.js";
 import store from "#modules/clash-of-code/services/store.js";
-import {
-  modeLabel,
-  resultImage,
-} from "#modules/clash-of-code/services/views.js";
+import { modeLabel } from "#modules/clash-of-code/services/views.js";
+import views from "#modules/clash-of-code/services/views.service.js";
 
 const HANDLE_PATTERN = /^[0-9a-f]{30,40}$/i;
 const PROGRESS_INTERVAL_MS = 5_000;
@@ -94,7 +90,7 @@ async function importGame(interaction: Interaction, config: Config) {
 
   let report;
   try {
-    report = await fetchClashReport(handle);
+    report = await codingame.fetchClashReport(handle);
   } catch (err) {
     if (!(err instanceof ClashNotFoundError)) {
       logger.warn({ err }, `CodinGame unreachable | handle = ${handle}`);
@@ -124,7 +120,7 @@ async function importGame(interaction: Interaction, config: Config) {
   logger.info(
     `Clash imported by hand | guildId = ${interaction.guildId} | handle = ${handle} | by = ${interaction.user.id}`
   );
-  const image = await resultImage(
+  const image = await views.resultImage(
     {
       client: interaction.client,
       guildId: interaction.guildId,
@@ -228,7 +224,7 @@ async function importChannel(interaction: Interaction, config: Config) {
     const deadline = interaction.createdTimestamp + IMPORT_BUDGET_MS;
 
     try {
-      state.searched ||= await searchChannelClashes(
+      state.searched ||= await history.searchChannelClashes(
         interaction.client.rest,
         guildId,
         channel.id,

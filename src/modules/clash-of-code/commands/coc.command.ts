@@ -17,10 +17,9 @@ import {
   isClashMode,
 } from "#modules/clash-of-code/services/api.js";
 import store from "#modules/clash-of-code/services/store.js";
-import {
-  profileCard,
+import views, {
   type ViewContext,
-} from "#modules/clash-of-code/services/views.js";
+} from "#modules/clash-of-code/services/views.service.js";
 
 const AUTOCOMPLETE_LIMIT = 25;
 const NICKNAME_MAX_LENGTH = 64;
@@ -89,7 +88,10 @@ async function profile(interaction: Interaction, config: Config) {
   }
 
   await interaction.deferReply();
-  const image = await profileCard(viewContext(interaction, config), player);
+  const image = await views.profileCard(
+    viewContext(interaction, config),
+    player
+  );
   await interaction.editReply(
     image
       ? { files: [new AttachmentBuilder(image, { name: "profile.png" })] }

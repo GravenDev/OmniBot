@@ -1,4 +1,16 @@
-import type { StoredParticipation } from "./store.js";
+export interface StoredPlayer {
+  codingamerId: number;
+  nickname: string;
+  avatarId: bigint | null;
+  userId: string | null;
+}
+
+export interface StoredParticipation {
+  codingamerId: number;
+  rank: number;
+  score: number;
+  durationMs: number;
+}
 
 export interface Standing {
   codingamerId: number;

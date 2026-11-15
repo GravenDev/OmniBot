@@ -9,15 +9,9 @@ const mocks = vi.hoisted(() => ({
   searchChannelClashes: vi.fn(),
   importClashes: vi.fn(),
 }));
-vi.mock(
-  "#modules/clash-of-code/services/history.js",
-  async (importOriginal) => ({
-    ...(await importOriginal<
-      typeof import("#modules/clash-of-code/services/history.js")
-    >()),
-    searchChannelClashes: mocks.searchChannelClashes,
-  })
-);
+vi.mock("#modules/clash-of-code/services/history.service.js", () => ({
+  default: { searchChannelClashes: mocks.searchChannelClashes },
+}));
 vi.mock(
   "#modules/clash-of-code/services/channel-import.js",
   async (importOriginal) => ({
