@@ -169,6 +169,18 @@ describe("reports purge task", () => {
     expect(mocks.delete.mock.calls).toEqual([[1], [3]]);
   });
 
+  it("keeps purging the other reports of the guild when one fails", async () => {
+    mocks.guildIds.mockResolvedValue(["g1"]);
+    mocks.reports.set(1, report(1, [31], null));
+    mocks.reports.set(2, report(2, [31], null));
+    mocks.expired.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+    mocks.delete.mockRejectedValueOnce(new Error("db down"));
+
+    await runPurge();
+
+    expect(mocks.delete.mock.calls).toEqual([[1], [2]]);
+  });
+
   it("keeps purging the other guilds when one fails", async () => {
     mocks.guildIds.mockResolvedValue(["broken", "g1"]);
     mocks.expired
