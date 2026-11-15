@@ -1,13 +1,13 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { createT } from "#lib/i18n.js";
 import { initTestI18n } from "#lib/testing.js";
-import en from "../i18n/en.json" with { type: "json" };
-import fr from "../i18n/fr.json" with { type: "json" };
 import {
   memberAnniversaryMessages,
   serverAnniversaryMessage,
   type MemberAnniversary,
 } from "./announcements.js";
+import en from "./i18n/en.json" with { type: "json" };
+import fr from "./i18n/fr.json" with { type: "json" };
 
 beforeAll(async () => {
   await initTestI18n("seniority", { en, fr });

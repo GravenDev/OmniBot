@@ -7,8 +7,8 @@ import {
 import { font, registerFont } from "#lib/imaging.js";
 import type { Previews } from "#lib/preview.js";
 import { firstFrame, previewT } from "#lib/preview.js";
+import { membersCardText, serverCardText } from "#modules/seniority/cards.js";
 import fr from "../i18n/fr.json" with { type: "json" };
-import { membersCardText, serverCardText } from "../services/cards.js";
 
 registerFont(
   new URL("../../../lib/assets/outfit.ttf", import.meta.url),

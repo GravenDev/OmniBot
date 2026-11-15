@@ -6,7 +6,7 @@ import {
 } from "#lib/discord-polyfills/guild-message-search.js";
 import { loggerMaker } from "#lib/logger.js";
 import { sweepStoredMembers } from "#lib/member-presence.js";
-import { seniorityStart } from "./overrides.js";
+import { seniorityStart } from "#modules/seniority/overrides.js";
 
 /** The recomputed seniority of the guild's members, by user id. */
 export async function overrides(guildId: string): Promise<Map<string, Date>> {

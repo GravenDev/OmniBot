@@ -15,12 +15,12 @@ import {
   messageText,
   silenceLogs,
 } from "#lib/testing.js";
-import en from "../i18n/en.json" with { type: "json" };
-import fr from "../i18n/fr.json" with { type: "json" };
 import {
   seniorityConfigSchema,
   type SeniorityConfigSchema,
-} from "../seniority.config.js";
+} from "#modules/seniority/seniority.config.js";
+import en from "../i18n/en.json" with { type: "json" };
+import fr from "../i18n/fr.json" with { type: "json" };
 
 const state = vi.hoisted(() => ({ lastDay: vi.fn(), claimDay: vi.fn() }));
 vi.mock("./state.js", () => state);
@@ -50,8 +50,8 @@ const cards = vi.hoisted(() => ({
   seniorityCard: vi.fn(),
   serverCard: vi.fn(),
 }));
-vi.mock("./cards.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./cards.js")>()),
+vi.mock("#modules/seniority/cards.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("#modules/seniority/cards.js")>()),
   ...cards,
 }));
 

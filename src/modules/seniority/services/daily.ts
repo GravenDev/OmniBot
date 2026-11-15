@@ -22,17 +22,17 @@ import { allMembers } from "#lib/guild-members.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { celebrationMessage, postCard } from "#lib/post-card.js";
-import type { SeniorityConfigSchema } from "../seniority.config.js";
 import {
   memberAnniversaryMessages,
   serverAnniversaryMessage,
-} from "./announcements.js";
+} from "#modules/seniority/announcements.js";
 import {
   celebratedMembers,
   seniorityCard,
   serverCard,
   serverFacts,
-} from "./cards.js";
+} from "#modules/seniority/cards.js";
+import type { SeniorityConfigSchema } from "#modules/seniority/seniority.config.js";
 import { overrides } from "./overrides.service.js";
 import portraits from "./portraits.service.js";
 import * as state from "./state.js";
