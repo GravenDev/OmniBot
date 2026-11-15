@@ -21,10 +21,15 @@ vi.mock("#modules/rngdle/services/store.service.js", () => ({
 vi.mock("#modules/rngdle/services/sync.service.js", () => ({
   default: { refreshIfStale: mocks.refreshIfStale },
 }));
-vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  versusCard: mocks.versusCard,
-}));
+vi.mock(
+  "#modules/rngdle/services/views.service.js",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    default: {
+      versusCard: mocks.versusCard,
+    },
+  })
+);
 vi.mock("#modules/rngdle/interactions/overall-page.button.js", () => ({
   overallPageMessage: vi.fn(),
 }));

@@ -52,22 +52,9 @@ vi.mock("#lib/imaging.js", () => ({
   fetchImage: async () => null,
 }));
 
+import { periodRange } from "#modules/rngdle/periods.js";
 import { renderProfile } from "#modules/rngdle/rendering/cards.js";
-import {
-  dailyLeaderboard,
-  dailyRecap,
-  historyCard,
-  overallPage,
-  parsePeriod,
-  periodRange,
-  profileCard,
-  serverCard,
-  timelineCard,
-  trendCard,
-  utcDayRange,
-  versusCard,
-  type ViewContext,
-} from "./views.js";
+import views, { type ViewContext } from "./views.service.js";
 
 const MEMBERS = new Set(["a"]);
 const KNOWN = new Set([
@@ -139,69 +126,6 @@ beforeEach(() => {
   mocks.tierOf.mockReset().mockReturnValue("COMMON");
 });
 
-describe("utcDayRange", () => {
-  const now = new Date("2026-03-01T15:30:00Z");
-
-  it("covers the current UTC day", () => {
-    const [from, to] = utcDayRange(0, now);
-
-    expect(from.toISOString()).toBe("2026-03-01T00:00:00.000Z");
-    expect(to.toISOString()).toBe("2026-03-02T00:00:00.000Z");
-  });
-
-  it("goes back across a month boundary", () => {
-    const [from, to] = utcDayRange(1, now);
-
-    expect(from.toISOString()).toBe("2026-02-28T00:00:00.000Z");
-    expect(to.toISOString()).toBe("2026-03-01T00:00:00.000Z");
-  });
-});
-
-describe("periodRange", () => {
-  const iso = (range: { from?: Date; to?: Date }) => [
-    range.from?.toISOString(),
-    range.to?.toISOString(),
-  ];
-
-  it("is unbounded for all time", () => {
-    expect(periodRange("all")).toEqual({});
-  });
-
-  it("covers the calendar month in UTC", () => {
-    expect(iso(periodRange("month", new Date("2026-12-31T23:59:00Z")))).toEqual(
-      ["2026-12-01T00:00:00.000Z", "2027-01-01T00:00:00.000Z"]
-    );
-  });
-
-  it("covers the ISO week, Monday to Monday, in UTC", () => {
-    const week = ["2026-10-05T00:00:00.000Z", "2026-10-12T00:00:00.000Z"];
-
-    expect(iso(periodRange("week", new Date("2026-10-05T00:00:00Z")))).toEqual(
-      week
-    );
-    expect(iso(periodRange("week", new Date("2026-10-11T23:59:59Z")))).toEqual(
-      week
-    );
-  });
-
-  it("crosses month and year boundaries for a week", () => {
-    expect(iso(periodRange("week", new Date("2027-01-01T12:00:00Z")))).toEqual([
-      "2026-12-28T00:00:00.000Z",
-      "2027-01-04T00:00:00.000Z",
-    ]);
-  });
-});
-
-describe("parsePeriod", () => {
-  it("accepts known periods and falls back to all time", () => {
-    expect(parsePeriod("week")).toBe("week");
-    expect(parsePeriod("month")).toBe("month");
-    expect(parsePeriod(undefined)).toBe("all");
-    expect(parsePeriod(null)).toBe("all");
-    expect(parsePeriod("year")).toBe("all");
-  });
-});
-
 describe("dailyLeaderboard", () => {
   const rendered = () =>
     mocks.renderDaily.mock.calls.at(-1)![0] as {
@@ -218,7 +142,7 @@ describe("dailyLeaderboard", () => {
   it("ranks the rolls and returns every distinct player tied with the best score as winner", async () => {
     days([roll("a", 100), roll("b", 100), roll("a", 100), roll("c", 50)]);
 
-    const board = await dailyLeaderboard(context, 0);
+    const board = await views.dailyLeaderboard(context, 0);
 
     expect(rendered().rows.map((row) => [row.rank, row.name])).toEqual([
       [1, "nick-a"],
@@ -243,7 +167,7 @@ describe("dailyLeaderboard", () => {
         [roll("a", 120), roll("a", 200), roll("b", 150)]
       );
 
-      await dailyLeaderboard(context, 1);
+      await views.dailyLeaderboard(context, 1);
 
       expect(mocks.rolls).toHaveBeenCalledWith(context.guildId, {
         from: new Date("2026-02-28T00:00:00Z"),
@@ -262,7 +186,7 @@ describe("dailyLeaderboard", () => {
   it("does not compare today's unfinished player count with yesterday's", async () => {
     days([roll("a", 300)], [roll("a", 200), roll("b", 150), roll("c", 90)]);
 
-    await dailyLeaderboard(context, 0);
+    await views.dailyLeaderboard(context, 0);
 
     expect(rendered().players).toEqual({ count: 1, previous: null });
     expect(rendered().average.previous).not.toBeNull();
@@ -271,7 +195,7 @@ describe("dailyLeaderboard", () => {
   it("leaves the comparison out when nobody rolled the day before", async () => {
     days([roll("a", 300)]);
 
-    await dailyLeaderboard(context, 0);
+    await views.dailyLeaderboard(context, 0);
 
     expect(rendered().average.previous).toBeNull();
     expect(rendered().players.previous).toBeNull();
@@ -288,7 +212,7 @@ describe("dailyLeaderboard", () => {
       { guildId: "g", userId: "ghost", username: "ghost-rngdle" },
     ]);
 
-    await dailyLeaderboard(context, 0);
+    await views.dailyLeaderboard(context, 0);
 
     expect(rendered().rows).toHaveLength(25);
     expect(rendered().worst).toMatchObject({
@@ -297,7 +221,10 @@ describe("dailyLeaderboard", () => {
     });
 
     days([roll("a", 300), roll("a", 5)]);
-    await dailyLeaderboard({ ...context, guildId: `${context.guildId}x` }, 0);
+    await views.dailyLeaderboard(
+      { ...context, guildId: `${context.guildId}x` },
+      0
+    );
     expect(rendered().worst).toBeNull();
   });
 
@@ -307,7 +234,7 @@ describe("dailyLeaderboard", () => {
     ]);
     days([roll("ghost", 30), roll("a", 20), roll("unknown", 10)]);
 
-    const board = await dailyLeaderboard(context, 0);
+    const board = await views.dailyLeaderboard(context, 0);
 
     expect(rendered().rows.map((row) => [row.rank, row.name])).toEqual([
       [1, "ghost-rngdle"],
@@ -318,7 +245,7 @@ describe("dailyLeaderboard", () => {
   });
 
   it("returns null without rolls", async () => {
-    expect(await dailyLeaderboard(context, 0)).toBeNull();
+    expect(await views.dailyLeaderboard(context, 0)).toBeNull();
     expect(mocks.renderDaily).not.toHaveBeenCalled();
   });
 });
@@ -335,7 +262,7 @@ describe("dailyRecap", () => {
         { userId: "b", score: 20, rolledAt: new Date("2026-03-01T11:00:00Z") },
       ]);
 
-      const recap = await dailyRecap("g", 1);
+      const recap = await views.dailyRecap("g", 1);
 
       expect(mocks.rolls).toHaveBeenCalledWith("g", {
         to: new Date("2026-03-02T00:00:00Z"),
@@ -373,11 +300,11 @@ describe("overallPage", () => {
   it("returns null when nobody has a roll", async () => {
     mocks.rolls.mockResolvedValue([]);
 
-    expect(await overallPage(context, 1, "p0")).toBeNull();
+    expect(await views.overallPage(context, 1, "p0")).toBeNull();
   });
 
   it("renders 10 rows per page in both tables and clamps the requested page", async () => {
-    expect(await overallPage(context, 99, "x")).toMatchObject({
+    expect(await views.overallPage(context, 99, "x")).toMatchObject({
       page: 3,
       pageCount: 3,
     });
@@ -388,7 +315,7 @@ describe("overallPage", () => {
       21, 22, 23, 24, 25,
     ]);
 
-    expect(await overallPage(context, 0, "x")).toMatchObject({
+    expect(await views.overallPage(context, 0, "x")).toMatchObject({
       page: 1,
       pageCount: 3,
     });
@@ -403,7 +330,7 @@ describe("overallPage", () => {
       datedRoll("b", 100),
     ]);
 
-    await overallPage(context, 1, "x");
+    await views.overallPage(context, 1, "x");
 
     expect(rendered().ranking.map((row) => [row.name, row.rolls])).toEqual([
       ["nick-a", 40],
@@ -420,20 +347,20 @@ describe("overallPage", () => {
   });
 
   it("adds the caller row only when the caller is off the page", async () => {
-    await overallPage(context, 1, "p14");
+    await views.overallPage(context, 1, "p14");
     expect(rendered().caller).toMatchObject({ rank: 15, name: "name-p14" });
 
-    await overallPage(context, 2, "p14");
+    await views.overallPage(context, 2, "p14");
     expect(rendered().caller).toBeUndefined();
 
-    await overallPage(context, 1, "not-ranked");
+    await views.overallPage(context, 1, "not-ranked");
     expect(rendered().caller).toBeUndefined();
   });
 
   it("ranks over the requested period, cached separately", async () => {
-    await overallPage(context, 1, "x");
-    await overallPage(context, 1, "x", "week");
-    await overallPage(context, 1, "x", "week");
+    await views.overallPage(context, 1, "x");
+    await views.overallPage(context, 1, "x", "week");
+    await views.overallPage(context, 1, "x", "week");
 
     expect(mocks.rolls).toHaveBeenCalledTimes(2);
     expect(mocks.rolls.mock.calls[0]).toEqual([context.guildId, {}]);
@@ -452,7 +379,7 @@ describe("overallPage", () => {
       { userId: "ghost1", username: "Registered" },
     ]);
 
-    await overallPage(context, 1, "x");
+    await views.overallPage(context, 1, "x");
 
     expect(rendered().ranking.map((row) => row.name)).toEqual([
       "Registered",
@@ -484,7 +411,7 @@ describe("historyCard", () => {
 
   it("returns null without rolls", async () => {
     expect(
-      await historyCard(context, { ...account, guildId: context.guildId })
+      await views.historyCard(context, { ...account, guildId: context.guildId })
     ).toBeNull();
     expect(mocks.renderHistory).not.toHaveBeenCalled();
   });
@@ -494,7 +421,7 @@ describe("historyCard", () => {
       Array.from({ length: 20 }, (_, i) => day(i + 1, (i + 1) * 100))
     );
 
-    const result = await historyCard(
+    const result = await views.historyCard(
       context,
       { ...account, guildId: context.guildId },
       5,
@@ -531,7 +458,7 @@ describe("historyCard", () => {
       day(19, 200),
     ]);
 
-    await historyCard(
+    await views.historyCard(
       context,
       { ...account, guildId: context.guildId },
       5,
@@ -556,7 +483,7 @@ describe("historyCard", () => {
         }
       ).subtitle(rendered().rows.length);
 
-    expect(await historyCard(context, own, 5, now, 2)).toMatchObject({
+    expect(await views.historyCard(context, own, 5, now, 2)).toMatchObject({
       page: 2,
       pageCount: 3,
     });
@@ -565,12 +492,12 @@ describe("historyCard", () => {
     ]);
     expect(subtitle()).toBe("history.subtitlePage");
 
-    expect(await historyCard(context, own, 5, now, 9)).toMatchObject({
+    expect(await views.historyCard(context, own, 5, now, 9)).toMatchObject({
       page: 3,
     });
     expect(rendered().rows.map((row) => row.score)).toEqual([200, 100]);
 
-    expect(await historyCard(context, own, 5, now, 0)).toMatchObject({
+    expect(await views.historyCard(context, own, 5, now, 0)).toMatchObject({
       page: 1,
     });
     expect(subtitle()).toBe("history.subtitle");
@@ -582,13 +509,13 @@ describe("historyCard", () => {
     );
     const own = { ...account, guildId: context.guildId };
 
-    await historyCard(context, own, 99, now);
+    await views.historyCard(context, own, 99, now);
     expect(rendered().rows).toHaveLength(15);
 
-    await historyCard(context, own, 1, now);
+    await views.historyCard(context, own, 1, now);
     expect(rendered().rows).toHaveLength(5);
 
-    await historyCard(context, own, undefined, now);
+    await views.historyCard(context, own, undefined, now);
     expect(rendered().rows).toHaveLength(10);
   });
 });
@@ -615,7 +542,10 @@ describe("timelineCard", () => {
 
   it("returns null without rolls", async () => {
     expect(
-      await timelineCard(context, { ...account, guildId: context.guildId })
+      await views.timelineCard(context, {
+        ...account,
+        guildId: context.guildId,
+      })
     ).toBeNull();
     expect(mocks.renderTimeline).not.toHaveBeenCalled();
   });
@@ -637,7 +567,11 @@ describe("timelineCard", () => {
       at("2026-10-18T10:00:00Z", 600),
     ]);
 
-    await timelineCard(context, { ...account, guildId: context.guildId }, now);
+    await views.timelineCard(
+      context,
+      { ...account, guildId: context.guildId },
+      now
+    );
 
     expect(mocks.rolls).toHaveBeenCalledWith(context.guildId, {
       userId: "a",
@@ -700,7 +634,7 @@ describe("trendCard", () => {
     serve([daysAgo(40, 100)]);
 
     expect(
-      await trendCard(
+      await views.trendCard(
         context,
         { ...account, guildId: context.guildId },
         30,
@@ -718,7 +652,12 @@ describe("trendCard", () => {
       daysAgo(0, 500),
     ]);
 
-    await trendCard(context, { ...account, guildId: context.guildId }, 30, now);
+    await views.trendCard(
+      context,
+      { ...account, guildId: context.guildId },
+      30,
+      now
+    );
 
     expect(mocks.rolls).toHaveBeenCalledWith(context.guildId, {
       userId: "a",
@@ -745,7 +684,12 @@ describe("trendCard", () => {
       daysAgo(0, 500),
     ]);
 
-    await trendCard(context, { ...account, guildId: context.guildId }, 30, now);
+    await views.trendCard(
+      context,
+      { ...account, guildId: context.guildId },
+      30,
+      now
+    );
 
     expect(rendered().change).toBeNull();
   });
@@ -766,7 +710,7 @@ describe("serverCard", () => {
       { userId: "ghost", username: "ghost-rngdle" },
     ]);
 
-    await serverCard(context, {
+    await views.serverCard(context, {
       id: context.guildId,
       iconURL: () => null,
     } as never);
@@ -801,7 +745,7 @@ describe("profileCard", () => {
         day("2026-03-04T10:00:00Z"),
       ]);
 
-      await profileCard(context, {
+      await views.profileCard(context, {
         guildId: context.guildId,
         userId: "a",
         username: "alice",
@@ -832,7 +776,9 @@ describe("versusCard", () => {
   });
 
   it("returns null when neither player has a roll", async () => {
-    expect(await versusCard(context, account("a"), account("b"))).toBeNull();
+    expect(
+      await views.versusCard(context, account("a"), account("b"))
+    ).toBeNull();
     expect(mocks.renderVersus).not.toHaveBeenCalled();
   });
 
@@ -846,7 +792,11 @@ describe("versusCard", () => {
         : [fullRoll("ghost", 1, 50)]
     );
 
-    const image = await versusCard(context, account("a"), account("ghost"));
+    const image = await views.versusCard(
+      context,
+      account("a"),
+      account("ghost")
+    );
 
     expect(image).toEqual(Buffer.from("versus"));
     const [data] = mocks.renderVersus.mock.calls[0]! as [
@@ -881,11 +831,11 @@ describe("versusCard", () => {
       fullRoll(userId, 1, userId === "a" ? 100 : 50),
     ]);
 
-    await versusCard(context, account("a"), account("b"));
-    await versusCard(context, account("a"), account("b"));
-    await versusCard(context, account("b"), account("a"));
-    await versusCard(context, account("a"), account("c"));
-    await versusCard(context, account("c"), account("b"));
+    await views.versusCard(context, account("a"), account("b"));
+    await views.versusCard(context, account("a"), account("b"));
+    await views.versusCard(context, account("b"), account("a"));
+    await views.versusCard(context, account("a"), account("c"));
+    await views.versusCard(context, account("c"), account("b"));
 
     expect(mocks.renderVersus).toHaveBeenCalledTimes(4);
   });

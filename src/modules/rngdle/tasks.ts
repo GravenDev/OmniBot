@@ -15,7 +15,7 @@ import api from "./services/api.service.js";
 import shareCards from "./services/share-cards.service.js";
 import store from "./services/store.service.js";
 import sync from "./services/sync.service.js";
-import { dailyLeaderboard, dailyRecap } from "./services/views.js";
+import views from "./services/views.service.js";
 
 const logger = loggerMaker("rngdle");
 
@@ -33,7 +33,7 @@ async function postDailyLeaderboard(
     return;
   }
 
-  const board = await dailyLeaderboard(
+  const board = await views.dailyLeaderboard(
     { client, guildId, t: config.t, locale: config.locale },
     1
   );
@@ -43,7 +43,7 @@ async function postDailyLeaderboard(
     );
     return;
   }
-  const recap = await dailyRecap(guildId, 1).catch((err: unknown) => {
+  const recap = await views.dailyRecap(guildId, 1).catch((err: unknown) => {
     logger.warn(
       { err },
       `Failed to compute the daily recap | guildId = ${guildId}`

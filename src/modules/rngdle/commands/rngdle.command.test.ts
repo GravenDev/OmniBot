@@ -39,16 +39,21 @@ vi.mock("#modules/rngdle/services/sync.service.js", () => ({
 vi.mock("#modules/rngdle/services/linking.service.js", () => ({
   default: { linkOwnAccount: mocks.linkOwnAccount },
 }));
-vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  dailyLeaderboard: mocks.dailyLeaderboard,
-  serverCard: mocks.serverCard,
-  profileCard: mocks.profileCard,
-  historyCard: mocks.historyCard,
-  timelineCard: mocks.timelineCard,
-  trendCard: mocks.trendCard,
-  overallPage: mocks.overallPage,
-}));
+vi.mock(
+  "#modules/rngdle/services/views.service.js",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    default: {
+      dailyLeaderboard: mocks.dailyLeaderboard,
+      serverCard: mocks.serverCard,
+      profileCard: mocks.profileCard,
+      historyCard: mocks.historyCard,
+      timelineCard: mocks.timelineCard,
+      trendCard: mocks.trendCard,
+      overallPage: mocks.overallPage,
+    },
+  })
+);
 
 const { default: command } = await import("./rngdle.command.js");
 

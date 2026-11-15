@@ -22,22 +22,19 @@ import {
 } from "#modules/rngdle/interactions/navigation.button.js";
 import { overallPageMessage } from "#modules/rngdle/interactions/overall-page.button.js";
 import { unlinkConfirmMessage } from "#modules/rngdle/interactions/unlink-confirm.button.js";
+import { parsePeriod } from "#modules/rngdle/periods.js";
 import { reminderTimestamp } from "#modules/rngdle/reminders.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
 import linking from "#modules/rngdle/services/linking.service.js";
 import store from "#modules/rngdle/services/store.service.js";
 import sync from "#modules/rngdle/services/sync.service.js";
-import {
-  dailyLeaderboard,
+import views, {
   HISTORY_MAX,
   HISTORY_MIN,
-  parsePeriod,
-  serverCard,
   TREND_DAYS,
   TREND_DEFAULT_DAYS,
-  versusCard,
   type ViewContext,
-} from "#modules/rngdle/services/views.js";
+} from "#modules/rngdle/services/views.service.js";
 
 const AUTOCOMPLETE_LIMIT = 25;
 const USERNAME_MAX_LENGTH = 64;
@@ -74,7 +71,10 @@ async function replyWithImage(
 }
 
 async function leaderboard(interaction: Interaction, config: Config) {
-  const board = await dailyLeaderboard(viewContext(interaction, config), 0);
+  const board = await views.dailyLeaderboard(
+    viewContext(interaction, config),
+    0
+  );
   await replyWithImage(
     interaction,
     board?.image ?? null,
@@ -138,7 +138,7 @@ async function serverStats(interaction: Interaction, config: Config) {
     (await interaction.client.guilds.fetch(interaction.guildId));
   await replyWithImage(
     interaction,
-    await serverCard(viewContext(interaction, config), guild),
+    await views.serverCard(viewContext(interaction, config), guild),
     "server-stats.png",
     config.t("server.empty"),
     [navigationRow(config.t, ["profile", "history", "overall"])]
@@ -286,7 +286,7 @@ async function versus(interaction: Interaction, config: Config) {
   await sync.refreshIfStale(interaction.guildId);
   await replyWithImage(
     interaction,
-    await versusCard(viewContext(interaction, config), left, right),
+    await views.versusCard(viewContext(interaction, config), left, right),
     "versus.png",
     config.t("versus.noRolls")
   );

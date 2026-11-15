@@ -42,17 +42,19 @@ vi.mock("#lib/logger.js", () => {
   };
   return { loggerMaker: () => logger };
 });
-vi.mock("./services/views.js", () => ({
-  dailyLeaderboard: async () => ({
-    image: Buffer.from("png"),
-    winnerIds: ["winner"],
-  }),
-  dailyRecap: async () => ({
-    participants: 4,
-    rarest: null,
-    worst: null,
-    streaks: [],
-  }),
+vi.mock("./services/views.service.js", () => ({
+  default: {
+    dailyLeaderboard: async () => ({
+      image: Buffer.from("png"),
+      winnerIds: ["winner"],
+    }),
+    dailyRecap: async () => ({
+      participants: 4,
+      rarest: null,
+      worst: null,
+      streaks: [],
+    }),
+  },
 }));
 
 const { rngdleMaintenanceTasks, rngdleTasks } = await import("./tasks.js");

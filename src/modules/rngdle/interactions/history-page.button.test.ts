@@ -10,10 +10,15 @@ const mocks = vi.hoisted(() => ({
 vi.mock("#modules/rngdle/services/store.service.js", () => ({
   default: { account: mocks.account },
 }));
-vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  historyCard: mocks.historyCard,
-}));
+vi.mock(
+  "#modules/rngdle/services/views.service.js",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    default: {
+      historyCard: mocks.historyCard,
+    },
+  })
+);
 
 const { default: handler } = await import("./history-page.button.js");
 
