@@ -1,29 +1,13 @@
 import {
-  AttachmentBuilder,
-  type Collection,
-  type GuildMember,
-} from "discord.js";
-import {
   celebratesOn,
   daysInMonth,
   formatDayOfYear,
   type CalendarDay,
 } from "#lib/calendar.js";
-import type { ConfigProvider } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
-import { fetchAvatar } from "#lib/imaging.js";
-import { loggerMaker } from "#lib/logger.js";
-import { NO_MENTIONS } from "#lib/mentions.js";
 import { truncate } from "#lib/text.js";
-import type { BirthdayConfigSchema } from "../birthday.config.js";
-import {
-  renderBirthdayCalendar,
-  shownAvatars,
-  type BirthdayCalendarLabels,
-} from "../rendering/birthday-calendar.js";
-import birthdayService, { type BirthdayEntry } from "./birthday.service.js";
-
-const logger = loggerMaker("birthday");
+import type { BirthdayCalendarLabels } from "../rendering/birthday-calendar.js";
+import type { BirthdayEntry } from "./birthday.service.js";
 
 const ALT_LIMIT = 1024;
 
@@ -109,76 +93,5 @@ export function calendarAlt(
   return truncate(
     t("calendar.alt", { title: t(`calendar.title.${month}`), year, days }),
     ALT_LIMIT
-  );
-}
-
-/**
- * On the 1st of the month, posts the month's calendar of the announced
- * birthdays of members still on the guild. Nothing when nobody celebrates.
- * Nobody is notified: it is a calendar, not a wish.
- */
-export async function postMonthlyCalendar(
-  guildId: string,
-  config: ConfigProvider<BirthdayConfigSchema>,
-  members: Collection<string, GuildMember>,
-  today: CalendarDay
-): Promise<void> {
-  const channel = config.get("channel");
-  if (today.day !== 1 || !config.get("monthlyCalendar")) {
-    return;
-  }
-  if (!channel?.isSendable()) {
-    logger[channel ? "warn" : "debug"](
-      `Monthly calendar skipped | reason = ${channel ? "channel not sendable" : "no channel"} | guildId = ${guildId}`
-    );
-    return;
-  }
-  const entries = (await birthdayService.list(guildId)).filter((entry) =>
-    members.has(entry.userId)
-  );
-  const days = monthCelebrants(entries, today.year, today.month).map(
-    (userIds) => userIds.map((userId) => members.get(userId)!)
-  );
-  if (days.every((day) => day.length === 0)) {
-    return;
-  }
-  const cells = await Promise.all(
-    days.map((day) =>
-      Promise.all(
-        day.map(async (member, index) => ({
-          name: member.displayName,
-          // Only the first ones are drawn.
-          avatar:
-            index < shownAvatars(day.length)
-              ? await fetchAvatar(member, 64)
-              : null,
-        }))
-      )
-    )
-  );
-  const png = renderBirthdayCalendar(
-    {
-      leading: leadingDays(today.year, today.month, config.locale),
-      days: cells,
-    },
-    calendarLabels(config.t, config.locale, today)
-  );
-  await channel.send({
-    content: config.t("calendar.content"),
-    files: [
-      new AttachmentBuilder(png, {
-        name: "birthday-calendar.png",
-        description: calendarAlt(
-          config.t,
-          config.locale,
-          today,
-          days.map((day) => day.map((member) => member.displayName))
-        ),
-      }),
-    ],
-    allowedMentions: NO_MENTIONS,
-  });
-  logger.info(
-    `Monthly calendar posted | guildId = ${guildId} | channelId = ${channel.id} | count = ${days.reduce((total, day) => total + day.length, 0)}`
   );
 }
