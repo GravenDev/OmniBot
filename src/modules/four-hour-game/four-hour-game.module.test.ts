@@ -23,8 +23,10 @@ const closeAllDays = vi.hoisted(() =>
     events.push("close");
   })
 );
-vi.mock("#modules/four-hour-game/tasks.js", () => ({
+vi.mock("#modules/four-hour-game/services/daily.service.js", () => ({
   closeAllDays,
+}));
+vi.mock("#modules/four-hour-game/tasks.js", () => ({
   fourHourGameTasks: () => [],
 }));
 

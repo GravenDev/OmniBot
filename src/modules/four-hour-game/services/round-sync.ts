@@ -8,9 +8,9 @@ import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour
 import {
   fetchPlayerMessages,
   fetchPlayerMessagesSince,
-} from "./channel-history.js";
+} from "./channel-history.service.js";
 import fourHourGameService from "./four-hour-game.service.js";
-import { announcePoint } from "./point-announcement.js";
+import { announcePoint } from "./point-announcement.service.js";
 
 const logger = loggerMaker("four-hour-game");
 

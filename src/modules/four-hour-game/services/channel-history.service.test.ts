@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   fetchPlayerMessagesSince,
   fetchStandingMessage,
-} from "./channel-history.js";
+} from "./channel-history.service.js";
 
 function channelWith(
   messages: {

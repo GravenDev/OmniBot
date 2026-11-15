@@ -9,9 +9,10 @@ import guildReturnListeners from "./listeners/guild-return.listener.js";
 import messageCreateListener from "./listeners/message-create.listener.js";
 import messageDeleteBulkListener from "./listeners/message-delete-bulk.listener.js";
 import messageDeleteListener from "./listeners/message-delete.listener.js";
+import { closeAllDays } from "./services/daily.service.js";
 import fourHourGameService from "./services/four-hour-game.service.js";
 import { syncAllRounds } from "./services/round-sync.js";
-import { closeAllDays, fourHourGameTasks } from "./tasks.js";
+import { fourHourGameTasks } from "./tasks.js";
 
 const logger = loggerMaker("four-hour-game");
 

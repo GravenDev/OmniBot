@@ -352,12 +352,12 @@ vi.mock("#core/services/module.service.js", () => ({
   default: { getModuleStateFromGuildIdIn },
 }));
 const announcePoint = vi.hoisted(() => vi.fn());
-vi.mock("./point-announcement.js", () => ({ announcePoint }));
+vi.mock("./point-announcement.service.js", () => ({ announcePoint }));
 
 const { default: prisma } = await import("#lib/database.js");
 const { default: service } = await import("./four-hour-game.service.js");
 const { fetchPlayerMessages, fetchPlayerMessagesSince } =
-  await import("./channel-history.js");
+  await import("./channel-history.service.js");
 const { default: guildReturnListeners } =
   await import("#modules/four-hour-game/listeners/guild-return.listener.js");
 

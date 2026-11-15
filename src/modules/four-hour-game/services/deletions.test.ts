@@ -12,7 +12,7 @@ vi.mock("#lib/logger.js", () => ({
 vi.mock("./four-hour-game.service.js", () => ({
   default: { handleDeletion: mocks.handleDeletion },
 }));
-vi.mock("./channel-history.js", () => ({
+vi.mock("./channel-history.service.js", () => ({
   fetchStandingMessage: mocks.fetchStandingMessage,
 }));
 
