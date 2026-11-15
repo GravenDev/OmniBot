@@ -25,7 +25,8 @@ import { quoteEachLine, truncate } from "./text.js";
 // message of their own (the quotes, the starboard): a container with the
 // author, the channel and the date in small text above the message's text,
 // the author's avatar beside them, its media in a gallery, then a separator
-// and the module's own line above a link to the message.
+// and the module's own line beside a link to the message (above it, with the
+// module's buttons, when it has some).
 
 const GALLERY_LIMIT = 10;
 const EXTRAS_LIMIT = 1200;
@@ -39,7 +40,10 @@ const HEADER_GAP = "\n\n";
 export interface ReportOptions {
   /** The container's accent colour; none when null. */
   accent: number | null;
-  /** The module's own line, above the buttons. */
+  /**
+   * The module's own line: beside the link to the message, or above it and
+   * the module's buttons when there are some.
+   */
   footer: string;
   /** The module's buttons, after the link to the message. */
   buttons?: ButtonBuilder[];
@@ -239,6 +243,46 @@ function replyLine(reply: Message, t: TFunction): string {
   })}`;
 }
 
+/**
+ * The media a message laid out with components shows through them, each
+ * hidden by its own spoiler or by its upload's.
+ */
+function shownMedia(raw: Body, hidden: ReadonlySet<string>) {
+  return componentsMedia(raw).map((item) => ({
+    url: item.url,
+    spoiler:
+      item.spoiler ||
+      (!!item.attachmentId &&
+        (hidden.has(item.attachmentId) ||
+          !!raw.attachments.get(item.attachmentId)?.spoiler)),
+    id: item.attachmentId,
+  }));
+}
+
+/**
+ * The module's line with the link beside it; above a row of buttons instead
+ * when the module adds its own, a section holding a single accessory.
+ */
+function addFooter(
+  container: ContainerBuilder,
+  footer: string,
+  link: ButtonBuilder,
+  extra: readonly ButtonBuilder[]
+): void {
+  if (extra.length > 0) {
+    container.addTextDisplayComponents((display) => display.setContent(footer));
+    container.addActionRowComponents((row) =>
+      row.addComponents(link, ...extra)
+    );
+    return;
+  }
+  container.addSectionComponents((section) =>
+    section
+      .addTextDisplayComponents((display) => display.setContent(footer))
+      .setButtonAccessory(link)
+  );
+}
+
 /** The container reporting `message`, with the module's line and buttons. */
 export function reportedMessage(
   message: Message<true>,
@@ -252,15 +296,7 @@ export function reportedMessage(
   // sets their spoiler there: its galleries are shown as they are (the upload
   // once, hidden by either spoiler), its other uploads with that spoiler.
   const hidden = hiddenAttachments(raw);
-  const shown = componentsMedia(raw).map((item) => ({
-    url: item.url,
-    spoiler:
-      item.spoiler ||
-      (!!item.attachmentId &&
-        (hidden.has(item.attachmentId) ||
-          !!raw.attachments.get(item.attachmentId)?.spoiler)),
-    id: item.attachmentId,
-  }));
+  const shown = shownMedia(raw, hidden);
   const shownIds = new Set(shown.map((item) => item.id));
   const body: Body = {
     content: raw.content,
@@ -293,13 +329,11 @@ export function reportedMessage(
   ]
     .filter((part): part is string => !!part)
     .join("\n");
-  const buttons = [
-    new ButtonBuilder()
-      .setStyle(ButtonStyle.Link)
-      .setURL(message.url)
-      .setLabel(t("reportedMessage.jump")),
-    ...(options.buttons ?? []),
-  ];
+  const link = new ButtonBuilder()
+    .setStyle(ButtonStyle.Link)
+    .setURL(message.url)
+    .setLabel(t("reportedMessage.jump"));
+  const buttons = [link, ...(options.buttons ?? [])];
   // Whether Discord counts the buttons' labels in its limit is not said:
   // they are kept out of it.
   const labels = buttons.reduce(
@@ -369,10 +403,7 @@ export function reportedMessage(
   }
 
   container.addSeparatorComponents((separator) => separator.setDivider(true));
-  container.addTextDisplayComponents((display) =>
-    display.setContent(options.footer)
-  );
-  container.addActionRowComponents((row) => row.addComponents(...buttons));
+  addFooter(container, options.footer, link, options.buttons ?? []);
   return container;
 }
 
