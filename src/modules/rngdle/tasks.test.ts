@@ -9,6 +9,7 @@ const { send, syncAll, pendingReminders, mentionable } = vi.hoisted(() => ({
   pendingReminders: vi.fn(),
   mentionable: vi.fn(),
 }));
+const pruneCards = vi.hoisted(() => vi.fn());
 
 vi.mock("#core/services/config.service.js", () => ({
   default: {
@@ -26,6 +27,7 @@ vi.mock("#core/services/module.service.js", () => ({
   default: { getActivatedGuildIds: async () => ["guild"] },
 }));
 vi.mock("./services/sync.js", () => ({ default: { syncAll } }));
+vi.mock("./services/share-cards.js", () => ({ pruneCards }));
 vi.mock("./services/store.js", () => ({ default: { pendingReminders } }));
 vi.mock("#lib/logger.js", () => {
   const logger = {
@@ -49,7 +51,7 @@ vi.mock("./services/views.js", () => ({
   }),
 }));
 
-const { rngdleTasks } = await import("./tasks.js");
+const { rngdleMaintenanceTasks, rngdleTasks } = await import("./tasks.js");
 
 function task(id: string) {
   return rngdleTasks({
@@ -137,5 +139,27 @@ describe("reminders task", () => {
     await task("reminders").run({} as Client<true>);
 
     expect(send).toHaveBeenCalledOnce();
+  });
+});
+
+describe("card marks pruning", () => {
+  // The marks are deleted two days later per the privacy policy, even on an
+  // instance where the module is skipped: a maintenance task, not an onLoad one.
+  it("is a maintenance task, not a task of the loaded module", async () => {
+    const [prune] = rngdleMaintenanceTasks();
+
+    // A night missed while the bot was down is caught up at start.
+    expect(prune).toMatchObject({
+      id: "cards",
+      schedule: "0 2 * * *",
+      runOnStart: true,
+    });
+    expect(
+      rngdleTasks({
+        id: "rngdle",
+      } as unknown as Module<RngdleConfigSchema>).map((declared) => declared.id)
+    ).not.toContain("cards");
+    await prune!.run({} as Client<true>);
+    expect(pruneCards).toHaveBeenCalledOnce();
   });
 });

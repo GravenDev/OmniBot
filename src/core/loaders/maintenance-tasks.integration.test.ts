@@ -16,6 +16,7 @@ describe("maintenance tasks of the shipped modules", async () => {
   // Deletions done by a listener or on uninstall are not checked here.
   it.each([
     ["reports", "purge"],
+    ["rngdle", "cards"],
     ["seniority", "sweep-departures"],
     ["server-stats", "purge"],
     ["temp-voice", "purge-preferences"],
