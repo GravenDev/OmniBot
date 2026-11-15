@@ -9,7 +9,11 @@ import {
 import { describe, expect, it, vi } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
 import type { MessageLogConfigSchema } from "#modules/message-log/message-log.config.js";
-import { logBulkDeletion, logDeletion, logEdit } from "./handlers.js";
+import {
+  logBulkDeletion,
+  logDeletion,
+  logEdit,
+} from "./message-log.service.js";
 
 const t = (key: string) => key;
 

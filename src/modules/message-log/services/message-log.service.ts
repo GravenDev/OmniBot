@@ -18,7 +18,7 @@ import {
 } from "#modules/message-log/entries.js";
 import type { MessageLogConfigSchema } from "#modules/message-log/message-log.config.js";
 import { type LogTarget, logTargetFor } from "#modules/message-log/routing.js";
-import { type DeleterLookup, findDeleter } from "./audit.js";
+import { type DeleterLookup, findDeleter } from "./audit.service.js";
 
 const logger = loggerMaker("message-log");
 
