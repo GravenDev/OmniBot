@@ -1,6 +1,7 @@
 import { AttachmentBuilder, type Client } from "discord.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
+import { forEachGuild } from "#lib/guild-loop.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { Module } from "#lib/module.js";
@@ -19,9 +20,6 @@ export async function postReport(
   guildId: string,
   day: Date
 ): Promise<void> {
-  if (!client.guilds.cache.has(guildId)) {
-    return;
-  }
   const config = await configService.getConfigForModuleIn(module, guildId);
   const channel = config.get("reportChannel");
   if (!channel?.isSendable()) {
@@ -66,16 +64,12 @@ export function serverStatsTasks(module: Module<ServerStatsConfigSchema>) {
       timezone: TIMEZONE,
       async run(client) {
         const day = addDays(dayOf(new Date()), -1);
-        for (const guildId of await moduleService.getActivatedGuildIds(
-          module.id
-        )) {
-          await postReport(client, module, guildId, day).catch((err: unknown) =>
-            logger.error(
-              { err },
-              `Failed to post the daily report | guildId = ${guildId}`
-            )
-          );
-        }
+        await forEachGuild(
+          client,
+          await moduleService.getActivatedGuildIds(module.id),
+          (guild) => postReport(client, module, guild.id, day),
+          { action: "post the daily report", logger }
+        );
       },
     }),
   ];
