@@ -1,5 +1,5 @@
 import { loggerMaker } from "#lib/logger.js";
-import { fetchUserRolls, RngdleUserNotFoundError } from "./api.js";
+import api, { RngdleUserNotFoundError } from "./api.service.js";
 import store, { type RegisterResult } from "./store.service.js";
 import sync from "./sync.service.js";
 
@@ -68,7 +68,7 @@ async function link(
 
   let rolls;
   try {
-    rolls = await fetchUserRolls(username, since);
+    rolls = await api.fetchUserRolls(username, since);
   } catch (err) {
     if (err instanceof RngdleUserNotFoundError) {
       return { kind: "notFound" };

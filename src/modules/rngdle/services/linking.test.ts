@@ -14,9 +14,9 @@ vi.mock("#lib/logger.js", () => {
   const logger = { info: vi.fn(), warn: vi.fn() };
   return { loggerMaker: () => logger };
 });
-vi.mock("./api.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./api.js")>()),
-  fetchUserRolls: mocks.fetchUserRolls,
+vi.mock("./api.service.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./api.service.js")>()),
+  default: { fetchUserRolls: mocks.fetchUserRolls },
 }));
 vi.mock("./store.service.js", () => ({
   default: {
@@ -36,7 +36,7 @@ vi.mock("./sync.service.js", () => ({
   },
 }));
 
-import { RngdleApiError, RngdleUserNotFoundError } from "./api.js";
+import { RngdleApiError, RngdleUserNotFoundError } from "./api.service.js";
 import { linkAccount, linkOwnAccount } from "./linking.js";
 
 const ROLLS = [{ number: 1 }, { number: 2 }];

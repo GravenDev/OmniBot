@@ -35,7 +35,7 @@ import {
   TIERS,
   type Tier,
 } from "#modules/rngdle/scoring/score-table.js";
-import { fetchRollBadges } from "./badges.js";
+import rollBadges from "./badges.service.js";
 import store, { type Account, type StoredRoll } from "./store.service.js";
 import sync from "./sync.service.js";
 
@@ -90,7 +90,7 @@ async function cardBadges(
   source: CardSource
 ): Promise<{ badges: CardBadge[]; badgeCount: number }> {
   const remote =
-    source === "pasted" ? null : await fetchRollBadges(roll.number);
+    source === "pasted" ? null : await rollBadges.fetchRollBadges(roll.number);
   if (remote) {
     return {
       badges: remote.badges.map((badge) => ({
@@ -343,7 +343,7 @@ async function refreshedRoll(
 }
 
 async function calculatorRoll(pasted: CardRoll): Promise<CardRoll | null> {
-  const remote = await fetchRollBadges(pasted.number);
+  const remote = await rollBadges.fetchRollBadges(pasted.number);
   return remote?.score === pasted.score ? pasted : null;
 }
 

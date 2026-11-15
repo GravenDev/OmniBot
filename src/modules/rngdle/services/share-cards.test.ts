@@ -30,7 +30,9 @@ vi.mock("#lib/players.js", () => ({
 vi.mock("#modules/rngdle/rendering/roll-card.js", () => ({
   renderRollCard: mocks.render,
 }));
-vi.mock("./badges.js", () => ({ fetchRollBadges: mocks.fetchBadges }));
+vi.mock("./badges.service.js", () => ({
+  default: { fetchRollBadges: mocks.fetchBadges },
+}));
 vi.mock("./store.service.js", () => ({ default: mocks.store }));
 vi.mock("./sync.service.js", () => ({
   default: { refreshAccount: mocks.refreshAccount },

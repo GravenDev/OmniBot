@@ -23,13 +23,13 @@ vi.mock("./store.service.js", () => ({
     saveRolls: mocks.saveRolls,
   },
 }));
-vi.mock("./api.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./api.js")>()),
-  fetchUserRolls: mocks.fetchUserRolls,
+vi.mock("./api.service.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./api.service.js")>()),
+  default: { fetchUserRolls: mocks.fetchUserRolls },
 }));
 
 import type { Client } from "discord.js";
-import { RngdleUserNotFoundError } from "./api.js";
+import { RngdleUserNotFoundError } from "./api.service.js";
 import sync, { FullSyncCooldownError } from "./sync.service.js";
 
 const MINUTE = 60_000;

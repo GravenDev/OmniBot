@@ -11,7 +11,7 @@ import { navigationRow } from "./interactions/navigation.button.js";
 import { buildDailyMessage } from "./recap.js";
 import { REMINDER_HOUR_UTC, reminderMessages } from "./reminders.js";
 import type { RngdleConfigSchema } from "./rngdle.config.js";
-import { fetchScoreTable } from "./services/api.js";
+import api from "./services/api.service.js";
 import { pruneCards } from "./services/share-cards.js";
 import store from "./services/store.service.js";
 import sync from "./services/sync.service.js";
@@ -128,7 +128,7 @@ export function rngdleTasks(module: Module<RngdleConfigSchema>) {
       schedule: "0 3 * * 1",
       runOnStart: true,
       async run(client) {
-        const table = await fetchScoreTable();
+        const table = await api.fetchScoreTable();
         if (!table) {
           logger.warn("No usable score table on rngdle.com, keeping ours");
         } else if (await store.replaceScoreTable(table)) {
