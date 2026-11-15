@@ -2,6 +2,7 @@ import type { Message } from "discord.js";
 import { apiErrorCode, isGuildSetupError } from "#lib/discord-errors.js";
 import { LogThrottle } from "#lib/log-throttle.js";
 import { loggerMaker } from "#lib/logger.js";
+import { declareService, type Service } from "#lib/service.js";
 import { creationFailure } from "#modules/thread-creator/creation-failures.js";
 
 const logger = loggerMaker("thread-creator");
@@ -27,7 +28,7 @@ export interface ThreadJob {
  * cross-guild sharing), and there is no size cap — see
  * `docs/specs/thread-creator-queue.md`.
  */
-export class ThreadCreationQueue {
+export class ThreadCreationQueue implements Service {
   private readonly queues = new Map<string, ThreadJob[]>();
   private readonly recentCreations = new Map<string, number[]>();
   private readonly draining = new Set<string>();
@@ -154,3 +155,5 @@ export class ThreadCreationQueue {
     );
   }
 }
+
+export default declareService(new ThreadCreationQueue());
