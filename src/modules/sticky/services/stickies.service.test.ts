@@ -7,7 +7,7 @@ const store = vi.hoisted(() => ({ list: vi.fn(), remove: vi.fn() }));
 vi.mock("./poster.service.js", () => ({ default: poster }));
 vi.mock("./store.service.js", () => ({ default: store }));
 
-const { stickyRecords } = await import("./stickies.service.js");
+const { default: stickyRecords } = await import("./stickies.service.js");
 
 function fakeGuild(
   granted: PermissionsString[] = ["ViewChannel", "SendMessages"]
