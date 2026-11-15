@@ -12,7 +12,9 @@ class PortraitsService implements Service {
     return Promise.all(
       members.map((member, index) =>
         // Only the first ones are drawn.
-        index < SHOWN_PORTRAITS ? fetchAvatar(member, 256) : null
+        index < SHOWN_PORTRAITS
+          ? fetchAvatar(member, 256)
+          : Promise.resolve(null)
       )
     );
   }
@@ -26,7 +28,9 @@ class PortraitsService implements Service {
         Promise.all(
           day.map((member, index) =>
             // Only the first ones are drawn.
-            index < shownAvatars(day.length) ? fetchAvatar(member, 64) : null
+            index < shownAvatars(day.length)
+              ? fetchAvatar(member, 64)
+              : Promise.resolve(null)
           )
         )
       )

@@ -18,7 +18,7 @@ vi.mock("#lib/logger.js", () => ({
   loggerMaker: () => ({ info, warn: vi.fn(), error: vi.fn() }),
 }));
 
-const { sweepDepartures } = await import("./departures.service.js");
+const { default: departures } = await import("./departures.service.js");
 
 // Whether the module is enabled, guild by guild, as the task asks it.
 const activeIn = (guildIds: string[]) => async (guildId: string) =>
@@ -65,7 +65,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("sweepDepartures", () => {
+describe("sweep", () => {
   it("deletes the birthdays of members gone, keeps those still here", async () => {
     findMany.mockResolvedValue([
       { guildId: "g", userId: "gone" },
@@ -73,7 +73,7 @@ describe("sweepDepartures", () => {
     ]);
     present("here");
 
-    await sweepDepartures(client(), activeIn(["g"]));
+    await departures.sweep(client(), activeIn(["g"]));
 
     expect(service.remove).toHaveBeenCalledExactlyOnceWith("g", "gone");
     expect(service.clearGuild).not.toHaveBeenCalled();
@@ -89,7 +89,7 @@ describe("sweepDepartures", () => {
     ]);
     present("here");
 
-    await sweepDepartures(client(), activeIn(["g"]));
+    await departures.sweep(client(), activeIn(["g"]));
 
     expect(service.remove.mock.invocationCallOrder[0]).toBeLessThan(
       fetchMember.mock.invocationCallOrder[1]!
@@ -105,7 +105,7 @@ describe("sweepDepartures", () => {
     ]);
     present("here");
 
-    await sweepDepartures(client(), activeIn(["g"]));
+    await departures.sweep(client(), activeIn(["g"]));
 
     expect(info).toHaveBeenCalledExactlyOnceWith(
       "Departed members' birthdays removed | guildId = g | count = 2"
@@ -116,7 +116,7 @@ describe("sweepDepartures", () => {
     findMany.mockResolvedValue([{ guildId: "g", userId: "here" }]);
     present("here");
 
-    await sweepDepartures(client(), activeIn(["g"]));
+    await departures.sweep(client(), activeIn(["g"]));
 
     expect(service.remove).not.toHaveBeenCalled();
   });
@@ -128,7 +128,7 @@ describe("sweepDepartures", () => {
     ]);
     present();
 
-    await sweepDepartures(client(), activeIn(["g"]));
+    await departures.sweep(client(), activeIn(["g"]));
 
     expect(service.remove).toHaveBeenCalledExactlyOnceWith("g", "gone");
   });
@@ -136,7 +136,7 @@ describe("sweepDepartures", () => {
   it("deletes the birthdays of a guild where the module is disabled", async () => {
     findMany.mockResolvedValue([{ guildId: "off", userId: "u" }]);
 
-    await sweepDepartures(client(["off"]), activeIn([]));
+    await departures.sweep(client(["off"]), activeIn([]));
 
     expect(service.clearGuild).toHaveBeenCalledExactlyOnceWith("off");
     expect(fetchMember).not.toHaveBeenCalled();
@@ -145,7 +145,7 @@ describe("sweepDepartures", () => {
   it("keeps the birthdays of a guild the bot left, as its configuration", async () => {
     findMany.mockResolvedValue([{ guildId: "left", userId: "u" }]);
 
-    await sweepDepartures(client([]), activeIn(["left"]));
+    await departures.sweep(client([]), activeIn(["left"]));
 
     expect(fetchMember).not.toHaveBeenCalled();
     expect(service.remove).not.toHaveBeenCalled();
@@ -155,7 +155,7 @@ describe("sweepDepartures", () => {
   it("waits for an unavailable guild", async () => {
     findMany.mockResolvedValue([{ guildId: "g", userId: "u" }]);
 
-    await sweepDepartures(client(["g"], false), activeIn(["g"]));
+    await departures.sweep(client(["g"], false), activeIn(["g"]));
 
     expect(fetchMember).not.toHaveBeenCalled();
     expect(service.remove).not.toHaveBeenCalled();
@@ -174,7 +174,7 @@ describe("sweepDepartures", () => {
       return true;
     };
 
-    await sweepDepartures(client(["broken", "g"]), isActivated);
+    await departures.sweep(client(["broken", "g"]), isActivated);
 
     expect(service.remove).toHaveBeenCalledExactlyOnceWith("g", "gone");
   });
