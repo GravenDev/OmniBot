@@ -37,7 +37,18 @@ onLoad(_client, registry) {
 
 ## Behavior
 
-- **Global, not per guild.** A task runs once for the whole bot, whatever the number of guilds. To act on the guilds where the module is enabled, list them with `moduleService.getActivatedGuildIds(module.id)` and load each guild's configuration with `configService.getConfigForModuleIn(module, guildId)`.
+- **Global, not per guild.** A task runs once for the whole bot, whatever the number of guilds. To act on the guilds where the module is enabled, pass `moduleService.getActivatedGuildIds(module.id)` to `forEachGuild` (`#lib/guild-loop.js`) and load each guild's configuration with `configService.getConfigForModuleIn(module, guild.id)`. The module stays enabled in a guild the bot has left, so that its configuration comes back with a new invite: `forEachGuild` skips such a guild, runs a few guilds at once, and logs a guild's failure without stopping the others.
+
+  ```typescript
+  run: async (client) =>
+    forEachGuild(
+      client,
+      await moduleService.getActivatedGuildIds(module.id),
+      (guild) => announceIn(guild),
+      { action: "post the announcement", logger }
+    ),
+  ```
+
 - **No overlap.** If a run is still in progress when the next one is due, the next one is skipped.
 - **Failures are contained.** An error thrown by `run` is logged with the task name; the task keeps its schedule and the bot keeps running.
 - **Every run is logged** with its duration.

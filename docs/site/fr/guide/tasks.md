@@ -37,7 +37,18 @@ onLoad(_client, registry) {
 
 ## Comportement
 
-- **Globale, pas par serveur.** Une tâche s'exécute une seule fois pour tout le bot, quel que soit le nombre de serveurs. Pour agir sur les serveurs où le module est activé, listez-les avec `moduleService.getActivatedGuildIds(module.id)` et chargez la configuration de chacun avec `configService.getConfigForModuleIn(module, guildId)`.
+- **Globale, pas par serveur.** Une tâche s'exécute une seule fois pour tout le bot, quel que soit le nombre de serveurs. Pour agir sur les serveurs où le module est activé, passez `moduleService.getActivatedGuildIds(module.id)` à `forEachGuild` (`#lib/guild-loop.js`) et chargez la configuration de chacun avec `configService.getConfigForModuleIn(module, guild.id)`. Le module reste activé sur un serveur que le bot a quitté, pour que sa configuration revienne avec une nouvelle invitation : `forEachGuild` saute ce serveur, traite quelques serveurs à la fois et journalise l'échec d'un serveur sans arrêter les autres.
+
+  ```typescript
+  run: async (client) =>
+    forEachGuild(
+      client,
+      await moduleService.getActivatedGuildIds(module.id),
+      (guild) => announceIn(guild),
+      { action: "post the announcement", logger }
+    ),
+  ```
+
 - **Pas de chevauchement.** Si une exécution est encore en cours à l'échéance suivante, celle-ci est sautée.
 - **Les erreurs sont contenues.** Une erreur levée par `run` est journalisée avec le nom de la tâche ; la tâche garde son planning et le bot continue de tourner.
 - **Chaque exécution est journalisée** avec sa durée.
