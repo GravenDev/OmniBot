@@ -123,6 +123,94 @@ describe("reportedMessage", () => {
     ]);
   });
 
+  it("quotes the message replied to under the header, the text below it at full width", () => {
+    const reply = fakeMessage({
+      author: { id: "other" },
+      content: "the question\nover two lines",
+    }) as unknown as Message;
+    const { json } = render(fakeMessage(), { reply });
+    expect(json.components.map((component) => component.type)).toEqual([
+      ComponentType.Section,
+      ComponentType.TextDisplay,
+      ComponentType.Separator,
+      ComponentType.Section,
+    ]);
+    expect(json.components[0]).toMatchObject({
+      components: [
+        {
+          content:
+            "-# <@author> in <#general> · <t:0:R>\n> -# ↪ <@other>: the question over two lines",
+        },
+      ],
+      accessory: { type: ComponentType.Thumbnail },
+    });
+    expect(json.components[1]).toMatchObject({
+      content: "a very good message",
+    });
+  });
+
+  it("drops the line markup of the message replied to, on one line", () => {
+    // A reply to a quote or a repost: its header and quote would show their
+    // markers mid-line.
+    const reply = fakeMessage({
+      author: { id: "other" },
+      content: "-# <@x> in <#c>\n> -# ↪ <@y>: hi\n>>> ## Title\n# Big\n- item",
+    }) as unknown as Message;
+    const { text } = render(fakeMessage(), { reply });
+    expect(text).toContain(
+      "> -# ↪ <@other>: <@x> in <#c> ↪ <@y>: hi Title Big - item"
+    );
+  });
+
+  it("leaves the text out under a quoted reply when the message has none", () => {
+    const reply = fakeMessage({
+      author: { id: "other" },
+    }) as unknown as Message;
+    const { json } = render(fakeMessage({ content: "" }), { reply });
+    expect(json.components.map((component) => component.type)).toEqual([
+      ComponentType.Section,
+      ComponentType.Separator,
+      ComponentType.Section,
+    ]);
+  });
+
+  it("keeps the quoted reply in the header above the extras of a message without text", () => {
+    const reply = fakeMessage({
+      author: { id: "other" },
+    }) as unknown as Message;
+    const image = {
+      id: "a1",
+      name: "a.png",
+      contentType: "image/png",
+      spoiler: false,
+      url: "https://cdn/a.png",
+    };
+    const { json } = render(
+      fakeMessage({
+        content: "",
+        embeds: [{ data: { type: "rich" }, title: "Embed title" }],
+        attachments: new Collection([["a1", image]]),
+      }),
+      { reply, emptyText: "*nothing*" }
+    );
+    expect(json.components.map((component) => component.type)).toEqual([
+      ComponentType.Section,
+      ComponentType.TextDisplay,
+      ComponentType.MediaGallery,
+      ComponentType.Separator,
+      ComponentType.Section,
+    ]);
+    expect(json.components[0]).toMatchObject({
+      components: [
+        {
+          content:
+            "-# <@author> in <#general> · <t:0:R>\n> -# ↪ <@other>: a very good message",
+        },
+      ],
+    });
+    expect(json.components[1]).toMatchObject({ content: "> **Embed title**" });
+  });
+
   it("has no accent colour when given none", () => {
     expect(render(fakeMessage(), { accent: null }).json.accent_color).toBe(
       undefined
@@ -474,7 +562,7 @@ describe("reportedMessage", () => {
       ]),
     }) as unknown as Message;
     expect(render(fakeMessage(), { reply }).text).toContain(
-      "↪ Replying to <@other>: forwarded words"
+      "> -# ↪ <@other>: forwarded words"
     );
   });
 
@@ -539,6 +627,17 @@ describe("reportedMessage", () => {
 
   it("fills the text limit exactly, the text beside the avatar", () => {
     const { container } = render(fakeMessage({ content: "c".repeat(4000) }), {
+      textLimit: 1000,
+    });
+    expect(textLength([container]) + "Go to message".length).toBe(1000);
+  });
+
+  it("fills the text limit exactly, the text below a quoted reply", () => {
+    const reply = fakeMessage({
+      author: { id: "other" },
+    }) as unknown as Message;
+    const { container } = render(fakeMessage({ content: "c".repeat(4000) }), {
+      reply,
       textLimit: 1000,
     });
     expect(textLength([container]) + "Go to message".length).toBe(1000);

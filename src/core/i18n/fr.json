@@ -178,7 +178,7 @@
   "guild.welcome.dmPrefix": "(Salon système indisponible) ",
 
   "reportedMessage.header": "{{author}} dans {{channel}} · {{sentAt}}",
-  "reportedMessage.reply": "↪ En réponse à {{author}} : {{excerpt}}",
+  "reportedMessage.reply": "↪ {{author}} : {{excerpt}}",
   "reportedMessage.forwarded": "↪ Message transféré",
   "reportedMessage.sticker": "Sticker : {{name}}",
   "reportedMessage.moreFiles_one": "… et {{count}} autre fichier",
