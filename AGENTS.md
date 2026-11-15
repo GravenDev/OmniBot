@@ -70,53 +70,55 @@ The docs are also published as a VitePress site (sources in `docs/site/`) — ru
 
 Shared code lives in `src/lib/` (imported as `#lib/…`), plus `src/core/utils/` for the core's own and `src/utils/colors.ts` for the palette. One line per file, so the right helper is found before a copy is written; `src/lib/agents-index.test.ts` fails when a file of `src/lib/` is missing here.
 
-| Import                     | What it gives                                                                                                        |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| `#lib/calendar.js`         | guild-local days and times: `localTime`, `dayKey`, `dueDay`, `upcoming`, `formatDate`, `addDays`, `anniversaryYears` |
-| `#lib/celebration-card.js` | the festive card of birthday and seniority, confetti included                                                        |
-| `#lib/channel-audience.js` | channels and categories a config excludes: `isExcluded`, `excludedIdsOf`, `isNsfw`                                   |
-| `#lib/command.js`          | `declareCommand` for slash commands                                                                                  |
-| `#lib/confetti-3d.js`      | animated 3D confetti over a card                                                                                     |
-| `#lib/config.js`           | config types, emoji resolution, channel records (`ChannelRecord…`), `formatConfigValue`                              |
-| `#lib/database.js`         | the Prisma client (default export `prisma`) and the `Prisma` namespace                                               |
-| `#lib/deadline.js`         | `withDeadline`: wait for a promise at most so long                                                                   |
-| `#lib/declared.js`         | the `Declared` type behind every `declare…`                                                                          |
-| `#lib/discord-errors.js`   | `isDiscordApiError`, `isApiError`, `apiErrorCode`, `isGuildSetupError`                                               |
-| `#lib/discord-polyfills/`  | REST calls discord.js lacks, one file per feature                                                                    |
-| `#lib/duration.js`         | `parseDuration`, `formatDuration`                                                                                    |
-| `#lib/emoji-shortcodes.js` | `:name:` shortcodes to emojis                                                                                        |
-| `#lib/env.js`              | `isDevMode`, `devGuildId`, `uptimeKumaPushUrl`                                                                       |
-| `#lib/format.js`           | numbers and previews: `formatInteger`, `formatPercentage`, `preview`, `describeLines`, `COMPONENTS_TEXT_LIMIT`       |
-| `#lib/guild-members.js`    | `allMembers`, `loadAllMembers`: a whole guild's members, shared between modules                                      |
-| `#lib/hidden-text.js`      | `stripHiddenText`: drop code and spoilers before reading links                                                       |
-| `#lib/i18n.js`             | `createT`, `TFunction`                                                                                               |
-| `#lib/imaging.js`          | canvas basics: fonts, palette, avatars, portraits, centred text                                                      |
-| `#lib/interaction.js`      | `declareInteractionHandler` for buttons, menus and modals, with who may use them                                     |
-| `#lib/keyed-queue.js`      | `KeyedQueue`: run tasks one at a time per key                                                                        |
-| `#lib/listener.js`         | `declareEventListener`, `removeOnChannelDelete`: forget a module's records of a deleted channel                      |
-| `#lib/log-throttle.js`     | `LogThrottle`: the same warning once, then at debug level                                                            |
-| `#lib/logger.js`           | `loggerMaker(name)`, the shared pino logger                                                                          |
-| `#lib/member-presence.js`  | `sweepStoredMembers`, `memberPresence`: stored members checked against who is still on a guild                       |
-| `#lib/mentions.js`         | `NO_MENTIONS`, `NO_MENTIONS_REPLY`                                                                                   |
-| `#lib/message-content.js`  | what a Components V2 message reads and shows: `componentsText`, `componentsMedia`                                    |
-| `#lib/moderation.js`       | `fetchMember` (null when gone), `isBanned`                                                                           |
-| `#lib/module.js`           | `defineModule`                                                                                                       |
-| `#lib/pagination.js`       | `pageRow`: previous / next buttons                                                                                   |
-| `#lib/permissions.js`      | `missingBotPermissions`, `missingBotPermissionNames` (named for a refusal), `canReplyWithFile`                       |
-| `#lib/players.js`          | `resolvePlayers`: member names and avatars for leaderboards                                                          |
-| `#lib/post-card.js`        | `postCard` (image, text if refused), `celebrationMessage`                                                            |
-| `#lib/preview.js`          | sample images for `pnpm render-preview`                                                                              |
-| `#lib/registry.js`         | a module's declarations                                                                                              |
-| `#lib/reply.js`            | `replyEphemeral`: answer only the member, by reply or follow-up                                                      |
-| `#lib/reported-message.js` | a message quoted elsewhere (message-quote, starboard): `reportedMessage`, `repliedTo`, `sendWithMediaFallback`       |
-| `#lib/revision-cache.js`   | `RevisionCache`, `RevisionCounter`: caches invalidated by key                                                        |
-| `#lib/service.js`          | `declareService`                                                                                                     |
-| `#lib/stat-card.js`        | stat cards: panels, trends, fitted text                                                                              |
-| `#lib/table.js`            | leaderboard tables drawn on a canvas                                                                                 |
-| `#lib/task.js`             | `declareTask` for scheduled tasks                                                                                    |
-| `#lib/testing.js`          | test fakes: guilds, channels, messages, config, silenced logs                                                        |
-| `#lib/text.js`             | `truncate`, `quoteEachLine` (Markdown quote), `stripLineMarkup` (headings, small text, quotes)                       |
-| `#lib/version.js`          | the `Version` type                                                                                                   |
+| Import                     | What it gives                                                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `#lib/calendar.js`         | guild-local days and times: `localTime`, `dayKey`, `dueDay`, `upcoming`, `formatDate`, `addDays`, `anniversaryYears`   |
+| `#lib/celebration-card.js` | the festive card of birthday and seniority, confetti included                                                          |
+| `#lib/channel-audience.js` | channels and categories a config excludes: `isExcluded`, `excludedIdsOf`, `isNsfw`                                     |
+| `#lib/command.js`          | `declareCommand` for slash commands                                                                                    |
+| `#lib/concurrency.js`      | `eachLimited`: run a task on each item, a few at once                                                                  |
+| `#lib/confetti-3d.js`      | animated 3D confetti over a card                                                                                       |
+| `#lib/config.js`           | config types, emoji resolution, channel records (`ChannelRecord…`), `formatConfigValue`                                |
+| `#lib/database.js`         | the Prisma client (default export `prisma`) and the `Prisma` namespace                                                 |
+| `#lib/deadline.js`         | `withDeadline`: wait for a promise at most so long                                                                     |
+| `#lib/declared.js`         | the `Declared` type behind every `declare…`                                                                            |
+| `#lib/discord-errors.js`   | `isDiscordApiError`, `isApiError`, `apiErrorCode`, `isGuildSetupError`                                                 |
+| `#lib/discord-polyfills/`  | REST calls discord.js lacks, one file per feature                                                                      |
+| `#lib/duration.js`         | `parseDuration`, `formatDuration`                                                                                      |
+| `#lib/emoji-shortcodes.js` | `:name:` shortcodes to emojis                                                                                          |
+| `#lib/env.js`              | `isDevMode`, `devGuildId`, `uptimeKumaPushUrl`                                                                         |
+| `#lib/format.js`           | numbers and previews: `formatInteger`, `formatPercentage`, `preview`, `describeLines`, `COMPONENTS_TEXT_LIMIT`         |
+| `#lib/guild-members.js`    | `allMembers`, `loadAllMembers`: a whole guild's members, shared between modules                                        |
+| `#lib/guild-loop.js`       | `forEachGuild`, `presentGuilds`: a task over a list of guilds (a module's activated ones), skipping those the bot left |
+| `#lib/hidden-text.js`      | `stripHiddenText`: drop code and spoilers before reading links                                                         |
+| `#lib/i18n.js`             | `createT`, `TFunction`                                                                                                 |
+| `#lib/imaging.js`          | canvas basics: fonts, palette, avatars, portraits, centred text                                                        |
+| `#lib/interaction.js`      | `declareInteractionHandler` for buttons, menus and modals, with who may use them                                       |
+| `#lib/keyed-queue.js`      | `KeyedQueue`: run tasks one at a time per key                                                                          |
+| `#lib/listener.js`         | `declareEventListener`, `removeOnChannelDelete`: forget a module's records of a deleted channel                        |
+| `#lib/log-throttle.js`     | `LogThrottle`: the same warning once, then at debug level                                                              |
+| `#lib/logger.js`           | `loggerMaker(name)`, the shared pino logger                                                                            |
+| `#lib/member-presence.js`  | `sweepStoredMembers`, `memberPresence`: stored members checked against who is still on a guild                         |
+| `#lib/mentions.js`         | `NO_MENTIONS`, `NO_MENTIONS_REPLY`                                                                                     |
+| `#lib/message-content.js`  | what a Components V2 message reads and shows: `componentsText`, `componentsMedia`                                      |
+| `#lib/moderation.js`       | `fetchMember` (null when gone), `isBanned`                                                                             |
+| `#lib/module.js`           | `defineModule`                                                                                                         |
+| `#lib/pagination.js`       | `pageRow`: previous / next buttons                                                                                     |
+| `#lib/permissions.js`      | `missingBotPermissions`, `missingBotPermissionNames` (named for a refusal), `canReplyWithFile`                         |
+| `#lib/players.js`          | `resolvePlayers`: member names and avatars for leaderboards                                                            |
+| `#lib/post-card.js`        | `postCard` (image, text if refused), `celebrationMessage`                                                              |
+| `#lib/preview.js`          | sample images for `pnpm render-preview`                                                                                |
+| `#lib/registry.js`         | a module's declarations                                                                                                |
+| `#lib/reply.js`            | `replyEphemeral`: answer only the member, by reply or follow-up                                                        |
+| `#lib/reported-message.js` | a message quoted elsewhere (message-quote, starboard): `reportedMessage`, `repliedTo`, `sendWithMediaFallback`         |
+| `#lib/revision-cache.js`   | `RevisionCache`, `RevisionCounter`: caches invalidated by key                                                          |
+| `#lib/service.js`          | `declareService`                                                                                                       |
+| `#lib/stat-card.js`        | stat cards: panels, trends, fitted text                                                                                |
+| `#lib/table.js`            | leaderboard tables drawn on a canvas                                                                                   |
+| `#lib/task.js`             | `declareTask` for scheduled tasks                                                                                      |
+| `#lib/testing.js`          | test fakes: guilds, channels, messages, config, silenced logs                                                          |
+| `#lib/text.js`             | `truncate`, `quoteEachLine` (Markdown quote), `stripLineMarkup` (headings, small text, quotes)                         |
+| `#lib/version.js`          | the `Version` type                                                                                                     |
 
 ## Commits
 
