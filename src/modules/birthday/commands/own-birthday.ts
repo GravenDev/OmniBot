@@ -40,10 +40,15 @@ async function stillOnGuild(
   if (!interaction.inCachedGuild()) {
     return present;
   }
+  const batches: string[][] = [];
   for (let start = 0; start < userIds.length; start += MEMBER_FETCH_LIMIT) {
-    const members = await interaction.guild.members.fetch({
-      user: userIds.slice(start, start + MEMBER_FETCH_LIMIT),
-    });
+    batches.push(userIds.slice(start, start + MEMBER_FETCH_LIMIT));
+  }
+  // Together: the gateway's own send queue keeps to Discord's rate limit.
+  const fetched = await Promise.all(
+    batches.map((user) => interaction.guild.members.fetch({ user }))
+  );
+  for (const members of fetched) {
     for (const userId of members.keys()) {
       present.add(userId);
     }
