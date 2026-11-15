@@ -107,6 +107,7 @@ class StarboardService implements Service {
 
   async handleDeletions(messageIds: string[], client: Client): Promise<void> {
     const idle = messageIds.filter((id) => !this.queue.isBusy(id));
+    // In sequence: their reposts share the starboard channel's rate limit.
     for (const id of messageIds.filter((id) => this.queue.isBusy(id))) {
       await this.handleDeletion(id, client);
     }
@@ -114,6 +115,7 @@ class StarboardService implements Service {
       return;
     }
     const deleted = new Set(idle);
+    // In sequence: a discard deletes a repost, all under one channel's limit.
     for (const entry of await store.findInvolving(idle)) {
       if (deleted.has(entry.messageId)) {
         await this.queue.run(entry.messageId, () =>
@@ -162,6 +164,7 @@ class StarboardService implements Service {
     if (!channel) {
       return;
     }
+    // In sequence: every delete goes to one channel, under one rate limit.
     for (let start = 0; start < ids.length; start += BULK_DELETE_LIMIT) {
       const batch = ids.slice(start, start + BULK_DELETE_LIMIT);
       let remaining = batch;
