@@ -215,8 +215,22 @@ class ModuleService implements Service {
       module.version
     );
 
-    for (const { guildId } of guildInfos) {
-      await this.updateModuleActivation(module.id, guildId, module.version);
+    if (guildInfos.length === 0) {
+      return;
+    }
+    const guildIds = guildInfos.map(({ guildId }) => guildId);
+    // One write for every drifted guild: the rows exist, read just above.
+    await prisma.moduleActivation.updateMany({
+      // Still enabled: a guild disabled since the read keeps its empty version.
+      where: {
+        moduleId: module.id,
+        activated: true,
+        guildId: { in: guildIds },
+      },
+      data: { activatedVersion: module.version },
+    });
+    for (const guildId of guildIds) {
+      stateCache.delete(stateKey(module.id, guildId));
     }
   }
 
