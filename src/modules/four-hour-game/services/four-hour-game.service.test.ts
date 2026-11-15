@@ -352,11 +352,13 @@ vi.mock("#core/services/module.service.js", () => ({
   default: { getModuleStateFromGuildIdIn },
 }));
 const announcePoint = vi.hoisted(() => vi.fn());
-vi.mock("./point-announcement.service.js", () => ({ announcePoint }));
+vi.mock("./point-announcement.service.js", () => ({
+  default: { announcePoint },
+}));
 
 const { default: prisma } = await import("#lib/database.js");
 const { default: service } = await import("./four-hour-game.service.js");
-const { fetchPlayerMessages, fetchPlayerMessagesSince } =
+const { default: channelHistoryService } =
   await import("./channel-history.service.js");
 const { default: guildReturnListeners } =
   await import("#modules/four-hour-game/listeners/guild-return.listener.js");
@@ -1112,8 +1114,9 @@ describe("FourHourGameService deletions and resync", () => {
       "guild",
       "game",
       {
-        latest: () => fetchPlayerMessages(channel),
-        since: (since) => fetchPlayerMessagesSince(channel, since),
+        latest: () => channelHistoryService.fetchPlayerMessages(channel),
+        since: (since) =>
+          channelHistoryService.fetchPlayerMessagesSince(channel, since),
       },
       DELAY,
       paris("2026-10-14T20:00:00")

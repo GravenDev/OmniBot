@@ -4,7 +4,9 @@ import type { Module } from "#lib/module.js";
 import type { FourHourGameConfigSchema } from "./four-hour-game.config.js";
 
 const closeAllDays = vi.hoisted(() => vi.fn());
-vi.mock("./services/daily.service.js", () => ({ closeAllDays }));
+vi.mock("./services/daily.service.js", () => ({
+  default: { closeAllDays },
+}));
 
 const { fourHourGameTasks } = await import("./tasks.js");
 

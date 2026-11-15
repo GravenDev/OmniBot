@@ -9,9 +9,9 @@ import guildReturnListeners from "./listeners/guild-return.listener.js";
 import messageCreateListener from "./listeners/message-create.listener.js";
 import messageDeleteBulkListener from "./listeners/message-delete-bulk.listener.js";
 import messageDeleteListener from "./listeners/message-delete.listener.js";
-import { closeAllDays } from "./services/daily.service.js";
+import dailyService from "./services/daily.service.js";
 import fourHourGameService from "./services/four-hour-game.service.js";
-import { syncAllRounds } from "./services/round-sync.service.js";
+import roundSyncService from "./services/round-sync.service.js";
 import { fourHourGameTasks } from "./tasks.js";
 
 const logger = loggerMaker("four-hour-game");
@@ -44,10 +44,13 @@ const fourHourGameModule = defineModule({
       registry.register(task);
     }
 
-    const { reserved, done } = syncAllRounds(client, fourHourGameModule);
+    const { reserved, done } = roundSyncService.syncAllRounds(
+      client,
+      fourHourGameModule
+    );
     fourHourGameService.waitForStartup(reserved);
     done
-      .then(() => closeAllDays(client, fourHourGameModule))
+      .then(() => dailyService.closeAllDays(client, fourHourGameModule))
       .catch((err: unknown) =>
         logger.error({ err }, "Failed to sync rounds and close days at startup")
       );

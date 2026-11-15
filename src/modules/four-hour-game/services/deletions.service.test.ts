@@ -13,15 +13,15 @@ vi.mock("./four-hour-game.service.js", () => ({
   default: { handleDeletion: mocks.handleDeletion },
 }));
 vi.mock("./channel-history.service.js", () => ({
-  fetchStandingMessage: mocks.fetchStandingMessage,
+  default: { fetchStandingMessage: mocks.fetchStandingMessage },
 }));
 
-const { handleGameDeletions } = await import("./deletions.service.js");
+const { default: deletionsService } = await import("./deletions.service.js");
 
 const gameChannel = { id: "game", isTextBased: () => true };
 const configWith = (channel: unknown) =>
   ({ get: () => channel }) as unknown as Parameters<
-    typeof handleGameDeletions
+    typeof deletionsService.handleGameDeletions
   >[0];
 
 beforeEach(() => {
@@ -31,10 +31,12 @@ beforeEach(() => {
 
 describe("handleGameDeletions", () => {
   it("hands the deleted ids of the game channel to the service", async () => {
-    await handleGameDeletions(configWith(gameChannel), "guild", "game", [
-      "1",
-      "2",
-    ]);
+    await deletionsService.handleGameDeletions(
+      configWith(gameChannel),
+      "guild",
+      "game",
+      ["1", "2"]
+    );
 
     expect(mocks.handleDeletion).toHaveBeenCalledWith(
       "guild",
@@ -57,8 +59,8 @@ describe("handleGameDeletions", () => {
       "game",
     ],
   ])("ignores the deletion when %s", async (_, config, channelId) => {
-    await handleGameDeletions(
-      config as Parameters<typeof handleGameDeletions>[0],
+    await deletionsService.handleGameDeletions(
+      config as Parameters<typeof deletionsService.handleGameDeletions>[0],
       "guild",
       channelId,
       ["1"]
@@ -70,7 +72,12 @@ describe("handleGameDeletions", () => {
     mocks.handleDeletion.mockRejectedValue(new Error("database down"));
 
     await expect(
-      handleGameDeletions(configWith(gameChannel), "guild", "game", ["1"])
+      deletionsService.handleGameDeletions(
+        configWith(gameChannel),
+        "guild",
+        "game",
+        ["1"]
+      )
     ).resolves.toBeUndefined();
     expect(mocks.error).toHaveBeenCalledTimes(1);
   });

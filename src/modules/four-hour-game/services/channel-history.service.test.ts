@@ -1,9 +1,6 @@
 import type { TextBasedChannel } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
-import {
-  fetchPlayerMessagesSince,
-  fetchStandingMessage,
-} from "./channel-history.service.js";
+import channelHistoryService from "./channel-history.service.js";
 
 function channelWith(
   messages: {
@@ -38,7 +35,7 @@ describe("fetchStandingMessage", () => {
       { id: "recent", at: 3_000 },
     ]);
 
-    expect(await fetchStandingMessage(channel)).toEqual({
+    expect(await channelHistoryService.fetchStandingMessage(channel)).toEqual({
       messageId: "recent",
       authorId: "author-recent",
       sentAt: new Date(3_000),
@@ -54,7 +51,7 @@ describe("fetchStandingMessage", () => {
       { id: "alice-3", author: "alice", at: 4_000 },
     ]);
 
-    expect(await fetchStandingMessage(channel)).toEqual({
+    expect(await channelHistoryService.fetchStandingMessage(channel)).toEqual({
       messageId: "alice-2",
       authorId: "alice",
       sentAt: new Date(3_000),
@@ -64,7 +61,9 @@ describe("fetchStandingMessage", () => {
   it("returns null when no player message is left", async () => {
     const channel = channelWith([{ id: "bot", bot: true, at: 1_000 }]);
 
-    expect(await fetchStandingMessage(channel)).toBeNull();
+    expect(
+      await channelHistoryService.fetchStandingMessage(channel)
+    ).toBeNull();
   });
 });
 
@@ -104,7 +103,10 @@ describe("fetchPlayerMessagesSince", () => {
   it("pages back until it reads a message of that time or older", async () => {
     const { channel, fetch } = pagedChannel(250);
 
-    const messages = await fetchPlayerMessagesSince(channel, new Date(120_000));
+    const messages = await channelHistoryService.fetchPlayerMessagesSince(
+      channel,
+      new Date(120_000)
+    );
 
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(messages[0]!.sentAt.getTime()).toBeLessThanOrEqual(120_000);
@@ -124,7 +126,10 @@ describe("fetchPlayerMessagesSince", () => {
       (i) => i >= 50 && i < 120
     );
 
-    const messages = await fetchPlayerMessagesSince(channel, new Date(120_000));
+    const messages = await channelHistoryService.fetchPlayerMessagesSince(
+      channel,
+      new Date(120_000)
+    );
 
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(messages.some((m) => m.sentAt.getTime() === 50_000)).toBe(true);
@@ -133,7 +138,10 @@ describe("fetchPlayerMessagesSince", () => {
   it("stops at the start of the channel", async () => {
     const { channel, fetch } = pagedChannel(30);
 
-    const messages = await fetchPlayerMessagesSince(channel, new Date(0));
+    const messages = await channelHistoryService.fetchPlayerMessagesSince(
+      channel,
+      new Date(0)
+    );
 
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(messages).toHaveLength(30);
@@ -142,7 +150,10 @@ describe("fetchPlayerMessagesSince", () => {
   it("gives up after 50 pages", async () => {
     const { channel, fetch } = pagedChannel(6_000);
 
-    const messages = await fetchPlayerMessagesSince(channel, new Date(0));
+    const messages = await channelHistoryService.fetchPlayerMessagesSince(
+      channel,
+      new Date(0)
+    );
 
     expect(fetch).toHaveBeenCalledTimes(50);
     expect(messages).toHaveLength(5_000);

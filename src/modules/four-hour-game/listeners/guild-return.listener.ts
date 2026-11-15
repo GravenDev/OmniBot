@@ -4,8 +4,8 @@ import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
-import { closeDays } from "#modules/four-hour-game/services/daily.service.js";
-import { syncRound } from "#modules/four-hour-game/services/round-sync.service.js";
+import dailyService from "#modules/four-hour-game/services/daily.service.js";
+import roundSyncService from "#modules/four-hour-game/services/round-sync.service.js";
 
 const logger = loggerMaker("four-hour-game");
 
@@ -32,12 +32,14 @@ export default function guildReturnListeners(
       .then((state) => state.activated);
     // Awaited within the queue, maybe later: its failure is handled there.
     activated.catch(() => undefined);
-    await syncRound(module, guild.id, activated).catch((err: unknown) =>
-      logger.warn({ err }, `Could not sync the round | guildId = ${guild.id}`)
-    );
+    await roundSyncService
+      .syncRound(module, guild.id, activated)
+      .catch((err: unknown) =>
+        logger.warn({ err }, `Could not sync the round | guildId = ${guild.id}`)
+      );
     // A failed lookup is already logged by the round sync above.
     if (await activated.catch(() => false)) {
-      await closeDays(module, guild.id);
+      await dailyService.closeDays(module, guild.id);
     }
   }
 
