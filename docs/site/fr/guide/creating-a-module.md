@@ -243,7 +243,7 @@ Avant que votre module n'atteigne des serveurs de production :
 - **Renseignez `DEV_GUILD_ID`** dans `.env` — sans lui, le mode dev n'enregistre aucune commande
 - **Préfixez noms de commandes et `customId`** avec votre id de module — les deux sont résolus premier-arrivé-premier-servi entre tous les modules, et un `:` dans un argument décale le parsing des `customId`
 - **Gardez `if (!config) return`** dans les listeners — hors serveurs (MP), ils tournent avec une config `undefined`
-- **Mettez `requiresAdmin: true`** sur chaque commande et handler sensible — sinon exposé à tout le monde
+- **Mettez `requiresAdmin: true`** sur chaque commande sensible — sinon exposée à tout le monde ; un handler d'interaction déclare qui peut s'en servir avec `access` (`"admin"`, `"everyone"` ou `{ permissions }`), obligatoire
 - **Jamais d'objet en `defaultValue` d'entité** (`USER`/`ROLE`/`CHANNEL`/`CATEGORY` restent non renseignés ; les ids sont stockés, les objets sont réhydratés)
 - **Déclarez les `options` des `ENUM` avec `as const`** pour typer `config.get()` en union littérale
 - **Ordre Prisma** : écrire `models/*.prisma`, puis `pnpm prisma:generate`, puis `pnpm prisma:migrate` — et gardez des noms de modèles uniques entre modules

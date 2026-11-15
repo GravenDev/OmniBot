@@ -245,7 +245,7 @@ Before your module reaches production guilds:
 - **Set `DEV_GUILD_ID`** in `.env` — without it, dev mode registers no commands at all
 - **Prefix command names and `customId`s** with your module id — both are matched first-come-first-served across all modules, and a `:` inside an argument shifts `customId` parsing
 - **Guard listeners with `if (!config) return`** — listeners run with `undefined` config outside guilds (DMs)
-- **Put `requiresAdmin: true`** on every sensitive command and interaction handler — fail-open otherwise
+- **Put `requiresAdmin: true`** on every sensitive command — fail-open otherwise; an interaction handler declares who may use it with `access` (`"admin"`, `"everyone"` or `{ permissions }`), required
 - **Never put an object in an entity `defaultValue`** (`USER`/`ROLE`/`CHANNEL`/`CATEGORY` defaults must stay unset; ids are stored, objects are hydrated)
 - **Declare `ENUM` `options` `as const`** for literal-union typing of `config.get()`
 - **Prisma order**: write `models/*.prisma`, then `pnpm prisma:generate`, then `pnpm prisma:migrate` — and keep model names unique across all modules
