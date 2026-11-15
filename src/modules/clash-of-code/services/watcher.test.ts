@@ -1,4 +1,4 @@
-import { MessageFlags } from "discord.js";
+import { Collection, MessageFlags } from "discord.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { silenceLogs } from "#lib/testing.js";
 import type { ClashReport } from "./api.js";
@@ -79,6 +79,9 @@ const send = vi.fn(async () => ({}));
 const removeReaction = vi.fn(async () => undefined);
 const client = {
   user: { id: "bot" },
+  guilds: {
+    cache: new Collection([["guild-1", { id: "guild-1", available: true }]]),
+  },
   channels: {
     fetch: vi.fn(async () => ({
       isSendable: () => true,
@@ -264,6 +267,14 @@ describe("resume", () => {
     expect(mocks.store.watchedGames).toHaveBeenCalledWith(["guild-1"]);
     await vi.advanceTimersByTimeAsync(0);
     expect(send).toHaveBeenCalledOnce();
+  });
+
+  it("leaves the games of a guild the bot left", async () => {
+    mocks.activatedGuildIds.mockResolvedValue(["guild-1", "gone"]);
+
+    await watcher.resume();
+
+    expect(mocks.store.watchedGames).toHaveBeenCalledWith(["guild-1"]);
   });
 
   it("does not schedule a game twice", async () => {
