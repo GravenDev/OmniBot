@@ -2,8 +2,8 @@ import { createCanvas, loadImage, type Image } from "@napi-rs/canvas";
 import type { CalendarDay } from "#lib/calendar.js";
 import type { Previews } from "#lib/preview.js";
 import { previewT } from "#lib/preview.js";
+import { calendarLabels, leadingDays } from "#modules/birthday/calendar.js";
 import fr from "../i18n/fr.json" with { type: "json" };
-import { calendarLabels, leadingDays } from "../services/calendar.js";
 import { renderBirthdayCalendar, type Celebrant } from "./birthday-calendar.js";
 
 // Made-up members; their avatars are plain gradients drawn here (no network),

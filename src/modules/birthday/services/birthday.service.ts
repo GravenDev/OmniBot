@@ -1,7 +1,7 @@
 import type { DayOfYear } from "#lib/calendar.js";
 import prisma from "#lib/database.js";
 import { declareService, type Service } from "#lib/service.js";
-import type { Milestone } from "./paradox.js";
+import type { Milestone } from "#modules/birthday/paradox.js";
 
 export interface BirthdayEntry extends DayOfYear {
   userId: string;

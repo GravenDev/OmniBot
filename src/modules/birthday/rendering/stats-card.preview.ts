@@ -1,12 +1,12 @@
 import type { Previews } from "#lib/preview.js";
 import { previewT } from "#lib/preview.js";
-import fr from "../i18n/fr.json" with { type: "json" };
-import type { BirthdayEntry } from "../services/birthday.service.js";
 import {
   birthdayStats,
   statsCardLabels,
   type StatsOptions,
-} from "../services/stats.js";
+} from "#modules/birthday/stats.js";
+import fr from "../i18n/fr.json" with { type: "json" };
+import type { BirthdayEntry } from "../services/birthday.service.js";
 import { renderStatsCard } from "./stats-card.js";
 
 // Made-up registrations: the dates are generated here, no member is real.

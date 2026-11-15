@@ -12,14 +12,14 @@ import {
 import type { TFunction } from "#lib/i18n.js";
 import { CELEBRATION_TEXT_LIMIT } from "#lib/post-card.js";
 import { stripLineMarkup, truncate } from "#lib/text.js";
-import { ACCENT, CONFETTI } from "../rendering/theme.js";
-import type { BirthdayEntry } from "./birthday.service.js";
 import {
   CERTAIN_GROUP_SIZE,
   collisionProbability,
   HALF_GROUP_SIZE,
   type Milestone,
 } from "./paradox.js";
+import { ACCENT, CONFETTI } from "./rendering/theme.js";
+import type { BirthdayEntry } from "./services/birthday.service.js";
 
 export const MESSAGE_LIMIT = 2000;
 

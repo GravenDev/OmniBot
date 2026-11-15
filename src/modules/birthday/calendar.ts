@@ -6,8 +6,8 @@ import {
 } from "#lib/calendar.js";
 import type { TFunction } from "#lib/i18n.js";
 import { truncate } from "#lib/text.js";
-import type { BirthdayCalendarLabels } from "../rendering/birthday-calendar.js";
-import type { BirthdayEntry } from "./birthday.service.js";
+import type { BirthdayCalendarLabels } from "./rendering/birthday-calendar.js";
+import type { BirthdayEntry } from "./services/birthday.service.js";
 
 const ALT_LIMIT = 1024;
 

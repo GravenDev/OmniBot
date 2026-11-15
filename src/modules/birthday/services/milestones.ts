@@ -1,15 +1,15 @@
 import type { ConfigProvider } from "#lib/config.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
-import type { BirthdayConfigSchema } from "../birthday.config.js";
-import { milestoneEmbed } from "./announcements.js";
-import birthdayService from "./birthday.service.js";
-import { logFailure } from "./failures.js";
+import { milestoneEmbed } from "#modules/birthday/announcements.js";
+import type { BirthdayConfigSchema } from "#modules/birthday/birthday.config.js";
+import { logFailure } from "#modules/birthday/failures.js";
 import {
   expectedFirstCollision,
   newMilestones,
   sharedDates,
-} from "./paradox.js";
+} from "#modules/birthday/paradox.js";
+import birthdayService from "./birthday.service.js";
 
 const queue = new KeyedQueue();
 

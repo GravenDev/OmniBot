@@ -7,15 +7,15 @@ import type { CalendarDay } from "#lib/calendar.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
-import type { BirthdayConfigSchema } from "../birthday.config.js";
-import { renderBirthdayCalendar } from "../rendering/birthday-calendar.js";
-import birthdayService from "./birthday.service.js";
+import type { BirthdayConfigSchema } from "#modules/birthday/birthday.config.js";
 import {
   calendarAlt,
   calendarLabels,
   leadingDays,
   monthCelebrants,
-} from "./calendar.js";
+} from "#modules/birthday/calendar.js";
+import { renderBirthdayCalendar } from "#modules/birthday/rendering/birthday-calendar.js";
+import birthdayService from "./birthday.service.js";
 import portraitsService from "./portraits.service.js";
 
 const logger = loggerMaker("birthday");

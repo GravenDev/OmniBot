@@ -17,7 +17,7 @@ import {
 import {
   birthdayConfigSchema,
   type BirthdayConfigSchema,
-} from "../birthday.config.js";
+} from "#modules/birthday/birthday.config.js";
 import en from "../i18n/en.json" with { type: "json" };
 import fr from "../i18n/fr.json" with { type: "json" };
 
@@ -48,7 +48,7 @@ vi.mock("#lib/celebration-card.js", async (importOriginal) => ({
   renderCelebrationImage,
 }));
 const renderBirthdayCalendar = vi.hoisted(() => vi.fn());
-vi.mock("../rendering/birthday-calendar.js", () => ({
+vi.mock("#modules/birthday/rendering/birthday-calendar.js", () => ({
   renderBirthdayCalendar,
   shownAvatars: (count: number) => count,
 }));
