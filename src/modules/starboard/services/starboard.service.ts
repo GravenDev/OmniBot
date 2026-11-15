@@ -18,8 +18,9 @@ import {
   starboardChannelOf,
   thresholdOf,
 } from "./eligibility.js";
+import reactions from "./reactions.service.js";
 import store, { type StarboardEntry } from "./store.js";
-import { type Tally, tallyReactions, upperBound } from "./tally.js";
+import { type Tally, tallyOf, upperBound } from "./tally.js";
 import { starboardMessage } from "./view.js";
 
 const logger = loggerMaker("starboard");
@@ -283,7 +284,7 @@ class StarboardService implements Service {
       this.logRefusal(message, blocked);
       return;
     }
-    const tally = await tallyReactions(message, emojis, config.get("selfStar"));
+    const tally = await this.tally(message, config);
     if (tally.total < threshold) {
       logger.debug(
         `Not enough different members | count = ${tally.total} | threshold = ${threshold} | messageId = ${message.id}`
@@ -356,11 +357,7 @@ class StarboardService implements Service {
 
     let tally = contentOnly ? entry.tally : null;
     if (!tally) {
-      tally = await tallyReactions(
-        message,
-        config.get("emojis"),
-        config.get("selfStar")
-      );
+      tally = await this.tally(message, config);
       if (
         tally.total < thresholdOf(config) &&
         config.get("belowThreshold") === "remove"
@@ -422,6 +419,14 @@ class StarboardService implements Service {
       return;
     }
     await store.remove(messageId);
+  }
+
+  private async tally(message: Message, config: Config): Promise<Tally> {
+    return tallyOf(
+      await reactions.reactors(message, config.get("emojis")),
+      message.author.id,
+      config.get("selfStar")
+    );
   }
 
   private async starboardChannel(client: Client, channelId: string) {
