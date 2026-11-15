@@ -1,39 +1,39 @@
 import { fileURLToPath } from "node:url";
 import path from "path";
 import { Client, Events } from "discord.js";
-import coreModule from "./core/core.module.js";
-import { syncCommands } from "./core/loaders/command-loader.js";
+import coreModule from "#core/core.module.js";
+import { syncCommands } from "#core/loaders/command-loader.js";
 import {
   fetchApplicationFlags,
   intentNames,
   planGateway,
-} from "./core/loaders/intent-guard.js";
+} from "#core/loaders/intent-guard.js";
 import {
   loadGlobalEvents,
   loadModuleEvents,
-} from "./core/loaders/listener-loader.js";
+} from "#core/loaders/listener-loader.js";
 import {
   findDuplicateDeclarations,
   loadModuleI18n,
   loadModules,
-} from "./core/loaders/module-loader.js";
+} from "#core/loaders/module-loader.js";
 import {
   startMaintenanceTasks,
   startModuleTasks,
   stopAllTasks,
-} from "./core/loaders/task-scheduler.js";
+} from "#core/loaders/task-scheduler.js";
 import {
   clearHealthFile,
   healthFileReporter,
-} from "./core/monitoring/health-file.js";
-import { botHealth, databaseProbe } from "./core/monitoring/health.js";
-import { startHeartbeat } from "./core/monitoring/heartbeat.js";
-import { uptimeKumaReporter } from "./core/monitoring/uptime-kuma.js";
-import { setRuntime } from "./core/runtime.js";
-import prisma, { Prisma } from "./lib/database.js";
-import { isDevMode, uptimeKumaPushUrl } from "./lib/env.js";
-import { initI18n } from "./lib/i18n.js";
-import logger from "./lib/logger.js";
+} from "#core/monitoring/health-file.js";
+import { botHealth, databaseProbe } from "#core/monitoring/health.js";
+import { startHeartbeat } from "#core/monitoring/heartbeat.js";
+import { uptimeKumaReporter } from "#core/monitoring/uptime-kuma.js";
+import { setRuntime } from "#core/runtime.js";
+import prisma, { Prisma } from "#lib/database.js";
+import { isDevMode, uptimeKumaPushUrl } from "#lib/env.js";
+import { initI18n } from "#lib/i18n.js";
+import logger from "#lib/logger.js";
 import sql = Prisma.sql;
 
 try {
