@@ -28,8 +28,14 @@ vi.mock("#lib/database.js", () => ({ default: {} }));
 vi.mock("./store.js", () => ({ default: store }));
 vi.mock("./panel.js", () => panel);
 
-const { applyAccess, joinHub, memberLeft, ownerMoved, reconcile } =
-  await import("./lifecycle.js");
+const {
+  applyAccess,
+  joinHub,
+  memberLeft,
+  ownerMoved,
+  reconcile,
+  seatWaitingMembers,
+} = await import("./lifecycle.js");
 
 silenceLogs();
 
@@ -404,5 +410,54 @@ describe("reconcile", () => {
     expect(panel.refreshPanel).not.toHaveBeenCalled();
     await reconcile(guild as any, config.t);
     expect(panel.refreshPanel).toHaveBeenCalledWith(temp, stored, config.t);
+  });
+
+  it("still reconciles the other channels when one fails", async () => {
+    const temp = {
+      id: "temp",
+      isVoiceBased: () => true,
+      members: new Collection([["bob", { id: "bob", user: { bot: false } }]]),
+    };
+    const guild = { id: "g1", channels: { cache: new Map([["temp", temp]]) } };
+    const stored = {
+      channelId: "temp",
+      ownerId: "alice",
+      createdAt: new Date(0),
+    };
+    store.hubs.mockResolvedValue([]);
+    store.channels.mockResolvedValue([{ channelId: "broken" }, stored]);
+    store.channel.mockImplementation(async (channelId: string) => {
+      if (channelId === "broken") {
+        throw new Error("database down");
+      }
+      return stored;
+    });
+
+    await expect(reconcile(guild as any, config.t)).resolves.toBeUndefined();
+
+    expect(panel.refreshPanel).toHaveBeenCalledWith(temp, stored, config.t);
+  });
+});
+
+describe("seatWaitingMembers", () => {
+  it("still seats the other waiting members when one fails", async () => {
+    const { guild, hubChannel, member } = setup();
+    const first = freshMember({
+      ...member,
+      voice: { channelId: "hub", setChannel: vi.fn() },
+    });
+    const second = freshMember(member);
+    hubChannel.isVoiceBased = () => true;
+    hubChannel.members = new Collection([
+      [first.id, first],
+      [second.id, second],
+    ]);
+    store.hubs.mockResolvedValue([hub]);
+    store.ownedBy.mockRejectedValueOnce(new Error("database down"));
+
+    await expect(seatWaitingMembers(guild, config)).resolves.toBeUndefined();
+
+    expect(guild.channels.create).toHaveBeenCalledOnce();
+    expect(second.voice.setChannel).toHaveBeenCalled();
   });
 });

@@ -23,15 +23,15 @@ export function tempVoiceTasks(module: Module<TempVoiceConfigSchema>) {
         );
         const guildIds = new Set([...activated, ...(await store.guildIds())]);
         for (const guildId of guildIds) {
-          const guild = client.guilds.cache.get(guildId);
-          if (!guild) {
-            await store.removeGuildChannels(guildId);
-            continue;
-          }
-          if (!guild.available) {
-            continue;
-          }
           try {
+            const guild = client.guilds.cache.get(guildId);
+            if (!guild) {
+              await store.removeGuildChannels(guildId);
+              continue;
+            }
+            if (!guild.available) {
+              continue;
+            }
             const config = activated.has(guildId)
               ? await configService.getConfigForModuleIn(module, guildId)
               : null;
