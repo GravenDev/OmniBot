@@ -2,8 +2,8 @@ import moduleService from "#core/services/module.service.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
 import type { SeniorityConfigSchema } from "./seniority.config.js";
-import { runAllGuildDays } from "./services/daily.service.js";
-import { sweepDepartures } from "./services/overrides.service.js";
+import daily from "./services/daily.service.js";
+import overrides from "./services/overrides.service.js";
 
 export function seniorityTasks(module: Module<SeniorityConfigSchema>) {
   return [
@@ -13,7 +13,7 @@ export function seniorityTasks(module: Module<SeniorityConfigSchema>) {
       id: "daily-announcements",
       schedule: "0 * * * *",
       runOnStart: true,
-      run: (client) => runAllGuildDays(client, module),
+      run: (client) => daily.runAllGuildDays(client, module),
     }),
   ];
 }
@@ -31,7 +31,7 @@ export function seniorityMaintenanceTasks(moduleId: string) {
       // A night missed while the bot was down is caught up at start.
       runOnStart: true,
       async run(client) {
-        await sweepDepartures(client, async (guildId) =>
+        await overrides.sweepDepartures(client, async (guildId) =>
           (await moduleService.getActivatedGuildIds(moduleId)).includes(guildId)
         );
       },

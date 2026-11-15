@@ -24,8 +24,7 @@ vi.mock("#lib/database.js", () => ({
   default: { seniorityOverride: db },
 }));
 
-const { firstMessageDate, recompute, sweepDepartures, uninstallWarning } =
-  await import("./overrides.service.js");
+const { default: overrides } = await import("./overrides.service.js");
 
 const JOINED = new Date("2024-06-01T10:00:00Z");
 const FIRST = "2020-03-15T08:30:00.000Z";
@@ -50,7 +49,9 @@ beforeEach(() => {
 describe("firstMessageDate", () => {
   it("asks for the member's oldest message, wherever it is", async () => {
     const { rest: client, get } = rest(found(FIRST));
-    expect(await firstMessageDate(client, "g", "u", Infinity)).toEqual({
+    expect(
+      await overrides.firstMessageDate(client, "g", "u", Infinity)
+    ).toEqual({
       date: new Date(FIRST),
       partial: false,
     });
@@ -76,22 +77,22 @@ describe("firstMessageDate", () => {
         [{ id: "1", channel_id: "c", timestamp: FIRST }],
       ],
     });
-    expect((await firstMessageDate(client, "g", "u", Infinity)).date).toEqual(
-      new Date(FIRST)
-    );
+    expect(
+      (await overrides.firstMessageDate(client, "g", "u", Infinity)).date
+    ).toEqual(new Date(FIRST));
   });
 
   it("finds nothing for a member who never posted", async () => {
     const { rest: client } = rest({ messages: [] });
     expect(
-      (await firstMessageDate(client, "g", "u", Infinity)).date
+      (await overrides.firstMessageDate(client, "g", "u", Infinity)).date
     ).toBeNull();
   });
 
   it("gives up while Discord indexes the guild past the deadline", async () => {
     const { rest: client } = rest({ code: 110000, retry_after: 60 });
     await expect(
-      firstMessageDate(client, "g", "u", Date.now() + 1000)
+      overrides.firstMessageDate(client, "g", "u", Date.now() + 1000)
     ).rejects.toBeInstanceOf(SearchNotReadyError);
   });
 });
@@ -99,7 +100,9 @@ describe("firstMessageDate", () => {
 describe("recompute", () => {
   it("stores a first message older than the arrival", async () => {
     const { rest: client } = rest(found(FIRST));
-    expect(await recompute(client, "g", "u", JOINED, Infinity)).toEqual({
+    expect(
+      await overrides.recompute(client, "g", "u", JOINED, Infinity)
+    ).toEqual({
       since: new Date(FIRST),
       corrected: true,
       partial: false,
@@ -119,7 +122,9 @@ describe("recompute", () => {
 
   it("keeps the arrival, and stores nothing, when no message is older", async () => {
     const { rest: client } = rest(found("2025-01-01T00:00:00.000Z"));
-    expect(await recompute(client, "g", "u", JOINED, Infinity)).toEqual({
+    expect(
+      await overrides.recompute(client, "g", "u", JOINED, Infinity)
+    ).toEqual({
       since: JOINED,
       corrected: false,
       partial: false,
@@ -134,7 +139,9 @@ describe("recompute", () => {
     const stored = new Date("2018-05-05T00:00:00Z");
     db.findUnique.mockResolvedValue({ since: stored });
     const { rest: client } = rest(found(FIRST));
-    expect(await recompute(client, "g", "u", JOINED, Infinity)).toEqual({
+    expect(
+      await overrides.recompute(client, "g", "u", JOINED, Infinity)
+    ).toEqual({
       since: stored,
       corrected: true,
       partial: false,
@@ -147,7 +154,7 @@ describe("recompute", () => {
       doing_deep_historical_index: true,
     });
     await expect(
-      recompute(client, "g", "u", JOINED, Infinity)
+      overrides.recompute(client, "g", "u", JOINED, Infinity)
     ).rejects.toBeInstanceOf(SearchNotReadyError);
     expect(db.deleteMany).not.toHaveBeenCalled();
   });
@@ -157,7 +164,9 @@ describe("recompute", () => {
       ...found(FIRST),
       doing_deep_historical_index: true,
     });
-    expect(await recompute(client, "g", "u", JOINED, Infinity)).toEqual({
+    expect(
+      await overrides.recompute(client, "g", "u", JOINED, Infinity)
+    ).toEqual({
       since: new Date(FIRST),
       corrected: true,
       partial: true,
@@ -168,7 +177,7 @@ describe("recompute", () => {
     // A deletion during the search must not be undone by a stale read.
     let answer!: (body: unknown) => void;
     const get = vi.fn(() => new Promise((resolve) => (answer = resolve)));
-    const pending = recompute(
+    const pending = overrides.recompute(
       { get } as unknown as REST,
       "g",
       "u",
@@ -185,7 +194,7 @@ describe("recompute", () => {
   it("changes nothing when the search cannot answer", async () => {
     const { rest: client } = rest({ code: 110000, retry_after: 60 });
     await expect(
-      recompute(client, "g", "u", JOINED, Date.now() + 1000)
+      overrides.recompute(client, "g", "u", JOINED, Date.now() + 1000)
     ).rejects.toBeInstanceOf(SearchNotReadyError);
     expect(db.upsert).not.toHaveBeenCalled();
     expect(db.deleteMany).not.toHaveBeenCalled();
@@ -249,7 +258,7 @@ describe("sweepDepartures", () => {
       { guildId: "g", userId: "back", leftAt: RECENT },
     ]);
     allMembers.mockResolvedValue(new Map([["back", {}]]));
-    await sweepDepartures(client(["back"]), activeIn(["g"]), NOW);
+    await overrides.sweepDepartures(client(["back"]), activeIn(["g"]), NOW);
     expect(allMembers).toHaveBeenCalledTimes(1);
     expect(fetchMember).toHaveBeenCalledExactlyOnceWith({
       user: "gone",
@@ -271,7 +280,7 @@ describe("sweepDepartures", () => {
     ]);
     // Fewer members than the server counts: "here" may just be missing.
     allMembers.mockResolvedValue(new Map());
-    await sweepDepartures(client(["here"]), activeIn(["g"]), NOW);
+    await overrides.sweepDepartures(client(["here"]), activeIn(["g"]), NOW);
     expect(fetchMember).toHaveBeenCalledWith({ user: "here", force: true });
     expect(db.updateMany).not.toHaveBeenCalled();
   });
@@ -285,13 +294,13 @@ describe("sweepDepartures", () => {
         leftAt: new Date("2027-03-01T12:00:00Z"),
       },
     ]);
-    await sweepDepartures(
+    await overrides.sweepDepartures(
       client([]),
       activeIn(["g"]),
       new Date("2028-03-01T04:30:00Z")
     );
     expect(db.deleteMany).not.toHaveBeenCalled();
-    await sweepDepartures(
+    await overrides.sweepDepartures(
       client([]),
       activeIn(["g"]),
       new Date("2028-03-02T04:30:00Z")
@@ -305,7 +314,7 @@ describe("sweepDepartures", () => {
       { guildId: "g", userId: "old", leftAt: OVER_A_YEAR },
       { guildId: "g", userId: "recent", leftAt: RECENT },
     ]);
-    await sweepDepartures(client([]), activeIn(["g"]), NOW);
+    await overrides.sweepDepartures(client([]), activeIn(["g"]), NOW);
     expect(db.updateMany).toHaveBeenCalledWith({
       where: { guildId: "g", userId: "gone", leftAt: null },
       data: { leftAt: NOW },
@@ -329,7 +338,11 @@ describe("sweepDepartures", () => {
       { guildId: "g", userId: "back", leftAt: OVER_A_YEAR },
       { guildId: "g", userId: "here", leftAt: null },
     ]);
-    await sweepDepartures(client(["back", "here"]), activeIn(["g"]), NOW);
+    await overrides.sweepDepartures(
+      client(["back", "here"]),
+      activeIn(["g"]),
+      NOW
+    );
     expect(db.updateMany).toHaveBeenCalledWith({
       where: { guildId: "g", userId: "back", leftAt: { not: null } },
       data: { leftAt: null },
@@ -342,7 +355,7 @@ describe("sweepDepartures", () => {
     db.findMany.mockResolvedValue([
       { guildId: "off", userId: "u", leftAt: null },
     ]);
-    await sweepDepartures(client([], ["off"]), activeIn([]), NOW);
+    await overrides.sweepDepartures(client([], ["off"]), activeIn([]), NOW);
     expect(db.deleteMany).toHaveBeenCalledWith({ where: { guildId: "off" } });
     expect(fetchMember).not.toHaveBeenCalled();
   });
@@ -353,7 +366,7 @@ describe("sweepDepartures", () => {
     ]);
     const c = client([]);
     fetchMember.mockRejectedValue(apiError(RESTJSONErrorCodes.UnknownUser));
-    await sweepDepartures(c, activeIn(["g"]), NOW);
+    await overrides.sweepDepartures(c, activeIn(["g"]), NOW);
     expect(db.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({ data: { leftAt: NOW } })
     );
@@ -366,7 +379,7 @@ describe("sweepDepartures", () => {
     ]);
     const c = client([]);
     fetchMember.mockRejectedValueOnce(new Error("Missing Access"));
-    await sweepDepartures(c, activeIn(["g"]), NOW);
+    await overrides.sweepDepartures(c, activeIn(["g"]), NOW);
     expect(db.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { guildId: "g", userId: "gone", leftAt: null },
@@ -387,7 +400,7 @@ describe("sweepDepartures", () => {
       }
       return true;
     };
-    await sweepDepartures(c, isActivated, NOW);
+    await overrides.sweepDepartures(c, isActivated, NOW);
     expect(db.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { guildId: "g", userId: "gone", leftAt: null },
@@ -399,7 +412,11 @@ describe("sweepDepartures", () => {
     db.findMany.mockResolvedValue([
       { guildId: "g", userId: "u", leftAt: OVER_A_YEAR },
     ]);
-    await sweepDepartures(client([], ["g"], false), activeIn(["g"]), NOW);
+    await overrides.sweepDepartures(
+      client([], ["g"], false),
+      activeIn(["g"]),
+      NOW
+    );
     expect(fetchMember).not.toHaveBeenCalled();
     expect(db.deleteMany).not.toHaveBeenCalled();
   });
@@ -408,7 +425,11 @@ describe("sweepDepartures", () => {
     db.findMany.mockResolvedValue([
       { guildId: "gone-guild", userId: "u", leftAt: OVER_A_YEAR },
     ]);
-    await sweepDepartures(client([], []), activeIn(["gone-guild"]), NOW);
+    await overrides.sweepDepartures(
+      client([], []),
+      activeIn(["gone-guild"]),
+      NOW
+    );
     expect(db.deleteMany).not.toHaveBeenCalled();
     expect(db.updateMany).not.toHaveBeenCalled();
   });
@@ -420,7 +441,7 @@ describe("uninstallWarning", () => {
 
   it("warns that the recomputed seniorities will be lost", async () => {
     db.count.mockResolvedValueOnce(3);
-    expect(await uninstallWarning("g", t as never)).toBe(
+    expect(await overrides.uninstallWarning("g", t as never)).toBe(
       'uninstall.warning {"count":3}'
     );
     expect(db.count).toHaveBeenCalledWith({ where: { guildId: "g" } });
@@ -428,6 +449,6 @@ describe("uninstallWarning", () => {
 
   it("says nothing when there is nothing to lose", async () => {
     db.count.mockResolvedValueOnce(0);
-    expect(await uninstallWarning("g", t as never)).toBeNull();
+    expect(await overrides.uninstallWarning("g", t as never)).toBeNull();
   });
 });

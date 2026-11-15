@@ -22,6 +22,7 @@ import { allMembers } from "#lib/guild-members.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { celebrationMessage, postCard } from "#lib/post-card.js";
+import { declareService, type Service } from "#lib/service.js";
 import {
   memberAnniversaryMessages,
   serverAnniversaryMessage,
@@ -33,9 +34,9 @@ import {
   serverFacts,
 } from "#modules/seniority/cards.js";
 import type { SeniorityConfigSchema } from "#modules/seniority/seniority.config.js";
-import { overrides } from "./overrides.service.js";
+import overrides from "./overrides.service.js";
 import portraits from "./portraits.service.js";
-import * as state from "./state.service.js";
+import state from "./state.service.js";
 
 const logger = loggerMaker("seniority");
 
@@ -218,83 +219,94 @@ async function attempt(
   });
 }
 
-/**
- * Posts the day's anniversaries once the guild's announcement hour is
- * reached, at most once per guild-local day. A day missed while the bot was
- * down is not caught up the next day.
- */
-export async function runGuildDay(
-  client: Client<true>,
-  module: Module<SeniorityConfigSchema>,
-  guildId: string,
-  now: Date
-): Promise<void> {
-  const config = await configService.getConfigForModuleIn(module, guildId);
-  const timeZone = config.get("timeZone");
-  const day = dueDay(
-    now,
-    timeZone,
-    config.get("hour"),
-    await state.lastDay(guildId)
-  );
-  if (day === null) {
-    return;
-  }
+class DailyService implements Service {
+  /**
+   * Posts the day's anniversaries once the guild's announcement hour is
+   * reached, at most once per guild-local day. A day missed while the bot was
+   * down is not caught up the next day.
+   */
+  async runGuildDay(
+    client: Client<true>,
+    module: Module<SeniorityConfigSchema>,
+    guildId: string,
+    now: Date
+  ): Promise<void> {
+    const config = await configService.getConfigForModuleIn(module, guildId);
+    const timeZone = config.get("timeZone");
+    const day = dueDay(
+      now,
+      timeZone,
+      config.get("hour"),
+      await state.lastDay(guildId)
+    );
+    if (day === null) {
+      return;
+    }
 
-  // Members fetched before the day is claimed: when Discord does not answer,
-  // the next hour tries again instead of losing the day. The server's card
-  // needs them too, for its longest-standing member.
-  const guild = await client.guilds.fetch(guildId);
-  const today = localTime(now, timeZone);
-  const serverYears = config.get("serverAnniversary")
-    ? anniversaryYears(guild.createdAt, today, timeZone)
-    : null;
-  // Checked first: members fetched for an announcement that can go nowhere
-  // would be for nothing.
-  const membersChannel = config.get("memberAnniversaries")
-    ? postable(membersTarget(config), guildId, "member anniversaries")
-    : null;
-  const serverChannel =
-    serverYears !== null
-      ? postable(serverTarget(config), guildId, "the server anniversary")
+    // Members fetched before the day is claimed: when Discord does not answer,
+    // the next hour tries again instead of losing the day. The server's card
+    // needs them too, for its longest-standing member.
+    const guild = await client.guilds.fetch(guildId);
+    const today = localTime(now, timeZone);
+    const serverYears = config.get("serverAnniversary")
+      ? anniversaryYears(guild.createdAt, today, timeZone)
       : null;
-  const members =
-    membersChannel || serverChannel ? await allMembers(guild) : null;
-  const recomputed = members
-    ? await overrides(guildId)
-    : new Map<string, Date>();
-  await state.claimDay(guildId, day);
-  if (members && membersChannel) {
-    await attempt(guildId, "member anniversaries", () =>
-      announceMembers(guild, config, membersChannel, members, recomputed, today)
+    // Checked first: members fetched for an announcement that can go nowhere
+    // would be for nothing.
+    const membersChannel = config.get("memberAnniversaries")
+      ? postable(membersTarget(config), guildId, "member anniversaries")
+      : null;
+    const serverChannel =
+      serverYears !== null
+        ? postable(serverTarget(config), guildId, "the server anniversary")
+        : null;
+    const members =
+      membersChannel || serverChannel ? await allMembers(guild) : null;
+    const recomputed = members
+      ? await overrides.ofGuild(guildId)
+      : new Map<string, Date>();
+    await state.claimDay(guildId, day);
+    if (members && membersChannel) {
+      await attempt(guildId, "member anniversaries", () =>
+        announceMembers(
+          guild,
+          config,
+          membersChannel,
+          members,
+          recomputed,
+          today
+        )
+      );
+    }
+    if (serverYears !== null && serverChannel) {
+      await attempt(guildId, "the server anniversary", () =>
+        announceServer(
+          guild,
+          config,
+          serverChannel,
+          members,
+          recomputed,
+          serverYears
+        )
+      );
+    }
+    logger.info(
+      `Day announced | guildId = ${guildId} | day = ${day} | memberAnniversaries = ${config.get("memberAnniversaries")} | serverYears = ${serverYears ?? "none"}`
     );
   }
-  if (serverYears !== null && serverChannel) {
-    await attempt(guildId, "the server anniversary", () =>
-      announceServer(
-        guild,
-        config,
-        serverChannel,
-        members,
-        recomputed,
-        serverYears
-      )
+
+  async runAllGuildDays(
+    client: Client<true>,
+    module: Module<SeniorityConfigSchema>,
+    now = new Date()
+  ): Promise<void> {
+    await forEachGuild(
+      client,
+      await moduleService.getActivatedGuildIds(module.id),
+      (guild) => this.runGuildDay(client, module, guild.id, now),
+      { action: "run the day", logger }
     );
   }
-  logger.info(
-    `Day announced | guildId = ${guildId} | day = ${day} | memberAnniversaries = ${config.get("memberAnniversaries")} | serverYears = ${serverYears ?? "none"}`
-  );
 }
 
-export async function runAllGuildDays(
-  client: Client<true>,
-  module: Module<SeniorityConfigSchema>,
-  now = new Date()
-): Promise<void> {
-  await forEachGuild(
-    client,
-    await moduleService.getActivatedGuildIds(module.id),
-    (guild) => runGuildDay(client, module, guild.id, now),
-    { action: "run the day", logger }
-  );
-}
+export default declareService(new DailyService());
