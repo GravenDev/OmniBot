@@ -98,6 +98,7 @@ interactionCreate
 │   └─ execute(interaction, config)
 ├─ isAutocomplete()
 │   ├─ trouver la commande
+│   ├─ si requiresAdmin et pas administrateur → aucune suggestion
 │   ├─ vérifier l'activation
 │   └─ complete(interaction, config)
 ├─ isMessageComponent() ou isModalSubmit()

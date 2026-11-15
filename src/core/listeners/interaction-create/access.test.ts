@@ -5,7 +5,7 @@ import {
 } from "discord.js";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { silenceLogs } from "#lib/testing.js";
-import { checkAccess, commandAccess } from "./access.js";
+import { checkAccess, commandAccess, hasAccess } from "./access.js";
 
 beforeAll(() => {
   silenceLogs();
@@ -104,5 +104,34 @@ describe("commandAccess", () => {
     [undefined, "everyone"],
   ])("maps requiresAdmin %s to %s", (requiresAdmin, access) => {
     expect(commandAccess({ requiresAdmin })).toBe(access);
+  });
+});
+
+describe("hasAccess", () => {
+  it.each([
+    ["admin", [PermissionFlagsBits.Administrator], true],
+    ["admin", [PermissionFlagsBits.ManageGuild], false],
+    ["admin", null, false],
+    ["everyone", null, true],
+  ] as const)("%s with %s gives %s", (access, granted, expected) => {
+    const { interaction, reply } = interactionWith(
+      granted === null ? null : [...granted]
+    );
+
+    expect(hasAccess(interaction, access)).toBe(expected);
+    expect(reply).not.toHaveBeenCalled();
+  });
+
+  it("checks the declared permissions", () => {
+    const { interaction, has } = interactionWith([
+      PermissionFlagsBits.ManageMessages,
+    ]);
+
+    expect(
+      hasAccess(interaction, {
+        permissions: PermissionFlagsBits.ManageMessages,
+      })
+    ).toBe(true);
+    expect(has).toHaveBeenCalledWith(PermissionFlagsBits.ManageMessages);
   });
 });

@@ -4,6 +4,7 @@ import {
 } from "discord.js";
 import configService from "#core/services/config.service.js";
 import logger from "#lib/logger.js";
+import { commandAccess, hasAccess } from "./access.js";
 import { moduleEnabled } from "./gates.js";
 import { findCommand } from "./routing.js";
 
@@ -23,6 +24,17 @@ export async function handleComplete(interaction: AutocompleteInteraction) {
   if (!interaction.guild || !interaction.guildId) {
     logger.warn(
       `Autocomplete outside guild | name = ${interaction.commandName}`
+    );
+    await interaction.respond([]);
+    return;
+  }
+
+  // Same access rule as running the command, but autocomplete cannot show a
+  // refusal: the member just gets no suggestion. Checked before the module
+  // state, which costs a query on every keystroke.
+  if (!hasAccess(interaction, commandAccess(command.command))) {
+    logger.debug(
+      `Autocomplete access refused | name = ${interaction.commandName} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
     );
     await interaction.respond([]);
     return;

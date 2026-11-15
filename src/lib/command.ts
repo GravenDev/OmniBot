@@ -38,7 +38,8 @@ export interface Command<
     | ContextMenuCommandBuilder;
 
   /**
-   * When true, the command is only executed for guild administrators; the
+   * When true, the command is only executed for guild administrators, and
+   * its `complete()` only runs for them (others get no suggestion); the
    * permission check is enforced centrally by the command dispatcher.
    * Defense in depth on top of `setDefaultMemberPermissions`.
    */

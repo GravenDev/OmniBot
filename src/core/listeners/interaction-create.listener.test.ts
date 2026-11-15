@@ -55,7 +55,10 @@ function fakeCommand(commandName: string, overrides: Record<string, any> = {}) {
   } as any;
 }
 
-function fakeAutocomplete(commandName: string) {
+function fakeAutocomplete(
+  commandName: string,
+  overrides: Record<string, any> = {}
+) {
   return {
     commandName,
     guild: { id: "guild-1" },
@@ -67,6 +70,7 @@ function fakeAutocomplete(commandName: string) {
     isMessageComponent: () => false,
     isModalSubmit: () => false,
     respond: vi.fn(async () => ({})),
+    ...overrides,
   } as any;
 }
 
@@ -139,6 +143,46 @@ describe("handleComplete", () => {
 
     expect(complete).not.toHaveBeenCalled();
     expect(interaction.respond).toHaveBeenCalledWith([]);
+  });
+
+  it("answers [] without running complete() for a non-admin on an admin command", async () => {
+    const complete = vi.fn(async () => ({}));
+    mockModules.push({
+      id: "mod-a",
+      registry: {
+        commands: [{ data: { name: "admin" }, requiresAdmin: true, complete }],
+        interactionHandlers: [],
+      },
+    });
+
+    const interaction = fakeAutocomplete("admin", {
+      memberPermissions: { has: () => false },
+    });
+    await listener.execute(interaction, undefined);
+
+    expect(complete).not.toHaveBeenCalled();
+    expect(interaction.respond).toHaveBeenCalledWith([]);
+    // A plain permission check, before the database: autocomplete fires on
+    // every keystroke.
+    expect(getModuleStateIn).not.toHaveBeenCalled();
+  });
+
+  it("runs complete() of an admin command for an admin", async () => {
+    const complete = vi.fn(async () => ({}));
+    mockModules.push({
+      id: "mod-a",
+      registry: {
+        commands: [{ data: { name: "admin" }, requiresAdmin: true, complete }],
+        interactionHandlers: [],
+      },
+    });
+
+    const interaction = fakeAutocomplete("admin", {
+      memberPermissions: { has: () => true },
+    });
+    await listener.execute(interaction, undefined);
+
+    expect(complete).toHaveBeenCalledOnce();
   });
 });
 

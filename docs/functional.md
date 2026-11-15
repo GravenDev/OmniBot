@@ -70,6 +70,8 @@ Les signalements ne sont pas touchés : ils restent aux modérateurs jusqu'à le
 
 Quand une commande ou un bouton échoue, la réponse d'erreur n'est visible que du membre concerné et lui indique quoi faire : relancer la commande, et prévenir un administrateur si le problème persiste. Un bouton devenu invalide (module ou option de configuration disparus depuis l'affichage du message) invite à relancer la commande pour obtenir un message à jour. Si l'échec vient d'une permission ou d'un accès manquant au bot sur Discord, le message le dit explicitement : un administrateur doit vérifier les permissions du bot sur le serveur et dans le salon.
 
+Une commande réservée aux administrateurs refuse les autres membres par un message visible d'eux seuls, et ne leur propose aucune suggestion d'autocomplétion.
+
 ### Noms et avatars dans les images
 
 Les images générées par les modules (classements, profils, statistiques) affichent chaque joueur sous son surnom sur le serveur, avec son avatar de serveur s'il en a un. Si le joueur a quitté le serveur, son nom d'affichage et son avatar Discord globaux sont utilisés à la place. Un nom trop long est écrit plus petit ; sur les fiches (profil, statistiques du serveur), s'il ne tient toujours pas, il est raccourci et terminé par « … ».
