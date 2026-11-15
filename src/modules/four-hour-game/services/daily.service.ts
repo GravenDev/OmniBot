@@ -8,7 +8,7 @@ import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour
 import { buildDailyPointEmbed } from "#modules/four-hour-game/point-announcement.js";
 import { ANNOUNCEMENT_OPTIONS } from "#modules/four-hour-game/rendering/announcement.js";
 import fourHourGameService from "./four-hour-game.service.js";
-import { fetchWinnerAvatar } from "./winner-avatar.js";
+import { fetchWinnerAvatar } from "./winner-avatar.service.js";
 
 const logger = loggerMaker("four-hour-game");
 

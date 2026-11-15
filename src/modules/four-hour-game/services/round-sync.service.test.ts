@@ -36,7 +36,7 @@ vi.mock("./four-hour-game.service.js", () => ({
 const announcePoint = vi.hoisted(() => vi.fn());
 vi.mock("./point-announcement.service.js", () => ({ announcePoint }));
 
-const { syncAllRounds, syncRound } = await import("./round-sync.js");
+const { syncAllRounds, syncRound } = await import("./round-sync.service.js");
 
 // The bot is on every guild but "gone".
 const client = {

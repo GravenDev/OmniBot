@@ -16,7 +16,7 @@ vi.mock("./channel-history.service.js", () => ({
   fetchStandingMessage: mocks.fetchStandingMessage,
 }));
 
-const { handleGameDeletions } = await import("./deletions.js");
+const { handleGameDeletions } = await import("./deletions.service.js");
 
 const gameChannel = { id: "game", isTextBased: () => true };
 const configWith = (channel: unknown) =>

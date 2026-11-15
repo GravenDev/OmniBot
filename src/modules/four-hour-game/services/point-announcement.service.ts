@@ -8,7 +8,7 @@ import fourHourGameService, {
   type PlayerRank,
   type ScoredPoint,
 } from "./four-hour-game.service.js";
-import { fetchWinnerAvatar } from "./winner-avatar.js";
+import { fetchWinnerAvatar } from "./winner-avatar.service.js";
 
 const logger = loggerMaker("four-hour-game");
 

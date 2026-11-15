@@ -14,7 +14,7 @@ const syncAllRounds = vi.hoisted(() =>
     }),
   }))
 );
-vi.mock("#modules/four-hour-game/services/round-sync.js", () => ({
+vi.mock("#modules/four-hour-game/services/round-sync.service.js", () => ({
   syncAllRounds,
 }));
 
