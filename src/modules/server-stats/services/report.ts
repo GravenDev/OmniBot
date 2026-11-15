@@ -1,8 +1,8 @@
+import type { Image } from "@napi-rs/canvas";
 import { ChannelType, type Guild, type GuildBasedChannel } from "discord.js";
 import { formatPercentage } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
-import { fetchImage } from "#lib/imaging.js";
-import { resolvePlayers } from "#lib/players.js";
+import type { Player } from "#lib/players.js";
 import {
   type BoxNote,
   type ChannelEntry,
@@ -12,10 +12,9 @@ import {
   renderReportCard,
 } from "#modules/server-stats/rendering/report-card.js";
 import { DAY_MS, dayOf, TIMEZONE } from "./day.js";
+import { customEmojiId } from "./emoji.js";
 import type { Insights, Metric } from "./insights.js";
 import type { DailyStats, Ranked } from "./store.js";
-
-const CUSTOM_EMOJI = /^<a?:e:(\d+)>$/;
 
 // The icons Discord shows before each kind of channel; threads are counted in
 // their parent, which is why forums and media channels can rank.
@@ -57,27 +56,30 @@ export interface Report {
   image: Buffer;
 }
 
-async function reactionEntry({ id, count }: Ranked): Promise<ReactionEntry> {
-  const custom = CUSTOM_EMOJI.exec(id);
-  if (!custom) {
-    return { text: id, image: null, count };
-  }
-  const image = await fetchImage(
-    `https://cdn.discordapp.com/emojis/${custom[1]}.png?size=64`
-  );
-  return { text: "?", image, count };
+// What the report draws but Discord holds: read by the report-assets service.
+export interface ReportAssets {
+  icon: Image | null;
+  // The image of each custom emoji, by its key.
+  emojis: Map<string, Image | null>;
+  // The names and avatars of the top members, null when they are not shown.
+  players: Map<string, Player> | null;
 }
 
-async function memberEntries(
-  guild: Guild,
+function reactionEntry(
+  { id, count }: Ranked,
+  emojis: ReportAssets["emojis"]
+): ReactionEntry {
+  if (customEmojiId(id) === null) {
+    return { text: id, image: null, count };
+  }
+  return { text: "?", image: emojis.get(id) ?? null, count };
+}
+
+function memberEntries(
   members: Ranked[],
+  players: Map<string, Player>,
   unknown: string
-): Promise<MemberEntry[]> {
-  const players = await resolvePlayers(
-    guild.client,
-    guild.id,
-    members.map((member) => member.id)
-  );
+): MemberEntry[] {
   return members.map(({ id, count }, index) => ({
     rank: index + 1,
     name: players.get(id)?.name ?? unknown,
@@ -172,20 +174,21 @@ function notes(
 export async function renderReport(
   guild: Guild,
   stats: DailyStats,
-  context: ReportContext
+  context: ReportContext,
+  { icon, emojis, players }: ReportAssets
 ): Promise<Report> {
   const { t, locale } = context;
   const date = reportDate(context);
   const complete =
     stats.hours.reduce((sum, count) => sum + count, 0) === stats.messages;
 
-  const [icon, topReactions, topMembers] = await Promise.all([
-    fetchImage(guild.iconURL({ extension: "png", size: 256 })),
-    Promise.all(stats.topReactions.map(reactionEntry)),
-    context.showTopMembers
-      ? memberEntries(guild, stats.topMembers, t("report.unknownMember"))
-      : null,
-  ]);
+  const topReactions = stats.topReactions.map((entry) =>
+    reactionEntry(entry, emojis)
+  );
+  const topMembers =
+    context.showTopMembers && players
+      ? memberEntries(stats.topMembers, players, t("report.unknownMember"))
+      : null;
 
   const image = await renderReportCard(
     {

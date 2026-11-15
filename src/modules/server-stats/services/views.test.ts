@@ -3,6 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NO_INSIGHTS } from "./insights.js";
 
 const mocks = vi.hoisted(() => ({
+  fetchAssets: vi.fn(async () => ({
+    icon: null,
+    emojis: new Map(),
+    players: null,
+  })),
   dailyStats: vi.fn(),
   periodStats: vi.fn(),
   history: vi.fn(async () => new Map()),
@@ -20,6 +25,9 @@ vi.mock("./store.js", () => ({
   },
 }));
 vi.mock("./report.js", () => ({ renderReport: mocks.renderReport }));
+vi.mock("./report-assets.service.js", () => ({
+  default: { fetch: mocks.fetchAssets },
+}));
 
 const { statsReport } = await import("./views.js");
 
@@ -154,5 +162,17 @@ describe("statsReport", () => {
     expect(
       shown.topChannels.map((channel: { id: string }) => channel.id)
     ).toEqual(["a", "b", "c", "d", "e"]);
+  });
+
+  it("draws the report with what Discord holds for it, members only when shown", async () => {
+    const assets = { icon: null, emojis: new Map(), players: new Map() };
+    mocks.fetchAssets.mockResolvedValueOnce(assets);
+    await statsReport(
+      guild,
+      { from: yesterday, to: yesterday },
+      { ...options, showTopMembers: false }
+    );
+    expect(mocks.fetchAssets).toHaveBeenCalledWith(guild, stats, false);
+    expect(mocks.renderReport.mock.calls[0]![3]).toBe(assets);
   });
 });

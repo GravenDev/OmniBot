@@ -10,6 +10,7 @@ import type {
 import type { ConfigProvider } from "#lib/config.js";
 import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
 import { dayOf, hourOf } from "./day.js";
+import { emojiKey } from "./emoji.js";
 import store from "./store.js";
 import { countedChannelId, isTracked } from "./tracking.js";
 
@@ -60,17 +61,6 @@ export async function collectReaction(
     return;
   }
   await store.recordReaction(message.guildId, dayOf(now), emoji);
-}
-
-export function emojiKey(emoji: {
-  id: string | null;
-  name: string | null;
-  animated?: boolean | null;
-}): string | null {
-  if (emoji.id) {
-    return `<${emoji.animated ? "a" : ""}:e:${emoji.id}>`;
-  }
-  return emoji.name;
 }
 
 export async function collectMemberChange(

@@ -1,24 +1,14 @@
 import { ChannelType, type Guild } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ReportContext } from "./report.js";
+import type { ReportAssets, ReportContext } from "./report.js";
 import type { DailyStats } from "./store.js";
 
 const mocks = vi.hoisted(() => ({
   renderReportCard: vi.fn(async () => Buffer.from("png")),
-  fetchImage: vi.fn(async (url: string | null) => (url ? { url } : null)),
-  resolvePlayers: vi.fn(
-    async () =>
-      new Map([
-        ["9", { name: "Lolo", avatar: { url: "lolo.png" } }],
-        ["left", { name: "Parti", avatar: null }],
-      ])
-  ),
 }));
 vi.mock("#modules/server-stats/rendering/report-card.js", () => ({
   renderReportCard: mocks.renderReportCard,
 }));
-vi.mock("#lib/imaging.js", () => ({ fetchImage: mocks.fetchImage }));
-vi.mock("#lib/players.js", () => ({ resolvePlayers: mocks.resolvePlayers }));
 
 const { renderReport } = await import("./report.js");
 
@@ -78,6 +68,17 @@ const guild = {
   client: { client: true },
 } as unknown as Guild;
 
+const assets = {
+  icon: { url: "icon.png" },
+  emojis: new Map([
+    ["<a:e:456>", { url: "https://cdn.discordapp.com/emojis/456.png?size=64" }],
+  ]),
+  players: new Map([
+    ["9", { name: "Lolo", avatar: { url: "lolo.png" } }],
+    ["left", { name: "Parti", avatar: null }],
+  ]),
+} as unknown as ReportAssets;
+
 function rendered() {
   const [data, labels] = mocks.renderReportCard.mock.calls[0] as unknown as [
     Record<string, unknown>,
@@ -92,7 +93,7 @@ beforeEach(() => {
 
 describe("renderReport", () => {
   it("announces the day in the message and returns the image", async () => {
-    const report = await renderReport(guild, stats, context);
+    const report = await renderReport(guild, stats, context, assets);
     expect(report.content).toBe(
       'report.message {"date":"mardi 13 octobre 2026"}'
     );
@@ -104,7 +105,8 @@ describe("renderReport", () => {
     await renderReport(
       guild,
       { ...stats, startedAt: new Date("2026-10-13T02:12:00Z") },
-      context
+      context,
+      assets
     );
     expect(rendered().labels.subtitle).toBe(
       'mardi 13 octobre 2026 · report.since {"time":"04:12"}'
@@ -112,10 +114,15 @@ describe("renderReport", () => {
   });
 
   it("tells how far a day still going is counted", async () => {
-    await renderReport(guild, stats, {
-      ...context,
-      until: new Date("2026-10-13T12:32:00Z"),
-    });
+    await renderReport(
+      guild,
+      stats,
+      {
+        ...context,
+        until: new Date("2026-10-13T12:32:00Z"),
+      },
+      assets
+    );
     expect(rendered().labels.subtitle).toBe(
       'mardi 13 octobre 2026 · report.until {"time":"14:32"}'
     );
@@ -125,7 +132,8 @@ describe("renderReport", () => {
     await renderReport(
       guild,
       { ...stats, startedAt: new Date("2026-10-13T02:12:00Z") },
-      { ...context, until: new Date("2026-10-13T12:32:00Z") }
+      { ...context, until: new Date("2026-10-13T12:32:00Z") },
+      assets
     );
     expect(rendered().labels.subtitle).toBe(
       'mardi 13 octobre 2026 · report.since {"time":"04:12"} · report.until {"time":"14:32"}'
@@ -133,11 +141,16 @@ describe("renderReport", () => {
   });
 
   it("spans the days of a period and adds their hours up", async () => {
-    const report = await renderReport(guild, stats, {
-      ...context,
-      day: new Date("2026-10-07T00:00:00Z"),
-      lastDay: new Date("2026-10-13T00:00:00Z"),
-    });
+    const report = await renderReport(
+      guild,
+      stats,
+      {
+        ...context,
+        day: new Date("2026-10-07T00:00:00Z"),
+        lastDay: new Date("2026-10-13T00:00:00Z"),
+      },
+      assets
+    );
     expect(report.content).toBe('report.message {"date":"7–13 octobre 2026"}');
     expect(rendered().labels.subtitle).toBe(
       '7–13 octobre 2026 · report.days {"count":7}'
@@ -146,7 +159,7 @@ describe("renderReport", () => {
   });
 
   it("names the hours of a single day plainly", async () => {
-    await renderReport(guild, stats, context);
+    await renderReport(guild, stats, context, assets);
     expect(rendered().labels.hours).toBe("report.hours");
   });
 
@@ -158,7 +171,8 @@ describe("renderReport", () => {
         ...context,
         day: new Date("2026-10-12T00:00:00Z"),
         until: new Date("2026-10-13T12:32:00Z"),
-      }
+      },
+      assets
     );
     expect(rendered().labels.subtitle).toBe(
       '12–13 octobre 2026 · report.days {"count":2} · report.since {"time":"10:00"} · report.until {"time":"14:32"}'
@@ -166,7 +180,7 @@ describe("renderReport", () => {
   });
 
   it("names the channels, a deleted one included", async () => {
-    await renderReport(guild, stats, context);
+    await renderReport(guild, stats, context, assets);
     expect(rendered().data.topChannels).toEqual([
       { icon: "#", name: "général", count: 567 },
       { icon: "#", name: "report.deletedChannel", count: 324 },
@@ -195,7 +209,8 @@ describe("renderReport", () => {
         ...stats,
         topChannels: kinds.map((_, index) => ({ id: String(index), count: 1 })),
       },
-      context
+      context,
+      assets
     );
     expect(
       (rendered().data.topChannels as { icon: string }[]).map(
@@ -205,7 +220,7 @@ describe("renderReport", () => {
   });
 
   it("draws custom emojis from their image, wherever they come from", async () => {
-    await renderReport(guild, stats, context);
+    await renderReport(guild, stats, context, assets);
     expect(rendered().data.topReactions).toEqual([
       { text: "👍", image: null, count: 19 },
       {
@@ -217,12 +232,7 @@ describe("renderReport", () => {
   });
 
   it("ranks members, those who left and unknown ones included", async () => {
-    await renderReport(guild, stats, context);
-    expect(mocks.resolvePlayers).toHaveBeenCalledWith(
-      { client: true },
-      "guild-1",
-      ["9", "left", "unknown"]
-    );
+    await renderReport(guild, stats, context, assets);
     expect(rendered().data.topMembers).toEqual([
       { rank: 1, name: "Lolo", avatar: { url: "lolo.png" }, count: 158 },
       { rank: 2, name: "Parti", avatar: null, count: 40 },
@@ -231,7 +241,7 @@ describe("renderReport", () => {
   });
 
   it("notes trends, records and the newcomers who spoke", async () => {
-    await renderReport(guild, stats, context);
+    await renderReport(guild, stats, context, assets);
     expect(rendered().data.notes).toEqual({
       joins: {
         trend: undefined,
@@ -255,14 +265,19 @@ describe("renderReport", () => {
   });
 
   it("shows no trend for a change that rounds to 0 %", async () => {
-    await renderReport(guild, stats, {
-      ...context,
-      insights: {
-        ...context.insights,
-        messages: { change: 0.004, record: false },
-        activeMembers: { change: -0.004, record: false },
+    await renderReport(
+      guild,
+      stats,
+      {
+        ...context,
+        insights: {
+          ...context.insights,
+          messages: { change: 0.004, record: false },
+          activeMembers: { change: -0.004, record: false },
+        },
       },
-    });
+      assets
+    );
     expect(rendered().data.notes).toMatchObject({
       messages: { trend: undefined },
       activeMembers: { trend: undefined },
@@ -273,7 +288,8 @@ describe("renderReport", () => {
     await renderReport(
       guild,
       { ...stats, hours: stats.hours.map((count) => count / 2) },
-      context
+      context,
+      assets
     );
     expect(rendered().data.hours).toEqual(stats.hours.map(() => 0));
     expect(rendered().data.notes).toMatchObject({
@@ -285,7 +301,8 @@ describe("renderReport", () => {
     await renderReport(
       guild,
       { ...stats, joins: 2, activeNewcomers: 5 },
-      context
+      context,
+      assets
     );
     expect(rendered().data.notes).toMatchObject({
       joins: {
@@ -299,7 +316,8 @@ describe("renderReport", () => {
     await renderReport(
       guild,
       { ...stats, joins: 0, activeNewcomers: 0 },
-      { ...context, insights: { ...context.insights, joins: noChange } }
+      { ...context, insights: { ...context.insights, joins: noChange } },
+      assets
     );
     expect(rendered().data.notes).toMatchObject({
       joins: { subtext: undefined, record: false },
@@ -307,7 +325,12 @@ describe("renderReport", () => {
   });
 
   it("leaves the members out when disabled", async () => {
-    await renderReport(guild, stats, { ...context, showTopMembers: false });
+    await renderReport(
+      guild,
+      stats,
+      { ...context, showTopMembers: false },
+      assets
+    );
     expect(rendered().data.topMembers).toBeNull();
   });
 });
