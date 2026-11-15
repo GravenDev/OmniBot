@@ -1,7 +1,7 @@
 import type { Guild, GuildMember } from "discord.js";
 import { MAX_BAN_PURGE_SECONDS } from "#lib/moderation.js";
 import { declareService, type Service } from "#lib/service.js";
-import type { Sanction } from "./moderation.js";
+import type { Sanction } from "#modules/reports/moderation.js";
 
 export const AUDIT_REASON_LIMIT = 512;
 

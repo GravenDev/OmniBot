@@ -8,11 +8,11 @@ import {
   purgedMessage,
   TEXT_LIMIT,
 } from "./alert-view.js";
-import type { Report } from "./store.js";
+import type { Report } from "./services/store.js";
 
 beforeAll(async () => {
   const en = JSON.parse(
-    readFileSync(new URL("../i18n/en.json", import.meta.url), "utf8")
+    readFileSync(new URL("./i18n/en.json", import.meta.url), "utf8")
   );
   await initTestI18n("reports", { en });
 });

@@ -20,15 +20,15 @@ import {
   MAX_BAN_PURGE_SECONDS,
 } from "#lib/moderation.js";
 import { replyEphemeral } from "#lib/reply.js";
-import type { ReportsConfigSchema } from "../reports.config.js";
-import { messageUrl } from "../services/alert-view.js";
+import { messageUrl } from "#modules/reports/alert-view.js";
 import {
   MAX_TIMEOUT_SECONDS,
   rankOf,
   sanctionBlock,
   targetRankOf,
   type Sanction,
-} from "../services/moderation.js";
+} from "#modules/reports/moderation.js";
+import type { ReportsConfigSchema } from "../reports.config.js";
 import reportService from "../services/report.service.js";
 import sanctions from "../services/sanctions.service.js";
 import store, { type Report } from "../services/store.js";

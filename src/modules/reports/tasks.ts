@@ -6,11 +6,11 @@ import { createT } from "#lib/i18n.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
+import { purgedMessage } from "./alert-view.js";
 import {
   MAX_RETENTION_SECONDS,
   type ReportsConfigSchema,
 } from "./reports.config.js";
-import { purgedMessage } from "./services/alert-view.js";
 import reportService from "./services/report.service.js";
 import store, { type Report } from "./services/store.js";
 
