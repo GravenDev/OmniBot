@@ -16,10 +16,10 @@ const store = vi.hoisted(() => ({
   recordReaction: vi.fn(async () => {}),
   recordMemberChange: vi.fn(async () => {}),
 }));
-vi.mock("./store.js", () => ({ default: store }));
+vi.mock("./store.service.js", () => ({ default: store }));
 
 const { collectMemberChange, collectMessage, collectReaction } =
-  await import("./collector.js");
+  await import("./collector.service.js");
 
 const everyone = { id: "everyone" };
 

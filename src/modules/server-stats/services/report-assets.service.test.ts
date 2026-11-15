@@ -1,6 +1,6 @@
 import type { Guild } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { DailyStats } from "./store.js";
+import type { DailyStats } from "./store.service.js";
 
 const mocks = vi.hoisted(() => ({
   fetchImage: vi.fn(async (url: string | null) => (url ? { url } : null)),

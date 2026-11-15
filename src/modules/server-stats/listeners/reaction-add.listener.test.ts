@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const collectReaction = vi.hoisted(() => vi.fn(async () => {}));
-vi.mock("#modules/server-stats/services/collector.js", () => ({
+vi.mock("#modules/server-stats/services/collector.service.js", () => ({
   collectReaction,
 }));
 

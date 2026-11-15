@@ -12,7 +12,7 @@ import { dayOf, hourOf } from "#modules/server-stats/day.js";
 import { emojiKey } from "#modules/server-stats/emoji.js";
 import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
 import { countedChannelId, isTracked } from "#modules/server-stats/tracking.js";
-import store from "./store.js";
+import store from "./store.service.js";
 
 type Config = ConfigProvider<ServerStatsConfigSchema>;
 

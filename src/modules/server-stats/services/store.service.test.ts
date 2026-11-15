@@ -26,7 +26,7 @@ const prisma = vi.hoisted(() => {
 });
 vi.mock("#lib/database.js", () => ({ default: prisma }));
 
-const { default: store } = await import("./store.js");
+const { default: store } = await import("./store.service.js");
 
 const day = new Date("2026-10-13T00:00:00Z");
 

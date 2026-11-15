@@ -27,7 +27,7 @@ vi.mock("#core/services/config.service.js", () => ({
 vi.mock("#core/services/module.service.js", () => ({
   default: { getActivatedGuildIds: mocks.getActivatedGuildIds },
 }));
-vi.mock("./services/store.js", () => ({
+vi.mock("./services/store.service.js", () => ({
   TOP_SIZE: 5,
   default: {
     dailyStats: mocks.dailyStats,

@@ -8,8 +8,8 @@ import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
 import { addDays, dayOf, RETENTION_DAYS, TIMEZONE } from "./day.js";
 import type { ServerStatsConfigSchema } from "./server-stats.config.js";
-import store from "./services/store.js";
-import { statsReport } from "./services/views.js";
+import store from "./services/store.service.js";
+import { statsReport } from "./services/views.service.js";
 import { channelShown } from "./tracking.js";
 
 const logger = loggerMaker("server-stats");

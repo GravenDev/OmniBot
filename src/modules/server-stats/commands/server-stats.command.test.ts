@@ -14,10 +14,10 @@ const mocks = vi.hoisted(() => ({
   startedAt: vi.fn(),
   statsReport: vi.fn(),
 }));
-vi.mock("#modules/server-stats/services/store.js", () => ({
+vi.mock("#modules/server-stats/services/store.service.js", () => ({
   default: { startedAt: mocks.startedAt },
 }));
-vi.mock("#modules/server-stats/services/views.js", () => ({
+vi.mock("#modules/server-stats/services/views.service.js", () => ({
   statsReport: mocks.statsReport,
 }));
 

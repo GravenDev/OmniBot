@@ -25,8 +25,8 @@ import {
   type SelectionResult,
 } from "#modules/server-stats/period.js";
 import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
-import store from "#modules/server-stats/services/store.js";
-import { statsReport } from "#modules/server-stats/services/views.js";
+import store from "#modules/server-stats/services/store.service.js";
+import { statsReport } from "#modules/server-stats/services/views.service.js";
 import { channelShown } from "#modules/server-stats/tracking.js";
 
 const AUTOCOMPLETE_LIMIT = 25;

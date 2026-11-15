@@ -1,5 +1,5 @@
 import { addDays, dayOf } from "./day.js";
-import type { Totals } from "./services/store.js";
+import type { Totals } from "./services/store.service.js";
 
 export const TREND_DAYS = 7;
 export const MIN_RECORD_DAYS = 7;

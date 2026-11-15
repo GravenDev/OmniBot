@@ -4,7 +4,7 @@ import { resolvePlayers } from "#lib/players.js";
 import { declareService, type Service } from "#lib/service.js";
 import { customEmojiId } from "#modules/server-stats/emoji.js";
 import type { ReportAssets } from "#modules/server-stats/report.js";
-import type { DailyStats } from "./store.js";
+import type { DailyStats } from "./store.service.js";
 
 async function emojiImages(
   reactions: DailyStats["topReactions"]

@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
     image: Buffer.from("png"),
   })),
 }));
-vi.mock("./store.js", () => ({
+vi.mock("./store.service.js", () => ({
   TOP_SIZE: 5,
   default: {
     dailyStats: mocks.dailyStats,
@@ -31,7 +31,7 @@ vi.mock("./report-assets.service.js", () => ({
   default: { fetch: mocks.fetchAssets },
 }));
 
-const { statsReport } = await import("./views.js");
+const { statsReport } = await import("./views.service.js");
 
 const guild = { id: "guild-1" } as Guild;
 // Friday 30 October 2026, 14:32 in Paris.

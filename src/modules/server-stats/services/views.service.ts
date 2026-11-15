@@ -13,7 +13,11 @@ import {
   type ReportContext,
 } from "#modules/server-stats/report.js";
 import reportAssets from "./report-assets.service.js";
-import store, { TOP_SIZE, type DailyStats, type Totals } from "./store.js";
+import store, {
+  TOP_SIZE,
+  type DailyStats,
+  type Totals,
+} from "./store.service.js";
 
 export interface ViewOptions {
   now: Date;
