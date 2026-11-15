@@ -1,9 +1,9 @@
 import { formatInteger } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
 import { DAY_MS } from "./days.js";
-import type { ScoreTable, TierOrError } from "./scoring.js";
-import { computeStreaks } from "./stats.js";
-import type { StoredRoll } from "./store.js";
+import type { ScoreTable, TierOrError } from "./scoring/score-table.js";
+import { computeStreaks } from "./scoring/stats.js";
+import type { StoredRoll } from "./services/store.js";
 
 export const MESSAGE_LIMIT = 2000;
 

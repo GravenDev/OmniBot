@@ -10,12 +10,12 @@ import {
   renderStatCard,
   type StatBox,
 } from "#lib/stat-card.js";
-import { DAY_MS } from "#modules/rngdle/services/days.js";
+import { DAY_MS } from "#modules/rngdle/days.js";
 import {
   TIER_COLORS,
   type Tier,
   type TierOrError,
-} from "#modules/rngdle/services/scoring.js";
+} from "#modules/rngdle/scoring/score-table.js";
 import { PROFILE_BREAKDOWN, tierBreakdown } from "./cards.js";
 import { formatEp } from "./format.js";
 import { ACCENT } from "./theme.js";

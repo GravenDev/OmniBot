@@ -6,8 +6,8 @@ import { presentGuilds } from "#lib/guild-loop.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
+import { startOfUtcDay } from "#modules/rngdle/days.js";
 import { fetchUserRolls, RngdleUserNotFoundError } from "./api.js";
-import { startOfUtcDay } from "./days.js";
 import store, { type Account } from "./store.js";
 
 const logger = loggerMaker("rngdle");

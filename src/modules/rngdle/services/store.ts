@@ -2,12 +2,12 @@ import { readFileSync } from "node:fs";
 import prisma from "#lib/database.js";
 import { RevisionCounter } from "#lib/revision-cache.js";
 import { declareService, type Service } from "#lib/service.js";
-import type { RemoteRoll } from "./api.js";
 import {
   isPlausibleTable,
   ScoreTable,
   type CompressedTable,
-} from "./scoring.js";
+} from "#modules/rngdle/scoring/score-table.js";
+import type { RemoteRoll } from "./api.js";
 
 const SNAPSHOT = new URL("../assets/score-table.json", import.meta.url);
 

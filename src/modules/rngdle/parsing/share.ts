@@ -1,4 +1,4 @@
-import { TIERS, type Tier } from "./scoring.js";
+import { TIERS, type Tier } from "#modules/rngdle/scoring/score-table.js";
 
 export interface SharedBadge {
   emoji: string;

@@ -7,8 +7,8 @@ import {
   MESSAGE_LIMIT,
   type DailyRecap,
 } from "./recap.js";
-import { ScoreTable } from "./scoring.js";
-import type { StoredRoll } from "./store.js";
+import { ScoreTable } from "./scoring/score-table.js";
+import type { StoredRoll } from "./services/store.js";
 
 const table = new ScoreTable({
   "0": 0,

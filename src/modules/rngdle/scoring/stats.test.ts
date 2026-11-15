@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { ScoreTable } from "./scoring.js";
+import type { StoredRoll } from "#modules/rngdle/services/store.js";
+import { ScoreTable } from "./score-table.js";
 import {
   byBestRoll,
   computeRanking,
@@ -8,7 +9,6 @@ import {
   computeStreaks,
   rankingIndex,
 } from "./stats.js";
-import type { StoredRoll } from "./store.js";
 
 const table = new ScoreTable({
   "0": 0,

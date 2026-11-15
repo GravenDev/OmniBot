@@ -5,7 +5,7 @@ import {
 } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { pageRow } from "#lib/pagination.js";
-import { DAY_MS } from "#modules/rngdle/services/days.js";
+import { DAY_MS } from "#modules/rngdle/days.js";
 import {
   overallPage,
   parsePeriod,

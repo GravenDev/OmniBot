@@ -14,16 +14,28 @@ import { canReplyWithFile } from "#lib/permissions.js";
 import { resolvePlayers } from "#lib/players.js";
 import { TREND_COLORS } from "#lib/stat-card.js";
 import {
+  DAY_MS,
+  nextUtcMidnight,
+  startOfUtcDay,
+} from "#modules/rngdle/days.js";
+import {
+  parseShare,
+  type Placement,
+  type SharedRoll,
+} from "#modules/rngdle/parsing/share.js";
+import {
   renderRollCard,
   type CardBadge,
   type CardHighlight,
 } from "#modules/rngdle/rendering/roll-card.js";
 import { ACCENT } from "#modules/rngdle/rendering/theme.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
+import {
+  formatPercent,
+  TIERS,
+  type Tier,
+} from "#modules/rngdle/scoring/score-table.js";
 import { fetchRollBadges } from "./badges.js";
-import { DAY_MS, nextUtcMidnight, startOfUtcDay } from "./days.js";
-import { formatPercent, TIERS, type Tier } from "./scoring.js";
-import { parseShare, type Placement, type SharedRoll } from "./share.js";
 import store, { type Account, type StoredRoll } from "./store.js";
 import sync from "./sync.js";
 

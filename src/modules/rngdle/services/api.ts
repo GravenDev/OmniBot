@@ -5,7 +5,7 @@ import {
   extractScoreTable,
   isPlausibleTable,
   type CompressedTable,
-} from "./scoring.js";
+} from "#modules/rngdle/scoring/score-table.js";
 
 const logger = loggerMaker("rngdle");
 

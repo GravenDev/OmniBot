@@ -22,9 +22,9 @@ import {
 } from "#modules/rngdle/interactions/navigation.button.js";
 import { overallPageMessage } from "#modules/rngdle/interactions/overall-page.button.js";
 import { unlinkConfirmMessage } from "#modules/rngdle/interactions/unlink-confirm.button.js";
+import { reminderTimestamp } from "#modules/rngdle/reminders.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
 import { linkOwnAccount } from "#modules/rngdle/services/linking.js";
-import { reminderTimestamp } from "#modules/rngdle/services/reminders.js";
 import store from "#modules/rngdle/services/store.js";
 import sync from "#modules/rngdle/services/sync.js";
 import {

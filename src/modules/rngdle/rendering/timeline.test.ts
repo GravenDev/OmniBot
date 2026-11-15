@@ -1,6 +1,6 @@
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { describe, expect, it } from "vitest";
-import { TIER_COLORS } from "#modules/rngdle/services/scoring.js";
+import { TIER_COLORS } from "#modules/rngdle/scoring/score-table.js";
 import {
   renderTimeline,
   stackPins,

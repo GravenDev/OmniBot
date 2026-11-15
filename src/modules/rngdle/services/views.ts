@@ -5,6 +5,8 @@ import type { TFunction } from "#lib/i18n.js";
 import { fetchImage } from "#lib/imaging.js";
 import { resolvePlayers } from "#lib/players.js";
 import { RevisionCache } from "#lib/revision-cache.js";
+import { DAY_MS, utcDayNumber } from "#modules/rngdle/days.js";
+import { computeDailyRecap, type DailyRecap } from "#modules/rngdle/recap.js";
 import {
   renderProfile,
   renderServerStats,
@@ -26,9 +28,11 @@ import {
   renderVersus,
   type VersusPlayer,
 } from "#modules/rngdle/rendering/versus.js";
-import { DAY_MS, utcDayNumber } from "./days.js";
-import { computeDailyRecap, type DailyRecap } from "./recap.js";
-import { formatPercent, TIERS, type Tier } from "./scoring.js";
+import {
+  formatPercent,
+  TIERS,
+  type Tier,
+} from "#modules/rngdle/scoring/score-table.js";
 import {
   byBestRoll,
   computeRanking,
@@ -36,13 +40,16 @@ import {
   computeServerStats,
   computeStreaks,
   RANKING_PRIOR,
-} from "./stats.js";
+} from "#modules/rngdle/scoring/stats.js";
+import {
+  computeVersus,
+  type VersusSide,
+} from "#modules/rngdle/scoring/versus.js";
 import store, {
   type Account,
   type DateRange,
   type StoredRoll,
 } from "./store.js";
-import { computeVersus, type VersusSide } from "./versus.js";
 
 const DAILY_SIZE = 25;
 const OVERALL_PAGE_SIZE = 10;

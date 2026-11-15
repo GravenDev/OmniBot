@@ -33,13 +33,13 @@ import {
 import {
   TIER_COLORS,
   type TierOrError,
-} from "#modules/rngdle/services/scoring.js";
+} from "#modules/rngdle/scoring/score-table.js";
 import type {
   HeadToHead,
   Side,
   VersusWinners,
   Winner,
-} from "#modules/rngdle/services/versus.js";
+} from "#modules/rngdle/scoring/versus.js";
 import { formatEp } from "./format.js";
 import { ACCENT } from "./theme.js";
 
