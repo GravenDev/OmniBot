@@ -2,8 +2,6 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { createT } from "#lib/i18n.js";
 import { CELEBRATION_TEXT_LIMIT } from "#lib/post-card.js";
 import { initTestI18n } from "#lib/testing.js";
-import en from "../i18n/en.json" with { type: "json" };
-import fr from "../i18n/fr.json" with { type: "json" };
 import {
   announcedCelebrants,
   birthdayCard,
@@ -15,6 +13,8 @@ import {
   plainMessage,
   wishMessages,
 } from "./announcements.js";
+import en from "./i18n/en.json" with { type: "json" };
+import fr from "./i18n/fr.json" with { type: "json" };
 
 describe("announcedCelebrants", () => {
   it("leaves out the members who did not want to be announced", () => {

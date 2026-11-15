@@ -1,9 +1,7 @@
 import { formatDayOfYear, type DayOfYear } from "#lib/calendar.js";
 import type { TFunction } from "#lib/i18n.js";
 import { truncate } from "#lib/text.js";
-import type { StatsCardLabels } from "../rendering/stats-card.js";
 import { formatPercent } from "./announcements.js";
-import type { BirthdayEntry } from "./birthday.service.js";
 import {
   CERTAIN_GROUP_SIZE,
   collisionProbability,
@@ -11,6 +9,8 @@ import {
   HALF_GROUP_SIZE,
   sharedDates,
 } from "./paradox.js";
+import type { StatsCardLabels } from "./rendering/stats-card.js";
+import type { BirthdayEntry } from "./services/birthday.service.js";
 
 /** The curve runs to at least this many registrations. */
 export const CURVE_MIN_SIZE = 70;

@@ -3,7 +3,7 @@ import { createT } from "#lib/i18n.js";
 import { initTestI18n } from "#lib/testing.js";
 import en from "#modules/birthday/i18n/en.json" with { type: "json" };
 import fr from "#modules/birthday/i18n/fr.json" with { type: "json" };
-import type { BirthdayEntry } from "./birthday.service.js";
+import type { BirthdayEntry } from "./services/birthday.service.js";
 import { birthdayStats, statsCardLabels, statsText } from "./stats.js";
 
 const entry = (

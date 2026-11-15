@@ -2,8 +2,8 @@ import { createCanvas, loadImage, type Image } from "@napi-rs/canvas";
 import { renderCelebrationImage } from "#lib/celebration-card.js";
 import type { Previews } from "#lib/preview.js";
 import { firstFrame, previewT } from "#lib/preview.js";
+import { birthdayCard } from "#modules/birthday/announcements.js";
 import fr from "../i18n/fr.json" with { type: "json" };
-import { birthdayCard } from "../services/announcements.js";
 
 interface Celebrant {
   name: string;

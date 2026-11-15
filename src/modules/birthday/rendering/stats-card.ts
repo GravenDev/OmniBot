@@ -13,8 +13,8 @@ import {
   CERTAIN_GROUP_SIZE,
   collisionProbability,
   HALF_GROUP_SIZE,
-} from "../services/paradox.js";
-import type { BirthdayStats } from "../services/stats.js";
+} from "#modules/birthday/paradox.js";
+import type { BirthdayStats } from "#modules/birthday/stats.js";
 import { ACCENT } from "./theme.js";
 
 const WIDTH = 1100;

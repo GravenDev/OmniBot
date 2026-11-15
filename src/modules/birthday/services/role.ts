@@ -1,6 +1,6 @@
 import type { ConfigProvider } from "#lib/config.js";
-import type { BirthdayConfigSchema } from "../birthday.config.js";
-import { logFailure } from "./failures.js";
+import type { BirthdayConfigSchema } from "#modules/birthday/birthday.config.js";
+import { logFailure } from "#modules/birthday/failures.js";
 
 /**
  * Takes the birthday role back from a member whose birthday is no longer

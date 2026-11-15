@@ -5,7 +5,7 @@ import {
   membersCacheComplete,
   type BirthdayGroup,
   type GroupSelection,
-} from "./group.js";
+} from "#modules/birthday/group.js";
 
 /**
  * The members of a role, or the people connected to a voice channel; null

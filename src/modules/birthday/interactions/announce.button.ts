@@ -7,7 +7,7 @@ import {
   ANNOUNCE_BUTTON_ID,
   ownBirthdaySheet,
   sheetNotice,
-} from "#modules/birthday/commands/own-birthday.js";
+} from "#modules/birthday/own-birthday.js";
 import birthdayService from "#modules/birthday/services/birthday.service.js";
 import { dropBirthdayRole } from "#modules/birthday/services/role.js";
 import { birthdayTwins } from "#modules/birthday/services/twins.service.js";

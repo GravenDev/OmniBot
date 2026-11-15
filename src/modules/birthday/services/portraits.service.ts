@@ -3,7 +3,7 @@ import type { GuildMember } from "discord.js";
 import { SHOWN_PORTRAITS } from "#lib/celebration-card.js";
 import { fetchAvatar } from "#lib/imaging.js";
 import { declareService, type Service } from "#lib/service.js";
-import { shownAvatars } from "../rendering/birthday-calendar.js";
+import { shownAvatars } from "#modules/birthday/rendering/birthday-calendar.js";
 
 /** The pictures the birthday card and calendar draw, from Discord's CDN. */
 class PortraitsService implements Service {

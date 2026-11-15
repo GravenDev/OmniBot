@@ -9,9 +9,9 @@ import {
 } from "discord.js";
 import { formatDayOfYear } from "#lib/calendar.js";
 import type { ConfigProvider } from "#lib/config.js";
-import type { BirthdayConfigSchema } from "#modules/birthday/birthday.config.js";
-import { ACCENT_COLOR } from "#modules/birthday/rendering/theme.js";
-import type { BirthdayEntry } from "#modules/birthday/services/birthday.service.js";
+import type { BirthdayConfigSchema } from "./birthday.config.js";
+import { ACCENT_COLOR } from "./rendering/theme.js";
+import type { BirthdayEntry } from "./services/birthday.service.js";
 
 // Twins named in the reply to /birthday set and show; the rest are counted.
 const SHOWN_TWINS = 10;

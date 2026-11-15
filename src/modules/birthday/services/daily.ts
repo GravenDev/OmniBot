@@ -17,7 +17,6 @@ import { allMembers } from "#lib/guild-members.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { celebrationMessage, postCard } from "#lib/post-card.js";
-import type { BirthdayConfigSchema } from "../birthday.config.js";
 import {
   announcedCelebrants,
   birthdayCard,
@@ -26,10 +25,11 @@ import {
   pickGuildMessage,
   wishMessages,
   type WishMessage,
-} from "./announcements.js";
+} from "#modules/birthday/announcements.js";
+import type { BirthdayConfigSchema } from "#modules/birthday/birthday.config.js";
+import { logFailure } from "#modules/birthday/failures.js";
 import birthdayService from "./birthday.service.js";
 import { postMonthlyCalendar } from "./calendar.service.js";
-import { logFailure } from "./failures.js";
 import portraitsService from "./portraits.service.js";
 
 const logger = loggerMaker("birthday");
