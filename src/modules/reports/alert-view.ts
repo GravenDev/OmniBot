@@ -13,7 +13,12 @@ import { formatDuration } from "#lib/duration.js";
 import type { TFunction } from "#lib/i18n.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import { quoteEachLine, truncate } from "#lib/text.js";
-import type { Action, AuthorHistory, Report, ReportStatus } from "./store.js";
+import type {
+  Action,
+  AuthorHistory,
+  Report,
+  ReportStatus,
+} from "./services/store.js";
 
 export const CONTENT_LIMIT = 1500;
 export const TEXT_LIMIT = 4000;

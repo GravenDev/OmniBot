@@ -8,9 +8,9 @@ import { isApiError } from "#lib/discord-errors.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
+import { alertMessage } from "#modules/reports/alert-view.js";
 import { canPost } from "#modules/reports/eligibility.js";
-import type { ReportsConfigSchema } from "../reports.config.js";
-import { alertMessage } from "./alert-view.js";
+import type { ReportsConfigSchema } from "#modules/reports/reports.config.js";
 import store, {
   type MessageSnapshot,
   type Report,

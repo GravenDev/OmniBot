@@ -41,7 +41,7 @@ vi.mock("./services/report.service.js", () => ({
     ) => task(mocks.reports.get(id)),
   },
 }));
-vi.mock("./services/alert-view.js", () => ({ purgedMessage: () => ({}) }));
+vi.mock("./alert-view.js", () => ({ purgedMessage: () => ({}) }));
 
 const { isExpired, reportsTasks } = await import("./tasks.js");
 
