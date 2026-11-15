@@ -175,13 +175,6 @@ class TempVoiceStore implements Service {
     });
   }
 
-  async forgetPreference(guildId: string, userId: string): Promise<boolean> {
-    const { count } = await prisma.tempVoicePreference.deleteMany({
-      where: { guildId, userId },
-    });
-    return count > 0;
-  }
-
   async purgePreferencesBefore(date: Date): Promise<number> {
     const { count } = await prisma.tempVoicePreference.deleteMany({
       where: { updatedAt: { lt: date } },
