@@ -26,7 +26,7 @@ vi.mock("#core/services/config.service.js", () => ({
 }));
 
 const fetchWinnerAvatar = vi.hoisted(() => vi.fn());
-vi.mock("#modules/four-hour-game/services/winner-avatar.js", () => ({
+vi.mock("#modules/four-hour-game/services/winner-avatar.service.js", () => ({
   fetchWinnerAvatar,
 }));
 
