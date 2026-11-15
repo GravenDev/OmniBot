@@ -2,9 +2,9 @@ import { AuditLogEvent, type Guild, PermissionFlagsBits } from "discord.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { LogThrottle } from "#lib/log-throttle.js";
 import { loggerMaker } from "#lib/logger.js";
+import { declareService, type Service } from "#lib/service.js";
 
 const logger = loggerMaker("message-log");
-const warnings = new LogThrottle();
 
 const FRESHNESS_MS = 10_000;
 const CLOCK_SKEW_MS = 2_000;
@@ -23,9 +23,10 @@ interface Seen {
   at: number;
 }
 
-export class DeleterFinder {
+export class DeleterFinder implements Service {
   private readonly queue = new KeyedQueue();
   private readonly seen = new Map<string, Seen>();
+  private readonly warnings = new LogThrottle();
 
   constructor(
     private readonly options: { delayMs?: number; now?: () => number } = {}
@@ -62,7 +63,7 @@ export class DeleterFinder {
     const logs = await guild
       .fetchAuditLogs({ type: AuditLogEvent.MessageDelete, limit: 10 })
       .catch((err: unknown) => {
-        logger[warnings.level(`audit:${guild.id}`)](
+        logger[this.warnings.level(`audit:${guild.id}`)](
           { err },
           `Audit log fetch failed | guildId = ${guild.id} | channelId = ${channelId}`
         );
@@ -108,4 +109,4 @@ export class DeleterFinder {
   }
 }
 
-export const findDeleter = new DeleterFinder().find;
+export default declareService(new DeleterFinder());

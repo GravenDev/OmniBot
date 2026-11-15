@@ -9,11 +9,8 @@ import {
 import { describe, expect, it, vi } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
 import type { MessageLogConfigSchema } from "#modules/message-log/message-log.config.js";
-import {
-  logBulkDeletion,
-  logDeletion,
-  logEdit,
-} from "./message-log.service.js";
+import deleterFinder from "./audit.service.js";
+import messageLog from "./message-log.service.js";
 
 const t = (key: string) => key;
 
@@ -107,10 +104,19 @@ function fakeMessage(
 const noDeleter = vi.fn(async () => null);
 
 describe("logDeletion", () => {
+  it("asks the audit log who deleted the message, by default", async () => {
+    const { config, send } = fakeConfig();
+    const find = vi.spyOn(deleterFinder, "find").mockResolvedValueOnce("7");
+    await messageLog.logDeletion(fakeMessage(), config);
+    expect(find).toHaveBeenCalledWith({ id: "100" }, "42", "200");
+    expect(JSON.stringify(send.mock.calls[0])).toContain("deleted.by");
+    find.mockRestore();
+  });
+
   it("logs a deleted message without pinging anyone", async () => {
     const { config, send } = fakeConfig();
     const lookup = vi.fn(async () => "7");
-    await logDeletion(fakeMessage(), config, lookup);
+    await messageLog.logDeletion(fakeMessage(), config, lookup);
 
     expect(lookup).toHaveBeenCalledWith({ id: "100" }, "42", "200");
     const [payload] = send.mock.calls[0] as unknown as [
@@ -122,7 +128,7 @@ describe("logDeletion", () => {
 
   it("sends the full text of a deletion too long for the embed", async () => {
     const { config, send } = fakeConfig();
-    await logDeletion(
+    await messageLog.logDeletion(
       fakeMessage({ content: "a".repeat(4090) }),
       config,
       noDeleter
@@ -133,17 +139,29 @@ describe("logDeletion", () => {
 
   it("ignores uncached messages, bots, webhooks and system messages", async () => {
     const { config, send } = fakeConfig();
-    await logDeletion(fakeMessage({ partial: true }), config, noDeleter);
-    await logDeletion(fakeMessage({ bot: true }), config, noDeleter);
-    await logDeletion(fakeMessage({ webhookId: "9" }), config, noDeleter);
-    await logDeletion(fakeMessage({ system: true }), config, noDeleter);
+    await messageLog.logDeletion(
+      fakeMessage({ partial: true }),
+      config,
+      noDeleter
+    );
+    await messageLog.logDeletion(fakeMessage({ bot: true }), config, noDeleter);
+    await messageLog.logDeletion(
+      fakeMessage({ webhookId: "9" }),
+      config,
+      noDeleter
+    );
+    await messageLog.logDeletion(
+      fakeMessage({ system: true }),
+      config,
+      noDeleter
+    );
     expect(send).not.toHaveBeenCalled();
   });
 
   it("ignores excluded channels and the log channel", async () => {
     const { config, send } = fakeConfig({ excluded: ["200"] });
-    await logDeletion(fakeMessage(), config, noDeleter);
-    await logDeletion(
+    await messageLog.logDeletion(fakeMessage(), config, noDeleter);
+    await messageLog.logDeletion(
       fakeMessage({ channel: fakeSourceChannel("log") }),
       config,
       noDeleter
@@ -153,18 +171,18 @@ describe("logDeletion", () => {
 
   it("ignores channels and threads of an excluded category", async () => {
     const { config, send } = fakeConfig({ excludedCategories: ["cat"] });
-    await logDeletion(
+    await messageLog.logDeletion(
       fakeMessage({ channel: fakeSourceChannel("200", "cat") }),
       config,
       noDeleter
     );
-    await logDeletion(
+    await messageLog.logDeletion(
       fakeMessage({ channel: fakeSourceChannel("thread", "201", "cat") }),
       config,
       noDeleter
     );
     expect(send).not.toHaveBeenCalled();
-    await logDeletion(
+    await messageLog.logDeletion(
       fakeMessage({ channel: fakeSourceChannel("thread", "201", "other") }),
       config,
       noDeleter
@@ -174,7 +192,7 @@ describe("logDeletion", () => {
 
   it("does nothing without a log channel", async () => {
     const { config, send } = fakeConfig({ noChannel: true });
-    await logDeletion(fakeMessage(), config, noDeleter);
+    await messageLog.logDeletion(fakeMessage(), config, noDeleter);
     expect(send).not.toHaveBeenCalled();
   });
 
@@ -186,7 +204,7 @@ describe("logDeletion", () => {
       ],
     });
     const lookup = vi.fn(async () => null);
-    await logDeletion(fakeMessage(), config, lookup);
+    await messageLog.logDeletion(fakeMessage(), config, lookup);
     expect(lookup).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
   });
@@ -199,7 +217,7 @@ describe("logDeletion", () => {
         PermissionFlagsBits.EmbedLinks,
       ],
     });
-    await logDeletion(
+    await messageLog.logDeletion(
       fakeMessage({ content: "a".repeat(4090) }),
       config,
       noDeleter
@@ -210,7 +228,7 @@ describe("logDeletion", () => {
 
   it("shows the content of a channel more private than the log channel", async () => {
     const { config, send } = fakeConfig();
-    await logDeletion(
+    await messageLog.logDeletion(
       fakeMessage({
         content: "secret plan",
         channel: fakeSourceChannel(
@@ -236,14 +254,22 @@ describe("logBulkDeletion", () => {
 
   it("logs a bulk deletion with its transcript", async () => {
     const { config, send } = fakeConfig();
-    await logBulkDeletion(messages(), fakeSourceChannel() as never, config);
+    await messageLog.logBulkDeletion(
+      messages(),
+      fakeSourceChannel() as never,
+      config
+    );
     const [payload] = send.mock.calls[0] as unknown as [{ files: unknown[] }];
     expect(payload.files).toHaveLength(1);
   });
 
   it("ignores a bulk deletion in an excluded channel", async () => {
     const { config, send } = fakeConfig({ excluded: ["200"] });
-    await logBulkDeletion(messages(), fakeSourceChannel() as never, config);
+    await messageLog.logBulkDeletion(
+      messages(),
+      fakeSourceChannel() as never,
+      config
+    );
     expect(send).not.toHaveBeenCalled();
   });
 });
@@ -251,7 +277,7 @@ describe("logBulkDeletion", () => {
 describe("logEdit", () => {
   it("logs a changed content", async () => {
     const { config, send } = fakeConfig();
-    await logEdit(
+    await messageLog.logEdit(
       fakeMessage({ content: "a" }),
       fakeMessage({ content: "b" }),
       config
@@ -267,7 +293,7 @@ describe("logEdit", () => {
       "cat",
       ChannelType.PrivateThread
     );
-    await logEdit(
+    await messageLog.logEdit(
       fakeMessage({ content: "a", channel }),
       fakeMessage({ content: "b", channel }),
       config
@@ -280,14 +306,18 @@ describe("logEdit", () => {
 
   it("ignores updates that keep the content, like an embed loading", async () => {
     const { config, send } = fakeConfig();
-    await logEdit(fakeMessage(), fakeMessage(), config);
+    await messageLog.logEdit(fakeMessage(), fakeMessage(), config);
     expect(send).not.toHaveBeenCalled();
   });
 
   it("ignores edits when either side is uncached", async () => {
     const { config, send } = fakeConfig();
-    await logEdit(fakeMessage({ partial: true }), fakeMessage(), config);
-    await logEdit(
+    await messageLog.logEdit(
+      fakeMessage({ partial: true }),
+      fakeMessage(),
+      config
+    );
+    await messageLog.logEdit(
       fakeMessage({ content: "a" }),
       fakeMessage({ partial: true }),
       config
@@ -298,7 +328,7 @@ describe("logEdit", () => {
   it("ignores edits by bots, webhooks, system messages and excluded channels", async () => {
     const { config, send } = fakeConfig({ excludedCategories: ["cat"] });
     const edited = (options: Parameters<typeof fakeMessage>[0]) =>
-      logEdit(
+      messageLog.logEdit(
         fakeMessage({ ...options, content: "a" }),
         fakeMessage({ ...options, content: "b" }),
         config
@@ -313,7 +343,7 @@ describe("logEdit", () => {
 
   it("ignores edits when disabled", async () => {
     const { config, send } = fakeConfig({ logEdits: false });
-    await logEdit(
+    await messageLog.logEdit(
       fakeMessage({ content: "a" }),
       fakeMessage({ content: "b" }),
       config
