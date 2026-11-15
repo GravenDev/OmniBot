@@ -1,9 +1,9 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { initTestI18n, makeTestConfig, silenceLogs } from "#lib/testing.js";
 import { clashOfCodeConfigSchema } from "#modules/clash-of-code/clash-of-code.config.js";
+import type { SearchState } from "#modules/clash-of-code/history.js";
 import en from "#modules/clash-of-code/i18n/en.json" with { type: "json" };
 import type { ImportSummary } from "#modules/clash-of-code/services/channel-import.js";
-import type { SearchState } from "#modules/clash-of-code/services/history.js";
 
 const mocks = vi.hoisted(() => ({
   searchChannelClashes: vi.fn(),

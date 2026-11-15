@@ -10,12 +10,9 @@ import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
+import { CLASH_MODES, isClashMode } from "#modules/clash-of-code/api.js";
 import type { ClashOfCodeConfigSchema } from "#modules/clash-of-code/clash-of-code.config.js";
 import { leaderboardMessage } from "#modules/clash-of-code/interactions/leaderboard-page.button.js";
-import {
-  CLASH_MODES,
-  isClashMode,
-} from "#modules/clash-of-code/services/api.js";
 import store from "#modules/clash-of-code/services/store.js";
 import views, {
   type ViewContext,

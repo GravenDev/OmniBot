@@ -1,8 +1,11 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { loggerMaker } from "#lib/logger.js";
-import { ClashNotFoundError, ClashRateLimitedError } from "./api.js";
+import {
+  ClashNotFoundError,
+  ClashRateLimitedError,
+} from "#modules/clash-of-code/api.js";
+import type { LinkedClash } from "#modules/clash-of-code/history.js";
 import codingame from "./codingame.service.js";
-import type { LinkedClash } from "./history.js";
 import store from "./store.js";
 
 const logger = loggerMaker("clash-of-code");

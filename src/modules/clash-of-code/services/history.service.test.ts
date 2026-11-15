@@ -5,7 +5,10 @@ vi.mock("node:timers/promises", () => ({
 }));
 
 import { SearchNotReadyError } from "#lib/discord-polyfills/guild-message-search.js";
-import { newSearchState, type SearchProgress } from "./history.js";
+import {
+  newSearchState,
+  type SearchProgress,
+} from "#modules/clash-of-code/history.js";
 import history from "./history.service.js";
 
 const A = "a".repeat(40);
