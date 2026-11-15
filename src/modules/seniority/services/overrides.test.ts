@@ -1,5 +1,7 @@
 import {
   DiscordAPIError,
+  GatewayIntentBits,
+  IntentsBitField,
   RESTJSONErrorCodes,
   type Client,
   type REST,
@@ -237,6 +239,11 @@ describe("sweepDepartures", () => {
               available,
               memberCount: present.length,
               members: { fetch: fetchMember },
+              client: {
+                options: {
+                  intents: new IntentsBitField(GatewayIntentBits.GuildMembers),
+                },
+              },
             },
           ])
         ),
@@ -244,7 +251,7 @@ describe("sweepDepartures", () => {
     } as unknown as Client<true>;
   }
 
-  it("reads the member list once, rather than asking member by member", async () => {
+  it("reads the member list once, asking only about those missing from it", async () => {
     db.findMany.mockResolvedValue([
       { guildId: "g", userId: "gone", leftAt: null },
       { guildId: "g", userId: "back", leftAt: RECENT },
@@ -252,7 +259,10 @@ describe("sweepDepartures", () => {
     allMembers.mockResolvedValue(new Map([["back", {}]]));
     await sweepDepartures(client(["back"]), activeIn(["g"]), NOW);
     expect(allMembers).toHaveBeenCalledTimes(1);
-    expect(fetchMember).not.toHaveBeenCalled();
+    expect(fetchMember).toHaveBeenCalledExactlyOnceWith({
+      user: "gone",
+      force: true,
+    });
     expect(db.updateMany).toHaveBeenCalledWith({
       where: { guildId: "g", userId: "gone", leftAt: null },
       data: { leftAt: NOW },

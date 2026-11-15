@@ -2,6 +2,8 @@ import {
   type Client,
   Collection,
   DiscordAPIError,
+  GatewayIntentBits,
+  IntentsBitField,
   RESTJSONErrorCodes,
   type Guild,
 } from "discord.js";
@@ -17,8 +19,16 @@ const logger = { warn: vi.fn(), error: vi.fn() } as never;
 
 const fetch = vi.fn();
 
-function guild(memberCount: number) {
-  return { id: "g", memberCount, members: { fetch } } as unknown as Guild;
+function guild(
+  memberCount: number,
+  intents = [GatewayIntentBits.GuildMembers]
+) {
+  return {
+    id: "g",
+    memberCount,
+    members: { fetch },
+    client: { options: { intents: new IntentsBitField(intents) } },
+  } as unknown as Guild;
 }
 
 const apiError = (code: number) =>
@@ -31,11 +41,25 @@ beforeEach(() => {
 describe("memberPresence", () => {
   it("answers from the whole member list when it is complete", async () => {
     allMembers.mockResolvedValue(new Collection([["here", {}]]));
+    fetch.mockRejectedValue(apiError(RESTJSONErrorCodes.UnknownMember));
     const isPresent = await memberPresence(guild(1), logger);
 
     expect(await isPresent("here")).toBe(true);
     expect(await isPresent("gone")).toBe(false);
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetch).not.toHaveBeenCalledWith({ user: "here", force: true });
+  });
+
+  // The list is the member cache, which can keep a departure the bot missed:
+  // with it, a short answer from Discord passes for complete. A member
+  // missing from it is asked about before being said gone, for a deletion
+  // cannot be undone.
+  it("asks Discord before saying a member missing from the list is gone", async () => {
+    allMembers.mockResolvedValue(new Collection([["stale", {}]]));
+    fetch.mockResolvedValue({ id: "here" });
+    const isPresent = await memberPresence(guild(1), logger);
+
+    expect(await isPresent("here")).toBe(true);
+    expect(fetch).toHaveBeenCalledWith({ user: "here", force: true });
   });
 
   it.each([
@@ -60,6 +84,16 @@ describe("memberPresence", () => {
     expect(await isPresent("here")).toBe(true);
     expect(await isPresent("gone")).toBe(false);
     expect(fetch).toHaveBeenCalledWith({ user: "gone", force: true });
+  });
+
+  // Without the intent, Discord never answers a whole-guild request:
+  // discord.js would wait its two-minute timeout for each guild.
+  it("asks member by member without waiting for a list the bot cannot get", async () => {
+    fetch.mockResolvedValue({ id: "here" });
+    const isPresent = await memberPresence(guild(1, []), logger);
+
+    expect(await isPresent("here")).toBe(true);
+    expect(allMembers).not.toHaveBeenCalled();
   });
 
   it("passes on a Discord error that does not say the member is gone", async () => {
@@ -90,6 +124,7 @@ describe("sweepStoredMembers", () => {
   beforeEach(() => {
     // "a" is still on the server, "e" is gone.
     allMembers.mockResolvedValue(new Collection([["a", {}]]));
+    fetch.mockRejectedValue(apiError(RESTJSONErrorCodes.UnknownMember));
   });
 
   it("hands each member of a guild the bot is on to the module, saying whether they are here", async () => {
