@@ -5,8 +5,11 @@ import { defineConfig } from "vitepress";
 const rawBase = process.env["DOCS_BASE"] ?? "/OmniBot/";
 const trimmed = rawBase.replace(/^\/+|\/+$/g, "");
 const base = trimmed ? `/${trimmed}/` : "/";
-// Where GitHub Pages publishes the site; DOCS_SITE_URL overrides it.
-const SITE_URL = process.env["DOCS_SITE_URL"] ?? "https://gravendev.github.io";
+// Where GitHub Pages publishes the site; DOCS_SITE_URL overrides it (with its
+// scheme). Its trailing slashes are dropped, as `base` brings the next one.
+const SITE_URL = (
+  process.env["DOCS_SITE_URL"] ?? "https://gravendev.github.io"
+).replace(/\/+$/, "");
 
 export default defineConfig({
   base,
@@ -37,7 +40,8 @@ export default defineConfig({
   ],
 
   themeConfig: {
-    // The robot's head is white on the dark theme, navy on the light one.
+    // The robot's head is white on the dark theme, outlined in navy on the
+    // light one.
     logo: { light: "/logo-light.svg", dark: "/logo.svg" },
     // "Bot" in cyan, as on the home page and in the logo's wordmark.
     siteTitle: 'Omni<span class="accent">Bot</span>',
