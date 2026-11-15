@@ -5,7 +5,7 @@ import jd4hAdminCommand from "./commands/jd4h-admin.command.js";
 import jd4hCommand from "./commands/jd4h.command.js";
 import { fourHourGameConfigSchema } from "./four-hour-game.config.js";
 import leaderboardPageButton from "./interactions/leaderboard-page.button.js";
-import guildCreateListener from "./listeners/guild-create.listener.js";
+import guildReturnListeners from "./listeners/guild-return.listener.js";
 import messageCreateListener from "./listeners/message-create.listener.js";
 import messageDeleteBulkListener from "./listeners/message-delete-bulk.listener.js";
 import messageDeleteListener from "./listeners/message-delete.listener.js";
@@ -33,7 +33,9 @@ const fourHourGameModule = defineModule({
     registry.register(messageCreateListener);
     registry.register(messageDeleteListener);
     registry.register(messageDeleteBulkListener);
-    registry.register(guildCreateListener(fourHourGameModule));
+    for (const listener of guildReturnListeners(fourHourGameModule)) {
+      registry.register(listener);
+    }
     registry.register(jd4hCommand);
     registry.register(jd4hAdminCommand);
     registry.register(leaderboardPageButton);

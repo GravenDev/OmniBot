@@ -362,16 +362,17 @@ class FourHourGameService implements Service {
   }
 
   /**
-   * Replays the guild's downtime, at startup or when the bot is invited back
-   * to the guild. Its queue is taken at once, before `load` reads the
-   * configuration, so that no live message of the guild comes before the
-   * replay; the points caught up are announced from within it, before the
-   * next live one.
+   * Replays the guild's downtime, at startup or when the guild comes back
+   * (the bot invited back, or after a Discord outage). Its queue is taken at
+   * once, before `load` reads the configuration, so that no live message of
+   * the guild comes before the replay; the points caught up are announced
+   * from within it, before the next live one. `now` defaults to when the
+   * replay runs, which may be well after the call when the queue is busy.
    */
   syncRound(
     guildId: string,
     load: () => Promise<RoundSync | null>,
-    now: Date = new Date()
+    now?: Date
   ): Promise<void> {
     return this.queue.run(guildId, async () => {
       const round = await load();
@@ -386,7 +387,7 @@ class FourHourGameService implements Service {
         round.channelId,
         round.history,
         round.delaySeconds,
-        now
+        now ?? new Date()
       );
       if (caughtUp.length > 0) {
         logger.info(
