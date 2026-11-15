@@ -114,7 +114,7 @@ const MODEL_PRISMA = `// Database models for the __ID__ module.
 // Model names must be unique across ALL modules (Prisma reads every *.prisma
 // file under src/ as one schema).
 //
-// model __Pascal__Thing {
+// model __PASCAL__Thing {
 //   id        String   @id @default(cuid())
 //   guildId   String
 //   createdAt DateTime @default(now())
