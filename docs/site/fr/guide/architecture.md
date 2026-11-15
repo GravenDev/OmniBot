@@ -86,13 +86,14 @@ export enum DeclarationType {
 
 ## Dispatch centralisé des interactions
 
-Un seul écouteur `interactionCreate` (`src/core/listeners/interaction-create.listener.ts`) gère toutes les interactions utilisateur :
+Un seul écouteur `interactionCreate` (`src/core/listeners/interaction-create.listener.ts`) gère toutes les interactions utilisateur. Il ne fait qu'aiguiller chaque interaction selon son type vers son gestionnaire dans `src/core/listeners/interaction-create/` (`commands.ts`, `autocomplete.ts`, `components.ts`), qui enchaînent les étapes communes : `routing.ts` (trouver la cible), `gates.ts` (activation du module), `access.ts` (qui peut s'en servir), et répondent par `replyEphemeral` (`src/lib/reply.ts`, réponses éphémères).
 
 ```
 interactionCreate
-├─ isChatInputCommand()
-│   ├─ trouver la commande par nom dans tous les modules
+├─ isChatInputCommand() ou isContextMenuCommand()
+│   ├─ trouver la commande par nom et type dans tous les modules
 │   ├─ vérifier l'état d'activation du module (BDD)
+│   ├─ si requiresAdmin → vérifier la permission Administrateur
 │   ├─ charger la configuration (ConfigProvider)
 │   └─ execute(interaction, config)
 ├─ isAutocomplete()
@@ -103,14 +104,14 @@ interactionCreate
 │   ├─ diviser customId sur ":" → préfixe + args
 │   ├─ trouver le gestionnaire par préfixe
 │   ├─ vérifier l'activation du module
-│   ├─ si access === "admin" → vérifier la permission Administrateur
 │   ├─ exécuter la garde de type (check())
+│   ├─ vérifier l'accès ("admin", "everyone" ou { permissions })
 │   └─ execute(interaction, args, config)
 ```
 
 Cette approche centralisée signifie que :
 
-- Les **permissions** sont vérifiées à un seul endroit (le champ requis `access` sur `InteractionHandler`)
+- Les **permissions** sont vérifiées à un seul endroit (`requiresAdmin` sur une commande, le champ requis `access` sur `InteractionHandler`)
 - L'**activation du module** est vérifiée automatiquement
 - L'**injection de configuration** se fait de manière transparente
 

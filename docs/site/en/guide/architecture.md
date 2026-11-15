@@ -86,13 +86,14 @@ export enum DeclarationType {
 
 ## Centralized Interaction Dispatch
 
-A single `interactionCreate` listener (`src/core/listeners/interaction-create.listener.ts`) handles all user interactions:
+A single `interactionCreate` listener (`src/core/listeners/interaction-create.listener.ts`) handles all user interactions. It only routes each interaction by type to its handler in `src/core/listeners/interaction-create/` (`commands.ts`, `autocomplete.ts`, `components.ts`), which chain the shared steps: `routing.ts` (find the target), `gates.ts` (module activation), `access.ts` (who may use it), and answer through `replyEphemeral` (`src/lib/reply.ts`, ephemeral answers).
 
 ```
 interactionCreate
-├─ isChatInputCommand()
-│   ├─ find command by name across all modules
+├─ isChatInputCommand() or isContextMenuCommand()
+│   ├─ find command by name and type across all modules
 │   ├─ check module activation state (DB)
+│   ├─ if requiresAdmin → check Administrator permission
 │   ├─ load config (ConfigProvider)
 │   └─ execute(interaction, config)
 ├─ isAutocomplete()
@@ -103,14 +104,14 @@ interactionCreate
 │   ├─ split customId on ":" → prefix + args
 │   ├─ find handler by prefix
 │   ├─ check module activation
-│   ├─ if access === "admin" → check Administrator permission
 │   ├─ run type guard (check())
+│   ├─ check access ("admin", "everyone" or { permissions })
 │   └─ execute(interaction, args, config)
 ```
 
 This centralised approach means:
 
-- **Permissions** are checked in one place (the required `access` field on `InteractionHandler`)
+- **Permissions** are checked in one place (`requiresAdmin` on a command, the required `access` field on `InteractionHandler`)
 - **Module activation** is verified automatically
 - **Config injection** happens transparently
 
