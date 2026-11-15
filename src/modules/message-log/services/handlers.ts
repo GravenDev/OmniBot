@@ -10,15 +10,15 @@ import type {
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
-import type { MessageLogConfigSchema } from "#modules/message-log/message-log.config.js";
-import { type DeleterLookup, findDeleter } from "./audit.js";
 import {
   bulkDeleteLog,
   deletedLog,
   editedLog,
   isAuthoredByMember,
-} from "./entries.js";
-import { type LogTarget, logTargetFor } from "./routing.js";
+} from "#modules/message-log/entries.js";
+import type { MessageLogConfigSchema } from "#modules/message-log/message-log.config.js";
+import { type LogTarget, logTargetFor } from "#modules/message-log/routing.js";
+import { type DeleterLookup, findDeleter } from "./audit.js";
 
 const logger = loggerMaker("message-log");
 

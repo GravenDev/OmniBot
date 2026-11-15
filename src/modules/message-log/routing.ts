@@ -7,7 +7,7 @@ import { excludedIdsOf, isExcluded } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { LogThrottle } from "#lib/log-throttle.js";
 import { loggerMaker } from "#lib/logger.js";
-import type { MessageLogConfigSchema } from "#modules/message-log/message-log.config.js";
+import type { MessageLogConfigSchema } from "./message-log.config.js";
 
 const logger = loggerMaker("message-log");
 const warnings = new LogThrottle();
