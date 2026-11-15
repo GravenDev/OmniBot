@@ -8,7 +8,7 @@ import {
   type DailyRecap,
 } from "./recap.js";
 import { ScoreTable } from "./scoring/score-table.js";
-import type { StoredRoll } from "./services/store.js";
+import type { StoredRoll } from "./services/store.service.js";
 
 const table = new ScoreTable({
   "0": 0,

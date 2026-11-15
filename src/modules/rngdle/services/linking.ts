@@ -1,7 +1,7 @@
 import { loggerMaker } from "#lib/logger.js";
 import { fetchUserRolls, RngdleUserNotFoundError } from "./api.js";
-import store, { type RegisterResult } from "./store.js";
-import sync from "./sync.js";
+import store, { type RegisterResult } from "./store.service.js";
+import sync from "./sync.service.js";
 
 const logger = loggerMaker("rngdle");
 

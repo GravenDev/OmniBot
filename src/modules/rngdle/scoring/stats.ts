@@ -1,5 +1,5 @@
 import { utcDayNumber } from "#modules/rngdle/days.js";
-import type { StoredRoll } from "#modules/rngdle/services/store.js";
+import type { StoredRoll } from "#modules/rngdle/services/store.service.js";
 import { TIERS, type ScoreTable, type Tier } from "./score-table.js";
 
 export interface RollSummary {

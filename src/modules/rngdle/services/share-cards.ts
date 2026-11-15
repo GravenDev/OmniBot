@@ -36,8 +36,8 @@ import {
   type Tier,
 } from "#modules/rngdle/scoring/score-table.js";
 import { fetchRollBadges } from "./badges.js";
-import store, { type Account, type StoredRoll } from "./store.js";
-import sync from "./sync.js";
+import store, { type Account, type StoredRoll } from "./store.service.js";
+import sync from "./sync.service.js";
 
 const logger = loggerMaker("rngdle");
 

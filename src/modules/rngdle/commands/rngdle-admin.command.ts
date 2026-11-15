@@ -14,8 +14,10 @@ import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
 import { linkAccount } from "#modules/rngdle/services/linking.js";
-import store from "#modules/rngdle/services/store.js";
-import sync, { FullSyncCooldownError } from "#modules/rngdle/services/sync.js";
+import store from "#modules/rngdle/services/store.service.js";
+import sync, {
+  FullSyncCooldownError,
+} from "#modules/rngdle/services/sync.service.js";
 import { Colors } from "#utils/colors.js";
 
 const USERNAME_MAX_LENGTH = 64;

@@ -10,8 +10,8 @@ import type { TFunction } from "#lib/i18n.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { pageRow } from "#lib/pagination.js";
 import { DAY_MS } from "#modules/rngdle/days.js";
-import store, { type Account } from "#modules/rngdle/services/store.js";
-import sync from "#modules/rngdle/services/sync.js";
+import store, { type Account } from "#modules/rngdle/services/store.service.js";
+import sync from "#modules/rngdle/services/sync.service.js";
 import {
   historyCard,
   profileCard,

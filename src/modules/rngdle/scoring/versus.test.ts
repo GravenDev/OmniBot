@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StoredRoll } from "#modules/rngdle/services/store.js";
+import type { StoredRoll } from "#modules/rngdle/services/store.service.js";
 import { compare, computeHeadToHead, computeVersus } from "./versus.js";
 
 function roll(

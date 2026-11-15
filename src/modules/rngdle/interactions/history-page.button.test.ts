@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
   historyCard: vi.fn(),
 }));
 
-vi.mock("#modules/rngdle/services/store.js", () => ({
+vi.mock("#modules/rngdle/services/store.service.js", () => ({
   default: { account: mocks.account },
 }));
 vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({

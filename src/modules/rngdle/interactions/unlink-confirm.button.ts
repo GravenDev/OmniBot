@@ -9,8 +9,8 @@ import {
 import type { TFunction } from "#lib/i18n.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { loggerMaker } from "#lib/logger.js";
-import store from "#modules/rngdle/services/store.js";
-import sync from "#modules/rngdle/services/sync.js";
+import store from "#modules/rngdle/services/store.service.js";
+import sync from "#modules/rngdle/services/sync.service.js";
 
 const CUSTOM_ID = "rngdle-unlink";
 

@@ -8,7 +8,7 @@ import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
 import { startOfUtcDay } from "#modules/rngdle/days.js";
 import { fetchUserRolls, RngdleUserNotFoundError } from "./api.js";
-import store, { type Account } from "./store.js";
+import store, { type Account } from "./store.service.js";
 
 const logger = loggerMaker("rngdle");
 

@@ -3,7 +3,7 @@ import type { TFunction } from "#lib/i18n.js";
 import { DAY_MS } from "./days.js";
 import type { ScoreTable, TierOrError } from "./scoring/score-table.js";
 import { computeStreaks } from "./scoring/stats.js";
-import type { StoredRoll } from "./services/store.js";
+import type { StoredRoll } from "./services/store.service.js";
 
 export const MESSAGE_LIMIT = 2000;
 

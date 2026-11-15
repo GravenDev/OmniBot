@@ -49,7 +49,7 @@ import store, {
   type Account,
   type DateRange,
   type StoredRoll,
-} from "./store.js";
+} from "./store.service.js";
 
 const DAILY_SIZE = 25;
 const OVERALL_PAGE_SIZE = 10;

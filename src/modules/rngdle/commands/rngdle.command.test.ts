@@ -23,7 +23,7 @@ vi.mock("#lib/logger.js", () => {
   const logger = { info: vi.fn(), warn: vi.fn() };
   return { loggerMaker: () => logger };
 });
-vi.mock("#modules/rngdle/services/store.js", () => ({
+vi.mock("#modules/rngdle/services/store.service.js", () => ({
   default: {
     account: mocks.account,
     accountByUsername: mocks.accountByUsername,
@@ -33,7 +33,7 @@ vi.mock("#modules/rngdle/services/store.js", () => ({
 vi.mock("#core/services/mention.service.js", () => ({
   default: { mentionable: mocks.mentionable },
 }));
-vi.mock("#modules/rngdle/services/sync.js", () => ({
+vi.mock("#modules/rngdle/services/sync.service.js", () => ({
   default: { refreshIfStale: mocks.refreshIfStale },
 }));
 vi.mock("#modules/rngdle/services/linking.js", () => ({

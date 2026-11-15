@@ -18,7 +18,7 @@ vi.mock("./api.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./api.js")>()),
   fetchUserRolls: mocks.fetchUserRolls,
 }));
-vi.mock("./store.js", () => ({
+vi.mock("./store.service.js", () => ({
   default: {
     account: mocks.account,
     accountByUsername: mocks.accountByUsername,
@@ -27,7 +27,7 @@ vi.mock("./store.js", () => ({
     saveRolls: mocks.saveRolls,
   },
 }));
-vi.mock("./sync.js", () => ({
+vi.mock("./sync.service.js", () => ({
   default: {
     exclusive: async (_guildId: string, task: () => Promise<unknown>) => {
       mocks.order.push("queue");

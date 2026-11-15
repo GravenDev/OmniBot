@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { StoredRoll } from "#modules/rngdle/services/store.js";
+import type { StoredRoll } from "#modules/rngdle/services/store.service.js";
 import { ScoreTable } from "./score-table.js";
 import {
   byBestRoll,

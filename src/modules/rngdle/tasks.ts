@@ -13,8 +13,8 @@ import { REMINDER_HOUR_UTC, reminderMessages } from "./reminders.js";
 import type { RngdleConfigSchema } from "./rngdle.config.js";
 import { fetchScoreTable } from "./services/api.js";
 import { pruneCards } from "./services/share-cards.js";
-import store from "./services/store.js";
-import sync from "./services/sync.js";
+import store from "./services/store.service.js";
+import sync from "./services/sync.service.js";
 import { dailyLeaderboard, dailyRecap } from "./services/views.js";
 
 const logger = loggerMaker("rngdle");

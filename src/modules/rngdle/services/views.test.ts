@@ -14,7 +14,7 @@ const mocks = vi.hoisted(() => ({
   tierOf: vi.fn((_score: number) => "COMMON"),
 }));
 
-vi.mock("./store.js", () => ({
+vi.mock("./store.service.js", () => ({
   default: {
     revision: () => 0,
     rolls: mocks.rolls,

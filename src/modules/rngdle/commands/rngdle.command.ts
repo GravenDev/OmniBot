@@ -25,8 +25,8 @@ import { unlinkConfirmMessage } from "#modules/rngdle/interactions/unlink-confir
 import { reminderTimestamp } from "#modules/rngdle/reminders.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
 import { linkOwnAccount } from "#modules/rngdle/services/linking.js";
-import store from "#modules/rngdle/services/store.js";
-import sync from "#modules/rngdle/services/sync.js";
+import store from "#modules/rngdle/services/store.service.js";
+import sync from "#modules/rngdle/services/sync.service.js";
 import {
   dailyLeaderboard,
   HISTORY_MAX,
