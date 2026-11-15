@@ -2,6 +2,7 @@ import { AttachmentBuilder, MessageFlags, type Client } from "discord.js";
 import configService from "#core/services/config.service.js";
 import mentionService from "#core/services/mention.service.js";
 import moduleService from "#core/services/module.service.js";
+import { forEachGuild } from "#lib/guild-loop.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
@@ -107,23 +108,19 @@ export function rngdleTasks(module: Module<RngdleConfigSchema>) {
     declareTask({
       id: "reminders",
       schedule: `0 ${REMINDER_HOUR_UTC} * * *`,
-      async run() {
+      async run(client) {
         await sync
           .syncAll()
           .catch((err: unknown) =>
             logger.warn({ err }, "Sync before the reminders failed")
           );
         const now = new Date();
-        for (const guildId of await moduleService.getActivatedGuildIds(
-          module.id
-        )) {
-          await postReminders(module, guildId, now).catch((err: unknown) =>
-            logger.error(
-              { err },
-              `Failed to post the reminders | guildId = ${guildId}`
-            )
-          );
-        }
+        await forEachGuild(
+          client,
+          await moduleService.getActivatedGuildIds(module.id),
+          (guild) => postReminders(module, guild.id, now),
+          { action: "post the reminders", logger }
+        );
       },
     }),
     declareTask({
@@ -149,17 +146,12 @@ export function rngdleTasks(module: Module<RngdleConfigSchema>) {
           .catch((err: unknown) =>
             logger.warn({ err }, "Sync before the daily leaderboard failed")
           );
-        for (const guildId of await moduleService.getActivatedGuildIds(
-          module.id
-        )) {
-          await postDailyLeaderboard(client, module, guildId).catch(
-            (err: unknown) =>
-              logger.error(
-                { err },
-                `Failed to post the daily leaderboard | guildId = ${guildId}`
-              )
-          );
-        }
+        await forEachGuild(
+          client,
+          await moduleService.getActivatedGuildIds(module.id),
+          (guild) => postDailyLeaderboard(client, module, guild.id),
+          { action: "post the daily leaderboard", logger }
+        );
       },
     }),
   ];

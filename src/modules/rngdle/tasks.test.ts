@@ -1,4 +1,4 @@
-import { MessageFlags, type Client } from "discord.js";
+import { Collection, MessageFlags, type Client } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
 import type { RngdleConfigSchema } from "./rngdle.config.js";
@@ -53,6 +53,17 @@ vi.mock("./services/views.js", () => ({
 
 const { rngdleMaintenanceTasks, rngdleTasks } = await import("./tasks.js");
 
+/** A client on the given guilds. */
+function clientIn(...guildIds: string[]): Client<true> {
+  return {
+    guilds: {
+      cache: new Collection(
+        guildIds.map((id) => [id, { id, available: true }])
+      ),
+    },
+  } as unknown as Client<true>;
+}
+
 function task(id: string) {
   return rngdleTasks({
     id: "rngdle",
@@ -78,7 +89,7 @@ describe("daily leaderboard task", () => {
       (declared) => declared.id === "daily-leaderboard"
     )!;
 
-    await task.run({} as Client<true>);
+    await task.run(clientIn("guild"));
 
     const [message] = send.mock.calls[0]! as [
       {
@@ -106,9 +117,15 @@ describe("daily leaderboard task", () => {
   it("still posts the leaderboard from the stored rolls when the sync fails", async () => {
     syncAll.mockRejectedValue(new Error("database down"));
 
-    await task("daily-leaderboard").run({} as Client<true>);
+    await task("daily-leaderboard").run(clientIn("guild"));
 
     expect(send).toHaveBeenCalledOnce();
+  });
+
+  it("skips a guild the bot left", async () => {
+    await task("daily-leaderboard").run(clientIn());
+
+    expect(send).not.toHaveBeenCalled();
   });
 });
 
@@ -117,7 +134,7 @@ describe("reminders task", () => {
     pendingReminders.mockResolvedValue(["a", "b"]);
     mentionable.mockResolvedValue(["b"]);
 
-    await task("reminders").run({} as Client<true>);
+    await task("reminders").run(clientIn("guild"));
 
     expect(syncAll).toHaveBeenCalledOnce();
     expect(send).toHaveBeenCalledExactlyOnceWith({
@@ -127,7 +144,7 @@ describe("reminders task", () => {
   });
 
   it("posts nothing when everyone already rolled", async () => {
-    await task("reminders").run({} as Client<true>);
+    await task("reminders").run(clientIn("guild"));
 
     expect(send).not.toHaveBeenCalled();
   });
@@ -136,9 +153,18 @@ describe("reminders task", () => {
     syncAll.mockRejectedValue(new Error("database down"));
     pendingReminders.mockResolvedValue(["a"]);
 
-    await task("reminders").run({} as Client<true>);
+    await task("reminders").run(clientIn("guild"));
 
     expect(send).toHaveBeenCalledOnce();
+  });
+
+  it("skips a guild the bot left", async () => {
+    pendingReminders.mockResolvedValue(["a"]);
+
+    await task("reminders").run(clientIn());
+
+    expect(pendingReminders).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
   });
 });
 
