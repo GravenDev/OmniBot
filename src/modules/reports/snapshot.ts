@@ -1,5 +1,5 @@
 import type { Message } from "discord.js";
-import type { MessageSnapshot } from "./services/store.js";
+import type { MessageSnapshot } from "./services/store.service.js";
 
 /** What a report keeps of the reported message, should it change or go. */
 export function snapshotOf(message: Message<true>): MessageSnapshot {

@@ -8,7 +8,7 @@ import {
   purgedMessage,
   TEXT_LIMIT,
 } from "./alert-view.js";
-import type { Report } from "./services/store.js";
+import type { Report } from "./services/store.service.js";
 
 beforeAll(async () => {
   const en = JSON.parse(

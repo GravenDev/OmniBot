@@ -18,7 +18,7 @@ import type {
   AuthorHistory,
   Report,
   ReportStatus,
-} from "./services/store.js";
+} from "./services/store.service.js";
 
 export const CONTENT_LIMIT = 1500;
 export const TEXT_LIMIT = 4000;

@@ -6,7 +6,7 @@ vi.mock("#lib/database.js", () => ({
   Prisma: {},
 }));
 
-const { default: store } = await import("./store.js");
+const { default: store } = await import("./store.service.js");
 
 describe("report store expiry", () => {
   beforeEach(() => {
