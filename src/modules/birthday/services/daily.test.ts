@@ -54,7 +54,8 @@ vi.mock("../rendering/birthday-calendar.js", () => ({
 }));
 vi.mock("#lib/imaging.js", () => ({ fetchAvatar: async () => null }));
 
-const { announcedCelebrants, runGuildDay } = await import("./daily.js");
+const { announcedCelebrants, runAllGuildDays, runGuildDay } =
+  await import("./daily.js");
 
 const module = { id: "birthday" } as unknown as Module<BirthdayConfigSchema>;
 
@@ -90,6 +91,7 @@ function setup(values: Partial<ConfigData<BirthdayConfigSchema>> = {}) {
   ]);
   const guild = {
     id: "guild-1",
+    available: true,
     createdAt: new Date("2021-10-16T10:00:00Z"),
     memberCount: 4,
     members: { cache: members, fetch: vi.fn(async () => members) },
@@ -407,13 +409,22 @@ describe("runGuildDay", () => {
     expect(service.claimDay).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
   });
+});
 
+describe("runAllGuildDays", () => {
   it("skips a guild the bot left", async () => {
     const { client, send } = setup();
     client.guilds.cache.clear();
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await runAllGuildDays(client, module, NINE_IN_PARIS);
     expect(getConfigForModuleIn).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it("runs the day of each guild the bot is on", async () => {
+    const { client, send } = setup();
+    await runAllGuildDays(client, module, NINE_IN_PARIS);
+    expect(service.claimDay).toHaveBeenCalledWith("guild-1", "2026-10-16");
+    expect(send).toHaveBeenCalled();
   });
 });
 
