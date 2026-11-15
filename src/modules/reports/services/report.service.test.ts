@@ -417,6 +417,44 @@ describe("messagesDeleted", () => {
 
     expect(db.store.setMessageState).toHaveBeenCalledWith(1, "deleted");
   });
+
+  it("still marks the other reported messages when one fails", async () => {
+    const { client, config } = setup();
+    await service.report(client, config, snapshot, reporter("r1"), false);
+    await service.report(
+      client,
+      config,
+      { ...snapshot, messageId: "m2" },
+      reporter("r1"),
+      false
+    );
+    db.store.byMessage.mockRejectedValueOnce(new Error("database down"));
+
+    await expect(
+      service.messagesDeleted(client, config, "g1", ["m1", "m2"])
+    ).resolves.toBeUndefined();
+
+    expect(db.store.setMessageState).toHaveBeenCalledWith(2, "deleted");
+  });
+
+  it("still marks a report being filed when the query fails", async () => {
+    const { client, config } = setup();
+    db.store.reportedAmong.mockRejectedValueOnce(new Error("database down"));
+
+    const filing = service.report(
+      client,
+      config,
+      snapshot,
+      reporter("r1"),
+      false
+    );
+    await expect(
+      service.messagesDeleted(client, config, "g1", ["m1", "m2"])
+    ).resolves.toBeUndefined();
+    await filing;
+
+    expect(db.store.setMessageState).toHaveBeenCalledWith(1, "deleted");
+  });
 });
 
 describe("ineligibility", () => {
