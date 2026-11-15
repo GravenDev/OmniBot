@@ -1,13 +1,13 @@
 import type { EmbedBuilder } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
-import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
 import { buildAnnouncementEmbed } from "#modules/four-hour-game/rendering/announcement.js";
-import { formatHeldTime } from "./formatting.js";
 import type {
   DailyPoint,
   PlayerRank,
   ScoredPoint,
-} from "./four-hour-game.service.js";
+} from "#modules/four-hour-game/services/four-hour-game.service.js";
+import { formatHeldTime } from "./formatting.js";
+import type { FourHourGameConfigSchema } from "./four-hour-game.config.js";
 
 export interface PointAnnouncement extends ScoredPoint {
   rank: PlayerRank | null;

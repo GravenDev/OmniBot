@@ -1,4 +1,4 @@
-import type { ScoredPoint } from "./four-hour-game.service.js";
+import type { ScoredPoint } from "#modules/four-hour-game/services/four-hour-game.service.js";
 
 // A message of the game channel, as the game remembers it.
 export interface ChannelMessage {

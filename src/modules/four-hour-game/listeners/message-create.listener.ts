@@ -1,8 +1,8 @@
 import type { Message } from "discord.js";
 import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
+import { isPlayerMessage } from "#modules/four-hour-game/channel-history.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
-import { isPlayerMessage } from "#modules/four-hour-game/services/channel-history.js";
 import fourHourGameService from "#modules/four-hour-game/services/four-hour-game.service.js";
 import { announcePoint } from "#modules/four-hour-game/services/point-announcement.service.js";
 

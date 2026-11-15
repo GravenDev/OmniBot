@@ -1,5 +1,5 @@
 import type { TFunction } from "#lib/i18n.js";
-import type { PlayerRank } from "./four-hour-game.service.js";
+import type { PlayerRank } from "#modules/four-hour-game/services/four-hour-game.service.js";
 
 const UNITS = [
   ["days", 24 * 60 * 60],

@@ -1,8 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import { initTestI18n, makeTestConfig } from "#lib/testing.js";
-import { fourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
 import en from "#modules/four-hour-game/i18n/en.json" with { type: "json" };
 import fr from "#modules/four-hour-game/i18n/fr.json" with { type: "json" };
+import { fourHourGameConfigSchema } from "./four-hour-game.config.js";
 import { buildDailyPointEmbed } from "./point-announcement.js";
 
 beforeAll(async () => {

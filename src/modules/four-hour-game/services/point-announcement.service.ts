@@ -2,12 +2,12 @@ import type { GuildTextBasedChannel } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
+import { buildPointEmbed } from "#modules/four-hour-game/point-announcement.js";
 import { ANNOUNCEMENT_OPTIONS } from "#modules/four-hour-game/rendering/announcement.js";
 import fourHourGameService, {
   type PlayerRank,
   type ScoredPoint,
 } from "./four-hour-game.service.js";
-import { buildPointEmbed } from "./point-announcement.js";
 import { fetchWinnerAvatar } from "./winner-avatar.js";
 
 const logger = loggerMaker("four-hour-game");

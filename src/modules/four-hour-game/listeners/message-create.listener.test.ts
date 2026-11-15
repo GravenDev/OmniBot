@@ -17,7 +17,7 @@ vi.mock("#modules/four-hour-game/services/four-hour-game.service.js", () => ({
 
 const { default: listener } = await import("./message-create.listener.js");
 const { buildPointEmbed } =
-  await import("#modules/four-hour-game/services/point-announcement.js");
+  await import("#modules/four-hour-game/point-announcement.js");
 const { announcePoint } =
   await import("#modules/four-hour-game/services/point-announcement.service.js");
 

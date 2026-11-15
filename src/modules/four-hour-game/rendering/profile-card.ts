@@ -2,7 +2,7 @@ import type { Image } from "@napi-rs/canvas";
 import { formatInteger } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
 import { renderStatCard, type StatCard } from "#lib/stat-card.js";
-import { formatHeldTime } from "#modules/four-hour-game/services/formatting.js";
+import { formatHeldTime } from "#modules/four-hour-game/formatting.js";
 import type { PlayerProfile } from "#modules/four-hour-game/services/four-hour-game.service.js";
 import { ACCENT } from "./theme.js";
 
