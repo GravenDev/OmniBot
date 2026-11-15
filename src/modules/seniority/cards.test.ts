@@ -1,9 +1,9 @@
 import type { AttachmentBuilder, Guild, GuildMember } from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { initTestI18n, makeTestConfig } from "#lib/testing.js";
-import en from "../i18n/en.json" with { type: "json" };
-import fr from "../i18n/fr.json" with { type: "json" };
-import { seniorityConfigSchema } from "../seniority.config.js";
+import en from "./i18n/en.json" with { type: "json" };
+import fr from "./i18n/fr.json" with { type: "json" };
+import { seniorityConfigSchema } from "./seniority.config.js";
 
 const rendering = vi.hoisted(() => ({
   renderCelebrationImage: vi.fn(async (..._args: unknown[]) => ({

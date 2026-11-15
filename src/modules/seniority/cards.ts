@@ -16,9 +16,9 @@ import type { ConfigProvider } from "#lib/config.js";
 import { formatInteger } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
 import { truncate } from "#lib/text.js";
-import { ACCENT, CONFETTI } from "../rendering/theme.js";
-import type { SeniorityConfigSchema } from "../seniority.config.js";
 import { seniorityStart } from "./overrides.js";
+import { ACCENT, CONFETTI } from "./rendering/theme.js";
+import type { SeniorityConfigSchema } from "./seniority.config.js";
 
 type Config = ConfigProvider<SeniorityConfigSchema>;
 
