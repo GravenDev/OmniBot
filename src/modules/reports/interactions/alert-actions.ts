@@ -19,6 +19,7 @@ import {
   isBanned,
   MAX_BAN_PURGE_SECONDS,
 } from "#lib/moderation.js";
+import { replyEphemeral } from "#lib/reply.js";
 import type { ReportsConfigSchema } from "../reports.config.js";
 import { messageUrl } from "../services/alert-view.js";
 import {
@@ -58,18 +59,6 @@ function reportIdOf(args: string[]): number | null {
   return Number.isSafeInteger(id) && id > 0 ? id : null;
 }
 
-async function tell(
-  interaction: ButtonInteraction | ModalSubmitInteraction,
-  content: string
-): Promise<void> {
-  const payload = { content, flags: MessageFlags.Ephemeral } as const;
-  if (interaction.deferred || interaction.replied) {
-    await interaction.followUp(payload);
-  } else {
-    await interaction.reply(payload);
-  }
-}
-
 function discordErrorKey(error: unknown): string {
   if (
     isApiError(
@@ -100,7 +89,7 @@ async function deleteReported(
   report: Report
 ): Promise<void> {
   if (report.messageState === "deleted") {
-    await tell(interaction, config.t("error.alreadyDeleted"));
+    await replyEphemeral(interaction, config.t("error.alreadyDeleted"));
     return;
   }
 
@@ -115,7 +104,7 @@ async function deleteReported(
     if (
       !channel.permissionsFor(moderator).has(PermissionFlagsBits.ManageMessages)
     ) {
-      await tell(interaction, config.t("error.memberCannotDelete"));
+      await replyEphemeral(interaction, config.t("error.memberCannotDelete"));
       return;
     }
     await channel.messages.delete(report.messageId);
@@ -126,7 +115,7 @@ async function deleteReported(
         `Delete failed | guildId = ${report.guildId} | reportId = ${report.id} | channelId = ${report.channelId} | messageId = ${report.messageId} | moderatorId = ${interaction.user.id}`
       );
       failed = true;
-      await tell(interaction, config.t(discordErrorKey(error)));
+      await replyEphemeral(interaction, config.t(discordErrorKey(error)));
     }
   }
   if (!failed) {
@@ -159,13 +148,13 @@ async function runDirect(
   }
   if (action === "reopen") {
     if (report.status === "open") {
-      await tell(interaction, config.t("error.alreadyOpen"));
+      await replyEphemeral(interaction, config.t("error.alreadyOpen"));
       return;
     }
     await store.setStatus(report.id, "open", null);
   } else {
     if (report.status !== "open") {
-      await tell(interaction, config.t("error.alreadyClosed"));
+      await replyEphemeral(interaction, config.t("error.alreadyClosed"));
       return;
     }
     await store.setStatus(
@@ -195,7 +184,7 @@ function directButton(action: Direct) {
     execute: async (interaction, args, config) => {
       const reportId = reportIdOf(args);
       if (!reportId) {
-        await tell(interaction, config.t("error.notFound"));
+        await replyEphemeral(interaction, config.t("error.notFound"));
         return;
       }
 
@@ -216,7 +205,7 @@ function directButton(action: Direct) {
         }
       );
       if (!done) {
-        await tell(interaction, config.t("error.notFound"));
+        await replyEphemeral(interaction, config.t("error.notFound"));
       }
     },
   });
@@ -295,11 +284,11 @@ function sanctionButton(sanction: Sanction) {
         ? await store.byId(interaction.guildId!, reportId)
         : null;
       if (!report) {
-        await tell(interaction, config.t("error.notFound"));
+        await replyEphemeral(interaction, config.t("error.notFound"));
         return;
       }
       if (report.status !== "open") {
-        await tell(interaction, config.t("error.alreadyClosed"));
+        await replyEphemeral(interaction, config.t("error.alreadyClosed"));
         return;
       }
       await interaction.showModal(sanctionModal(sanction, report.id, config));
@@ -352,7 +341,7 @@ async function runSanction(
   fields: SanctionFields
 ): Promise<void> {
   if (report.status !== "open") {
-    await tell(interaction, config.t("error.alreadyClosed"));
+    await replyEphemeral(interaction, config.t("error.alreadyClosed"));
     return;
   }
 
@@ -374,7 +363,7 @@ async function runSanction(
     logger.info(
       `Sanction refused | sanction = ${sanction} | block = ${block} | guildId = ${report.guildId} | reportId = ${report.id} | targetId = ${report.authorId} | moderatorId = ${interaction.user.id}`
     );
-    await tell(interaction, config.t(`block.${block}`));
+    await replyEphemeral(interaction, config.t(`block.${block}`));
     return;
   }
 
@@ -399,7 +388,7 @@ async function runSanction(
       `Sanction failed | sanction = ${sanction} | guildId = ${report.guildId} | reportId = ${report.id} | targetId = ${report.authorId} | moderatorId = ${interaction.user.id}`
     );
     failed = true;
-    await tell(interaction, config.t(discordErrorKey(error)));
+    await replyEphemeral(interaction, config.t(discordErrorKey(error)));
   }
 
   await store.addAction(report.id, {
@@ -427,13 +416,13 @@ function sanctionModalHandler(sanction: Sanction) {
       execute: async (interaction, args, config) => {
         const reportId = reportIdOf(args);
         if (!reportId) {
-          await tell(interaction, config.t("error.notFound"));
+          await replyEphemeral(interaction, config.t("error.notFound"));
           return;
         }
 
         const fields = readFields(sanction, interaction);
         if (typeof fields === "string") {
-          await tell(interaction, config.t(`error.${fields}`));
+          await replyEphemeral(interaction, config.t(`error.${fields}`));
           return;
         }
 
@@ -459,7 +448,7 @@ function sanctionModalHandler(sanction: Sanction) {
           }
         );
         if (!done) {
-          await tell(interaction, config.t("error.notFound"));
+          await replyEphemeral(interaction, config.t("error.notFound"));
         }
       },
     }
