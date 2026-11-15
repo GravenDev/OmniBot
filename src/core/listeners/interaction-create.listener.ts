@@ -9,14 +9,15 @@ import {
 import coreModule from "#core/core.module.js";
 import { modules } from "#core/runtime.js";
 import configService from "#core/services/config.service.js";
-import moduleService from "#core/services/module.service.js";
 import { errorMessageKey } from "#core/utils/error-message.js";
 import { commandType } from "#lib/command.js";
 import { createT } from "#lib/i18n.js";
 import type { CompatibleInteraction } from "#lib/interaction.js";
 import { declareEventListener } from "#lib/listener.js";
 import logger from "#lib/logger.js";
+import { replyEphemeral } from "#lib/reply.js";
 import { checkAccess, commandAccess } from "./interaction-create/access.js";
+import { moduleEnabled } from "./interaction-create/gates.js";
 
 function findCommand(commandName: string, type: ApplicationCommandType) {
   return [...modules, coreModule]
@@ -88,12 +89,7 @@ async function handleCommand(
     interaction.guildId
   );
 
-  const enabled =
-    command.module.id === coreModule.id ||
-    (await moduleService.getModuleStateIn(command.module.id, interaction.guild))
-      .activated;
-
-  if (!enabled) {
+  if (!(await moduleEnabled(command.module, interaction.guild))) {
     logger.warn(
       `Command not enabled | name = ${interaction.commandName} | module = ${command.module.id} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
     );
@@ -129,18 +125,13 @@ async function handleCommand(
       { err },
       `Command failed | name = ${interaction.commandName} | module = ${command.module.id} | guildId = ${interaction.guildId} | channelId = ${interaction.channelId} | userId = ${interaction.user.id}`
     );
-    const payload = {
-      content: coreConfig.t(errorMessageKey(err, "command.failed"), {
-        commandName: interaction.commandName,
-      }),
-      flags: MessageFlags.Ephemeral,
-    } as const;
     try {
-      if (interaction.replied || interaction.deferred) {
-        await interaction.followUp(payload);
-      } else {
-        await interaction.reply(payload);
-      }
+      await replyEphemeral(
+        interaction,
+        coreConfig.t(errorMessageKey(err, "command.failed"), {
+          commandName: interaction.commandName,
+        })
+      );
     } catch {
       logger.debug(`Error reply failed | name = ${interaction.commandName}`);
     }
@@ -168,12 +159,7 @@ async function handleComplete(interaction: AutocompleteInteraction) {
     return;
   }
 
-  if (
-    command.module.id !== coreModule.id &&
-    !(
-      await moduleService.getModuleStateIn(command.module.id, interaction.guild)
-    ).activated
-  ) {
+  if (!(await moduleEnabled(command.module, interaction.guild))) {
     logger.warn(
       `Command not enabled | name = ${interaction.commandName} | module = ${command.module.id}`
     );
@@ -241,12 +227,7 @@ async function handleInteraction(interaction: CompatibleInteraction) {
     interaction.guildId
   );
 
-  const enabled =
-    handler.module.id === coreModule.id ||
-    (await moduleService.getModuleStateIn(handler.module.id, interaction.guild))
-      .activated;
-
-  if (!enabled) {
+  if (!(await moduleEnabled(handler.module, interaction.guild))) {
     logger.warn(
       `Interaction for disabled module | customId = ${interaction.customId} | module = ${handler.module.id} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
     );
@@ -282,16 +263,11 @@ async function handleInteraction(interaction: CompatibleInteraction) {
       { err },
       `Interaction handler failed | customId = ${interaction.customId} | module = ${handler.module.id} | guildId = ${interaction.guildId} | channelId = ${interaction.channelId} | userId = ${interaction.user.id}`
     );
-    const payload = {
-      content: coreConfig.t(errorMessageKey(err, "interaction.failed")),
-      flags: MessageFlags.Ephemeral,
-    } as const;
     try {
-      if (interaction.replied || interaction.deferred) {
-        await interaction.followUp(payload);
-      } else {
-        await interaction.reply(payload);
-      }
+      await replyEphemeral(
+        interaction,
+        coreConfig.t(errorMessageKey(err, "interaction.failed"))
+      );
     } catch {
       logger.debug(`Error reply failed | customId = ${interaction.customId}`);
     }
@@ -324,15 +300,10 @@ async function replyDispatchFailure(interaction: Interaction) {
 
   if (!interaction.isRepliable()) return;
 
-  const payload = {
-    content: createT(interaction.locale, "core")("interaction.failed"),
-    flags: MessageFlags.Ephemeral,
-  } as const;
-  if (interaction.replied || interaction.deferred) {
-    await interaction.followUp(payload);
-  } else {
-    await interaction.reply(payload);
-  }
+  await replyEphemeral(
+    interaction,
+    createT(interaction.locale, "core")("interaction.failed")
+  );
 }
 
 export default declareEventListener({
