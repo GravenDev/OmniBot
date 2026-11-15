@@ -18,7 +18,7 @@ vi.mock("#lib/logger.js", () => ({
   loggerMaker: () => ({ info, warn: vi.fn(), error: vi.fn() }),
 }));
 
-const { sweepDepartures } = await import("./departures.js");
+const { sweepDepartures } = await import("./departures.service.js");
 
 // Whether the module is enabled, guild by guild, as the task asks it.
 const activeIn = (guildIds: string[]) => async (guildId: string) =>

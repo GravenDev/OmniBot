@@ -38,7 +38,7 @@ vi.mock("#modules/birthday/services/birthday.service.js", () => ({
 }));
 
 const checkMilestones = vi.hoisted(() => vi.fn());
-vi.mock("#modules/birthday/services/milestones.js", () => ({
+vi.mock("#modules/birthday/services/milestones.service.js", () => ({
   checkMilestones,
 }));
 

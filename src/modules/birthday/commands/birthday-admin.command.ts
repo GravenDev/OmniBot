@@ -9,7 +9,7 @@ import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { BirthdayConfigSchema } from "#modules/birthday/birthday.config.js";
 import birthdayService from "#modules/birthday/services/birthday.service.js";
-import { dropBirthdayRole } from "#modules/birthday/services/role.js";
+import { dropBirthdayRole } from "#modules/birthday/services/role.service.js";
 
 const logger = loggerMaker("birthday");
 
