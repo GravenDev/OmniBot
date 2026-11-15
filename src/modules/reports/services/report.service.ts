@@ -245,7 +245,16 @@ class ReportService implements Service {
       (this.queue.isBusy(`${guildId}:${id}`) ? busy : idle).push(id);
     }
     const reported = new Set(
-      idle.length > 0 ? await store.reportedAmong(guildId, idle) : []
+      idle.length > 0
+        ? await store.reportedAmong(guildId, idle).catch((err: unknown) => {
+            // The reports being filed are still marked deleted.
+            logger.error(
+              { err },
+              `Reported messages of a bulk deletion not looked up | guildId = ${guildId} | count = ${idle.length}`
+            );
+            return [];
+          })
+        : []
     );
     // A report filed while the query ran may be missing from it: its queue,
     // busy since, says so, and its turn comes once the report is written.
@@ -257,9 +266,17 @@ class ReportService implements Service {
     ];
     // In sequence: alerts usually share one channel, and its rate limit.
     for (const messageId of changed) {
-      await this.messageChanged(client, config, guildId, messageId, {
-        deleted: true,
-      });
+      try {
+        await this.messageChanged(client, config, guildId, messageId, {
+          deleted: true,
+        });
+      } catch (err) {
+        // The other reported messages are still marked deleted.
+        logger.error(
+          { err },
+          `Reported message deletion not recorded | guildId = ${guildId} | messageId = ${messageId}`
+        );
+      }
     }
   }
 
