@@ -12,6 +12,7 @@ import { presentGuilds } from "#lib/guild-loop.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { Module } from "#lib/module.js";
+import { declareService, type Service } from "#lib/service.js";
 import {
   ClashNotFoundError,
   type ClashReport,
@@ -19,7 +20,7 @@ import {
 import type { ClashOfCodeConfigSchema } from "#modules/clash-of-code/clash-of-code.config.js";
 import { modeLabel } from "#modules/clash-of-code/views.js";
 import codingame from "./codingame.service.js";
-import store, { type WatchedGame } from "./store.js";
+import store, { type WatchedGame } from "./store.service.js";
 import views from "./views.service.js";
 
 const logger = loggerMaker("clash-of-code");
@@ -40,7 +41,7 @@ function keyOf(game: Pick<WatchedGame, "guildId" | "handle">): string {
   return `${game.guildId}:${game.handle}`;
 }
 
-class ClashWatcher {
+class ClashWatcher implements Service {
   private readonly timers = new Map<string, NodeJS.Timeout>();
   private readonly failures = new Map<string, number>();
   private readonly waiting: (() => void)[] = [];
@@ -320,4 +321,4 @@ class ClashWatcher {
   }
 }
 
-export default new ClashWatcher();
+export default declareService(new ClashWatcher());

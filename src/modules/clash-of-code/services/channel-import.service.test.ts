@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("./codingame.service.js", () => ({
   default: { fetchClashReport: mocks.fetchClashReport },
 }));
-vi.mock("./store.js", () => ({ default: mocks.store }));
+vi.mock("./store.service.js", () => ({ default: mocks.store }));
 
 import {
   ClashNotFoundError,
@@ -27,7 +27,7 @@ import {
   MAX_RATE_LIMIT_RETRIES,
   RATE_LIMIT_PAUSE_MS,
   REQUEST_SPACING_MS,
-} from "./channel-import.js";
+} from "./channel-import.service.js";
 
 function report(overrides: Partial<ClashReport> = {}): ClashReport {
   return {

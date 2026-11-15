@@ -1,6 +1,6 @@
 import { loggerMaker } from "#lib/logger.js";
 import { declareTask } from "#lib/task.js";
-import watcher from "./services/watcher.js";
+import watcher from "./services/watcher.service.js";
 
 const logger = loggerMaker("clash-of-code");
 

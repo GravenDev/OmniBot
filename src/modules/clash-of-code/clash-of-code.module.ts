@@ -6,8 +6,8 @@ import cocAdminCommand from "./commands/coc-admin.command.js";
 import cocCommand from "./commands/coc.command.js";
 import leaderboardPageButton from "./interactions/leaderboard-page.button.js";
 import messageCreateListener from "./listeners/message-create.listener.js";
-import store from "./services/store.js";
-import watcher from "./services/watcher.js";
+import store from "./services/store.service.js";
+import watcher from "./services/watcher.service.js";
 import { clashOfCodeTasks } from "./tasks.js";
 
 const logger = loggerMaker("clash-of-code");
