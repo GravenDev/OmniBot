@@ -41,7 +41,10 @@ const module = { id: "server-stats" } as Module<ServerStatsConfigSchema>;
 const guild = { id: "guild-1", channels: { cache: new Map() } };
 const client = {
   guilds: {
-    cache: { has: (id: string) => id !== "gone" },
+    cache: {
+      get: (id: string) =>
+        id === "gone" ? undefined : { id, available: true },
+    },
     fetch: async () => guild,
   },
 } as unknown as Client<true>;
