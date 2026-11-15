@@ -193,18 +193,9 @@ async function announceBirthdays(
   members: Collection<string, GuildMember>,
   today: CalendarDay
 ): Promise<void> {
-  // Rows of members who left while the bot could not see it go now.
+  // Members missing from the list are only left out: it may be incomplete,
+  // and the `sweep-departures` maintenance task deletes the departed ones.
   const entries = await birthdayService.list(guild.id);
-  const departed = entries
-    .map((entry) => entry.userId)
-    .filter((userId) => !members.has(userId));
-  if (departed.length > 0) {
-    await birthdayService.removeMany(guild.id, departed);
-    logger.info(
-      `Departed members' birthdays removed | guildId = ${guild.id} | count = ${departed.length}`
-    );
-  }
-
   const announced = announcedCelebrants(
     entries.filter((entry) => members.has(entry.userId)),
     today
