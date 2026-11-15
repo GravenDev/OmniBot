@@ -1,6 +1,7 @@
 import type { GuildMember, UserSelectMenuInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
+import { USERS_ID } from "#modules/temp-voice/panel.js";
 import {
   block,
   rememberNotice,
@@ -9,9 +10,8 @@ import {
   type ActionContext,
   type Outcome,
 } from "#modules/temp-voice/services/actions.js";
-import { USERS_ID } from "#modules/temp-voice/services/panel.js";
-import { notifyRow, outcomeText } from "#modules/temp-voice/services/views.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
+import { notifyRow, outcomeText } from "#modules/temp-voice/views.js";
 
 const none: Outcome = { ok: false, key: "select.noMember" };
 

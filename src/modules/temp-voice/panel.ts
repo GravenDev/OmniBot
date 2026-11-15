@@ -12,7 +12,7 @@ import type { TFunction } from "#lib/i18n.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import { Colors } from "#utils/colors.js";
 import { ACCESS_MODES, accessMode, type AccessMode } from "./access-mode.js";
-import type { TempChannel } from "./store.js";
+import type { TempChannel } from "./services/store.js";
 
 export const PANEL_ID = "tempvoice";
 export const ACCESS_ID = "tempvoice-access";

@@ -1,13 +1,17 @@
 import type { Guild, GuildMember, VoiceBasedChannel } from "discord.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
+import {
+  accessMode,
+  modeFlags,
+  type AccessMode,
+} from "#modules/temp-voice/access-mode.js";
+import { cleanName } from "#modules/temp-voice/naming.js";
+import { accessState } from "#modules/temp-voice/overwrites.js";
+import { isModerator, isProtected } from "#modules/temp-voice/permissions.js";
 import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
-import { accessMode, modeFlags, type AccessMode } from "./access-mode.js";
 import { applyAccess, queue, removeTempChannel } from "./lifecycle.js";
-import { cleanName } from "./naming.js";
-import { accessState } from "./overwrites.js";
 import panelService from "./panel.service.js";
-import { isModerator, isProtected } from "./permissions.js";
 import renames from "./renames.service.js";
 import store, {
   type ChannelState,

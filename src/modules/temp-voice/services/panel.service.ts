@@ -2,7 +2,7 @@ import type { VoiceBasedChannel } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
 import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
-import { panelMessage } from "./panel.js";
+import { panelMessage } from "#modules/temp-voice/panel.js";
 import store, { type TempChannel } from "./store.js";
 
 const logger = loggerMaker("temp-voice");

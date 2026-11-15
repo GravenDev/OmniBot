@@ -1,11 +1,11 @@
 import { MessageFlags, type ModalSubmitInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
+import { parseUserLimit } from "#modules/temp-voice/naming.js";
+import { MODAL_ID } from "#modules/temp-voice/panel.js";
 import { edit, withChannel } from "#modules/temp-voice/services/actions.js";
-import { parseUserLimit } from "#modules/temp-voice/services/naming.js";
-import { MODAL_ID } from "#modules/temp-voice/services/panel.js";
-import { outcomeText } from "#modules/temp-voice/services/views.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
+import { outcomeText } from "#modules/temp-voice/views.js";
 
 export default declareInteractionHandler<
   ModalSubmitInteraction,

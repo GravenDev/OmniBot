@@ -1,15 +1,15 @@
 import type { StringSelectMenuInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
+import { PICK_ID } from "#modules/temp-voice/panel.js";
 import {
   kick,
   revoke,
   transfer,
   withChannel,
 } from "#modules/temp-voice/services/actions.js";
-import { PICK_ID } from "#modules/temp-voice/services/panel.js";
-import { outcomeText } from "#modules/temp-voice/services/views.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
+import { outcomeText } from "#modules/temp-voice/views.js";
 
 export default declareInteractionHandler<
   StringSelectMenuInteraction,

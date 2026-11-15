@@ -1,6 +1,7 @@
 import { MessageFlags, type ButtonInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
+import { isPanelAction, PANEL_ID } from "#modules/temp-voice/panel.js";
 import {
   authorize,
   claim,
@@ -13,20 +14,19 @@ import {
   type Outcome,
 } from "#modules/temp-voice/services/actions.js";
 import { queue } from "#modules/temp-voice/services/lifecycle.js";
-import { isPanelAction, PANEL_ID } from "#modules/temp-voice/services/panel.js";
 import panelService from "#modules/temp-voice/services/panel.service.js";
 import store from "#modules/temp-voice/services/store.js";
+import type {
+  TempVoiceConfig,
+  TempVoiceConfigSchema,
+} from "#modules/temp-voice/temp-voice.config.js";
 import {
   deleteConfirmation,
   editModal,
   membersSheet,
   outcomeText,
   transferSelect,
-} from "#modules/temp-voice/services/views.js";
-import type {
-  TempVoiceConfig,
-  TempVoiceConfigSchema,
-} from "#modules/temp-voice/temp-voice.config.js";
+} from "#modules/temp-voice/views.js";
 
 const ephemeral = { flags: MessageFlags.Ephemeral } as const;
 

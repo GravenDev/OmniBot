@@ -1,16 +1,16 @@
 import { MessageFlags, type StringSelectMenuInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
-import { isAccessMode } from "#modules/temp-voice/services/access-mode.js";
+import { isAccessMode } from "#modules/temp-voice/access-mode.js";
+import { ACCESS_ID } from "#modules/temp-voice/panel.js";
 import {
   redrawPanel,
   setAccess,
   withChannel,
 } from "#modules/temp-voice/services/actions.js";
 import { queue } from "#modules/temp-voice/services/lifecycle.js";
-import { ACCESS_ID } from "#modules/temp-voice/services/panel.js";
-import { outcomeText } from "#modules/temp-voice/services/views.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
+import { outcomeText } from "#modules/temp-voice/views.js";
 
 export default declareInteractionHandler<
   StringSelectMenuInteraction,

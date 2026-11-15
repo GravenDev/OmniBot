@@ -14,8 +14,7 @@ import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { fetchMember } from "#lib/moderation.js";
 import { missingBotPermissions } from "#lib/permissions.js";
-import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
-import { renderName } from "./naming.js";
+import { renderName } from "#modules/temp-voice/naming.js";
 import {
   managedMembers,
   overwriteChanges,
@@ -24,9 +23,13 @@ import {
   toOverwrite,
   type AccessState,
   type Overwrite,
-} from "./overwrites.js";
+} from "#modules/temp-voice/overwrites.js";
+import {
+  isProtected,
+  REQUIRED_PERMISSIONS,
+} from "#modules/temp-voice/permissions.js";
+import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
 import panelService from "./panel.service.js";
-import { isProtected, REQUIRED_PERMISSIONS } from "./permissions.js";
 import renames from "./renames.service.js";
 import store, { type Hub, type TempChannel } from "./store.js";
 

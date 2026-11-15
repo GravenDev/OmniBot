@@ -12,10 +12,10 @@ import {
 } from "discord.js";
 import { MAX_SELECT_VALUES } from "#lib/config.js";
 import type { TFunction } from "#lib/i18n.js";
-import type { Outcome } from "./actions.js";
 import { CHANNEL_NAME_MAX } from "./naming.js";
 import { MODAL_ID, panelButton, PICK_ID, USERS_ID } from "./panel.js";
-import type { TempChannel } from "./store.js";
+import type { Outcome } from "./services/actions.js";
+import type { TempChannel } from "./services/store.js";
 
 export type UserAction = "trust" | "block";
 export type PresentAction = "kick" | "transfer";
