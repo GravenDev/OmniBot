@@ -6,6 +6,7 @@ import {
 } from "#lib/discord-polyfills/guild-message-search.js";
 import { loggerMaker } from "#lib/logger.js";
 import { sweepStoredMembers } from "#lib/member-presence.js";
+import { seniorityStart } from "./overrides.js";
 
 /** The recomputed seniority of the guild's members, by user id. */
 export async function overrides(guildId: string): Promise<Map<string, Date>> {
@@ -14,14 +15,6 @@ export async function overrides(guildId: string): Promise<Map<string, Date>> {
     select: { userId: true, since: true },
   });
   return new Map(rows.map(({ userId, since }) => [userId, since]));
-}
-
-/** The date a member's seniority counts from: the earliest one known. */
-export function seniorityStart(
-  joinedAt: Date,
-  override: Date | undefined
-): Date {
-  return override && override < joinedAt ? override : joinedAt;
 }
 
 export interface FirstMessage {

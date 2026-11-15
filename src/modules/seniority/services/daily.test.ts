@@ -55,6 +55,14 @@ vi.mock("./cards.js", async (importOriginal) => ({
   ...cards,
 }));
 
+const portraits = vi.hoisted(() => ({
+  ofMembers: vi.fn(async (members: { id: string }[]) =>
+    members.map(({ id }) => `portrait of ${id}`)
+  ),
+  serverIcon: vi.fn(async () => "server icon"),
+}));
+vi.mock("./portraits.service.js", () => ({ default: portraits }));
+
 const { runAllGuildDays, runGuildDay } = await import("./daily.js");
 
 const module = { id: "seniority" } as unknown as Module<SeniorityConfigSchema>;
@@ -200,6 +208,13 @@ describe("runGuildDay", () => {
       (celebrated as { member: GuildMember }[]).map(({ member }) => member.id)
     ).toEqual(["alice", "bob", "quiet"]);
     expect(day).toMatchObject({ year: 2026, month: 10, day: 16 });
+    // Their portraits, in the same order; the server's icon on its card.
+    expect(cards.seniorityCard.mock.calls[0]![3]).toEqual([
+      "portrait of alice",
+      "portrait of bob",
+      "portrait of quiet",
+    ]);
+    expect(cards.serverCard.mock.calls[0]![4]).toBe("server icon");
     expect(state.claimDay).toHaveBeenCalledWith("guild-1", "2026-10-16");
   });
 

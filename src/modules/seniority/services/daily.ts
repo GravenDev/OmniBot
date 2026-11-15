@@ -34,6 +34,7 @@ import {
   serverFacts,
 } from "./cards.js";
 import { overrides } from "./overrides.service.js";
+import portraits from "./portraits.service.js";
 import * as state from "./state.js";
 
 const logger = loggerMaker("seniority");
@@ -113,7 +114,13 @@ async function announceMembers(
   const posted = await postCard(
     logger,
     `the member anniversaries | guildId = ${guild.id}`,
-    () => seniorityCard(config, celebrated, today),
+    async () =>
+      seniorityCard(
+        config,
+        celebrated,
+        today,
+        await portraits.ofMembers(celebrated.map(({ member }) => member))
+      ),
     (card) =>
       send(
         channel,
@@ -159,7 +166,15 @@ async function announceServer(
   const posted = await postCard(
     logger,
     `the server anniversary | guildId = ${guild.id}`,
-    () => serverCard(guild, config, members?.values() ?? [], years, recomputed),
+    async () =>
+      serverCard(
+        guild,
+        config,
+        members?.values() ?? [],
+        years,
+        await portraits.serverIcon(guild),
+        recomputed
+      ),
     (card) =>
       send(
         channel,

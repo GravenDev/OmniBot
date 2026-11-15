@@ -15,11 +15,6 @@ vi.mock("#lib/celebration-card.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("#lib/celebration-card.js")>()),
   ...rendering,
 }));
-vi.mock("#lib/imaging.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("#lib/imaging.js")>()),
-  fetchImage: async () => null,
-  fetchAvatar: async () => "avatar",
-}));
 
 const { celebratedMembers, seniorityCard, serverCard } =
   await import("./cards.js");
@@ -51,6 +46,10 @@ const config = (values: { loopCard?: boolean } = {}) =>
   makeTestConfig("seniority", seniorityConfigSchema, values, "fr");
 
 const NOV_1 = { year: 2026, month: 11, day: 1 };
+
+/** The portraits fetched for the members: the first three only. */
+const portraits = (members: readonly unknown[]) =>
+  members.map((_, index) => (index < 3 ? "avatar" : null)) as never[];
 
 describe("celebratedMembers", () => {
   it("lists the longest-standing first, without bots or newcomers", () => {
@@ -111,7 +110,8 @@ describe("seniorityCard", () => {
     const card: AttachmentBuilder = await seniorityCard(
       config(),
       celebrated,
-      NOV_1
+      NOV_1,
+      portraits(celebrated)
     );
 
     const [drawn] = rendering.renderCelebrationImage.mock.calls[0]! as [
@@ -122,7 +122,6 @@ describe("seniorityCard", () => {
       title: "5 anniversaires d'arrivée !",
       names: "11 ans : 1 · 10 ans : 1 · 9 ans : 1 · autres : 2",
       footer: "📅  1er novembre",
-      // Only the drawn portraits are fetched.
       avatars: ["avatar", "avatar", "avatar", null, null],
     });
     expect(card.description).toBe(
@@ -131,28 +130,35 @@ describe("seniorityCard", () => {
   });
 
   it("names the file after the image it got, animated or still", async () => {
-    expect((await seniorityCard(config(), celebrated, NOV_1)).name).toBe(
-      "seniority.webp"
-    );
+    expect(
+      (await seniorityCard(config(), celebrated, NOV_1, portraits(celebrated)))
+        .name
+    ).toBe("seniority.webp");
     rendering.renderCelebrationImage.mockResolvedValueOnce({
       data: Buffer.from("png"),
       extension: "png",
     });
-    expect((await seniorityCard(config(), celebrated, NOV_1)).name).toBe(
-      "seniority.png"
-    );
+    expect(
+      (await seniorityCard(config(), celebrated, NOV_1, portraits(celebrated)))
+        .name
+    ).toBe("seniority.png");
   });
 
   it("loops the card, or plays it once when the server asks", async () => {
-    await seniorityCard(config(), celebrated, NOV_1);
-    await seniorityCard(config({ loopCard: false }), celebrated, NOV_1);
+    await seniorityCard(config(), celebrated, NOV_1, portraits(celebrated));
+    await seniorityCard(
+      config({ loopCard: false }),
+      celebrated,
+      NOV_1,
+      portraits(celebrated)
+    );
     expect(
       rendering.renderCelebrationImage.mock.calls.map((call) => call[1])
     ).toEqual([{ loop: true }, { loop: false }]);
   });
 
   it("names up to three members with their years", async () => {
-    await seniorityCard(config(), celebrated.slice(2), NOV_1);
+    await seniorityCard(config(), celebrated.slice(2), NOV_1, []);
     expect(rendering.renderCelebrationImage.mock.calls[0]![0]).toMatchObject({
       names: "m2 (9 ans) · m3 (8 ans) · m4 (7 ans)",
     });
@@ -163,7 +169,7 @@ describe("seniorityCard", () => {
       member: member(`c${index}`, "2020-11-01T08:00:00Z"),
       years,
     }));
-    await seniorityCard(config(), crowd, NOV_1);
+    await seniorityCard(config(), crowd, NOV_1, []);
     expect(rendering.renderCelebrationImage.mock.calls[0]![0]).toMatchObject({
       names: "5 ans : 2 · 3 ans : 3",
     });
@@ -174,14 +180,14 @@ describe("seniorityCard", () => {
       member: member(`d${index}`, "2016-11-01T08:00:00Z"),
       years,
     }));
-    await seniorityCard(config(), crowd, NOV_1);
+    await seniorityCard(config(), crowd, NOV_1, []);
     expect(rendering.renderCelebrationImage.mock.calls[0]![0]).toMatchObject({
       names: "9 ans : 2 · 8 ans : 1 · 7 ans : 1 · autres : 3",
     });
   });
 
   it("wishes a single member on their own", async () => {
-    await seniorityCard(config(), celebrated.slice(4), NOV_1);
+    await seniorityCard(config(), celebrated.slice(4), NOV_1, []);
     expect(rendering.renderCelebrationImage.mock.calls[0]![0]).toMatchObject({
       title: "Joyeux anniversaire d'arrivée !",
       names: "m4 (7 ans)",
@@ -199,6 +205,7 @@ describe("serverCard", () => {
         member("returned", "2024-01-01T08:00:00Z"),
       ],
       10,
+      null,
       new Map([["returned", new Date("2016-12-01T08:00:00Z")]])
     );
     const [drawn] = rendering.renderCelebrationImage.mock.calls[0]! as [
@@ -216,7 +223,8 @@ describe("serverCard", () => {
         member("nora", "2017-03-03T08:00:00Z"),
         member("late", "2020-01-01T08:00:00Z"),
       ],
-      10
+      10,
+      null
     );
 
     expect(rendering.renderCelebrationImage.mock.calls[0]![0]).toMatchObject({
@@ -235,8 +243,8 @@ describe("serverCard", () => {
   });
 
   it("loops the card, or plays it once when the server asks", async () => {
-    await serverCard(guild, config(), [], 10);
-    await serverCard(guild, config({ loopCard: false }), [], 10);
+    await serverCard(guild, config(), [], 10, null);
+    await serverCard(guild, config({ loopCard: false }), [], 10, null);
     expect(
       rendering.renderCelebrationImage.mock.calls.map((call) => call[1])
     ).toEqual([{ loop: true }, { loop: false }]);
@@ -247,7 +255,8 @@ describe("serverCard", () => {
       guild,
       config(),
       [member("bot", "2016-11-01T11:00:00Z", true)],
-      1
+      1,
+      null
     );
     expect(rendering.renderCelebrationImage.mock.calls[0]![0]).toMatchObject({
       title: "Le serveur fête son premier anniversaire !",
