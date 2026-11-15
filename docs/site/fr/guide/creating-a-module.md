@@ -34,7 +34,8 @@ src/modules/mon-module/
 │   ├── confirmer.button.ts
 │   └── retour.modal.ts
 ├── rendering/                    # Images et accent du module, `theme.ts` (voir Générer des images)
-├── services/                     # Logique métier
+├── rules.ts                      # Règles et calculs purs (voir Services)
+├── services/                     # Code avec un état ou des dépendances (voir Services)
 │   └── mon-service.service.ts
 ├── tasks.ts                      # Tâches planifiées (optionnel)
 └── mon-module.prisma             # Modèles Prisma (optionnel)
@@ -256,7 +257,7 @@ Avant que votre module n'atteigne des serveurs de production :
 
 ## Bonnes pratiques
 
-- **Gardez `onLoad` léger** — enregistrez les artefacts et loggez, déplacez la logique dans les services
+- **Gardez `onLoad` léger** — enregistrez les artefacts et loggez, sortez la logique (dans les services, ou en fonctions simples quand elle est pure)
 - **Utilisez le kebab-case** pour les IDs de module et les noms de dossiers
 - **Laissez échouer les hooks de cycle de vie** — une erreur levée par `onInstall`/`onUninstall` annule l'opération ; n'interceptez que ce qui peut échouer sans conséquence
 - **Organisez les fichiers** — une commande, un écouteur ou un gestionnaire par fichier, dans son sous-dossier ; les tâches partagent un seul `tasks.ts`
@@ -268,5 +269,5 @@ Avant que votre module n'atteigne des serveurs de production :
 - [Écouteurs](./listeners) — Réagir aux événements Discord
 - [Interactions](./interactions) — Boutons, menus de sélection et modales
 - [Configuration](./configuration) — Déclarer un schéma de configuration typé
-- [Services](./services) — Organiser la logique métier
+- [Services](./services) — Partager l'état et les dépendances
 - [Base de données](./database) — Persister les données avec Prisma

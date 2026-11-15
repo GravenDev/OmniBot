@@ -309,6 +309,6 @@ Cela signifie que les chaînes d'interface communes comme `config.previous`, `co
 
 ## Prochaines étapes
 
-- [Services](./services) pour organiser la logique métier
+- [Services](./services) pour partager l'état et les dépendances
 - [Base de données](./database) pour les données persistantes avancées
 - [Commandes](./commands) pour créer des commandes slash

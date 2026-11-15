@@ -125,19 +125,19 @@ src/
 
 Files use suffixes to identify their role:
 
-| Suffix          | Role                                                       |
-| --------------- | ---------------------------------------------------------- |
-| `*.module.ts`   | Module definition (e.g. `thread-creator.module.ts`)        |
-| `*.config.ts`   | Configuration schema (e.g. `thread-creator.config.ts`)     |
-| `*.command.ts`  | Slash command (e.g. `greet.command.ts`)                    |
-| `*.listener.ts` | Event listener (e.g. `message-create.listener.ts`)         |
-| `*.button.ts`   | Button interaction handler                                 |
-| `*.modal.ts`    | Modal submit handler                                       |
-| `*.select.ts`   | Select menu handler                                        |
-| `*.service.ts`  | Business service (e.g. `thread-creation-queue.service.ts`) |
-| `tasks.ts`      | Scheduled tasks, one file at the module root               |
-| `*.prisma`      | Prisma model definition                                    |
-| `i18n/*.json`   | Locale translation files (e.g. `en.json`, `fr.json`)       |
+| Suffix          | Role                                                          |
+| --------------- | ------------------------------------------------------------- |
+| `*.module.ts`   | Module definition (e.g. `thread-creator.module.ts`)           |
+| `*.config.ts`   | Configuration schema (e.g. `thread-creator.config.ts`)        |
+| `*.command.ts`  | Slash command (e.g. `greet.command.ts`)                       |
+| `*.listener.ts` | Event listener (e.g. `message-create.listener.ts`)            |
+| `*.button.ts`   | Button interaction handler                                    |
+| `*.modal.ts`    | Modal submit handler                                          |
+| `*.select.ts`   | Select menu handler                                           |
+| `*.service.ts`  | Service with state or dependencies (e.g. `config.service.ts`) |
+| `tasks.ts`      | Scheduled tasks, one file at the module root                  |
+| `*.prisma`      | Prisma model definition                                       |
+| `i18n/*.json`   | Locale translation files (e.g. `en.json`, `fr.json`)          |
 
 ---
 

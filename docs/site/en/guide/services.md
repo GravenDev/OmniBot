@@ -1,6 +1,16 @@
 # Services
 
-Services allow you to encapsulate business logic and reuse it across your module's commands, listeners, and interactions. Unlike modules, services are **not auto-discovered** — you import them directly where needed.
+Services hold the state and the dependencies (database, Discord, external APIs) shared across your module's commands, listeners, and interactions. Unlike modules, services are **not auto-discovered** — you import them directly where needed.
+
+## What Is a Service
+
+A service is code that holds **state** (a cache, a queue, a timer) or **dependencies** (the database, Discord, an external API) and that several parts of the module share. Make it a class declared with `declareService`, in `services/<name>.service.ts`.
+
+Pure functions (parsing, formatting, scoring rules, building a message from data) are not services: keep them as plain exported functions, with no class and no `declareService`, in a file at the root of the module named after their job (`rules.ts`, `formatting.ts`). They are easier to read and to test that way. A file that mixes both is split: the pure part on one side, the part that reads or writes on the other.
+
+There is no `domain/` or `business/` folder, and no layers on top: a module stays small, and what several modules share goes to `src/lib/`. When a module gathers many pure files (six or seven), group them in a folder named after their role, as `rendering/` does for images.
+
+The starboard shows the target: `eligibility.ts` (which messages may reach the board) and `view.ts` (the message posted on the board) are pure and belong at the root of `src/modules/starboard/`; `tally.ts` mixes both, its counting rules being pure while `tallyReactions` fetches the reactors from Discord, so it gets split; `starboard.service.ts` and `store.ts`, which read and write the database, stay in `services/`, the latter as `store.service.ts`. Today all of them sit in `services/`: like most existing modules, the starboard predates this rule. Apply it to new code, and when a change reworks a module.
 
 ## Creating a Service
 
@@ -52,22 +62,24 @@ The `thread-creator` module demonstrates a practical service pattern. Here's how
 A per-guild FIFO queue with rate limiting for thread creation:
 
 ```typescript
-class ThreadCreationQueue implements Service {
+export class ThreadCreationQueue {
   // Each guild has its own queue
-  private queues = new Map<string, QueuedJob[]>();
-  private pumps = new Map<string, boolean>();
-  private timestamps = new Map<string, number[]>();
+  private readonly queues = new Map<string, ThreadJob[]>();
+  private readonly recentCreations = new Map<string, number[]>();
+  private readonly draining = new Set<string>();
 
-  enqueue(guildId: string, job: QueuedJob): void {
-    // Add job to guild's queue and start processing
+  enqueue(guildId: string, job: ThreadJob): void {
+    // Add job to guild's queue and start draining
   }
 
-  private pump(guildId: string): void {
+  private async pump(guildId: string): Promise<void> {
     // Process jobs at max 5 per 10 seconds per guild
-    // Uses setTimeout to schedule next batch when rate-limited
+    // Uses setTimeout to resume when the window frees up
   }
 }
 ```
+
+It is a plain class, not declared with `declareService`: `ThreadCreatorService` creates its only instance and is the one the module shares.
 
 Key characteristics:
 
@@ -82,10 +94,12 @@ Coordinates thread creation:
 
 ```typescript
 class ThreadCreatorService implements Service {
-  async scheduleThreadForMessage(
+  private readonly queue = new ThreadCreationQueue();
+
+  scheduleThreadForMessage(
     message: Message,
-    config: ConfigProvider
-  ): Promise<void> {
+    config: ConfigProvider<ThreadCreatorConfigSchema>
+  ): void {
     // Check if message channel is in the configured channels
     // Generate thread name from template
     // Enqueue thread creation
@@ -100,30 +114,39 @@ class ThreadCreatorService implements Service {
 
 The `ThreadCreatorService` is used by the `messageCreate` listener, which calls `scheduleThreadForMessage()` with the message and the module's config. The service handles channel checking, name generation, and queueing in one call.
 
+This module predates the rule above too: `generateThreadName` and `creationFailure` are pure and would move to a file at the module root, and the queue, which holds state, would live in `thread-creation-queue.service.ts`.
+
 ### Config Schema Integration
 
 ```typescript
 // thread-creator.config.ts
-config: {
+export const threadCreatorConfigSchema = {
   channels: {
-    name: "Channels",
-    description: "Channels to watch",
+    name: "Monitored channels",
+    description: "Channels where new messages are monitored (…)",
     type: [ConfigType.CHANNEL],
   },
   welcomeMessage: {
     name: "Welcome message",
-    description: "Message posted in new threads",
+    description: "Message automatically posted in each created thread.",
     type: ConfigType.STRING,
     defaultValue: "💬 Use this thread to discuss this topic!",
   },
-}
+  threadNameTemplate: {
+    name: "Name template",
+    description:
+      "Thread name — variables: {messageAuthor}, {messageContent}, {timestamp}.",
+    type: ConfigType.STRING,
+    defaultValue: "Discussion - {messageAuthor}",
+  },
+} satisfies ConfigSchema;
 ```
 
 ## Best Practices
 
 - **Single responsibility** — each service should focus on one concern
 - **Testable** — export the class so unit tests can import it directly before `declareService`; alternatively keep it in a separate file and import the plain class for testing without Discord API calls
-- **No global state** — use class instances with proper encapsulation
+- **State inside the service** — keep it in the instance's private fields, not in module-level variables beside it
 - **Import directly** — import the declared instance where needed
 - **Use with Prisma** — services are the natural place for database operations
 

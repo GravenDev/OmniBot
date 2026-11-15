@@ -1,6 +1,16 @@
 # Services
 
-Les services vous permettent d'encapsuler la logique métier et de la réutiliser dans les commandes, écouteurs et interactions de votre module. Contrairement aux modules, les services ne sont **pas auto-découverts** — vous les importez directement là où vous en avez besoin.
+Les services portent l'état et les dépendances (base de données, Discord, API externes) partagés par les commandes, écouteurs et interactions de votre module. Contrairement aux modules, les services ne sont **pas auto-découverts** — vous les importez directement là où vous en avez besoin.
+
+## Qu'est-ce qu'un service
+
+Un service est du code qui porte un **état** (un cache, une file, un minuteur) ou des **dépendances** (la base de données, Discord, une API externe), et que plusieurs parties du module partagent. Écrivez-le comme une classe déclarée avec `declareService`, dans `services/<nom>.service.ts`.
+
+Les fonctions pures (analyse, mise en forme, règles de calcul, construction d'un message à partir de données) ne sont pas des services : gardez-les en fonctions exportées simples, sans classe ni `declareService`, dans un fichier à la racine du module, nommé d'après leur rôle (`rules.ts`, `formatting.ts`). Elles se lisent et se testent plus facilement ainsi. Un fichier qui mélange les deux se découpe : la partie pure d'un côté, celle qui lit ou écrit de l'autre.
+
+Pas de dossier `domain/` ni `business/`, ni de couches par-dessus : un module reste petit, et ce que plusieurs modules partagent va dans `src/lib/`. Quand un module accumule beaucoup de fichiers purs (six ou sept), regroupez-les dans un dossier nommé d'après leur rôle, comme `rendering/` pour les images.
+
+Le starboard montre la cible : `eligibility.ts` (quels messages peuvent atteindre le tableau) et `view.ts` (le message posté sur le tableau) sont purs et ont leur place à la racine de `src/modules/starboard/` ; `tally.ts` mélange les deux, ses règles de décompte étant pures quand `tallyReactions` va chercher les auteurs des réactions sur Discord, et se découpe donc ; `starboard.service.ts` et `store.ts`, qui lisent et écrivent en base, restent dans `services/`, le second sous le nom `store.service.ts`. Aujourd'hui, tous sont dans `services/` : comme la plupart des modules existants, le starboard précède cette règle. Appliquez-la au nouveau code, et quand un changement retravaille un module.
 
 ## Créer un service
 
@@ -52,22 +62,24 @@ Le module `thread-creator` illustre un modèle de service pratique. Voici son fo
 Une file d'attente FIFO par serveur avec limitation de débit pour la création de fils :
 
 ```typescript
-class ThreadCreationQueue implements Service {
+export class ThreadCreationQueue {
   // Chaque serveur a sa propre file
-  private files = new Map<string, JobEnAttente[]>();
-  private pompes = new Map<string, boolean>();
-  private horodatages = new Map<string, number[]>();
+  private readonly queues = new Map<string, ThreadJob[]>();
+  private readonly recentCreations = new Map<string, number[]>();
+  private readonly draining = new Set<string>();
 
-  enqueue(guildId: string, job: JobEnAttente): void {
+  enqueue(guildId: string, job: ThreadJob): void {
     // Ajouter le job à la file du serveur et démarrer le traitement
   }
 
-  private pump(guildId: string): void {
+  private async pump(guildId: string): Promise<void> {
     // Traiter les jobs à max 5 par 10 secondes par serveur
-    // Utilise setTimeout pour planifier le prochain lot quand le taux est atteint
+    // Utilise setTimeout pour reprendre quand la fenêtre se libère
   }
 }
 ```
+
+C'est une classe simple, sans `declareService` : `ThreadCreatorService` crée son unique instance, et c'est lui que le module partage.
 
 Caractéristiques clés :
 
@@ -82,48 +94,59 @@ Coordonne la création de fils :
 
 ```typescript
 class ThreadCreatorService implements Service {
-  async planifierCreationFil(
+  private readonly queue = new ThreadCreationQueue();
+
+  scheduleThreadForMessage(
     message: Message,
-    config: ConfigProvider
-  ): Promise<void> {
+    config: ConfigProvider<ThreadCreatorConfigSchema>
+  ): void {
     // Vérifier si le salon du message est dans les salons configurés
     // Générer le nom du fil à partir du template
     // Mettre en file d'attente la création du fil
   }
 
-  genererNomFil(template: string, message: Message): string {
+  generateThreadName(template: string, message: Message): string {
     // Remplacer les variables : {messageAuthor}, {messageContent}, {timestamp}
     // Limiter à 100 caractères (limite Discord)
   }
 }
 ```
 
-Le `ThreadCreatorService` est utilisé par l'écouteur `messageCreate`, qui appelle `planifierCreationFil()` avec le message et la configuration du module. Le service gère la vérification du salon, la génération du nom et la mise en file d'attente en un seul appel.
+Le `ThreadCreatorService` est utilisé par l'écouteur `messageCreate`, qui appelle `scheduleThreadForMessage()` avec le message et la configuration du module. Le service gère la vérification du salon, la génération du nom et la mise en file d'attente en un seul appel.
+
+Ce module précède lui aussi la règle ci-dessus : `generateThreadName` et `creationFailure` sont purs et iraient dans un fichier à la racine du module, et la file, qui porte un état, vivrait dans `thread-creation-queue.service.ts`.
 
 ### Intégration avec le schéma de configuration
 
 ```typescript
 // thread-creator.config.ts
-config: {
-  salons: {
-    name: "Salons",
-    description: "Salons à surveiller",
+export const threadCreatorConfigSchema = {
+  channels: {
+    name: "Monitored channels",
+    description: "Channels where new messages are monitored (…)",
     type: [ConfigType.CHANNEL],
   },
-  messageBienvenue: {
-    name: "Message de bienvenue",
-    description: "Message posté dans les nouveaux fils",
+  welcomeMessage: {
+    name: "Welcome message",
+    description: "Message automatically posted in each created thread.",
     type: ConfigType.STRING,
-    defaultValue: "💬 Utilisez ce fil pour discuter de ce sujet !",
+    defaultValue: "💬 Use this thread to discuss this topic!",
   },
-}
+  threadNameTemplate: {
+    name: "Name template",
+    description:
+      "Thread name — variables: {messageAuthor}, {messageContent}, {timestamp}.",
+    type: ConfigType.STRING,
+    defaultValue: "Discussion - {messageAuthor}",
+  },
+} satisfies ConfigSchema;
 ```
 
 ## Bonnes pratiques
 
 - **Responsabilité unique** — chaque service doit se concentrer sur une préoccupation
 - **Testable** — exportez la classe pour que les tests unitaires puissent l'importer directement avant `declareService` ; ou gardez-la dans un fichier séparé et importez la classe brute pour les tests sans appels API Discord
-- **Pas d'état global** — utilisez des instances de classe avec un encapsullement approprié
+- **L'état dans le service** — gardez-le dans les champs privés de l'instance, pas dans des variables de module à côté
 - **Import direct** — importez l'instance déclarée là où vous en avez besoin
 - **Utilisation avec Prisma** — les services sont l'endroit naturel pour les opérations base de données
 

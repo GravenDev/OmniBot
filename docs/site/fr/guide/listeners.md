@@ -125,4 +125,4 @@ Enregistrez-le comme n'importe quel autre écouteur.
 
 - [Configuration](./configuration) pour gérer les paramètres du module
 - [Base de données](./database) pour le stockage persistant des données
-- [Services](./services) pour organiser la logique métier
+- [Services](./services) pour partager l'état et les dépendances

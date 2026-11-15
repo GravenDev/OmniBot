@@ -140,13 +140,13 @@ The configuration system has several layers:
 
 ## Service Layer
 
-Unlike modules, **services are not auto-discovered**. They are plain TypeScript classes or objects tagged with `declareService()`. You import them directly where needed:
+Unlike modules, **services are not auto-discovered**. A service is a class whose instance is declared with `declareService()` and exported by default (see [Services](./services)). You import that instance directly where needed:
 
 ```typescript
-import queue from "../services/thread-creation-queue.js";
+import threadCreatorService from "../services/thread-creator.service.js";
 ```
 
-This keeps the service layer simple and dependency-free.
+This keeps the service layer simple: no container, no dependency injection.
 
 ## Listener Auto-Activation
 
