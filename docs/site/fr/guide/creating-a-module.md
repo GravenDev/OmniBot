@@ -16,9 +16,13 @@ Pour les tests, utilisez les helpers partagés de `#lib/testing.js` (`makeTestCo
 
 Un module n'atteint le core que par `#core/services/`, et les helpers partagés vivent dans `#lib/` : le lint (`no-restricted-imports`) refuse tout autre import `#core/…` depuis un module, sauf `#core/i18n/` dans ses tests (pour lire les textes du core). Simuler `#core/runtime.js` dans un test reste nécessaire pour autant : les services le chargent.
 
+## Structure d'un module
+
 ```
 src/modules/mon-module/
 ├── mon-module.module.ts          # Définition principale du module
+├── mon-module.config.ts          # Schéma de configuration (optionnel)
+├── mon-module.test.ts            # Tests, chacun à côté du fichier testé
 ├── i18n/                         # Fichiers de traduction
 │   ├── en.json
 │   └── fr.json
@@ -29,10 +33,11 @@ src/modules/mon-module/
 ├── interactions/                 # Gestionnaires de boutons, modales, selects
 │   ├── confirmer.button.ts
 │   └── retour.modal.ts
+├── rendering/                    # Images et accent du module, `theme.ts` (voir Générer des images)
 ├── services/                     # Logique métier
 │   └── mon-service.service.ts
-└── models/                       # Schémas Prisma (optionnel)
-    └── mon-modele.prisma
+├── tasks.ts                      # Tâches planifiées (optionnel)
+└── mon-module.prisma             # Modèles Prisma (optionnel)
 ```
 
 ## Guide pas à pas : Créer un module « Salut »
@@ -246,7 +251,7 @@ Avant que votre module n'atteigne des serveurs de production :
 - **Mettez `requiresAdmin: true`** sur chaque commande sensible — sinon exposée à tout le monde ; un handler d'interaction déclare qui peut s'en servir avec `access` (`"admin"`, `"everyone"` ou `{ permissions }`), obligatoire
 - **Jamais d'objet en `defaultValue` d'entité** (`USER`/`ROLE`/`CHANNEL`/`CATEGORY` restent non renseignés ; les ids sont stockés, les objets sont réhydratés)
 - **Déclarez les `options` des `ENUM` avec `as const`** pour typer `config.get()` en union littérale
-- **Ordre Prisma** : écrire `models/*.prisma`, puis `pnpm prisma:generate`, puis `pnpm prisma:migrate` — et gardez des noms de modèles uniques entre modules
+- **Ordre Prisma** : écrire `<module>.prisma`, puis `pnpm prisma:generate`, puis `pnpm prisma:migrate` — et gardez des noms de modèles uniques entre modules
 - **Pas de side-effect au top-level** — les modules `devOnly` sont quand même importés en production ; seul leur enregistrement est sauté
 
 ## Bonnes pratiques
@@ -254,7 +259,7 @@ Avant que votre module n'atteigne des serveurs de production :
 - **Gardez `onLoad` léger** — enregistrez les artefacts et loggez, déplacez la logique dans les services
 - **Utilisez le kebab-case** pour les IDs de module et les noms de dossiers
 - **Laissez échouer les hooks de cycle de vie** — une erreur levée par `onInstall`/`onUninstall` annule l'opération ; n'interceptez que ce qui peut échouer sans conséquence
-- **Organisez les fichiers** — un artefact par fichier, utilisez des sous-dossiers
+- **Organisez les fichiers** — une commande, un écouteur ou un gestionnaire par fichier, dans son sous-dossier ; les tâches partagent un seul `tasks.ts`
 - **Déclarez uniquement les intentions nécessaires** — minimisez l'utilisation des intentions privilégiées
 
 ## Prochaines étapes

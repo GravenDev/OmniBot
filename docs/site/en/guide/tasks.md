@@ -5,18 +5,27 @@ A module can run code on a schedule — a nightly report, a periodic sync with a
 ## Declaring a Task
 
 ```typescript
-// src/modules/my-module/tasks/cleanup.task.ts
+// src/modules/my-module/tasks.ts
 
+import moduleService from "#core/services/module.service.js";
+import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
+import type { MyModuleConfigSchema } from "./my-module.config.js";
 
-export default declareTask({
-  id: "cleanup",
-  schedule: "0 3 * * *", // every day at 03:00 UTC
-  runOnStart: false,
-  async run(client) {
-    // client is the ready Discord client
-  },
-});
+export function myModuleTasks(module: Module<MyModuleConfigSchema>) {
+  return [
+    declareTask({
+      id: "daily-report",
+      schedule: "0 3 * * *", // every day at 03:00 UTC
+      runOnStart: false,
+      async run(client) {
+        // client is the ready Discord client
+        const guildIds = await moduleService.getActivatedGuildIds(module.id);
+        // ...
+      },
+    }),
+  ];
+}
 ```
 
 | Field        | Description                                                                        |
@@ -27,13 +36,19 @@ export default declareTask({
 | `runOnStart` | Also run once as soon as the bot starts. Optional, `false` by default.             |
 | `run`        | The work to do. Receives the ready Discord client.                                 |
 
-Register the task in the module's `onLoad`, like commands and listeners:
+A module keeps its tasks in one `tasks.ts` at its root, exported as a function that returns them: it takes the module when the tasks need it (its id, its configuration), nothing otherwise (`clashOfCodeTasks()`).
+
+Register them in the module's `onLoad`, like commands and listeners:
 
 ```typescript
 onLoad(_client, registry) {
-  registry.register(cleanupTask);
+  for (const task of myModuleTasks(myModule)) {
+    registry.register(task);
+  }
 },
 ```
+
+Tasks that purge stored data are not registered there: export them from the same `tasks.ts`, by a function of their own when the module also has other tasks (`tempVoiceMaintenanceTasks()`), and return them from the module's `maintenanceTasks`, so that they also run for a module skipped at startup (see [Creating a Module](./creating-a-module#lifecycle-hooks)).
 
 ## Behavior
 

@@ -21,6 +21,8 @@ A module reaches the core through `#core/services/` only, and the shared helpers
 ```
 src/modules/my-module/
 ├── my-module.module.ts          # Main module definition
+├── my-module.config.ts          # Configuration schema (optional)
+├── my-module.test.ts            # Tests, each next to the file it tests
 ├── i18n/                        # Translation files
 │   ├── en.json
 │   └── fr.json
@@ -31,10 +33,11 @@ src/modules/my-module/
 ├── interactions/                # Button, modal, select handlers
 │   ├── confirm.button.ts
 │   └── feedback.modal.ts
+├── rendering/                   # Images and the module's accent, `theme.ts` (see Generating Images)
 ├── services/                    # Business logic
 │   └── my-service.service.ts
-└── models/                      # Prisma schemas (optional)
-    └── my-model.prisma
+├── tasks.ts                     # Scheduled tasks (optional)
+└── my-module.prisma             # Prisma models (optional)
 ```
 
 ## Step-by-Step: Creating a "Greeter" Module
@@ -248,7 +251,7 @@ Before your module reaches production guilds:
 - **Put `requiresAdmin: true`** on every sensitive command — fail-open otherwise; an interaction handler declares who may use it with `access` (`"admin"`, `"everyone"` or `{ permissions }`), required
 - **Never put an object in an entity `defaultValue`** (`USER`/`ROLE`/`CHANNEL`/`CATEGORY` defaults must stay unset; ids are stored, objects are hydrated)
 - **Declare `ENUM` `options` `as const`** for literal-union typing of `config.get()`
-- **Prisma order**: write `models/*.prisma`, then `pnpm prisma:generate`, then `pnpm prisma:migrate` — and keep model names unique across all modules
+- **Prisma order**: write `<module>.prisma`, then `pnpm prisma:generate`, then `pnpm prisma:migrate` — and keep model names unique across all modules
 - **No top-level side effects** — `devOnly` modules are still imported in production; only their registration is skipped
 
 ## Best Practices
@@ -256,7 +259,7 @@ Before your module reaches production guilds:
 - **Keep `onLoad` lean** — register artifacts and log, move logic to services
 - **Use kebab-case** for module IDs and folder names
 - **Let lifecycle hooks fail** — an error thrown by `onInstall`/`onUninstall` cancels the operation; catch only what may fail without consequence
-- **Keep files organized** — one artifact per file, use subdirectories
+- **Keep files organized** — one command, listener or handler per file, in its subdirectory; the tasks share one `tasks.ts`
 - **Declare only needed intents** — minimize privileged intent usage
 
 ## Next Steps
