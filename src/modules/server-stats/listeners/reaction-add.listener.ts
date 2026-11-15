@@ -1,6 +1,6 @@
 import { declareEventListener } from "#lib/listener.js";
 import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
-import { collectReaction } from "#modules/server-stats/services/collector.service.js";
+import collector from "#modules/server-stats/services/collector.service.js";
 
 export default declareEventListener<
   "messageReactionAdd",
@@ -10,7 +10,7 @@ export default declareEventListener<
 
   async execute(reaction, user, _details, config) {
     if (config) {
-      await collectReaction(reaction, user, config);
+      await collector.collectReaction(reaction, user, config);
     }
   },
 });

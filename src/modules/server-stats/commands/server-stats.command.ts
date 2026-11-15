@@ -26,7 +26,7 @@ import {
 } from "#modules/server-stats/period.js";
 import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
 import store from "#modules/server-stats/services/store.service.js";
-import { statsReport } from "#modules/server-stats/services/views.service.js";
+import views from "#modules/server-stats/services/views.service.js";
 import { channelShown } from "#modules/server-stats/tracking.js";
 
 const AUTOCOMPLETE_LIMIT = 25;
@@ -205,7 +205,7 @@ export default declareCommand<ServerStatsConfigSchema>({
 
     await interaction.deferReply();
     try {
-      const report = await statsReport(interaction.guild, counted, {
+      const report = await views.statsReport(interaction.guild, counted, {
         now,
         channelShown: channelShown(interaction.guild, config),
         showTopMembers: config.get("showTopMembers"),

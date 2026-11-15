@@ -9,7 +9,7 @@ import { declareTask } from "#lib/task.js";
 import { addDays, dayOf, RETENTION_DAYS, TIMEZONE } from "./day.js";
 import type { ServerStatsConfigSchema } from "./server-stats.config.js";
 import store from "./services/store.service.js";
-import { statsReport } from "./services/views.service.js";
+import views from "./services/views.service.js";
 import { channelShown } from "./tracking.js";
 
 const logger = loggerMaker("server-stats");
@@ -29,7 +29,7 @@ export async function postReport(
     return;
   }
   const guild = await client.guilds.fetch(guildId);
-  const report = await statsReport(
+  const report = await views.statsReport(
     guild,
     { from: day, to: day },
     {

@@ -1,6 +1,6 @@
 import { declareEventListener } from "#lib/listener.js";
 import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
-import { collectMemberChange } from "#modules/server-stats/services/collector.service.js";
+import collector from "#modules/server-stats/services/collector.service.js";
 
 export default declareEventListener<
   "guildMemberRemove",
@@ -10,7 +10,7 @@ export default declareEventListener<
 
   async execute(member, config) {
     if (config) {
-      await collectMemberChange(member, "leaves");
+      await collector.collectMemberChange(member, "leaves");
     }
   },
 });

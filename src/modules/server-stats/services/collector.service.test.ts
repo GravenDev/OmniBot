@@ -18,8 +18,7 @@ const store = vi.hoisted(() => ({
 }));
 vi.mock("./store.service.js", () => ({ default: store }));
 
-const { collectMemberChange, collectMessage, collectReaction } =
-  await import("./collector.service.js");
+const { default: collector } = await import("./collector.service.js");
 
 const everyone = { id: "everyone" };
 
@@ -67,7 +66,7 @@ beforeEach(() => {
 
 describe("collectMessage", () => {
   it("counts a member's message on the Paris day and hour", async () => {
-    await collectMessage(fakeMessage(), config);
+    await collector.collectMessage(fakeMessage(), config);
     expect(store.recordMessage).toHaveBeenCalledWith(
       "guild-1",
       new Date("2026-10-14T00:00:00Z"),
@@ -79,7 +78,7 @@ describe("collectMessage", () => {
   });
 
   it("flags a member who joined the same Paris day", async () => {
-    await collectMessage(
+    await collector.collectMessage(
       fakeMessage({ joinedAt: new Date("2026-10-13T22:05:00Z") }),
       config
     );
@@ -94,7 +93,7 @@ describe("collectMessage", () => {
   });
 
   it("does not flag a member who joined the evening before", async () => {
-    await collectMessage(
+    await collector.collectMessage(
       fakeMessage({ joinedAt: new Date("2026-10-13T21:55:00Z") }),
       config
     );
@@ -109,7 +108,7 @@ describe("collectMessage", () => {
   });
 
   it("counts a thread message under its parent channel", async () => {
-    await collectMessage(
+    await collector.collectMessage(
       fakeMessage({ channel: fakeChannel({ thread: true }) }),
       config
     );
@@ -124,9 +123,9 @@ describe("collectMessage", () => {
   });
 
   it("ignores bots, system messages and private channels", async () => {
-    await collectMessage(fakeMessage({ bot: true }), config);
-    await collectMessage(fakeMessage({ system: true }), config);
-    await collectMessage(
+    await collector.collectMessage(fakeMessage({ bot: true }), config);
+    await collector.collectMessage(fakeMessage({ system: true }), config);
+    await collector.collectMessage(
       fakeMessage({ channel: fakeChannel({ public: false }) }),
       config
     );
@@ -152,7 +151,7 @@ describe("collectReaction", () => {
 
   it("keys custom emojis by id so renaming them keeps one counter", async () => {
     const user = { partial: false, bot: false } as unknown as User;
-    await collectReaction(
+    await collector.collectReaction(
       fakeReaction(fakeChannel(), { id: "123", name: "old", animated: true }),
       user,
       config,
@@ -167,7 +166,7 @@ describe("collectReaction", () => {
 
   it("counts a member's reaction", async () => {
     const user = { partial: false, bot: false } as unknown as User;
-    await collectReaction(fakeReaction(), user, config, now);
+    await collector.collectReaction(fakeReaction(), user, config, now);
     expect(store.recordReaction).toHaveBeenCalledWith(
       "guild-1",
       new Date("2026-10-13T00:00:00Z"),
@@ -184,15 +183,15 @@ describe("collectReaction", () => {
       partial: true,
       fetch: async () => ({ bot: true }),
     } as unknown as User;
-    await collectReaction(fakeReaction(), bot, config, now);
+    await collector.collectReaction(fakeReaction(), bot, config, now);
     expect(store.recordReaction).not.toHaveBeenCalled();
-    await collectReaction(fakeReaction(), human, config, now);
+    await collector.collectReaction(fakeReaction(), human, config, now);
     expect(store.recordReaction).toHaveBeenCalledOnce();
   });
 
   it("ignores reactions in a private channel", async () => {
     const user = { partial: false, bot: false } as unknown as User;
-    await collectReaction(
+    await collector.collectReaction(
       fakeReaction(fakeChannel({ public: false })),
       user,
       config,
@@ -211,7 +210,7 @@ describe("collectMemberChange", () => {
       user: { bot: false },
       guild: { id: "guild-1" },
     } as unknown as GuildMember;
-    await collectMemberChange(member, "leaves", now);
+    await collector.collectMemberChange(member, "leaves", now);
     expect(store.recordMemberChange).toHaveBeenCalledWith(
       "guild-1",
       new Date("2026-10-13T00:00:00Z"),
@@ -224,7 +223,7 @@ describe("collectMemberChange", () => {
       user: { bot: true },
       guild: { id: "guild-1" },
     } as unknown as GuildMember;
-    await collectMemberChange(bot, "joins", now);
+    await collector.collectMemberChange(bot, "joins", now);
     expect(store.recordMemberChange).not.toHaveBeenCalled();
   });
 });
