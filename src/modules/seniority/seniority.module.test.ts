@@ -3,9 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 const clearGuild = vi.hoisted(() => vi.fn(async (_guildId: string) => {}));
 vi.mock("./services/overrides.service.js", () => ({
-  clearGuild,
-  remove: vi.fn(),
-  uninstallWarning: vi.fn(),
+  default: { clearGuild, remove: vi.fn(), uninstallWarning: vi.fn() },
 }));
 vi.mock("./tasks.js", () => ({
   seniorityTasks: () => [],

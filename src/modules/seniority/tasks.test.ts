@@ -1,8 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
 const sweepDepartures = vi.hoisted(() => vi.fn(async () => undefined));
-vi.mock("./services/overrides.service.js", () => ({ sweepDepartures }));
-vi.mock("./services/daily.service.js", () => ({ runAllGuildDays: vi.fn() }));
+vi.mock("./services/overrides.service.js", () => ({
+  default: { sweepDepartures },
+}));
+vi.mock("./services/daily.service.js", () => ({
+  default: { runAllGuildDays: vi.fn() },
+}));
 const getActivatedGuildIds = vi.hoisted(() => vi.fn(async () => ["g"]));
 vi.mock("#core/services/module.service.js", () => ({
   default: { getActivatedGuildIds },

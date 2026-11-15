@@ -23,14 +23,11 @@ import en from "../i18n/en.json" with { type: "json" };
 import fr from "../i18n/fr.json" with { type: "json" };
 
 const state = vi.hoisted(() => ({ lastDay: vi.fn(), claimDay: vi.fn() }));
-vi.mock("./state.service.js", () => state);
+vi.mock("./state.service.js", () => ({ default: state }));
 const recomputed = vi.hoisted(() => ({
-  overrides: vi.fn(async () => new Map<string, Date>()),
+  ofGuild: vi.fn(async () => new Map<string, Date>()),
 }));
-vi.mock("./overrides.service.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./overrides.service.js")>()),
-  ...recomputed,
-}));
+vi.mock("./overrides.service.js", () => ({ default: recomputed }));
 
 const getConfigForModuleIn = vi.hoisted(() => vi.fn());
 vi.mock("#core/services/config.service.js", () => ({
@@ -63,7 +60,7 @@ const portraits = vi.hoisted(() => ({
 }));
 vi.mock("./portraits.service.js", () => ({ default: portraits }));
 
-const { runAllGuildDays, runGuildDay } = await import("./daily.service.js");
+const { default: daily } = await import("./daily.service.js");
 
 const module = { id: "seniority" } as unknown as Module<SeniorityConfigSchema>;
 
@@ -161,11 +158,11 @@ beforeEach(() => {
 describe("runGuildDay", () => {
   it("puts a recomputed member under the years of their first message", async () => {
     // Bob's first message is from 2020: six years, not one.
-    recomputed.overrides.mockResolvedValueOnce(
+    recomputed.ofGuild.mockResolvedValueOnce(
       new Map([["bob", new Date("2020-10-16T08:00:00Z")]])
     );
     const { client, send } = setup({ serverAnniversary: false });
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     const [first] = sent(send);
     expect(messageText(first!)).toBe(
       "🎉 **Ancienneté sur le serveur**\n**6 ans** · <@bob>\n**3 ans** · <@alice>\n**1 an** · <@quiet>"
@@ -185,7 +182,7 @@ describe("runGuildDay", () => {
 
   it("posts the member anniversaries, then the server's", async () => {
     const { client, send } = setup();
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
 
     const [members, server] = sent(send);
     // The heading, the card full width, then the groups: mentions without a
@@ -222,7 +219,7 @@ describe("runGuildDay", () => {
     const { client, send } = setup();
     cards.seniorityCard.mockRejectedValue(new Error("canvas"));
     cards.serverCard.mockRejectedValue(new Error("canvas"));
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
 
     const [members, server] = sent(send);
     expect(messageText(members!)).toBe(
@@ -256,7 +253,7 @@ describe("runGuildDay", () => {
       }
       return {};
     });
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
 
     expect(sent(send).map(messageText)).toEqual([
       "🎉 **Ancienneté sur le serveur**\n**3 ans** · <@alice>\n**1 an** · <@bob> <@quiet>",
@@ -268,7 +265,7 @@ describe("runGuildDay", () => {
 
   it("can announce one without the other", async () => {
     const { client, send } = setup({ memberAnniversaries: false });
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(sent(send).map(messageText)).toEqual([
       "🎂 Le serveur fête ses 5 ans !",
     ]);
@@ -284,7 +281,7 @@ describe("runGuildDay", () => {
     const { client, send } = setup({ serverChannel } as Partial<
       ConfigData<SeniorityConfigSchema>
     >);
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(sent(send).map(messageText)).toEqual([
       "🎉 **Ancienneté sur le serveur**\n**3 ans** · <@alice>\n**1 an** · <@bob> <@quiet>",
     ]);
@@ -303,7 +300,7 @@ describe("runGuildDay", () => {
     const { client, send } = setup({ channel: null, serverChannel } as Partial<
       ConfigData<SeniorityConfigSchema>
     >);
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(send).not.toHaveBeenCalled();
     expect(sent(serverSend).map(messageText)).toEqual([
       "🎂 Le serveur fête ses 5 ans !",
@@ -314,7 +311,7 @@ describe("runGuildDay", () => {
     const { client, guild } = setup({ channel: undefined } as Partial<
       ConfigData<SeniorityConfigSchema>
     >);
-    await runGuildDay(
+    await daily.runGuildDay(
       client,
       module,
       "guild-1",
@@ -328,7 +325,7 @@ describe("runGuildDay", () => {
     const { client, guild, send } = setup({ channel: undefined } as Partial<
       ConfigData<SeniorityConfigSchema>
     >);
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(guild.members.fetch).not.toHaveBeenCalled();
     expect(cards.serverCard).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
@@ -338,14 +335,14 @@ describe("runGuildDay", () => {
     const { client, guild, send } = setup({
       channel: { id: "voice", isSendable: () => false, send: vi.fn() },
     } as unknown as Partial<ConfigData<SeniorityConfigSchema>>);
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(guild.members.fetch).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
   });
 
   it("fetches no members when there is nothing to announce", async () => {
     const { client, send, guild } = setup({ memberAnniversaries: false });
-    await runGuildDay(
+    await daily.runGuildDay(
       client,
       module,
       "guild-1",
@@ -359,7 +356,7 @@ describe("runGuildDay", () => {
   it("runs once per local day", async () => {
     state.lastDay.mockResolvedValue("2026-10-16");
     const { client, send } = setup();
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(state.claimDay).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
   });
@@ -368,7 +365,7 @@ describe("runGuildDay", () => {
     const { client, guild, send } = setup();
     guild.members.fetch.mockRejectedValue(new Error("timeout"));
     await expect(
-      runGuildDay(client, module, "guild-1", NINE_IN_PARIS)
+      daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS)
     ).rejects.toThrow("timeout");
     expect(state.claimDay).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
@@ -377,7 +374,7 @@ describe("runGuildDay", () => {
   it("still posts the server's anniversary when the members' fails", async () => {
     const { client, send } = setup();
     send.mockRejectedValueOnce(new Error("refused"));
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
     expect(send).toHaveBeenCalledTimes(2);
   });
 
@@ -387,7 +384,7 @@ describe("runGuildDay", () => {
       const id = `member-${index}`;
       members.set(id, member(id, "2024-10-16T08:00:00Z"));
     }
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
+    await daily.runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
 
     const messages = sent(send);
     expect(messages.length).toBeGreaterThan(1);
@@ -415,14 +412,14 @@ describe("runAllGuildDays", () => {
   it("skips a guild the bot left", async () => {
     const { client, send } = setup();
     client.guilds.cache.clear();
-    await runAllGuildDays(client, module, NINE_IN_PARIS);
+    await daily.runAllGuildDays(client, module, NINE_IN_PARIS);
     expect(getConfigForModuleIn).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
   });
 
   it("runs the day of each guild the bot is on", async () => {
     const { client, send } = setup();
-    await runAllGuildDays(client, module, NINE_IN_PARIS);
+    await daily.runAllGuildDays(client, module, NINE_IN_PARIS);
     expect(state.claimDay).toHaveBeenCalledWith("guild-1", "2026-10-16");
     expect(send).toHaveBeenCalled();
   });

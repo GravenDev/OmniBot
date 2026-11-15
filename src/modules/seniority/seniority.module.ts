@@ -4,11 +4,7 @@ import { defineModule } from "#lib/module.js";
 import type { ScheduledTask } from "#lib/task.js";
 import seniorityAdminCommand from "./commands/seniority-admin.command.js";
 import { seniorityConfigSchema } from "./seniority.config.js";
-import {
-  clearGuild,
-  remove,
-  uninstallWarning,
-} from "./services/overrides.service.js";
+import overrides from "./services/overrides.service.js";
 import { seniorityMaintenanceTasks, seniorityTasks } from "./tasks.js";
 
 const logger = loggerMaker("seniority");
@@ -43,17 +39,17 @@ const seniorityModule = defineModule({
   // Recomputed seniorities are not kept for a reinstall. A failure cancels
   // the uninstall: the module stays enabled with them.
   async onUninstall(_client, guild) {
-    await clearGuild(guild.id);
+    await overrides.clearGuild(guild.id);
     logger.info(`Module uninstalled | guildId = ${guild.id}`);
   },
 
-  uninstallWarning,
+  uninstallWarning: (guildId, t) => overrides.uninstallWarning(guildId, t),
 
   maintenanceTasks: (): ScheduledTask[] =>
     seniorityMaintenanceTasks(seniorityModule.id),
 
   async deleteMemberData(guildId, userId) {
-    await remove(guildId, userId);
+    await overrides.remove(guildId, userId);
   },
 });
 
