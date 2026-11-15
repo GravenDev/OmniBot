@@ -1,8 +1,11 @@
 import prisma from "#lib/database.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { declareService, type Service } from "#lib/service.js";
-import type { ClashMode, ClashReport } from "./api.js";
-import type { StoredParticipation, StoredPlayer } from "./stats.js";
+import type { ClashMode, ClashReport } from "#modules/clash-of-code/api.js";
+import type {
+  StoredParticipation,
+  StoredPlayer,
+} from "#modules/clash-of-code/stats.js";
 
 export const GameStatus = {
   Watching: "WATCHING",

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ClashReport } from "./api.js";
+import type { ClashReport } from "#modules/clash-of-code/api.js";
 
 interface Row extends Record<string, any> {}
 

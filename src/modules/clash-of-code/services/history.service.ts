@@ -8,7 +8,7 @@ import {
   recordPage,
   type SearchProgress,
   type SearchState,
-} from "./history.js";
+} from "#modules/clash-of-code/history.js";
 
 // Discord's message search (#lib/discord-polyfills/guild-message-search.ts).
 // `link_hostname` takes the registrable domain: "codingame.com" matches the

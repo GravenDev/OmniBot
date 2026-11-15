@@ -5,10 +5,7 @@ import {
 } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { pageRow } from "#lib/pagination.js";
-import {
-  isClashMode,
-  type ClashMode,
-} from "#modules/clash-of-code/services/api.js";
+import { isClashMode, type ClashMode } from "#modules/clash-of-code/api.js";
 import views, {
   type ViewContext,
 } from "#modules/clash-of-code/services/views.service.js";

@@ -1,7 +1,7 @@
 import type { Image } from "@napi-rs/canvas";
 import { formatInteger, formatPercentage } from "#lib/format.js";
 import type { RankedPlayer } from "#lib/table.js";
-import type { ClashMode } from "#modules/clash-of-code/services/api.js";
+import type { ClashMode } from "#modules/clash-of-code/api.js";
 import { renderBoard, type BoardColumn } from "./board.js";
 import { formatDuration } from "./format.js";
 

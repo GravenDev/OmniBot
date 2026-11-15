@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { silenceLogs } from "#lib/testing.js";
-import type { ClashReport } from "./api.js";
+import type { ClashReport } from "#modules/clash-of-code/api.js";
 
 // The fake timers do not patch node:timers/promises: route it to setTimeout.
 vi.mock("node:timers/promises", () => ({
@@ -17,7 +17,10 @@ vi.mock("./codingame.service.js", () => ({
 }));
 vi.mock("./store.js", () => ({ default: mocks.store }));
 
-import { ClashNotFoundError, ClashRateLimitedError } from "./api.js";
+import {
+  ClashNotFoundError,
+  ClashRateLimitedError,
+} from "#modules/clash-of-code/api.js";
 import {
   importClashes,
   MAX_RATE_LIMIT_PAUSE_MS,

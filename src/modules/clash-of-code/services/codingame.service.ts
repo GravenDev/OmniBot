@@ -7,7 +7,7 @@ import {
   ClashRateLimitedError,
   parseReport,
   type ClashReport,
-} from "./api.js";
+} from "#modules/clash-of-code/api.js";
 
 const logger = loggerMaker("clash-of-code");
 

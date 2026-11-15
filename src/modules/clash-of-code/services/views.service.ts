@@ -1,17 +1,21 @@
 import type { Client } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
 import { declareService, type Service } from "#lib/service.js";
-import type { ClashMode, ClashReport } from "./api.js";
-import avatars from "./avatars.service.js";
-import { playerStats, rankByWins, type StoredPlayer } from "./stats.js";
-import store from "./store.js";
+import type { ClashMode, ClashReport } from "#modules/clash-of-code/api.js";
+import {
+  playerStats,
+  rankByWins,
+  type StoredPlayer,
+} from "#modules/clash-of-code/stats.js";
 import {
   leaderboardCard,
   profileStatCard,
   RESULT_MAX_ROWS,
   resultCard,
   standingsPage,
-} from "./views.js";
+} from "#modules/clash-of-code/views.js";
+import avatars from "./avatars.service.js";
+import store from "./store.js";
 
 export interface ViewContext {
   client: Client;

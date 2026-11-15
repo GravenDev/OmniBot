@@ -3,8 +3,8 @@ import type { Client } from "discord.js";
 import { fetchImage } from "#lib/imaging.js";
 import { resolvePlayers } from "#lib/players.js";
 import { declareService, type Service } from "#lib/service.js";
-import { avatarUrl } from "./api.js";
-import type { StoredPlayer } from "./stats.js";
+import { avatarUrl } from "#modules/clash-of-code/api.js";
+import type { StoredPlayer } from "#modules/clash-of-code/stats.js";
 
 /** The images the cards show, from Discord and CodinGame. */
 class AvatarsService implements Service {

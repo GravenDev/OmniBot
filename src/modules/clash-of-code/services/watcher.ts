@@ -12,11 +12,14 @@ import { presentGuilds } from "#lib/guild-loop.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { Module } from "#lib/module.js";
+import {
+  ClashNotFoundError,
+  type ClashReport,
+} from "#modules/clash-of-code/api.js";
 import type { ClashOfCodeConfigSchema } from "#modules/clash-of-code/clash-of-code.config.js";
-import { ClashNotFoundError, type ClashReport } from "./api.js";
+import { modeLabel } from "#modules/clash-of-code/views.js";
 import codingame from "./codingame.service.js";
 import store, { type WatchedGame } from "./store.js";
-import { modeLabel } from "./views.js";
 import views from "./views.service.js";
 
 const logger = loggerMaker("clash-of-code");

@@ -2,7 +2,7 @@ import type { Message } from "discord.js";
 import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { ClashOfCodeConfigSchema } from "#modules/clash-of-code/clash-of-code.config.js";
-import { parseClashLinks } from "#modules/clash-of-code/services/links.js";
+import { parseClashLinks } from "#modules/clash-of-code/links.js";
 import watcher from "#modules/clash-of-code/services/watcher.js";
 
 const logger = loggerMaker("clash-of-code");

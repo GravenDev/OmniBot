@@ -3,7 +3,7 @@ import {
   ClashApiError,
   ClashNotFoundError,
   ClashRateLimitedError,
-} from "./api.js";
+} from "#modules/clash-of-code/api.js";
 
 const sleep = vi.hoisted(() => vi.fn(async (_ms: number) => undefined));
 vi.mock("node:timers/promises", () => ({ setTimeout: sleep }));

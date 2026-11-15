@@ -16,24 +16,24 @@ import {
 } from "#lib/discord-polyfills/guild-message-search.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
+import { ClashNotFoundError } from "#modules/clash-of-code/api.js";
 import type { ClashOfCodeConfigSchema } from "#modules/clash-of-code/clash-of-code.config.js";
-import { ClashNotFoundError } from "#modules/clash-of-code/services/api.js";
+import {
+  newSearchState,
+  type SearchProgress,
+  type SearchState,
+} from "#modules/clash-of-code/history.js";
+import { parseClashLinks } from "#modules/clash-of-code/links.js";
 import {
   type ImportSummary,
   importClashes,
   MAX_RATE_LIMIT_PAUSE_MS,
 } from "#modules/clash-of-code/services/channel-import.js";
 import codingame from "#modules/clash-of-code/services/codingame.service.js";
-import {
-  newSearchState,
-  type SearchProgress,
-  type SearchState,
-} from "#modules/clash-of-code/services/history.js";
 import history from "#modules/clash-of-code/services/history.service.js";
-import { parseClashLinks } from "#modules/clash-of-code/services/links.js";
 import store from "#modules/clash-of-code/services/store.js";
-import { modeLabel } from "#modules/clash-of-code/services/views.js";
 import views from "#modules/clash-of-code/services/views.service.js";
+import { modeLabel } from "#modules/clash-of-code/views.js";
 
 const HANDLE_PATTERN = /^[0-9a-f]{30,40}$/i;
 const PROGRESS_INTERVAL_MS = 5_000;
