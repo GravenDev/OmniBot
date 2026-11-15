@@ -4,7 +4,6 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
-import { requireAdmin } from "#core/utils/require-admin.js";
 import { formatDate } from "#lib/calendar.js";
 import { declareCommand } from "#lib/command.js";
 import {
@@ -58,9 +57,6 @@ export default declareCommand<SeniorityConfigSchema>({
 
   async execute(interaction, config) {
     if (!interaction.inCachedGuild()) {
-      return;
-    }
-    if (!(await requireAdmin(interaction, config.t))) {
       return;
     }
     const user = interaction.options.getUser("member", true);

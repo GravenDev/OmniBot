@@ -8,9 +8,6 @@ import { seniorityConfigSchema } from "../seniority.config.js";
 
 const overrides = vi.hoisted(() => ({ recompute: vi.fn() }));
 vi.mock("../services/overrides.js", () => overrides);
-vi.mock("#core/utils/require-admin.js", () => ({
-  requireAdmin: async () => true,
-}));
 
 const { default: command } = await import("./seniority-admin.command.js");
 
@@ -179,5 +176,11 @@ describe("/seniority-admin recompute", () => {
     const { value, editReply } = interaction();
     await command.execute(value, config());
     expect(content(editReply)).toContain("a échoué");
+  });
+});
+
+describe("/seniority-admin access", () => {
+  it("is checked by the command dispatcher, before anything runs", () => {
+    expect(command.requiresAdmin).toBe(true);
   });
 });

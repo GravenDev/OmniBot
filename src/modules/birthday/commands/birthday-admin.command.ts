@@ -4,7 +4,6 @@ import {
   PermissionFlagsBits,
   SlashCommandBuilder,
 } from "discord.js";
-import { requireAdmin } from "#core/utils/require-admin.js";
 import { declareCommand } from "#lib/command.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
@@ -44,9 +43,6 @@ export default declareCommand<BirthdayConfigSchema>({
 
   async execute(interaction, config) {
     if (!interaction.inGuild()) {
-      return;
-    }
-    if (!(await requireAdmin(interaction, config.t))) {
       return;
     }
 
