@@ -4,7 +4,7 @@ import { forEachGuild } from "#lib/guild-loop.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
-import { reconcile, seatWaitingMembers } from "./services/lifecycle.service.js";
+import lifecycle from "./services/lifecycle.service.js";
 import store from "./services/store.service.js";
 import type { TempVoiceConfigSchema } from "./temp-voice.config.js";
 
@@ -51,9 +51,9 @@ export function tempVoiceTasks(module: Module<TempVoiceConfigSchema>) {
             const config = activated.has(guild.id)
               ? await configService.getConfigForModuleIn(module, guild.id)
               : null;
-            await reconcile(guild, config?.t);
+            await lifecycle.reconcile(guild, config?.t);
             if (config) {
-              await seatWaitingMembers(guild, config);
+              await lifecycle.seatWaitingMembers(guild, config);
             }
           },
           { action: "reconcile temporary voice channels", logger }

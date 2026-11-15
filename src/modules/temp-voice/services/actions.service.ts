@@ -10,7 +10,7 @@ import { cleanName } from "#modules/temp-voice/naming.js";
 import { accessState } from "#modules/temp-voice/overwrites.js";
 import { isModerator, isProtected } from "#modules/temp-voice/permissions.js";
 import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
-import { applyAccess, queue, removeTempChannel } from "./lifecycle.service.js";
+import lifecycle from "./lifecycle.service.js";
 import panelService from "./panel.service.js";
 import renames from "./renames.service.js";
 import store, {
@@ -115,7 +115,7 @@ export function withChannel(
   action: (ctx: ActionContext) => Promise<Outcome>,
   { ownerOnly = true } = {}
 ): Promise<Outcome> {
-  return queue.run(channelId, async () => {
+  return lifecycle.queue.run(channelId, async () => {
     const channel = tempChannelOf(guild, channelId);
     if (!channel) {
       return fail("action.gone");
@@ -138,7 +138,7 @@ async function commit(
   preference?: PreferenceChange
 ): Promise<TempChannel | null> {
   const next = { ...ctx.row, ...change };
-  await applyAccess(
+  await lifecycle.applyAccess(
     ctx.channel,
     ctx.row.hubId,
     accessState(next),
@@ -148,17 +148,19 @@ async function commit(
   try {
     updated = await store.updateChannel(ctx.row.channelId, change);
   } catch (err) {
-    await applyAccess(
-      ctx.channel,
-      ctx.row.hubId,
-      accessState(ctx.row),
-      accessState(next)
-    ).catch((rollbackErr: unknown) =>
-      logger.error(
-        { err: rollbackErr },
-        `Rollback failed | channelId = ${ctx.channel.id}`
+    await lifecycle
+      .applyAccess(
+        ctx.channel,
+        ctx.row.hubId,
+        accessState(ctx.row),
+        accessState(next)
       )
-    );
+      .catch((rollbackErr: unknown) =>
+        logger.error(
+          { err: rollbackErr },
+          `Rollback failed | channelId = ${ctx.channel.id}`
+        )
+      );
     throw err;
   }
   if (!updated) {
@@ -194,7 +196,7 @@ export async function rename(
       if (isOwner(ctx)) {
         await store.savePreference(ctx.guild.id, ctx.actor.id, { name });
       }
-      queue
+      lifecycle.queue
         .run(channelId, async () => {
           const row = await store.channel(channelId);
           if (row) {
@@ -536,7 +538,7 @@ export async function transfer(
 }
 
 export async function remove(ctx: ActionContext): Promise<Outcome> {
-  return (await removeTempChannel(ctx.channel, ctx.row, "owner"))
+  return (await lifecycle.removeTempChannel(ctx.channel, ctx.row, "owner"))
     ? done("delete.done")
     : fail("delete.failed");
 }

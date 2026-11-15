@@ -28,14 +28,7 @@ vi.mock("#lib/database.js", () => ({ default: {} }));
 vi.mock("./store.service.js", () => ({ default: store }));
 vi.mock("./panel.service.js", () => ({ default: panel }));
 
-const {
-  applyAccess,
-  joinHub,
-  memberLeft,
-  ownerMoved,
-  reconcile,
-  seatWaitingMembers,
-} = await import("./lifecycle.service.js");
+const { default: lifecycle } = await import("./lifecycle.service.js");
 
 silenceLogs();
 
@@ -191,7 +184,7 @@ function freshMember(member: any) {
 describe("joinHub", () => {
   it("creates the channel, moves the member and posts the panel", async () => {
     const { hubChannel, member, created, guild } = setup();
-    await joinHub(freshMember(member), hubChannel, hub, config);
+    await lifecycle.joinHub(freshMember(member), hubChannel, hub, config);
     expect(guild.channels.create).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Salon de Alice" })
     );
@@ -204,7 +197,7 @@ describe("joinHub", () => {
 
   it("creates nothing and warns the member when the bot lacks a permission", async () => {
     const { hubChannel, member, guild } = setup({ missing: ["MoveMembers"] });
-    await joinHub(freshMember(member), hubChannel, hub, config);
+    await lifecycle.joinHub(freshMember(member), hubChannel, hub, config);
     expect(guild.channels.create).not.toHaveBeenCalled();
     expect(hubChannel.send).toHaveBeenCalledWith(
       expect.objectContaining({ content: `<@${member.id}> hub.unavailable` })
@@ -213,7 +206,7 @@ describe("joinHub", () => {
 
   it("deletes the channel and warns the member when it cannot be set up", async () => {
     const { hubChannel, member, created } = setup({ reject: () => true });
-    await joinHub(freshMember(member), hubChannel, hub, config);
+    await lifecycle.joinHub(freshMember(member), hubChannel, hub, config);
     expect(created.delete).toHaveBeenCalled();
     expect(store.createChannel).not.toHaveBeenCalled();
     expect(member.voice.setChannel).not.toHaveBeenCalled();
@@ -224,7 +217,7 @@ describe("joinHub", () => {
       reject: (_id, options) => options.Connect === false,
     });
     store.preference.mockResolvedValue(preference({ locked: true }));
-    await joinHub(freshMember(member), hubChannel, hub, config);
+    await lifecycle.joinHub(freshMember(member), hubChannel, hub, config);
     expect(created.delete).not.toHaveBeenCalled();
     expect(store.createChannel).toHaveBeenCalledWith(
       expect.objectContaining({ locked: false })
@@ -237,7 +230,7 @@ describe("joinHub", () => {
     store.preference.mockResolvedValue(
       preference({ blocked: ["mod", "troll"] })
     );
-    await joinHub(freshMember(member), hubChannel, hub, config);
+    await lifecycle.joinHub(freshMember(member), hubChannel, hub, config);
     expect(store.createChannel).toHaveBeenCalledWith(
       expect.objectContaining({ blocked: ["troll"] })
     );
@@ -246,7 +239,7 @@ describe("joinHub", () => {
   it("gives no access to a trusted member it cannot find", async () => {
     const { hubChannel, member, created } = setup();
     store.preference.mockResolvedValue(preference({ trusted: ["ghost"] }));
-    await joinHub(freshMember(member), hubChannel, hub, config);
+    await lifecycle.joinHub(freshMember(member), hubChannel, hub, config);
     expect(created.permissionOverwrites.cache.has("ghost")).toBe(false);
   });
 
@@ -258,7 +251,7 @@ describe("joinHub", () => {
     store.preference.mockResolvedValue(
       preference({ blocked: ["gone"], trusted: ["left"] })
     );
-    await joinHub(freshMember(member), hubChannel, hub, config);
+    await lifecycle.joinHub(freshMember(member), hubChannel, hub, config);
     expect(created.delete).not.toHaveBeenCalled();
     expect(store.createChannel).toHaveBeenCalledWith(
       expect.objectContaining({ blocked: [], trusted: [] })
@@ -277,7 +270,9 @@ describe("applyAccess", () => {
       trusted: [],
       blocked: ["troll"],
     };
-    await expect(applyAccess(created, "hub", state)).rejects.toThrow();
+    await expect(
+      lifecycle.applyAccess(created, "hub", state)
+    ).rejects.toThrow();
     expect(created.permissionOverwrites.create).toHaveBeenCalled();
     expect([...created.permissionOverwrites.cache.keys()]).toEqual([]);
   });
@@ -299,7 +294,7 @@ describe("applyAccess", () => {
       trusted: [],
       blocked: ["ghost"],
     };
-    await applyAccess(created, "hub", state);
+    await lifecycle.applyAccess(created, "hub", state);
     expect(overwrites.cache.has("alice")).toBe(true);
     expect(overwrites.cache.has("ghost")).toBe(false);
   });
@@ -327,7 +322,12 @@ describe("applyAccess", () => {
       });
       return created;
     });
-    await applyAccess(created, "hub", { ...state, trusted: [] }, state);
+    await lifecycle.applyAccess(
+      created,
+      "hub",
+      { ...state, trusted: [] },
+      state
+    );
     expect(created.permissionOverwrites.delete).toHaveBeenCalledWith("friend");
   });
 });
@@ -346,7 +346,7 @@ describe("memberLeft", () => {
   it("deletes the channel when only bots are left", async () => {
     store.channel.mockResolvedValue({ channelId: "temp", ownerId: "alice" });
     const channel = channelWith({ id: "music", bot: true });
-    await memberLeft(channel, "alice", config.t);
+    await lifecycle.memberLeft(channel, "alice", config.t);
     expect(channel.delete).toHaveBeenCalled();
     expect(panel.refresh).not.toHaveBeenCalled();
     expect(store.removeChannel).toHaveBeenCalledWith("temp");
@@ -358,10 +358,10 @@ describe("memberLeft", () => {
       { id: "music", bot: true },
       { id: "bob", bot: false }
     );
-    await memberLeft(channel, "carol", config.t);
+    await lifecycle.memberLeft(channel, "carol", config.t);
     expect(channel.delete).not.toHaveBeenCalled();
     expect(panel.refresh).not.toHaveBeenCalled();
-    await memberLeft(channel, "alice", config.t);
+    await lifecycle.memberLeft(channel, "alice", config.t);
     expect(panel.refresh).toHaveBeenCalledTimes(1);
   });
 });
@@ -370,9 +370,9 @@ describe("ownerMoved", () => {
   it("redraws the panel only when the owner comes or goes", async () => {
     const channel = { id: "c1" } as any;
     store.channel.mockResolvedValue({ channelId: "c1", ownerId: "owner" });
-    await ownerMoved(channel, "guest", config.t);
+    await lifecycle.ownerMoved(channel, "guest", config.t);
     expect(panel.refresh).not.toHaveBeenCalled();
-    await ownerMoved(channel, "owner", config.t);
+    await lifecycle.ownerMoved(channel, "owner", config.t);
     expect(panel.refresh).toHaveBeenCalledTimes(1);
   });
 });
@@ -386,7 +386,7 @@ describe("reconcile", () => {
     ]);
     store.channels.mockResolvedValue([]);
     guild.channels.cache.get("hub").isVoiceBased = () => true;
-    await reconcile(guild);
+    await lifecycle.reconcile(guild);
     expect(store.removeHub).toHaveBeenCalledTimes(1);
     expect(store.removeHub).toHaveBeenCalledWith("g1", "deleted-hub");
   });
@@ -406,9 +406,9 @@ describe("reconcile", () => {
     store.hubs.mockResolvedValue([]);
     store.channels.mockResolvedValue([stored]);
     store.channel.mockResolvedValue(stored);
-    await reconcile(guild as any);
+    await lifecycle.reconcile(guild as any);
     expect(panel.refresh).not.toHaveBeenCalled();
-    await reconcile(guild as any, config.t);
+    await lifecycle.reconcile(guild as any, config.t);
     expect(panel.refresh).toHaveBeenCalledWith(temp, stored, config.t);
   });
 
@@ -433,7 +433,7 @@ describe("reconcile", () => {
         : Promise.resolve(stored)
     );
 
-    const done = reconcile(guild as any, config.t);
+    const done = lifecycle.reconcile(guild as any, config.t);
     await vi.waitFor(() => expect(panel.refresh).toHaveBeenCalled());
 
     release(null);
@@ -462,7 +462,9 @@ describe("reconcile", () => {
       return stored;
     });
 
-    await expect(reconcile(guild as any, config.t)).resolves.toBeUndefined();
+    await expect(
+      lifecycle.reconcile(guild as any, config.t)
+    ).resolves.toBeUndefined();
 
     expect(panel.refresh).toHaveBeenCalledWith(temp, stored, config.t);
   });
@@ -484,7 +486,9 @@ describe("seatWaitingMembers", () => {
     store.hubs.mockResolvedValue([hub]);
     store.ownedBy.mockRejectedValueOnce(new Error("database down"));
 
-    await expect(seatWaitingMembers(guild, config)).resolves.toBeUndefined();
+    await expect(
+      lifecycle.seatWaitingMembers(guild, config)
+    ).resolves.toBeUndefined();
 
     expect(guild.channels.create).toHaveBeenCalledOnce();
     expect(second.voice.setChannel).toHaveBeenCalled();

@@ -14,6 +14,7 @@ import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { fetchMember } from "#lib/moderation.js";
 import { missingBotPermissions } from "#lib/permissions.js";
+import { declareService, type Service } from "#lib/service.js";
 import { renderName } from "#modules/temp-voice/naming.js";
 import {
   managedMembers,
@@ -38,9 +39,6 @@ const logger = loggerMaker("temp-voice");
 const CREATE_COOLDOWN_MS = 10_000;
 const NOTICE_LIFETIME_MS = 10_000;
 const RECONCILE_GRACE_MS = 60_000;
-
-export const queue = new KeyedQueue();
-const lastCreation = new Map<string, number>();
 
 function baseOverwrites(parent: CategoryChannel | null): Overwrite[] {
   return parent ? parent.permissionOverwrites.cache.map(toOverwrite) : [];
@@ -69,13 +67,14 @@ async function grantable(
     const member =
       guild.members.cache.get(id) ??
       (await guild.members.fetch(id).catch(() => null));
-    bits.set(
-      id,
-      member
-        ? (reference ? reference.permissionsFor(member) : member.permissions)
-            .bitfield
-        : 0n
-    );
+    if (!member) {
+      bits.set(id, 0n);
+      continue;
+    }
+    const permissions = reference
+      ? reference.permissionsFor(member)
+      : member.permissions;
+    bits.set(id, permissions.bitfield);
   }
   return bits;
 }
@@ -133,56 +132,7 @@ async function writeOverwrite(
   }
 }
 
-export async function applyAccess(
-  channel: VoiceBasedChannel,
-  hubId: string,
-  state: AccessState,
-  previous?: AccessState
-): Promise<void> {
-  const me = await botMember(channel.guild);
-  const fresh = await channel.fetch(true);
-  const current = fresh.permissionOverwrites.cache.map(toOverwrite);
-  const changes = overwriteChanges(state, {
-    everyoneId: channel.guild.id,
-    botId: me.id,
-    botPermissions: botPermissions(me, fresh.parent),
-    base: baseOverwrites(fresh.parent),
-    current,
-    grantable: await grantable(fresh, state, hubId),
-    staffRoles: staffRoles(channel.guild),
-    released: previous ? managedMembers(previous) : [],
-  });
-  const isBot = (change: (typeof changes)[number]) =>
-    change.kind === "set" && change.overwrite.id === me.id;
-  changes.sort((a, b) => Number(isBot(b)) - Number(isBot(a)));
-
-  const before = new Map(current.map((o) => [o.id, o]));
-  const applied: string[] = [];
-  try {
-    for (const change of changes) {
-      const id = change.kind === "set" ? change.overwrite.id : change.id;
-      await writeOverwrite(
-        fresh,
-        id,
-        change.kind === "set" ? change.overwrite : undefined
-      );
-      applied.push(id);
-    }
-  } catch (err) {
-    for (const id of applied.reverse()) {
-      await writeOverwrite(fresh, id, before.get(id)).catch(
-        (undoErr: unknown) =>
-          logger.error(
-            { err: undoErr },
-            `Overwrite not restored | channelId = ${channel.id} | id = ${id}`
-          )
-      );
-    }
-    throw err;
-  }
-}
-
-export function humanCount(channel: VoiceBasedChannel): number {
+function humanCount(channel: VoiceBasedChannel): number {
   return channel.members.filter((member) => !member.user.bot).size;
 }
 
@@ -236,261 +186,6 @@ async function moveTo(
   }
 }
 
-async function returnToOwnChannel(
-  member: GuildMember,
-  hubChannel: VoiceBasedChannel
-): Promise<boolean> {
-  const existing = await store.ownedBy(member.guild.id, member.id);
-  if (!existing) {
-    return false;
-  }
-  return queue.run(existing.channelId, async () => {
-    const channel = voiceChannel(member.guild, existing.channelId);
-    if (!channel) {
-      logger.debug(
-        `Owned channel missing, record dropped | guildId = ${member.guild.id} | channelId = ${existing.channelId} | userId = ${member.id}`
-      );
-      await store.removeChannel(existing.channelId);
-      return false;
-    }
-    if (!(await store.channel(existing.channelId))) {
-      return false;
-    }
-    if (member.voice.channelId === hubChannel.id) {
-      await moveTo(member, channel);
-    }
-    return true;
-  });
-}
-
-export function joinHub(
-  member: GuildMember,
-  hubChannel: VoiceBasedChannel,
-  hub: Hub,
-  config: TempVoiceConfig
-): Promise<void> {
-  const guild = member.guild;
-  const key = `${guild.id}:${member.id}`;
-  return queue.run(key, async () => {
-    if (member.voice.channelId !== hubChannel.id || member.user.bot) {
-      return;
-    }
-    if (await returnToOwnChannel(member, hubChannel)) {
-      return;
-    }
-
-    const now = Date.now();
-    const last = lastCreation.get(key) ?? 0;
-    if (now - last < CREATE_COOLDOWN_MS) {
-      logger.debug(
-        `Hub join refused | reason = cooldown | guildId = ${guild.id} | hubId = ${hubChannel.id} | userId = ${member.id}`
-      );
-      await notify(
-        hubChannel,
-        member,
-        config.t("hub.cooldown", {
-          time: `<t:${Math.ceil((last + CREATE_COOLDOWN_MS) / 1000)}:R>`,
-        })
-      );
-      return;
-    }
-
-    const parent = hubChannel.parent;
-    const missing = await missingBotPermissions(
-      guild,
-      parent ?? hubChannel,
-      REQUIRED_PERMISSIONS
-    );
-    if (missing.length > 0) {
-      logger.warn(
-        `Missing permissions | guildId = ${guild.id} | hubId = ${hubChannel.id} | userId = ${member.id} | missing = ${missing.join(",")}`
-      );
-      await notify(hubChannel, member, config.t("hub.unavailable"));
-      return;
-    }
-
-    const preference = await store.preference(guild.id, member.id);
-    let state: AccessState = {
-      ownerId: member.id,
-      locked: preference?.locked ?? false,
-      hidden: preference?.hidden ?? false,
-      trusted: await stillInGuild(guild, preference?.trusted ?? []),
-      blocked: (await stillInGuild(guild, preference?.blocked ?? [])).filter(
-        (id) => {
-          const blocked = guild.members.cache.get(id);
-          return !blocked || !isProtected(blocked, hubChannel);
-        }
-      ),
-    };
-    lastCreation.set(key, now);
-    setTimeout(() => {
-      if (lastCreation.get(key) === now) {
-        lastCreation.delete(key);
-      }
-    }, CREATE_COOLDOWN_MS).unref();
-    let channel: VoiceChannel;
-    try {
-      channel = await guild.channels.create({
-        name: preference?.name ?? renderName(hub.nameTemplate, member),
-        type: ChannelType.GuildVoice,
-        userLimit: preference?.userLimit ?? hub.userLimit,
-        bitrate: hubChannel.bitrate,
-        ...(parent && { parent: parent.id }),
-        ...(hubChannel.rtcRegion && { rtcRegion: hubChannel.rtcRegion }),
-        reason: `Temporary voice channel of ${member.user.username}`,
-      });
-    } catch (err) {
-      logger.error(
-        { err },
-        `Temporary channel not created | guildId = ${guild.id} | userId = ${member.id}`
-      );
-      await notify(hubChannel, member, config.t("hub.unavailable"));
-      return;
-    }
-
-    let row: TempChannel;
-    try {
-      try {
-        await applyAccess(channel, hubChannel.id, state);
-      } catch (err) {
-        if (!state.locked && !state.hidden) {
-          throw err;
-        }
-        logger.warn(
-          { err },
-          `Remembered lock not applied, opening the channel | channelId = ${channel.id}`
-        );
-        state = { ...state, locked: false, hidden: false };
-        await applyAccess(channel, hubChannel.id, state);
-      }
-      row = await store.createChannel({
-        channelId: channel.id,
-        guildId: guild.id,
-        hubId: hubChannel.id,
-        ownerId: member.id,
-        locked: state.locked,
-        hidden: state.hidden,
-        trusted: state.trusted,
-        blocked: state.blocked,
-      });
-    } catch (err) {
-      logger.error(
-        { err },
-        `Temporary channel not set up | guildId = ${guild.id} | channelId = ${channel.id}`
-      );
-      await channel.delete().catch(() => undefined);
-      await notify(hubChannel, member, config.t("hub.unavailable"));
-      return;
-    }
-    if (preference) {
-      await store.touchPreference(guild.id, member.id);
-    }
-
-    if (!(await moveTo(member, channel))) {
-      await removeTempChannel(channel, row, "abandoned");
-      return;
-    }
-
-    logger.info(
-      `Temporary channel created | guildId = ${guild.id} | channelId = ${channel.id} | ownerId = ${member.id}`
-    );
-    await panelService.post(channel, row, config.t, true);
-  });
-}
-
-export async function removeTempChannel(
-  channel: VoiceBasedChannel | null,
-  row: TempChannel,
-  reason: "empty" | "abandoned" | "deleted" | "owner"
-): Promise<boolean> {
-  if (channel) {
-    try {
-      await channel.delete();
-    } catch (err) {
-      logger.warn(
-        { err },
-        `Temporary channel not deleted | channelId = ${channel.id}`
-      );
-      return false;
-    }
-  }
-  await store.removeChannel(row.channelId);
-  renames.forget(row.channelId);
-  logger.info(
-    `Temporary channel removed | guildId = ${row.guildId} | channelId = ${row.channelId} | reason = ${reason}`
-  );
-  return true;
-}
-
-export function memberLeft(
-  channel: VoiceBasedChannel,
-  userId: string,
-  t: TFunction
-): Promise<void> {
-  return queue.run(channel.id, async () => {
-    const row = await store.channel(channel.id);
-    if (!row) {
-      return;
-    }
-    if (humanCount(channel) === 0) {
-      await removeTempChannel(channel, row, "empty");
-    } else if (row.ownerId === userId) {
-      await panelService.refresh(channel, row, t);
-    }
-  });
-}
-
-export function ownerMoved(
-  channel: VoiceBasedChannel,
-  userId: string,
-  t: TFunction
-): Promise<void> {
-  return queue.run(channel.id, async () => {
-    const row = await store.channel(channel.id);
-    if (row?.ownerId === userId) {
-      await panelService.refresh(channel, row, t);
-    }
-  });
-}
-
-export function channelDeleted(guild: Guild, channelId: string): Promise<void> {
-  return queue.run(channelId, async () => {
-    if (await store.removeHub(guild.id, channelId)) {
-      logger.info(
-        `Hub deleted with its channel | guildId = ${guild.id} | channelId = ${channelId}`
-      );
-    }
-    const row = await store.channel(channelId);
-    if (row) {
-      await removeTempChannel(null, row, "deleted");
-    }
-  });
-}
-
-export async function reconcile(guild: Guild, t?: TFunction): Promise<void> {
-  const now = Date.now();
-  const hubs = (await store.hubs(guild.id)).filter(
-    (hub) => !voiceChannel(guild, hub.channelId)
-  );
-  const rows = await store.channels(guild.id);
-  // Together: each hub and channel has its own row, Discord channel and queue.
-  await Promise.allSettled([
-    ...hubs.map((hub) =>
-      settle(guild, hub.channelId, async () => {
-        await store.removeHub(guild.id, hub.channelId);
-        logger.info(
-          `Deleted hub forgotten | guildId = ${guild.id} | channelId = ${hub.channelId}`
-        );
-      })
-    ),
-    ...rows.map((row) =>
-      settle(guild, row.channelId, () =>
-        queue.run(row.channelId, () => reconcileChannel(guild, row, now, t))
-      )
-    ),
-  ]);
-}
-
 /** Runs one channel's part of `reconcile`, its failure logged apart. */
 async function settle(
   guild: Guild,
@@ -507,49 +202,364 @@ async function settle(
   }
 }
 
-async function reconcileChannel(
-  guild: Guild,
-  row: TempChannel,
-  now: number,
-  t: TFunction | undefined
-): Promise<void> {
-  // Read again once the queue is ours: an event may have changed it meanwhile.
-  const current = await store.channel(row.channelId);
-  if (!current) {
-    return;
-  }
-  const channel = voiceChannel(guild, current.channelId);
-  if (!channel) {
-    await removeTempChannel(null, current, "deleted");
-    return;
-  }
-  if (
-    humanCount(channel) === 0 &&
-    now - current.createdAt.getTime() > RECONCILE_GRACE_MS
-  ) {
-    await removeTempChannel(channel, current, "empty");
-  } else if (t && !channel.members.has(current.ownerId)) {
-    await panelService.refresh(channel, current, t);
-  }
-}
+/** Creates, hands over and removes temporary channels, one change at a time per channel. */
+class LifecycleService implements Service {
+  /** Runs the changes of one channel, or of one member at a hub, in turn. */
+  readonly queue = new KeyedQueue();
+  private readonly lastCreation = new Map<string, number>();
 
-export async function seatWaitingMembers(
-  guild: Guild,
-  config: TempVoiceConfig
-): Promise<void> {
-  // In sequence: a seat may create a channel, a route Discord limits per guild.
-  for (const hub of await store.hubs(guild.id)) {
-    const hubChannel = voiceChannel(guild, hub.channelId);
-    for (const member of hubChannel?.members.values() ?? []) {
+  async applyAccess(
+    channel: VoiceBasedChannel,
+    hubId: string,
+    state: AccessState,
+    previous?: AccessState
+  ): Promise<void> {
+    const me = await botMember(channel.guild);
+    const fresh = await channel.fetch(true);
+    const current = fresh.permissionOverwrites.cache.map(toOverwrite);
+    const changes = overwriteChanges(state, {
+      everyoneId: channel.guild.id,
+      botId: me.id,
+      botPermissions: botPermissions(me, fresh.parent),
+      base: baseOverwrites(fresh.parent),
+      current,
+      grantable: await grantable(fresh, state, hubId),
+      staffRoles: staffRoles(channel.guild),
+      released: previous ? managedMembers(previous) : [],
+    });
+    const isBot = (change: (typeof changes)[number]) =>
+      change.kind === "set" && change.overwrite.id === me.id;
+    changes.sort((a, b) => Number(isBot(b)) - Number(isBot(a)));
+
+    const before = new Map(current.map((o) => [o.id, o]));
+    const applied: string[] = [];
+    try {
+      for (const change of changes) {
+        const id = change.kind === "set" ? change.overwrite.id : change.id;
+        await writeOverwrite(
+          fresh,
+          id,
+          change.kind === "set" ? change.overwrite : undefined
+        );
+        applied.push(id);
+      }
+    } catch (err) {
+      for (const id of applied.reverse()) {
+        await writeOverwrite(fresh, id, before.get(id)).catch(
+          (undoErr: unknown) =>
+            logger.error(
+              { err: undoErr },
+              `Overwrite not restored | channelId = ${channel.id} | id = ${id}`
+            )
+        );
+      }
+      throw err;
+    }
+  }
+
+  private async returnToOwnChannel(
+    member: GuildMember,
+    hubChannel: VoiceBasedChannel
+  ): Promise<boolean> {
+    const existing = await store.ownedBy(member.guild.id, member.id);
+    if (!existing) {
+      return false;
+    }
+    return this.queue.run(existing.channelId, async () => {
+      const channel = voiceChannel(member.guild, existing.channelId);
+      if (!channel) {
+        logger.debug(
+          `Owned channel missing, record dropped | guildId = ${member.guild.id} | channelId = ${existing.channelId} | userId = ${member.id}`
+        );
+        await store.removeChannel(existing.channelId);
+        return false;
+      }
+      if (!(await store.channel(existing.channelId))) {
+        return false;
+      }
+      if (member.voice.channelId === hubChannel.id) {
+        await moveTo(member, channel);
+      }
+      return true;
+    });
+  }
+
+  joinHub(
+    member: GuildMember,
+    hubChannel: VoiceBasedChannel,
+    hub: Hub,
+    config: TempVoiceConfig
+  ): Promise<void> {
+    const guild = member.guild;
+    const key = `${guild.id}:${member.id}`;
+    return this.queue.run(key, async () => {
+      if (member.voice.channelId !== hubChannel.id || member.user.bot) {
+        return;
+      }
+      if (await this.returnToOwnChannel(member, hubChannel)) {
+        return;
+      }
+
+      const now = Date.now();
+      const last = this.lastCreation.get(key) ?? 0;
+      if (now - last < CREATE_COOLDOWN_MS) {
+        logger.debug(
+          `Hub join refused | reason = cooldown | guildId = ${guild.id} | hubId = ${hubChannel.id} | userId = ${member.id}`
+        );
+        await notify(
+          hubChannel,
+          member,
+          config.t("hub.cooldown", {
+            time: `<t:${Math.ceil((last + CREATE_COOLDOWN_MS) / 1000)}:R>`,
+          })
+        );
+        return;
+      }
+
+      const parent = hubChannel.parent;
+      const missing = await missingBotPermissions(
+        guild,
+        parent ?? hubChannel,
+        REQUIRED_PERMISSIONS
+      );
+      if (missing.length > 0) {
+        logger.warn(
+          `Missing permissions | guildId = ${guild.id} | hubId = ${hubChannel.id} | userId = ${member.id} | missing = ${missing.join(",")}`
+        );
+        await notify(hubChannel, member, config.t("hub.unavailable"));
+        return;
+      }
+
+      const preference = await store.preference(guild.id, member.id);
+      let state: AccessState = {
+        ownerId: member.id,
+        locked: preference?.locked ?? false,
+        hidden: preference?.hidden ?? false,
+        trusted: await stillInGuild(guild, preference?.trusted ?? []),
+        blocked: (await stillInGuild(guild, preference?.blocked ?? [])).filter(
+          (id) => {
+            const blocked = guild.members.cache.get(id);
+            return !blocked || !isProtected(blocked, hubChannel);
+          }
+        ),
+      };
+      this.lastCreation.set(key, now);
+      setTimeout(() => {
+        if (this.lastCreation.get(key) === now) {
+          this.lastCreation.delete(key);
+        }
+      }, CREATE_COOLDOWN_MS).unref();
+      let channel: VoiceChannel;
       try {
-        await joinHub(member, hubChannel!, hub, config);
+        channel = await guild.channels.create({
+          name: preference?.name ?? renderName(hub.nameTemplate, member),
+          type: ChannelType.GuildVoice,
+          userLimit: preference?.userLimit ?? hub.userLimit,
+          bitrate: hubChannel.bitrate,
+          ...(parent && { parent: parent.id }),
+          ...(hubChannel.rtcRegion && { rtcRegion: hubChannel.rtcRegion }),
+          reason: `Temporary voice channel of ${member.user.username}`,
+        });
       } catch (err) {
-        // The other waiting members are still seated.
         logger.error(
           { err },
-          `Waiting member not seated | guildId = ${guild.id} | channelId = ${hub.channelId} | userId = ${member.id}`
+          `Temporary channel not created | guildId = ${guild.id} | userId = ${member.id}`
         );
+        await notify(hubChannel, member, config.t("hub.unavailable"));
+        return;
+      }
+
+      let row: TempChannel;
+      try {
+        try {
+          await this.applyAccess(channel, hubChannel.id, state);
+        } catch (err) {
+          if (!state.locked && !state.hidden) {
+            throw err;
+          }
+          logger.warn(
+            { err },
+            `Remembered lock not applied, opening the channel | channelId = ${channel.id}`
+          );
+          state = { ...state, locked: false, hidden: false };
+          await this.applyAccess(channel, hubChannel.id, state);
+        }
+        row = await store.createChannel({
+          channelId: channel.id,
+          guildId: guild.id,
+          hubId: hubChannel.id,
+          ownerId: member.id,
+          locked: state.locked,
+          hidden: state.hidden,
+          trusted: state.trusted,
+          blocked: state.blocked,
+        });
+      } catch (err) {
+        logger.error(
+          { err },
+          `Temporary channel not set up | guildId = ${guild.id} | channelId = ${channel.id}`
+        );
+        await channel.delete().catch(() => undefined);
+        await notify(hubChannel, member, config.t("hub.unavailable"));
+        return;
+      }
+      if (preference) {
+        await store.touchPreference(guild.id, member.id);
+      }
+
+      if (!(await moveTo(member, channel))) {
+        await this.removeTempChannel(channel, row, "abandoned");
+        return;
+      }
+
+      logger.info(
+        `Temporary channel created | guildId = ${guild.id} | channelId = ${channel.id} | ownerId = ${member.id}`
+      );
+      await panelService.post(channel, row, config.t, true);
+    });
+  }
+
+  async removeTempChannel(
+    channel: VoiceBasedChannel | null,
+    row: TempChannel,
+    reason: "empty" | "abandoned" | "deleted" | "owner"
+  ): Promise<boolean> {
+    if (channel) {
+      try {
+        await channel.delete();
+      } catch (err) {
+        logger.warn(
+          { err },
+          `Temporary channel not deleted | channelId = ${channel.id}`
+        );
+        return false;
+      }
+    }
+    await store.removeChannel(row.channelId);
+    renames.forget(row.channelId);
+    logger.info(
+      `Temporary channel removed | guildId = ${row.guildId} | channelId = ${row.channelId} | reason = ${reason}`
+    );
+    return true;
+  }
+
+  memberLeft(
+    channel: VoiceBasedChannel,
+    userId: string,
+    t: TFunction
+  ): Promise<void> {
+    return this.queue.run(channel.id, async () => {
+      const row = await store.channel(channel.id);
+      if (!row) {
+        return;
+      }
+      if (humanCount(channel) === 0) {
+        await this.removeTempChannel(channel, row, "empty");
+      } else if (row.ownerId === userId) {
+        await panelService.refresh(channel, row, t);
+      }
+    });
+  }
+
+  ownerMoved(
+    channel: VoiceBasedChannel,
+    userId: string,
+    t: TFunction
+  ): Promise<void> {
+    return this.queue.run(channel.id, async () => {
+      const row = await store.channel(channel.id);
+      if (row?.ownerId === userId) {
+        await panelService.refresh(channel, row, t);
+      }
+    });
+  }
+
+  channelDeleted(guild: Guild, channelId: string): Promise<void> {
+    return this.queue.run(channelId, async () => {
+      if (await store.removeHub(guild.id, channelId)) {
+        logger.info(
+          `Hub deleted with its channel | guildId = ${guild.id} | channelId = ${channelId}`
+        );
+      }
+      const row = await store.channel(channelId);
+      if (row) {
+        await this.removeTempChannel(null, row, "deleted");
+      }
+    });
+  }
+
+  async reconcile(guild: Guild, t?: TFunction): Promise<void> {
+    const now = Date.now();
+    const hubs = (await store.hubs(guild.id)).filter(
+      (hub) => !voiceChannel(guild, hub.channelId)
+    );
+    const rows = await store.channels(guild.id);
+    // Together: each hub and channel has its own row, Discord channel and queue.
+    await Promise.allSettled([
+      ...hubs.map((hub) =>
+        settle(guild, hub.channelId, async () => {
+          await store.removeHub(guild.id, hub.channelId);
+          logger.info(
+            `Deleted hub forgotten | guildId = ${guild.id} | channelId = ${hub.channelId}`
+          );
+        })
+      ),
+      ...rows.map((row) =>
+        settle(guild, row.channelId, () =>
+          this.queue.run(row.channelId, () =>
+            this.reconcileChannel(guild, row, now, t)
+          )
+        )
+      ),
+    ]);
+  }
+
+  private async reconcileChannel(
+    guild: Guild,
+    row: TempChannel,
+    now: number,
+    t: TFunction | undefined
+  ): Promise<void> {
+    // Read again once the queue is ours: an event may have changed it meanwhile.
+    const current = await store.channel(row.channelId);
+    if (!current) {
+      return;
+    }
+    const channel = voiceChannel(guild, current.channelId);
+    if (!channel) {
+      await this.removeTempChannel(null, current, "deleted");
+      return;
+    }
+    if (
+      humanCount(channel) === 0 &&
+      now - current.createdAt.getTime() > RECONCILE_GRACE_MS
+    ) {
+      await this.removeTempChannel(channel, current, "empty");
+    } else if (t && !channel.members.has(current.ownerId)) {
+      await panelService.refresh(channel, current, t);
+    }
+  }
+
+  async seatWaitingMembers(
+    guild: Guild,
+    config: TempVoiceConfig
+  ): Promise<void> {
+    // In sequence: a seat may create a channel, a route Discord limits per guild.
+    for (const hub of await store.hubs(guild.id)) {
+      const hubChannel = voiceChannel(guild, hub.channelId);
+      for (const member of hubChannel?.members.values() ?? []) {
+        try {
+          await this.joinHub(member, hubChannel!, hub, config);
+        } catch (err) {
+          // The other waiting members are still seated.
+          logger.error(
+            { err },
+            `Waiting member not seated | guildId = ${guild.id} | channelId = ${hub.channelId} | userId = ${member.id}`
+          );
+        }
       }
     }
   }
 }
+
+export default declareService(new LifecycleService());

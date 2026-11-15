@@ -18,8 +18,7 @@ vi.mock("#lib/database.js", () => ({ default: {} }));
 vi.mock("./store.service.js", () => ({ default: store }));
 vi.mock("./panel.service.js", () => ({ default: { refresh: vi.fn() } }));
 vi.mock("./lifecycle.service.js", () => ({
-  ...lifecycle,
-  queue: new KeyedQueue(),
+  default: { ...lifecycle, queue: new KeyedQueue() },
 }));
 
 const actions = await import("./actions.service.js");

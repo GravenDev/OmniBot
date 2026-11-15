@@ -13,7 +13,7 @@ import {
   type ActionContext,
   type Outcome,
 } from "#modules/temp-voice/services/actions.service.js";
-import { queue } from "#modules/temp-voice/services/lifecycle.service.js";
+import lifecycle from "#modules/temp-voice/services/lifecycle.service.js";
 import panelService from "#modules/temp-voice/services/panel.service.js";
 import store from "#modules/temp-voice/services/store.service.js";
 import type {
@@ -36,7 +36,7 @@ async function replaceOutdatedPanel(
   config: TempVoiceConfig
 ): Promise<void> {
   await interaction.deferReply(ephemeral);
-  const key = await queue.run(channelId, async () => {
+  const key = await lifecycle.queue.run(channelId, async () => {
     const channel = tempChannelOf(interaction.guild, channelId);
     const row = channel ? await store.channel(channelId) : null;
     if (!channel || row?.panelMessageId !== interaction.message.id) {

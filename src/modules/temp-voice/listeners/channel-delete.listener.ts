@@ -1,6 +1,6 @@
 import type { DMChannel, NonThreadGuildBasedChannel } from "discord.js";
 import { declareEventListener } from "#lib/listener.js";
-import { channelDeleted } from "#modules/temp-voice/services/lifecycle.service.js";
+import lifecycle from "#modules/temp-voice/services/lifecycle.service.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
 
 export default declareEventListener<"channelDelete", TempVoiceConfigSchema>({
@@ -10,6 +10,6 @@ export default declareEventListener<"channelDelete", TempVoiceConfigSchema>({
     if (!config || channel.isDMBased() || !channel.isVoiceBased()) {
       return;
     }
-    await channelDeleted(channel.guild, channel.id);
+    await lifecycle.channelDeleted(channel.guild, channel.id);
   },
 });

@@ -24,8 +24,10 @@ vi.mock("./services/store.service.js", () => ({
   },
 }));
 vi.mock("./services/lifecycle.service.js", () => ({
-  reconcile: mocks.reconcile,
-  seatWaitingMembers: mocks.seatWaitingMembers,
+  default: {
+    reconcile: mocks.reconcile,
+    seatWaitingMembers: mocks.seatWaitingMembers,
+  },
 }));
 
 const { tempVoiceTasks } = await import("./tasks.js");

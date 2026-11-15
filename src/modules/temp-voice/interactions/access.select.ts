@@ -8,7 +8,7 @@ import {
   setAccess,
   withChannel,
 } from "#modules/temp-voice/services/actions.service.js";
-import { queue } from "#modules/temp-voice/services/lifecycle.service.js";
+import lifecycle from "#modules/temp-voice/services/lifecycle.service.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
 import { outcomeText } from "#modules/temp-voice/views.js";
 
@@ -26,7 +26,7 @@ export default declareInteractionHandler<
       return;
     }
     const redraw = () =>
-      queue.run(channelId, () =>
+      lifecycle.queue.run(channelId, () =>
         redrawPanel(interaction.guild, channelId, config)
       );
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
