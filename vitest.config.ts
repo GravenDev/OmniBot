@@ -46,6 +46,7 @@ export default defineConfig({
         "**/*.preview.ts",
         // Fakes for the tests, not code of the bot.
         "src/lib/testing.ts",
+        "**/*.fakes.ts",
         "src/generated/**",
         "src/**/*.d.ts",
       ],
