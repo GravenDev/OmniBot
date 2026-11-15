@@ -80,6 +80,16 @@ describe("disable-module", () => {
     });
   });
 
+  it("tells a button naming no module is no longer available", async () => {
+    const { interaction } = click();
+    await disableModuleButton.execute(interaction, [], {} as never);
+    expect(interaction.reply).toHaveBeenCalledWith({
+      content: "interaction.unavailable",
+      flags: MessageFlags.Ephemeral,
+    });
+    expect(mocks.uninstallModule).not.toHaveBeenCalled();
+  });
+
   it("disables at once when nothing would be lost", async () => {
     const uninstallWarning = vi.fn(async () => null);
     withModule(uninstallWarning);

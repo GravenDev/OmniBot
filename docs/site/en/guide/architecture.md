@@ -103,7 +103,7 @@ interactionCreate
 │   └─ complete(interaction, config)
 ├─ isMessageComponent() or isModalSubmit()
 │   ├─ split customId on ":" → prefix + args
-│   ├─ find handler by prefix
+│   ├─ find handler by prefix (none → ephemeral "no longer available" reply)
 │   ├─ check module activation
 │   ├─ run type guard (check())
 │   ├─ check access ("admin", "everyone" or { permissions })
