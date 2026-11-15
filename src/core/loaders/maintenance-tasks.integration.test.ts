@@ -9,12 +9,20 @@ describe("maintenance tasks of the shipped modules", async () => {
   await initI18n();
   const modules = await loadModules("./modules");
 
-  it("include the modules that declare some", () => {
-    // A module that fails to import is skipped, not thrown: make sure the
-    // ones with maintenance tasks are actually checked below.
-    expect(modules.map((module) => module.id)).toEqual(
-      expect.arrayContaining(["reports", "server-stats", "seniority"])
-    );
+  // The scheduled purges behind retention periods of the privacy policy
+  // (docs/site/*/legal/privacy.md), kept by hand: registered from onLoad
+  // instead, they would stop on an instance where the module is skipped. A
+  // module that fails to import is skipped too, not thrown: its row fails.
+  // Deletions done by a listener or on uninstall are not checked here.
+  it.each([
+    ["reports", "purge"],
+    ["seniority", "sweep-departures"],
+    ["server-stats", "purge"],
+    ["temp-voice", "purge-preferences"],
+  ])("%s: purges its data with the %s maintenance task", (moduleId, taskId) => {
+    const module = modules.find((candidate) => candidate.id === moduleId);
+    const ids = (module?.maintenanceTasks?.() ?? []).map((task) => task.id);
+    expect(ids).toContain(taskId);
   });
 
   it.each(modules.map((module) => [module.id, module] as const))(
