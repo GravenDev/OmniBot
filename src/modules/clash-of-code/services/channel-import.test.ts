@@ -12,9 +12,8 @@ const mocks = vi.hoisted(() => ({
   store: { isKnown: vi.fn(), importReport: vi.fn() },
 }));
 
-vi.mock("./api.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./api.js")>()),
-  fetchClashReport: mocks.fetchClashReport,
+vi.mock("./codingame.service.js", () => ({
+  default: { fetchClashReport: mocks.fetchClashReport },
 }));
 vi.mock("./store.js", () => ({ default: mocks.store }));
 

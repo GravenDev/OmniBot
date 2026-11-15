@@ -16,14 +16,12 @@ const mocks = vi.hoisted(() => ({
   activatedGuildIds: vi.fn(),
 }));
 
-vi.mock("./api.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./api.js")>()),
-  fetchClashReport: mocks.fetchClashReport,
+vi.mock("./codingame.service.js", () => ({
+  default: { fetchClashReport: mocks.fetchClashReport },
 }));
 vi.mock("./store.js", () => ({ default: mocks.store }));
-vi.mock("./views.js", () => ({
-  resultImage: vi.fn(async () => Buffer.from("png")),
-  modeLabel: (_t: unknown, mode: string | null) => mode ?? "?",
+vi.mock("./views.service.js", () => ({
+  default: { resultImage: vi.fn(async () => Buffer.from("png")) },
 }));
 vi.mock("#core/services/module.service.js", () => ({
   default: {

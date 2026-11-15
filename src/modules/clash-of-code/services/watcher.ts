@@ -13,13 +13,11 @@ import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { Module } from "#lib/module.js";
 import type { ClashOfCodeConfigSchema } from "#modules/clash-of-code/clash-of-code.config.js";
-import {
-  ClashNotFoundError,
-  fetchClashReport,
-  type ClashReport,
-} from "./api.js";
+import { ClashNotFoundError, type ClashReport } from "./api.js";
+import codingame from "./codingame.service.js";
 import store, { type WatchedGame } from "./store.js";
-import { modeLabel, resultImage } from "./views.js";
+import { modeLabel } from "./views.js";
+import views from "./views.service.js";
 
 const logger = loggerMaker("clash-of-code");
 
@@ -69,7 +67,7 @@ class ClashWatcher {
     }
     let report: ClashReport | null = null;
     try {
-      report = await this.limited(() => fetchClashReport(handle));
+      report = await this.limited(() => codingame.fetchClashReport(handle));
     } catch (err) {
       if (err instanceof ClashNotFoundError) {
         logger.debug(
@@ -168,7 +166,9 @@ class ClashWatcher {
 
     let report: ClashReport;
     try {
-      report = await this.limited(() => fetchClashReport(game.handle));
+      report = await this.limited(() =>
+        codingame.fetchClashReport(game.handle)
+      );
     } catch (err) {
       if (err instanceof ClashNotFoundError) {
         await this.abandon(game, "not found");
@@ -291,7 +291,7 @@ class ClashWatcher {
     const winners = report.players
       .filter((player) => player.rank === 1)
       .map((player) => escapeMarkdown(player.nickname));
-    const image = await resultImage(
+    const image = await views.resultImage(
       {
         client: this.client,
         guildId: game.guildId,

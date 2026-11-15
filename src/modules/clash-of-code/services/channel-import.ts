@@ -1,10 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import { loggerMaker } from "#lib/logger.js";
-import {
-  ClashNotFoundError,
-  ClashRateLimitedError,
-  fetchClashReport,
-} from "./api.js";
+import { ClashNotFoundError, ClashRateLimitedError } from "./api.js";
+import codingame from "./codingame.service.js";
 import type { LinkedClash } from "./history.js";
 import store from "./store.js";
 
@@ -87,7 +84,7 @@ async function importOne(
       if (Date.now() >= deadline) {
         return "time";
       }
-      const report = await fetchClashReport(clash.handle);
+      const report = await codingame.fetchClashReport(clash.handle);
       if (!report.finished || !report.started) {
         return "unfinished";
       }

@@ -9,10 +9,9 @@ import {
   isClashMode,
   type ClashMode,
 } from "#modules/clash-of-code/services/api.js";
-import {
-  leaderboardPage,
+import views, {
   type ViewContext,
-} from "#modules/clash-of-code/services/views.js";
+} from "#modules/clash-of-code/services/views.service.js";
 
 const CUSTOM_ID = "coc-leaderboard";
 const ALL_MODES = "all";
@@ -26,7 +25,7 @@ export async function leaderboardMessage(
   callerId: string,
   visibility: Visibility
 ) {
-  const result = await leaderboardPage(context, mode, page, callerId);
+  const result = await views.leaderboardPage(context, mode, page, callerId);
   if (!result) {
     return {
       content: context.t("leaderboard.empty"),

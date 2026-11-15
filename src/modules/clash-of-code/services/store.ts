@@ -2,6 +2,7 @@ import prisma from "#lib/database.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { declareService, type Service } from "#lib/service.js";
 import type { ClashMode, ClashReport } from "./api.js";
+import type { StoredParticipation, StoredPlayer } from "./stats.js";
 
 export const GameStatus = {
   Watching: "WATCHING",
@@ -15,20 +16,6 @@ export interface WatchedGame {
   channelId: string | null;
   messageId: string | null;
   watchUntil: Date;
-}
-
-export interface StoredPlayer {
-  codingamerId: number;
-  nickname: string;
-  avatarId: bigint | null;
-  userId: string | null;
-}
-
-export interface StoredParticipation {
-  codingamerId: number;
-  rank: number;
-  score: number;
-  durationMs: number;
 }
 
 export type WatchOutcome = "watching" | "known";
