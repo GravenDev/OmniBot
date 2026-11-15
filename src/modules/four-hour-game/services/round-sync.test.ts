@@ -1,3 +1,4 @@
+import type { Client } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
 import { silenceLogs } from "#lib/testing.js";
@@ -11,6 +12,7 @@ const getConfigForModuleIn = vi.hoisted(() => vi.fn());
 vi.mock("#core/services/config.service.js", () => ({
   default: { getConfigForModuleIn },
 }));
+
 const getActivatedGuildIds = vi.hoisted(() => vi.fn());
 vi.mock("#core/services/module.service.js", () => ({
   default: { getActivatedGuildIds },
@@ -35,6 +37,16 @@ const announcePoint = vi.hoisted(() => vi.fn());
 vi.mock("./point-announcement.js", () => ({ announcePoint }));
 
 const { syncAllRounds, syncRound } = await import("./round-sync.js");
+
+// The bot is on every guild but "gone".
+const client = {
+  guilds: {
+    cache: {
+      get: (id: string) =>
+        id === "gone" ? undefined : { id, available: true },
+    },
+  },
+} as unknown as Client;
 
 const module = {
   id: "four-hour-game",
@@ -95,17 +107,28 @@ describe("syncAllRounds", () => {
       .mockRejectedValueOnce(new Error("Unknown Channel"))
       .mockResolvedValueOnce([scored("alice")]);
 
-    await syncAllRounds(module).done;
+    await syncAllRounds(client, module).done;
 
     expect(resyncLastMessage).toHaveBeenCalledTimes(2);
     expect(announcePoint).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips a guild the bot left", async () => {
+    getActivatedGuildIds.mockResolvedValue(["gone", "guild"]);
+    resyncLastMessage.mockResolvedValue([]);
+
+    await syncAllRounds(client, module).done;
+
+    expect(syncRoundInService.mock.calls.map((call) => call[0])).toEqual([
+      "guild",
+    ]);
   });
 
   it("takes every guild's queue at once, without waiting for the replays", async () => {
     getActivatedGuildIds.mockResolvedValue(["slow", "guild"]);
     resyncLastMessage.mockReturnValue(new Promise(() => {}));
 
-    await syncAllRounds(module).reserved;
+    await syncAllRounds(client, module).reserved;
 
     expect(syncRoundInService.mock.calls.map((call) => call[0])).toEqual([
       "slow",

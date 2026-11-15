@@ -1,4 +1,4 @@
-import { MessageFlags } from "discord.js";
+import { MessageFlags, type Client } from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Module } from "#lib/module.js";
 import { initTestI18n, makeTestConfig, silenceLogs } from "#lib/testing.js";
@@ -32,6 +32,16 @@ vi.mock("#modules/four-hour-game/services/winner-avatar.js", () => ({
 
 const { buildDailyPointEmbed, closeAllDays, fourHourGameTasks } =
   await import("./tasks.js");
+
+// The bot is on every guild but "gone".
+const client = {
+  guilds: {
+    cache: {
+      get: (id: string) =>
+        id === "gone" ? undefined : { id, available: true },
+    },
+  },
+} as unknown as Client;
 
 beforeAll(async () => {
   silenceLogs();
@@ -121,7 +131,7 @@ describe("closeAllDays", () => {
       { day: "2026-10-13", userId: "bob", heldSeconds: 7200 },
     ]);
 
-    await closeAllDays(module);
+    await closeAllDays(client, module);
 
     expect(closeDays).toHaveBeenCalledWith("guild", "game");
     expect(send).toHaveBeenCalledTimes(2);
@@ -143,7 +153,7 @@ describe("closeAllDays", () => {
       rank: { rank: 1, total: 1 },
     }));
 
-    await closeAllDays(module);
+    await closeAllDays(client, module);
 
     expect(getDailyRank).toHaveBeenCalledWith("guild", "alice", "2026-10-12");
     expect(getDailyRank).toHaveBeenCalledWith("guild", "alice", "2026-10-13");
@@ -163,7 +173,7 @@ describe("closeAllDays", () => {
     ]);
     send.mockRejectedValueOnce(new Error("Missing Permissions"));
 
-    await closeAllDays(module);
+    await closeAllDays(client, module);
 
     expect(send).toHaveBeenCalledTimes(2);
   });
@@ -184,7 +194,7 @@ describe("closeAllDays", () => {
       }),
     });
     fetchWinnerAvatar.mockResolvedValue("https://cdn/bob.png");
-    await closeAllDays(module);
+    await closeAllDays(client, module);
 
     expect(fetchWinnerAvatar).toHaveBeenCalledWith(guild, "bob");
     expect(send.mock.calls[0]![0].embeds[0].toJSON().thumbnail).toEqual({
@@ -201,7 +211,7 @@ describe("closeAllDays", () => {
       { day: "2026-10-13", userId: "bob", heldSeconds: 7200 },
     ]);
 
-    await closeAllDays(module);
+    await closeAllDays(client, module);
 
     expect(closeDays).toHaveBeenCalledWith("guild", "game");
     expect(send).not.toHaveBeenCalled();
@@ -216,17 +226,37 @@ describe("closeAllDays", () => {
       return [];
     });
 
-    await closeAllDays(module);
+    await closeAllDays(client, module);
 
     expect(closeDays).toHaveBeenCalledWith("guild", "game");
+  });
+
+  it("skips a guild the bot left", async () => {
+    getActivatedGuildIds.mockResolvedValue(["gone", "guild"]);
+    closeDays.mockResolvedValue([]);
+
+    await closeAllDays(client, module);
+
+    expect(getConfigForModuleIn).not.toHaveBeenCalledWith(module, "gone");
+    expect(closeDays.mock.calls.map(([guildId]) => guildId)).toEqual(["guild"]);
   });
 
   it("stays silent when no day was closed", async () => {
     closeDays.mockResolvedValue([]);
 
-    await closeAllDays(module);
+    await closeAllDays(client, module);
 
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it("closes the days at midnight in the guilds of the scheduler's client", async () => {
+    getActivatedGuildIds.mockResolvedValue(["gone", "guild"]);
+    closeDays.mockResolvedValue([]);
+    const [task] = fourHourGameTasks(module);
+
+    await task!.run(client as Client<true>);
+
+    expect(closeDays.mock.calls.map(([guildId]) => guildId)).toEqual(["guild"]);
   });
 
   it("closes the days at Paris midnight", () => {

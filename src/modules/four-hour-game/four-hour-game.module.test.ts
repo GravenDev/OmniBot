@@ -6,13 +6,16 @@ const events = vi.hoisted(() => [] as string[]);
 
 // Settled as soon as every guild's queue is taken; `done` comes later.
 const reserved = vi.hoisted(() => Promise.resolve());
-vi.mock("#modules/four-hour-game/services/round-sync.js", () => ({
-  syncAllRounds: vi.fn(() => ({
+const syncAllRounds = vi.hoisted(() =>
+  vi.fn((..._args: unknown[]) => ({
     reserved,
     done: new Promise<void>((resolve) => setTimeout(resolve, 5)).then(() => {
       events.push("sync");
     }),
-  })),
+  }))
+);
+vi.mock("#modules/four-hour-game/services/round-sync.js", () => ({
+  syncAllRounds,
 }));
 
 const closeAllDays = vi.hoisted(() =>
@@ -43,7 +46,8 @@ describe("fourHourGameModule.onLoad", () => {
     await vi.waitFor(() => expect(closeAllDays).toHaveBeenCalled());
 
     expect(events).toEqual(["sync", "close"]);
-    expect(closeAllDays).toHaveBeenCalledWith(fourHourGameModule);
+    expect(syncAllRounds).toHaveBeenCalledWith(client, fourHourGameModule);
+    expect(closeAllDays).toHaveBeenCalledWith(client, fourHourGameModule);
   });
 
   it("holds live messages until every guild's queue is taken", async () => {

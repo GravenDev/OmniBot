@@ -1,5 +1,7 @@
+import type { Client } from "discord.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
+import { presentGuilds } from "#lib/guild-loop.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
@@ -52,22 +54,23 @@ export function syncRound(
  * Replays every activated guild at once, each in its own queue: `reserved`
  * once every queue is taken, `done` once every replay is over.
  */
-export function syncAllRounds(module: Module<FourHourGameConfigSchema>): {
+export function syncAllRounds(
+  client: Client,
+  module: Module<FourHourGameConfigSchema>
+): {
   reserved: Promise<void>;
   done: Promise<void>;
 } {
-  const syncs = moduleService
-    .getActivatedGuildIds(module.id)
-    .then((guildIds) =>
-      guildIds.map((guildId) =>
-        syncRound(module, guildId).catch((err: unknown) =>
-          logger.warn(
-            { err },
-            `Could not sync the round | guildId = ${guildId}`
-          )
-        )
+  const syncs = moduleService.getActivatedGuildIds(module.id).then((guildIds) =>
+    presentGuilds(client, guildIds, {
+      action: "sync the round",
+      logger,
+    }).map(({ id: guildId }) =>
+      syncRound(module, guildId).catch((err: unknown) =>
+        logger.warn({ err }, `Could not sync the round | guildId = ${guildId}`)
       )
-    );
+    )
+  );
   return {
     reserved: syncs.then(() => undefined),
     done: syncs.then(async (all) => {
