@@ -6,7 +6,7 @@ import {
 } from "discord.js";
 import { excludedIdsOf, isExcluded } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
-import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
+import type { ServerStatsConfigSchema } from "./server-stats.config.js";
 
 export function isPublic(channel: GuildBasedChannel): boolean {
   if (channel.type === ChannelType.PrivateThread) {

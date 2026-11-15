@@ -1,6 +1,6 @@
 import { PermissionFlagsBits, type Interaction } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
-import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
+import type { ServerStatsConfigSchema } from "./server-stats.config.js";
 
 /** Administrators, and members with one of the `allowedRoles`. */
 export function canSeeStats(

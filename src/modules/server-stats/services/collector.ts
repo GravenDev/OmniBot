@@ -8,11 +8,11 @@ import type {
   User,
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { dayOf, hourOf } from "#modules/server-stats/day.js";
+import { emojiKey } from "#modules/server-stats/emoji.js";
 import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
-import { dayOf, hourOf } from "./day.js";
-import { emojiKey } from "./emoji.js";
+import { countedChannelId, isTracked } from "#modules/server-stats/tracking.js";
 import store from "./store.js";
-import { countedChannelId, isTracked } from "./tracking.js";
 
 type Config = ConfigProvider<ServerStatsConfigSchema>;
 

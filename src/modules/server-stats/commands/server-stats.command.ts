@@ -10,9 +10,8 @@ import {
 import { declareCommand } from "#lib/command.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
-import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
-import { canSeeStats } from "#modules/server-stats/services/access.js";
-import { dayOf, RETENTION_DAYS } from "#modules/server-stats/services/day.js";
+import { canSeeStats } from "#modules/server-stats/access.js";
+import { dayOf, RETENTION_DAYS } from "#modules/server-stats/day.js";
 import {
   countedPart,
   dayChoices,
@@ -24,10 +23,11 @@ import {
   selectToday,
   type SelectionError,
   type SelectionResult,
-} from "#modules/server-stats/services/period.js";
+} from "#modules/server-stats/period.js";
+import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
 import store from "#modules/server-stats/services/store.js";
-import { channelShown } from "#modules/server-stats/services/tracking.js";
 import { statsReport } from "#modules/server-stats/services/views.js";
+import { channelShown } from "#modules/server-stats/tracking.js";
 
 const AUTOCOMPLETE_LIMIT = 25;
 const DATE_MAX_LENGTH = 32;

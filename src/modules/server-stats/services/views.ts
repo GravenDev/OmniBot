@@ -1,10 +1,18 @@
 import type { Guild } from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
-import { dayOf, RETENTION_DAYS } from "./day.js";
-import { compare, NO_INSIGHTS, previousDays } from "./insights.js";
-import type { Selection } from "./period.js";
+import { dayOf, RETENTION_DAYS } from "#modules/server-stats/day.js";
+import {
+  compare,
+  NO_INSIGHTS,
+  previousDays,
+} from "#modules/server-stats/insights.js";
+import type { Selection } from "#modules/server-stats/period.js";
+import {
+  renderReport,
+  type Report,
+  type ReportContext,
+} from "#modules/server-stats/report.js";
 import reportAssets from "./report-assets.service.js";
-import { renderReport, type Report, type ReportContext } from "./report.js";
 import store, { TOP_SIZE, type DailyStats, type Totals } from "./store.js";
 
 export interface ViewOptions {
