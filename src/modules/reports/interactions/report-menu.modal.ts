@@ -6,13 +6,11 @@ import {
 import { isApiError } from "#lib/discord-errors.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { loggerMaker } from "#lib/logger.js";
+import { canPost, ineligibility } from "#modules/reports/eligibility.js";
+import { snapshotOf } from "#modules/reports/snapshot.js";
 import { REPORT_MODAL_ID } from "../commands/report-message.command.js";
 import type { ReportsConfigSchema } from "../reports.config.js";
-import reportService, {
-  canPost,
-  ineligibility,
-  snapshotOf,
-} from "../services/report.service.js";
+import reportService from "../services/report.service.js";
 
 const logger = loggerMaker("reports");
 

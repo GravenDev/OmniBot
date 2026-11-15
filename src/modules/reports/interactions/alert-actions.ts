@@ -23,7 +23,6 @@ import { replyEphemeral } from "#lib/reply.js";
 import type { ReportsConfigSchema } from "../reports.config.js";
 import { messageUrl } from "../services/alert-view.js";
 import {
-  applySanction,
   MAX_TIMEOUT_SECONDS,
   rankOf,
   sanctionBlock,
@@ -31,6 +30,7 @@ import {
   type Sanction,
 } from "../services/moderation.js";
 import reportService from "../services/report.service.js";
+import sanctions from "../services/sanctions.service.js";
 import store, { type Report } from "../services/store.js";
 
 const logger = loggerMaker("reports");
@@ -369,7 +369,7 @@ async function runSanction(
 
   let failed = false;
   try {
-    await applySanction(guild, member, report.authorId, sanction, {
+    await sanctions.apply(guild, member, report.authorId, sanction, {
       ...fields,
       auditReason: config.t("audit.reason", {
         id: report.id,

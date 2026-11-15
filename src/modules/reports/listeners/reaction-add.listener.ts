@@ -1,12 +1,10 @@
 import { matchesEmoji } from "#lib/config.js";
 import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
+import { canPost, ineligibility } from "#modules/reports/eligibility.js";
+import { snapshotOf } from "#modules/reports/snapshot.js";
 import type { ReportsConfigSchema } from "../reports.config.js";
-import reportService, {
-  canPost,
-  ineligibility,
-  snapshotOf,
-} from "../services/report.service.js";
+import reportService from "../services/report.service.js";
 
 const logger = loggerMaker("reports");
 

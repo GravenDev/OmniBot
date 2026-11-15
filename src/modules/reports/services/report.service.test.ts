@@ -82,7 +82,7 @@ const db = vi.hoisted(() => {
 
 vi.mock("./store.js", () => ({ default: db.store }));
 
-const { default: service, ineligibility } = await import("./report.service.js");
+const { default: service } = await import("./report.service.js");
 
 beforeAll(async () => {
   await initTestI18n();
@@ -454,44 +454,5 @@ describe("messagesDeleted", () => {
     await filing;
 
     expect(db.store.setMessageState).toHaveBeenCalledWith(1, "deleted");
-  });
-});
-
-describe("ineligibility", () => {
-  const message = (overrides: Record<string, any> = {}) =>
-    ({
-      author: { id: "author", bot: false },
-      system: false,
-      channelId: "c1",
-      channel: { isThread: () => false },
-      ...overrides,
-    }) as any;
-
-  it("accepts a regular message from someone else", () => {
-    expect(ineligibility(message(), "reporter", "alerts")).toBeNull();
-  });
-
-  it("rejects bots, system messages and your own messages", () => {
-    expect(
-      ineligibility(message({ author: { id: "a", bot: true } }), "r", "alerts")
-    ).toBe("bot");
-    expect(ineligibility(message({ system: true }), "r", "alerts")).toBe("bot");
-    expect(ineligibility(message(), "author", "alerts")).toBe("self");
-  });
-
-  it("rejects the alert channel and its threads", () => {
-    expect(ineligibility(message({ channelId: "alerts" }), "r", "alerts")).toBe(
-      "alertChannel"
-    );
-    expect(
-      ineligibility(
-        message({
-          channelId: "thread",
-          channel: { isThread: () => true, parentId: "alerts" },
-        }),
-        "r",
-        "alerts"
-      )
-    ).toBe("alertChannel");
   });
 });

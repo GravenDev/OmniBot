@@ -1,10 +1,6 @@
 import {
-  PermissionFlagsBits,
   RESTJSONErrorCodes,
-  type Channel,
   type Client,
-  type GuildTextBasedChannel,
-  type Message,
   type SendableChannels,
 } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
@@ -12,6 +8,7 @@ import { isApiError } from "#lib/discord-errors.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
+import { canPost } from "#modules/reports/eligibility.js";
 import type { ReportsConfigSchema } from "../reports.config.js";
 import { alertMessage } from "./alert-view.js";
 import store, {
@@ -29,70 +26,7 @@ export type ReportOutcome =
   | "duplicate"
   | "unconfigured";
 
-export type Ineligibility = "bot" | "self" | "alertChannel";
-
 type Config = ConfigProvider<ReportsConfigSchema>;
-
-export function snapshotOf(message: Message<true>): MessageSnapshot {
-  return {
-    guildId: message.guildId,
-    channelId: message.channelId,
-    messageId: message.id,
-    authorId: message.author.id,
-    content: message.content,
-    attachments: [
-      ...[...message.attachments.values()].map((attachment) => ({
-        name: attachment.name,
-        url: attachment.url,
-      })),
-      ...[...message.stickers.values()].map((sticker) => ({
-        name: sticker.name,
-        url: sticker.url,
-      })),
-    ],
-    createdAt: message.createdAt,
-  };
-}
-
-export function ineligibility(
-  message: Pick<Message<true>, "author" | "system" | "channelId" | "channel">,
-  reporterId: string,
-  alertChannelId: string | undefined
-): Ineligibility | null {
-  if (message.author.bot || message.system) {
-    return "bot";
-  }
-  if (message.author.id === reporterId) {
-    return "self";
-  }
-  const parentId = message.channel.isThread() ? message.channel.parentId : null;
-  if (
-    alertChannelId &&
-    (message.channelId === alertChannelId || parentId === alertChannelId)
-  ) {
-    return "alertChannel";
-  }
-  return null;
-}
-
-export function canPost(
-  channel: Channel | null | undefined
-): channel is GuildTextBasedChannel {
-  if (!channel?.isSendable() || channel.isDMBased()) {
-    return false;
-  }
-  const me = channel.guild.members.me;
-  return (
-    !me ||
-    (channel
-      .permissionsFor(me)
-      ?.has([
-        PermissionFlagsBits.ViewChannel,
-        PermissionFlagsBits.SendMessages,
-      ]) ??
-      false)
-  );
-}
 
 function isMissing(error: unknown): boolean {
   return isApiError(

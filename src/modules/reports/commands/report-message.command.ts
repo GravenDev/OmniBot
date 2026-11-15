@@ -11,8 +11,8 @@ import {
 } from "discord.js";
 import { declareCommand } from "#lib/command.js";
 import { loggerMaker } from "#lib/logger.js";
+import { ineligibility } from "#modules/reports/eligibility.js";
 import type { ReportsConfigSchema } from "../reports.config.js";
-import { ineligibility } from "../services/report.service.js";
 
 const logger = loggerMaker("reports");
 
