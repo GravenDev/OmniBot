@@ -9,25 +9,17 @@ import {
 import configService from "#core/services/config.service.js";
 import mentionService from "#core/services/mention.service.js";
 import moduleService from "#core/services/module.service.js";
-import {
-  celebratesOn,
-  dueDay,
-  localTime,
-  type CalendarDay,
-} from "#lib/calendar.js";
-import {
-  renderCelebrationImage,
-  SHOWN_PORTRAITS,
-} from "#lib/celebration-card.js";
+import { dueDay, localTime, type CalendarDay } from "#lib/calendar.js";
+import { renderCelebrationImage } from "#lib/celebration-card.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { forEachGuild } from "#lib/guild-loop.js";
 import { allMembers } from "#lib/guild-members.js";
-import { fetchAvatar } from "#lib/imaging.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { celebrationMessage, postCard } from "#lib/post-card.js";
 import type { BirthdayConfigSchema } from "../birthday.config.js";
 import {
+  announcedCelebrants,
   birthdayCard,
   plainMessage,
   cardMessages,
@@ -35,23 +27,14 @@ import {
   wishMessages,
   type WishMessage,
 } from "./announcements.js";
-import birthdayService, { type BirthdayEntry } from "./birthday.service.js";
-import { postMonthlyCalendar } from "./calendar.js";
+import birthdayService from "./birthday.service.js";
+import { postMonthlyCalendar } from "./calendar.service.js";
 import { logFailure } from "./failures.js";
+import portraitsService from "./portraits.service.js";
 
 const logger = loggerMaker("birthday");
 
 type Config = ConfigProvider<BirthdayConfigSchema>;
-
-/** Members celebrating today who agreed to have it announced. */
-export function announcedCelebrants(
-  entries: BirthdayEntry[],
-  today: CalendarDay
-): string[] {
-  return entries
-    .filter((entry) => entry.announce && celebratesOn(entry, today))
-    .map((entry) => entry.userId);
-}
 
 /** Today's card. */
 async function drawCard(
@@ -77,12 +60,7 @@ async function drawCard(
       ),
     today
   );
-  const avatars = await Promise.all(
-    celebrants.map((member, index) =>
-      // Only the first ones are drawn.
-      index < SHOWN_PORTRAITS ? fetchAvatar(member, 256) : null
-    )
-  );
+  const avatars = await portraitsService.ofMembers(celebrants);
   const image = await renderCelebrationImage(
     { ...card, avatars },
     { loop: config.get("loopCard") }

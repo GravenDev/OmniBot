@@ -23,11 +23,11 @@ import { renderStatsCard } from "#modules/birthday/rendering/stats-card.js";
 import birthdayService, {
   type BirthdayEntry,
 } from "#modules/birthday/services/birthday.service.js";
-import {
-  resolveGroup,
-  type BirthdayGroup,
-  type GroupSelection,
+import type {
+  BirthdayGroup,
+  GroupSelection,
 } from "#modules/birthday/services/group.js";
+import { resolveGroup } from "#modules/birthday/services/group.service.js";
 import { checkMilestones } from "#modules/birthday/services/milestones.js";
 import { dropBirthdayRole } from "#modules/birthday/services/role.js";
 import {
@@ -36,6 +36,7 @@ import {
   statsText,
   type BirthdayStats,
 } from "#modules/birthday/services/stats.js";
+import { birthdayTwins } from "#modules/birthday/services/twins.service.js";
 import { ownBirthdaySheet, sheetNotice } from "./own-birthday.js";
 
 const UPCOMING_DAYS = 30;
@@ -94,7 +95,12 @@ async function setBirthday(interaction: GuildInteraction, config: Config) {
 
   const entries = await birthdayService.list(interaction.guildId);
   await interaction.editReply({
-    ...(await ownBirthdaySheet(interaction, config, entry, entries, "set")),
+    ...ownBirthdaySheet(
+      config,
+      entry,
+      await birthdayTwins(interaction, entry, entries),
+      "set"
+    ),
     allowedMentions: NO_MENTIONS,
   });
 
@@ -120,7 +126,11 @@ async function showBirthday(interaction: GuildInteraction, config: Config) {
     return;
   }
   await interaction.editReply({
-    ...(await ownBirthdaySheet(interaction, config, entry, entries)),
+    ...ownBirthdaySheet(
+      config,
+      entry,
+      await birthdayTwins(interaction, entry, entries)
+    ),
     allowedMentions: NO_MENTIONS,
   });
 }

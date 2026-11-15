@@ -54,8 +54,7 @@ vi.mock("../rendering/birthday-calendar.js", () => ({
 }));
 vi.mock("#lib/imaging.js", () => ({ fetchAvatar: async () => null }));
 
-const { announcedCelebrants, runAllGuildDays, runGuildDay } =
-  await import("./daily.js");
+const { runAllGuildDays, runGuildDay } = await import("./daily.js");
 
 const module = { id: "birthday" } as unknown as Module<BirthdayConfigSchema>;
 
@@ -132,21 +131,6 @@ beforeEach(() => {
     { userId: "bob", day: 1, month: 1, announce: true },
     { userId: "gone", day: 16, month: 10, announce: true },
   ]);
-});
-
-describe("announcedCelebrants", () => {
-  it("leaves out the members who did not want to be announced", () => {
-    expect(
-      announcedCelebrants(
-        [
-          { userId: "a", day: 16, month: 10, announce: true },
-          { userId: "b", day: 16, month: 10, announce: false },
-          { userId: "c", day: 17, month: 10, announce: true },
-        ],
-        { year: 2026, month: 10, day: 16 }
-      )
-    ).toEqual(["a"]);
-  });
 });
 
 describe("runGuildDay", () => {

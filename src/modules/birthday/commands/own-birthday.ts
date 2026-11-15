@@ -6,98 +6,29 @@ import {
   SectionBuilder,
   SeparatorSpacingSize,
   TextDisplayBuilder,
-  type ButtonInteraction,
-  type ChatInputCommandInteraction,
 } from "discord.js";
 import { formatDayOfYear } from "#lib/calendar.js";
 import type { ConfigProvider } from "#lib/config.js";
-import { loggerMaker } from "#lib/logger.js";
 import type { BirthdayConfigSchema } from "#modules/birthday/birthday.config.js";
 import { ACCENT_COLOR } from "#modules/birthday/rendering/theme.js";
 import type { BirthdayEntry } from "#modules/birthday/services/birthday.service.js";
 
 // Twins named in the reply to /birthday set and show; the rest are counted.
 const SHOWN_TWINS = 10;
-// Discord answers a member request for 100 users at most.
-const MEMBER_FETCH_LIMIT = 100;
 
 /** Custom id of the button that switches the member's announcement on or off. */
 export const ANNOUNCE_BUTTON_ID = "birthday-announce";
 
-const logger = loggerMaker("birthday");
-
 type Config = ConfigProvider<BirthdayConfigSchema>;
-export type MemberInteraction =
-  | ChatInputCommandInteraction<"cached" | "raw">
-  | ButtonInteraction<"cached" | "raw">;
-
-/** Ids, among `userIds`, of the members still on the guild. */
-async function stillOnGuild(
-  interaction: MemberInteraction,
-  userIds: string[]
-): Promise<Set<string>> {
-  const present = new Set<string>();
-  if (!interaction.inCachedGuild()) {
-    return present;
-  }
-  const batches: string[][] = [];
-  for (let start = 0; start < userIds.length; start += MEMBER_FETCH_LIMIT) {
-    batches.push(userIds.slice(start, start + MEMBER_FETCH_LIMIT));
-  }
-  // Together: the gateway's own send queue keeps to Discord's rate limit.
-  const fetched = await Promise.all(
-    batches.map((user) => interaction.guild.members.fetch({ user }))
-  );
-  for (const members of fetched) {
-    for (const userId of members.keys()) {
-      present.add(userId);
-    }
-  }
-  return present;
-}
 
 /**
- * The line naming the members who share `own`'s date, or null when nobody
- * does. Only announced members still on the guild are named or counted: a
- * hidden one is never revealed, even to a hidden asker. The same registered
- * date, 29 February included: it is not 28 February's twin, as in the
- * statistics.
+ * The line naming the members who share the member's date, found by the
+ * twins service, or null when nobody does.
  */
-export async function twinsLine(
-  interaction: MemberInteraction,
-  config: Config,
-  own: BirthdayEntry,
-  entries: readonly BirthdayEntry[]
-): Promise<string | null> {
-  const candidates = entries
-    .filter(
-      (entry) =>
-        entry.announce &&
-        entry.userId !== own.userId &&
-        entry.day === own.day &&
-        entry.month === own.month
-    )
-    .map((entry) => entry.userId);
-  if (candidates.length === 0) {
-    return null;
-  }
-
-  let twins: string[];
-  try {
-    const present = await stillOnGuild(interaction, candidates);
-    twins = candidates.filter((userId) => present.has(userId)).sort();
-  } catch (err) {
-    // Better no twins than a departed member named.
-    logger.error(
-      { err },
-      `Failed to fetch the birthday twins | guildId = ${interaction.guildId}`
-    );
-    return null;
-  }
+function twinsLine(config: Config, twins: readonly string[]): string | null {
   if (twins.length === 0) {
     return null;
   }
-
   // Ten names, then « N other members »: the reply stays short.
   const names = twins.slice(0, SHOWN_TWINS).map((userId) => `<@${userId}>`);
   if (twins.length > SHOWN_TWINS) {
@@ -159,14 +90,13 @@ export function sheetNotice(...texts: string[]): SheetMessage {
  * it and its button updates it: the date and where it is announced beside
  * the button that changes it, the members who share it, then what is stored.
  */
-export async function ownBirthdaySheet(
-  interaction: MemberInteraction,
+export function ownBirthdaySheet(
   config: Config,
   entry: BirthdayEntry,
-  entries: readonly BirthdayEntry[],
+  twinIds: readonly string[],
   title: SheetTitle = "show"
-): Promise<SheetMessage> {
-  const twins = await twinsLine(interaction, config, entry, entries);
+): SheetMessage {
+  const twins = twinsLine(config, twinIds);
   const container = new ContainerBuilder()
     .setAccentColor(ACCENT_COLOR)
     .addTextDisplayComponents(

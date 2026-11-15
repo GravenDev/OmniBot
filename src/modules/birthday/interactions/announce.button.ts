@@ -10,6 +10,7 @@ import {
 } from "#modules/birthday/commands/own-birthday.js";
 import birthdayService from "#modules/birthday/services/birthday.service.js";
 import { dropBirthdayRole } from "#modules/birthday/services/role.js";
+import { birthdayTwins } from "#modules/birthday/services/twins.service.js";
 
 const logger = loggerMaker("birthday");
 
@@ -57,13 +58,16 @@ export default declareInteractionHandler<
     }
     await interaction.editReply({
       content: "",
-      ...(await ownBirthdaySheet(
-        interaction,
+      ...ownBirthdaySheet(
         config,
         entry,
-        entries.map((other) => (other.userId === userId ? entry : other)),
+        await birthdayTwins(
+          interaction,
+          entry,
+          entries.map((other) => (other.userId === userId ? entry : other))
+        ),
         title === "set" ? "set" : "show"
-      )),
+      ),
       allowedMentions: NO_MENTIONS,
     });
   },

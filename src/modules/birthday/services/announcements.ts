@@ -1,5 +1,10 @@
 import { EmbedBuilder } from "discord.js";
-import { formatDayOfYear, type DayOfYear } from "#lib/calendar.js";
+import {
+  celebratesOn,
+  formatDayOfYear,
+  type CalendarDay,
+  type DayOfYear,
+} from "#lib/calendar.js";
 import {
   SHOWN_PORTRAITS,
   type CelebrationCard,
@@ -8,6 +13,7 @@ import type { TFunction } from "#lib/i18n.js";
 import { CELEBRATION_TEXT_LIMIT } from "#lib/post-card.js";
 import { stripLineMarkup, truncate } from "#lib/text.js";
 import { ACCENT, CONFETTI } from "../rendering/theme.js";
+import type { BirthdayEntry } from "./birthday.service.js";
 import {
   CERTAIN_GROUP_SIZE,
   collisionProbability,
@@ -22,6 +28,16 @@ export const BUILT_IN_MESSAGES = [
   "announce.builtIn.2",
   "announce.builtIn.3",
 ] as const;
+
+/** Members celebrating today who agreed to have it announced. */
+export function announcedCelebrants(
+  entries: BirthdayEntry[],
+  today: CalendarDay
+): string[] {
+  return entries
+    .filter((entry) => entry.announce && celebratesOn(entry, today))
+    .map((entry) => entry.userId);
+}
 
 const mention = (userId: string) => `<@${userId}>`;
 

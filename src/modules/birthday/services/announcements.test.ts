@@ -5,6 +5,7 @@ import { initTestI18n } from "#lib/testing.js";
 import en from "../i18n/en.json" with { type: "json" };
 import fr from "../i18n/fr.json" with { type: "json" };
 import {
+  announcedCelebrants,
   birthdayCard,
   birthdayMessage,
   cardMessages,
@@ -14,6 +15,21 @@ import {
   plainMessage,
   wishMessages,
 } from "./announcements.js";
+
+describe("announcedCelebrants", () => {
+  it("leaves out the members who did not want to be announced", () => {
+    expect(
+      announcedCelebrants(
+        [
+          { userId: "a", day: 16, month: 10, announce: true },
+          { userId: "b", day: 16, month: 10, announce: false },
+          { userId: "c", day: 17, month: 10, announce: true },
+        ],
+        { year: 2026, month: 10, day: 16 }
+      )
+    ).toEqual(["a"]);
+  });
+});
 
 describe("plainMessage", () => {
   const names = {

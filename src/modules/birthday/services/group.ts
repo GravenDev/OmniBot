@@ -1,5 +1,4 @@
 import type { Collection, Guild, GuildMember } from "discord.js";
-import { loadAllMembers } from "#lib/guild-members.js";
 
 /** Part of the server the paradox can be computed for, instead of all of it. */
 export type GroupSelection =
@@ -28,18 +27,14 @@ function humans(members: Collection<string, GuildMember>): Set<string> {
 }
 
 /**
- * The members of a role, or the people connected to a voice channel; null
- * when the role or channel no longer exists. Role members are fetched first
- * when the cache does not hold the whole server.
+ * The members of a role, or the people connected to a voice channel, as the
+ * cache holds them; null when the role or channel no longer exists.
  */
-export async function resolveGroup(
+export function cachedGroup(
   guild: Guild,
   selection: GroupSelection
-): Promise<BirthdayGroup | null> {
+): BirthdayGroup | null {
   if (selection.kind === "role") {
-    if (!membersCacheComplete(guild)) {
-      await loadAllMembers(guild);
-    }
     const role = guild.roles.cache.get(selection.id);
     return role
       ? {
