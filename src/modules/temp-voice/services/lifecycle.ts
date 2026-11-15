@@ -499,34 +499,64 @@ export function channelDeleted(guild: Guild, channelId: string): Promise<void> {
 
 export async function reconcile(guild: Guild, t?: TFunction): Promise<void> {
   const now = Date.now();
-  for (const hub of await store.hubs(guild.id)) {
-    if (!voiceChannel(guild, hub.channelId)) {
+  const hubs = (await store.hubs(guild.id)).filter(
+    (hub) => !voiceChannel(guild, hub.channelId)
+  );
+  const rows = await store.channels(guild.id);
+  for (const hub of hubs) {
+    await settle(guild, hub.channelId, async () => {
       await store.removeHub(guild.id, hub.channelId);
       logger.info(
         `Deleted hub forgotten | guildId = ${guild.id} | channelId = ${hub.channelId}`
       );
-    }
-  }
-  for (const row of await store.channels(guild.id)) {
-    await queue.run(row.channelId, async () => {
-      const current = await store.channel(row.channelId);
-      if (!current) {
-        return;
-      }
-      const channel = voiceChannel(guild, current.channelId);
-      if (!channel) {
-        await removeTempChannel(null, current, "deleted");
-        return;
-      }
-      if (
-        humanCount(channel) === 0 &&
-        now - current.createdAt.getTime() > RECONCILE_GRACE_MS
-      ) {
-        await removeTempChannel(channel, current, "empty");
-      } else if (t && !channel.members.has(current.ownerId)) {
-        await refreshPanel(channel, current, t);
-      }
     });
+  }
+  for (const row of rows) {
+    await settle(guild, row.channelId, () =>
+      queue.run(row.channelId, () => reconcileChannel(guild, row, now, t))
+    );
+  }
+}
+
+/** Runs one channel's part of `reconcile`, its failure logged apart. */
+async function settle(
+  guild: Guild,
+  channelId: string,
+  run: () => Promise<void>
+): Promise<void> {
+  try {
+    await run();
+  } catch (err) {
+    logger.error(
+      { err },
+      `Reconciliation failed | guildId = ${guild.id} | channelId = ${channelId}`
+    );
+  }
+}
+
+async function reconcileChannel(
+  guild: Guild,
+  row: TempChannel,
+  now: number,
+  t: TFunction | undefined
+): Promise<void> {
+  // Read again once the queue is ours: an event may have changed it meanwhile.
+  const current = await store.channel(row.channelId);
+  if (!current) {
+    return;
+  }
+  const channel = voiceChannel(guild, current.channelId);
+  if (!channel) {
+    await removeTempChannel(null, current, "deleted");
+    return;
+  }
+  if (
+    humanCount(channel) === 0 &&
+    now - current.createdAt.getTime() > RECONCILE_GRACE_MS
+  ) {
+    await removeTempChannel(channel, current, "empty");
+  } else if (t && !channel.members.has(current.ownerId)) {
+    await refreshPanel(channel, current, t);
   }
 }
 
@@ -534,10 +564,19 @@ export async function seatWaitingMembers(
   guild: Guild,
   config: TempVoiceConfig
 ): Promise<void> {
+  // In sequence: a seat may create a channel, a route Discord limits per guild.
   for (const hub of await store.hubs(guild.id)) {
     const hubChannel = voiceChannel(guild, hub.channelId);
     for (const member of hubChannel?.members.values() ?? []) {
-      await joinHub(member, hubChannel!, hub, config);
+      try {
+        await joinHub(member, hubChannel!, hub, config);
+      } catch (err) {
+        // The other waiting members are still seated.
+        logger.error(
+          { err },
+          `Waiting member not seated | guildId = ${guild.id} | channelId = ${hub.channelId} | userId = ${member.id}`
+        );
+      }
     }
   }
 }
