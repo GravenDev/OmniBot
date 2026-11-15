@@ -64,4 +64,70 @@ describe("reconcile task", () => {
       undefined
     );
   });
+
+  it("forgets the channels of every left guild in one query", async () => {
+    mocks.guildIds.mockResolvedValue(["left", "gone", "here"]);
+
+    await run(clientWith("here"));
+
+    expect(mocks.removeGuildChannels).toHaveBeenCalledTimes(1);
+    expect(mocks.removeGuildChannels).toHaveBeenCalledWith(["left", "gone"]);
+    expect(mocks.reconcile).toHaveBeenCalledTimes(1);
+  });
+
+  it("forgets only left guilds that still have channel rows", async () => {
+    mocks.activated.mockResolvedValue(["activated-left", "here"]);
+    mocks.guildIds.mockResolvedValue(["rows-left"]);
+
+    await run(clientWith("here"));
+
+    expect(mocks.removeGuildChannels).toHaveBeenCalledWith(["rows-left"]);
+  });
+
+  it("sends no deletion when no left guild has channel rows", async () => {
+    mocks.activated.mockResolvedValue(["activated-left", "here"]);
+
+    await run(clientWith("here"));
+
+    expect(mocks.removeGuildChannels).not.toHaveBeenCalled();
+  });
+
+  it("reconciles a few guilds at once, never all of them together", async () => {
+    const ids = Array.from({ length: 10 }, (_, i) => `g${i}`);
+    mocks.guildIds.mockResolvedValue(ids);
+    let running = 0;
+    let most = 0;
+    mocks.reconcile.mockImplementation(async () => {
+      most = Math.max(most, ++running);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+      running--;
+    });
+
+    await run(clientWith(...ids));
+
+    expect(mocks.reconcile).toHaveBeenCalledTimes(10);
+    expect(most).toBeGreaterThan(1);
+    expect(most).toBeLessThan(10);
+  });
+
+  it("reconciles the guilds together, a slow one holding none back", async () => {
+    mocks.activated.mockResolvedValue(["slow", "fast"]);
+    let release!: () => void;
+    mocks.reconcile.mockImplementation(async (guild: { id: string }) => {
+      if (guild.id === "slow") {
+        await new Promise<void>((resolve) => (release = resolve));
+      }
+    });
+
+    const done = run(clientWith("slow", "fast"));
+    await vi.waitFor(() => expect(mocks.seatWaitingMembers).toHaveBeenCalled());
+
+    expect(mocks.seatWaitingMembers).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "fast" }),
+      expect.anything()
+    );
+    release();
+    await done;
+    expect(mocks.seatWaitingMembers).toHaveBeenCalledTimes(2);
+  });
 });

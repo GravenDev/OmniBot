@@ -128,9 +128,9 @@ class TempVoiceStore implements Service {
     return count > 0 ? this.channel(channelId) : null;
   }
 
-  async removeGuildChannels(guildId: string): Promise<number> {
+  async removeGuildChannels(guildIds: readonly string[]): Promise<number> {
     const { count } = await prisma.tempVoiceChannel.deleteMany({
-      where: { guildId },
+      where: { guildId: { in: [...guildIds] } },
     });
     return count;
   }
