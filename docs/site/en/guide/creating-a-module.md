@@ -14,6 +14,8 @@ The generated module compiles and its test passes unmodified. Fill the `TODO` de
 
 For tests, use the shared helpers from `#lib/testing.js` (`makeTestConfig`, `fakeGuild`, `fakeMessage`, `initTestI18n`) instead of hand-rolled mocks. Note that `vi.mock("#core/runtime.js")` and `vi.mock("#lib/database.js")` must still be declared per test file — Vitest hoists them, so no helper can hide them.
 
+A module reaches the core through `#core/services/` only, and the shared helpers live in `#lib/`: the lint (`no-restricted-imports`) refuses any other `#core/…` import from a module, except `#core/i18n/` in its tests (to read the core's strings). Mocking `#core/runtime.js` in a test stays necessary all the same: the services load it.
+
 ## Module Structure
 
 ```

@@ -14,6 +14,8 @@ Le module généré compile et son test passe sans retouche. Remplissez la descr
 
 Pour les tests, utilisez les helpers partagés de `#lib/testing.js` (`makeTestConfig`, `fakeGuild`, `fakeMessage`, `initTestI18n`) plutôt que des mocks maison. Notez que `vi.mock("#core/runtime.js")` et `vi.mock("#lib/database.js")` doivent toujours être déclarés par fichier de test — Vitest les hisse, aucun helper ne peut les masquer.
 
+Un module n'atteint le core que par `#core/services/`, et les helpers partagés vivent dans `#lib/` : le lint (`no-restricted-imports`) refuse tout autre import `#core/…` depuis un module, sauf `#core/i18n/` dans ses tests (pour lire les textes du core). Simuler `#core/runtime.js` dans un test reste nécessaire pour autant : les services le chargent.
+
 ```
 src/modules/mon-module/
 ├── mon-module.module.ts          # Définition principale du module

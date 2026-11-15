@@ -173,6 +173,58 @@
       "rules": {
         "omnibot/no-whole-guild-member-fetch": "off"
       }
+    },
+    {
+      "files": ["src/modules/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "#core/**",
+                  "../**/core/**",
+                  "!#core/services/**",
+                  "!../**/core/services/**"
+                ],
+                "message": "A module reaches the core through #core/services/ only: the loaders, listeners, utils and the rest are the core's own; shared helpers live in #lib/."
+              },
+              {
+                "group": ["#core/runtime.js", "../**/core/runtime.js"],
+                "message": "A module gets the client from what calls it (run(client), onLoad(client), guild.client), not from the core's global state in #core/runtime.js."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/modules/**/*.test.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "#core/**",
+                  "../**/core/**",
+                  "!#core/services/**",
+                  "!../**/core/services/**",
+                  "!#core/i18n/**",
+                  "!../**/core/i18n/**"
+                ],
+                "message": "A module reaches the core through #core/services/ only: the loaders, listeners, utils and the rest are the core's own; shared helpers live in #lib/."
+              },
+              {
+                "group": ["#core/runtime.js", "../**/core/runtime.js"],
+                "message": "A module gets the client from what calls it (run(client), onLoad(client), guild.client), not from the core's global state in #core/runtime.js."
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }
