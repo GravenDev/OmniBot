@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { truncate } from "./text.js";
+import { quoteEachLine, truncate } from "./text.js";
 
 describe("truncate", () => {
   it("keeps a short text", () => {
@@ -30,5 +30,15 @@ describe("truncate", () => {
     expect(truncate(`a || b ${"c".repeat(40)}`, 20)).toBe(
       `a || b ${"c".repeat(10)}||…`
     );
+  });
+});
+
+describe("quoteEachLine", () => {
+  it("quotes every line, empty ones included", () => {
+    expect(quoteEachLine("first\n\nthird")).toBe("> first\n> \n> third");
+  });
+
+  it("quotes a single line", () => {
+    expect(quoteEachLine("only")).toBe("> only");
   });
 });

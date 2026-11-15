@@ -12,7 +12,7 @@ import {
 import { formatDuration } from "#lib/duration.js";
 import type { TFunction } from "#lib/i18n.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
-import { truncate } from "#lib/text.js";
+import { quoteEachLine, truncate } from "#lib/text.js";
 import type { Action, AuthorHistory, Report, ReportStatus } from "./store.js";
 
 export const CONTENT_LIMIT = 1500;
@@ -69,13 +69,6 @@ function fitText(texts: string[], limit: number): string[] {
   return result;
 }
 
-function quote(text: string): string {
-  return text
-    .split("\n")
-    .map((line) => `> ${line}`)
-    .join("\n");
-}
-
 function statusLine(report: Report, t: TFunction): string {
   if (report.status === "open") {
     return t("alert.status.open");
@@ -129,7 +122,7 @@ function contentBlock(report: Report, t: TFunction): string {
   const lines: string[] = [];
   lines.push(
     report.content
-      ? quote(truncate(report.content, CONTENT_LIMIT))
+      ? quoteEachLine(truncate(report.content, CONTENT_LIMIT))
       : t("alert.noContent")
   );
   if (report.attachments.length > 0) {
@@ -154,7 +147,7 @@ function notes(report: Report, t: TFunction): string[] {
     if (report.editedContent !== null) {
       result.push(
         report.editedContent
-          ? quote(truncate(report.editedContent, EDITED_LIMIT))
+          ? quoteEachLine(truncate(report.editedContent, EDITED_LIMIT))
           : t("alert.noContent")
       );
     }

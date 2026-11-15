@@ -24,3 +24,14 @@ export function truncate(text: string, limit: number): string {
   const shorter = prefix(text, limit - 3);
   return opensSpoiler(shorter) ? `${shorter}||…` : `${shorter}…`;
 }
+
+/**
+ * A text as a Markdown quote, one `> ` per line: discord.js's `quote` only
+ * quotes the first.
+ */
+export function quoteEachLine(text: string): string {
+  return text
+    .split("\n")
+    .map((line) => `> ${line}`)
+    .join("\n");
+}

@@ -19,7 +19,7 @@ import {
   componentsText,
   hiddenAttachments,
 } from "./message-content.js";
-import { truncate } from "./text.js";
+import { quoteEachLine, truncate } from "./text.js";
 
 // The layout shared by the modules that report someone else's message in a
 // message of their own (the quotes, the starboard): a container with the
@@ -63,13 +63,6 @@ type Body = Pick<
 interface GalleryItem {
   url: string;
   spoiler: boolean;
-}
-
-function quote(text: string): string {
-  return text
-    .split("\n")
-    .map((line) => `> ${line}`)
-    .join("\n");
 }
 
 function isMedia(attachment: Attachment): boolean {
@@ -125,7 +118,7 @@ function embedText(embed: Embed): string | null {
     embed.description,
   ].filter((part): part is string => !!part);
   return parts.length > 0
-    ? truncate(quote(parts.join("\n")), EMBED_LIMIT)
+    ? truncate(quoteEachLine(parts.join("\n")), EMBED_LIMIT)
     : null;
 }
 
