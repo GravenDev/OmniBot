@@ -4,8 +4,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const store = vi.hoisted(() => ({ get: vi.fn() }));
 const poster = vi.hoisted(() => ({ bump: vi.fn() }));
 
-vi.mock("#modules/sticky/services/store.js", () => ({ default: store }));
-vi.mock("#modules/sticky/services/poster.js", () => ({ default: poster }));
+vi.mock("#modules/sticky/services/store.service.js", () => ({
+  default: store,
+}));
+vi.mock("#modules/sticky/services/poster.service.js", () => ({
+  default: poster,
+}));
 
 const { default: listener } = await import("./message-create.listener.js");
 

@@ -104,7 +104,7 @@ A module that keeps something per channel (a sticky message, an auto-reaction) f
 
 ```typescript
 import { removeOnChannelDelete } from "#lib/listener.js";
-import store from "#modules/sticky/services/store.js";
+import store from "#modules/sticky/services/store.service.js";
 
 export default removeOnChannelDelete("sticky", "Sticky", (guildId, channelId) =>
   store.remove(guildId, channelId)

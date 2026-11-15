@@ -6,8 +6,8 @@ import type {
 } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
 import { missingBotPermissionNames } from "#lib/permissions.js";
-import poster from "./poster.js";
-import store from "./store.js";
+import poster from "./poster.service.js";
+import store from "./store.service.js";
 
 const logger = loggerMaker("sticky");
 
