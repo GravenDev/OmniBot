@@ -4,9 +4,8 @@ import {
   searchGuildMessagesPage,
   SearchNotReadyError,
 } from "#lib/discord-polyfills/guild-message-search.js";
-import { allMembers } from "#lib/guild-members.js";
 import { loggerMaker } from "#lib/logger.js";
-import { fetchMember } from "#lib/moderation.js";
+import { sweepStoredMembers } from "#lib/member-presence.js";
 
 /** The recomputed seniority of the guild's members, by user id. */
 export async function overrides(guildId: string): Promise<Map<string, Date>> {
@@ -142,66 +141,19 @@ function aYearBefore(now: Date): Date {
 
 const logger = loggerMaker("seniority");
 
-/** One guild's part of `sweepDepartures`. */
-async function sweepGuild(
-  guild: Guild,
-  rows: readonly { userId: string; leftAt: Date | null }[],
-  now: Date
-): Promise<void> {
-  const cutoff = aYearBefore(now);
-  const isPresent = await presence(guild);
-  for (const { userId, leftAt } of rows) {
-    try {
-      await sweepMember(guild, userId, leftAt, now, cutoff, isPresent);
-    } catch (err) {
-      // The other members are still swept; this one is tried again tomorrow.
-      logger.error(
-        { err },
-        `Failed to sweep a departure | guildId = ${guild.id} | userId = ${userId}`
-      );
-    }
-  }
-}
-
-/**
- * Who is still on the server: the whole member list, fetched once and shared
- * with the other modules, rather than one request per recomputed seniority,
- * which a large server can have by the thousand. Member by member, asked to
- * Discord rather than the cache, when the list cannot be had (no members
- * intent) or misses members, who may be absent from it rather than gone.
- */
-async function presence(
-  guild: Guild
-): Promise<(userId: string) => Promise<boolean>> {
-  try {
-    const members = await allMembers(guild);
-    if (members.size >= guild.memberCount) {
-      return async (userId) => members.has(userId);
-    }
-  } catch (err) {
-    logger.warn(
-      { err },
-      `Member list unavailable, asking member by member | guildId = ${guild.id}`
-    );
-  }
-  return async (userId) =>
-    (await fetchMember(guild, userId, { force: true })) !== null;
-}
-
 async function sweepMember(
   guild: Guild,
-  userId: string,
-  leftAt: Date | null,
+  { userId, leftAt }: { userId: string; leftAt: Date | null },
+  present: boolean,
   now: Date,
-  cutoff: Date,
-  isPresent: (userId: string) => Promise<boolean>
+  cutoff: Date
 ): Promise<void> {
   const where = { guildId: guild.id, userId };
   // Each write checks the stored state it was decided on, so a recompute that
   // ran while Discord was asked is not undone by a delete or a return. A
   // member coming back in that instant is not seen: dated as a departure, the
   // next sweep forgets it; deleted after a year, an administrator recomputes.
-  if (await isPresent(userId)) {
+  if (present) {
     if (leftAt) {
       await prisma.seniorityOverride.updateMany({
         where: { ...where, leftAt: { not: null } },
@@ -237,24 +189,12 @@ export async function sweepDepartures(
   const rows = await prisma.seniorityOverride.findMany({
     select: { guildId: true, userId: true, leftAt: true },
   });
-  for (const [guildId, guildRows] of Map.groupBy(rows, (row) => row.guildId)) {
-    try {
-      // Asked when the guild comes up, not from a list read at the start: the
-      // module may have been enabled again, and a date recomputed, meanwhile.
-      if (!(await isActivated(guildId))) {
-        await clearGuild(guildId);
-        continue;
-      }
-      const guild = client.guilds.cache.get(guildId);
-      if (guild?.available) {
-        await sweepGuild(guild, guildRows, now);
-      }
-    } catch (err) {
-      // The other guilds are still swept; this one is tried again tomorrow.
-      logger.error(
-        { err },
-        `Failed to sweep the departures | guildId = ${guildId}`
-      );
-    }
-  }
+  const cutoff = aYearBefore(now);
+  await sweepStoredMembers(client, rows, {
+    isActivated,
+    clearGuild,
+    sweepMember: (guild, row, present) =>
+      sweepMember(guild, row, present, now, cutoff),
+    logger,
+  });
 }
