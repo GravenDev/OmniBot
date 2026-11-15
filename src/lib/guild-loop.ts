@@ -7,7 +7,7 @@ import type { loggerMaker } from "./logger.js";
  * others back, few enough that a task over many guilds never holds every
  * guild's members and images in memory together.
  */
-const CONCURRENCY = 4;
+export const GUILD_CONCURRENCY = 4;
 
 export interface GuildLoopOptions {
   /** What is done in each guild, for the logs: "post the daily report". */
@@ -54,7 +54,7 @@ export async function forEachGuild(
   run: (guild: Guild) => Promise<void>,
   options: GuildLoopOptions
 ): Promise<void> {
-  const { action, logger, concurrency = CONCURRENCY } = options;
+  const { action, logger, concurrency = GUILD_CONCURRENCY } = options;
   await eachLimited(
     presentGuilds(client, guildIds, options),
     concurrency,
