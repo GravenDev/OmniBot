@@ -1,7 +1,8 @@
-import type { EmbedBuilder } from "discord.js";
+import type { Client, EmbedBuilder } from "discord.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import type { ConfigProvider } from "#lib/config.js";
+import { forEachGuild } from "#lib/guild-loop.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
@@ -113,13 +114,15 @@ async function closeDays(
 }
 
 export async function closeAllDays(
+  client: Client,
   module: Module<FourHourGameConfigSchema>
 ): Promise<void> {
-  for (const guildId of await moduleService.getActivatedGuildIds(module.id)) {
-    await closeDays(module, guildId).catch((err: unknown) =>
-      logger.error({ err }, `Failed to close the day | guildId = ${guildId}`)
-    );
-  }
+  await forEachGuild(
+    client,
+    await moduleService.getActivatedGuildIds(module.id),
+    (guild) => closeDays(module, guild.id),
+    { action: "close the day", logger }
+  );
 }
 
 export function fourHourGameTasks(module: Module<FourHourGameConfigSchema>) {
@@ -128,7 +131,7 @@ export function fourHourGameTasks(module: Module<FourHourGameConfigSchema>) {
       id: "daily-point",
       schedule: "0 0 * * *",
       timezone: GAME_TIME_ZONE,
-      run: () => closeAllDays(module),
+      run: (client) => closeAllDays(client, module),
     }),
   ];
 }
