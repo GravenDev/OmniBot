@@ -98,6 +98,21 @@ async execute(message, config) {
 
 The guild's locale is configured via `/config core > locale`. See [Configuration → Localization](./configuration#localization) for details.
 
+## Forgetting a Deleted Channel
+
+A module that keeps something per channel (a sticky message, an auto-reaction) forgets it when the channel is deleted. `removeOnChannelDelete` from `#lib/listener.js` builds that `channelDelete` listener: give it the module's id for the logs, what is removed, and the store call that deletes it and returns how many records went.
+
+```typescript
+import { removeOnChannelDelete } from "#lib/listener.js";
+import store from "#modules/sticky/services/store.js";
+
+export default removeOnChannelDelete("sticky", "Sticky", (guildId, channelId) =>
+  store.remove(guildId, channelId)
+);
+```
+
+Register it like any other listener.
+
 ## Best Practices
 
 - **Filter early** — check for bots, DMs, or irrelevant channels at the top of `execute()`

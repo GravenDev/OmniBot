@@ -92,7 +92,7 @@ Shared code lives in `src/lib/` (imported as `#lib/…`), plus `src/core/utils/`
 | `#lib/imaging.js`          | canvas basics: fonts, palette, avatars, portraits, centred text                                                      |
 | `#lib/interaction.js`      | `declareInteractionHandler` for buttons, menus and modals, with who may use them                                     |
 | `#lib/keyed-queue.js`      | `KeyedQueue`: run tasks one at a time per key                                                                        |
-| `#lib/listener.js`         | `declareEventListener`                                                                                               |
+| `#lib/listener.js`         | `declareEventListener`, `removeOnChannelDelete`: forget a module's records of a deleted channel                      |
 | `#lib/log-throttle.js`     | `LogThrottle`: the same warning once, then at debug level                                                            |
 | `#lib/logger.js`           | `loggerMaker(name)`, the shared pino logger                                                                          |
 | `#lib/mentions.js`         | `NO_MENTIONS`, `NO_MENTIONS_REPLY`                                                                                   |

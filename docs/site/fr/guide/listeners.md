@@ -98,6 +98,21 @@ async execute(message, config) {
 
 La locale du serveur est configurée via `/config core > locale`. Voir [Configuration → Localisation](./configuration#localisation) pour les détails.
 
+## Oublier un salon supprimé
+
+Un module qui garde quelque chose par salon (un message épinglé, une réaction automatique) l'oublie quand le salon est supprimé. `removeOnChannelDelete` de `#lib/listener.js` construit cet écouteur `channelDelete` : donnez-lui l'id du module pour les logs, ce qui est retiré, et l'appel au store qui le supprime et renvoie le nombre d'enregistrements retirés.
+
+```typescript
+import { removeOnChannelDelete } from "#lib/listener.js";
+import store from "#modules/sticky/services/store.js";
+
+export default removeOnChannelDelete("sticky", "Sticky", (guildId, channelId) =>
+  store.remove(guildId, channelId)
+);
+```
+
+Enregistrez-le comme n'importe quel autre écouteur.
+
 ## Bonnes pratiques
 
 - **Filtrez tôt** — vérifiez les bots, MPs ou salons non pertinents au début de `execute()`
