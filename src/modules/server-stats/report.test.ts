@@ -1,7 +1,7 @@
 import { ChannelType, type Guild } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReportAssets, ReportContext } from "./report.js";
-import type { DailyStats } from "./store.js";
+import type { DailyStats } from "./services/store.js";
 
 const mocks = vi.hoisted(() => ({
   renderReportCard: vi.fn(async () => Buffer.from("png")),

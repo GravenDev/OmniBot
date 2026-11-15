@@ -7,8 +7,8 @@ import {
 } from "discord.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
+import { RETENTION_DAYS } from "#modules/server-stats/day.js";
 import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
-import { RETENTION_DAYS } from "#modules/server-stats/services/day.js";
 
 const mocks = vi.hoisted(() => ({
   startedAt: vi.fn(),

@@ -6,11 +6,11 @@ import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
+import { addDays, dayOf, RETENTION_DAYS, TIMEZONE } from "./day.js";
 import type { ServerStatsConfigSchema } from "./server-stats.config.js";
-import { addDays, dayOf, RETENTION_DAYS, TIMEZONE } from "./services/day.js";
 import store from "./services/store.js";
-import { channelShown } from "./services/tracking.js";
 import { statsReport } from "./services/views.js";
+import { channelShown } from "./tracking.js";
 
 const logger = loggerMaker("server-stats");
 

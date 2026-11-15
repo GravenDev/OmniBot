@@ -7,7 +7,7 @@ import {
 } from "discord.js";
 import { describe, expect, it } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
-import type { ServerStatsConfigSchema } from "#modules/server-stats/server-stats.config.js";
+import type { ServerStatsConfigSchema } from "./server-stats.config.js";
 import {
   channelShown,
   countedChannelId,

@@ -1,6 +1,6 @@
 import type { Guild } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NO_INSIGHTS } from "./insights.js";
+import { NO_INSIGHTS } from "#modules/server-stats/insights.js";
 
 const mocks = vi.hoisted(() => ({
   fetchAssets: vi.fn(async () => ({
@@ -24,7 +24,9 @@ vi.mock("./store.js", () => ({
     history: mocks.history,
   },
 }));
-vi.mock("./report.js", () => ({ renderReport: mocks.renderReport }));
+vi.mock("#modules/server-stats/report.js", () => ({
+  renderReport: mocks.renderReport,
+}));
 vi.mock("./report-assets.service.js", () => ({
   default: { fetch: mocks.fetchAssets },
 }));

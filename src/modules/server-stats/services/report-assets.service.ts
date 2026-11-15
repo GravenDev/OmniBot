@@ -2,8 +2,8 @@ import type { Guild } from "discord.js";
 import { fetchImage } from "#lib/imaging.js";
 import { resolvePlayers } from "#lib/players.js";
 import { declareService, type Service } from "#lib/service.js";
-import { customEmojiId } from "./emoji.js";
-import type { ReportAssets } from "./report.js";
+import { customEmojiId } from "#modules/server-stats/emoji.js";
+import type { ReportAssets } from "#modules/server-stats/report.js";
 import type { DailyStats } from "./store.js";
 
 async function emojiImages(

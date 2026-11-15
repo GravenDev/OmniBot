@@ -14,7 +14,7 @@ import {
 import { DAY_MS, dayOf, TIMEZONE } from "./day.js";
 import { customEmojiId } from "./emoji.js";
 import type { Insights, Metric } from "./insights.js";
-import type { DailyStats, Ranked } from "./store.js";
+import type { DailyStats, Ranked } from "./services/store.js";
 
 // The icons Discord shows before each kind of channel; threads are counted in
 // their parent, which is why forums and media channels can rank.

@@ -35,7 +35,7 @@ vi.mock("./services/store.js", () => ({
     purgeBefore: mocks.purgeBefore,
   },
 }));
-vi.mock("./services/report.js", () => ({
+vi.mock("./report.js", () => ({
   renderReport: mocks.renderReport,
 }));
 vi.mock("./services/report-assets.service.js", () => ({
