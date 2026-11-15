@@ -1,5 +1,4 @@
-import type { Guild, GuildMember } from "discord.js";
-import { MAX_BAN_PURGE_SECONDS } from "#lib/moderation.js";
+import type { GuildMember } from "discord.js";
 
 export type Sanction = "warn" | "timeout" | "kick" | "ban" | "softban";
 
@@ -12,7 +11,6 @@ export type SanctionBlock =
   | "alreadyBanned";
 
 export const MAX_TIMEOUT_SECONDS = 28 * 24 * 60 * 60;
-export const AUDIT_REASON_LIMIT = 512;
 
 export interface Rank {
   id: string;
@@ -65,46 +63,4 @@ export function targetRankOf(member: GuildMember): TargetRank {
       ban: member.bannable,
     },
   };
-}
-
-export interface SanctionInput {
-  reason: string | null;
-  duration: number | null;
-  purgeSeconds: number | null;
-  auditReason: string;
-  warnMessage: string;
-}
-
-export async function applySanction(
-  guild: Guild,
-  member: GuildMember | null,
-  userId: string,
-  sanction: Sanction,
-  input: SanctionInput
-): Promise<void> {
-  const reason = input.auditReason.slice(0, AUDIT_REASON_LIMIT);
-  switch (sanction) {
-    case "warn":
-      await member!.send(input.warnMessage);
-      return;
-    case "timeout":
-      await member!.timeout(input.duration! * 1000, reason);
-      return;
-    case "kick":
-      await member!.kick(reason);
-      return;
-    case "ban":
-      await guild.bans.create(userId, {
-        reason,
-        deleteMessageSeconds: input.purgeSeconds ?? 0,
-      });
-      return;
-    case "softban":
-      await guild.bans.create(userId, {
-        reason,
-        deleteMessageSeconds: input.purgeSeconds ?? MAX_BAN_PURGE_SECONDS,
-      });
-      await guild.bans.remove(userId, reason);
-      return;
-  }
 }

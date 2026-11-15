@@ -5,11 +5,7 @@ import { reportsConfigSchema } from "../reports.config.js";
 vi.mock("#lib/database.js", () => ({ default: {}, Prisma: {} }));
 
 const report = vi.hoisted(() => vi.fn(async () => "created"));
-vi.mock("../services/report.service.js", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../services/report.service.js")>();
-  return { ...actual, default: { report } };
-});
+vi.mock("../services/report.service.js", () => ({ default: { report } }));
 
 const { default: listener } = await import("./reaction-add.listener.js");
 
