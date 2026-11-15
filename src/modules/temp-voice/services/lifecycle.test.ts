@@ -412,6 +412,35 @@ describe("reconcile", () => {
     expect(panel.refreshPanel).toHaveBeenCalledWith(temp, stored, config.t);
   });
 
+  it("reconciles the channels together, a slow one holding none back", async () => {
+    const temp = {
+      id: "temp",
+      isVoiceBased: () => true,
+      members: new Collection([["bob", { id: "bob", user: { bot: false } }]]),
+    };
+    const guild = { id: "g1", channels: { cache: new Map([["temp", temp]]) } };
+    const stored = {
+      channelId: "temp",
+      ownerId: "alice",
+      createdAt: new Date(0),
+    };
+    let release!: (row: null) => void;
+    store.hubs.mockResolvedValue([]);
+    store.channels.mockResolvedValue([{ channelId: "slow" }, stored]);
+    store.channel.mockImplementation((channelId: string) =>
+      channelId === "slow"
+        ? new Promise((resolve) => (release = resolve))
+        : Promise.resolve(stored)
+    );
+
+    const done = reconcile(guild as any, config.t);
+    await vi.waitFor(() => expect(panel.refreshPanel).toHaveBeenCalled());
+
+    release(null);
+    await done;
+    expect(panel.refreshPanel).toHaveBeenCalledWith(temp, stored, config.t);
+  });
+
   it("still reconciles the other channels when one fails", async () => {
     const temp = {
       id: "temp",

@@ -503,19 +503,22 @@ export async function reconcile(guild: Guild, t?: TFunction): Promise<void> {
     (hub) => !voiceChannel(guild, hub.channelId)
   );
   const rows = await store.channels(guild.id);
-  for (const hub of hubs) {
-    await settle(guild, hub.channelId, async () => {
-      await store.removeHub(guild.id, hub.channelId);
-      logger.info(
-        `Deleted hub forgotten | guildId = ${guild.id} | channelId = ${hub.channelId}`
-      );
-    });
-  }
-  for (const row of rows) {
-    await settle(guild, row.channelId, () =>
-      queue.run(row.channelId, () => reconcileChannel(guild, row, now, t))
-    );
-  }
+  // Together: each hub and channel has its own row, Discord channel and queue.
+  await Promise.allSettled([
+    ...hubs.map((hub) =>
+      settle(guild, hub.channelId, async () => {
+        await store.removeHub(guild.id, hub.channelId);
+        logger.info(
+          `Deleted hub forgotten | guildId = ${guild.id} | channelId = ${hub.channelId}`
+        );
+      })
+    ),
+    ...rows.map((row) =>
+      settle(guild, row.channelId, () =>
+        queue.run(row.channelId, () => reconcileChannel(guild, row, now, t))
+      )
+    ),
+  ]);
 }
 
 /** Runs one channel's part of `reconcile`, its failure logged apart. */
