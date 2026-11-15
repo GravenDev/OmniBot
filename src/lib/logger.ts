@@ -34,6 +34,9 @@ const base = pino({
 export const loggerMaker = (name?: string) =>
   name ? base.child({ name }) : base;
 
+/** A logger from `loggerMaker`, for a helper that logs with its caller's. */
+export type Logger = ReturnType<typeof loggerMaker>;
+
 const logger = loggerMaker();
 
 console.log = logger.info.bind(logger);

@@ -6,9 +6,7 @@ import {
 } from "discord.js";
 import { isDiscordApiError } from "./discord-errors.js";
 import { COMPONENTS_TEXT_LIMIT } from "./format.js";
-import type { loggerMaker } from "./logger.js";
-
-type Logger = ReturnType<typeof loggerMaker>;
+import type { Logger } from "./logger.js";
 
 /**
  * Draws a card and posts it. False when it could not be drawn or Discord

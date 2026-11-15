@@ -96,6 +96,7 @@ Shared code lives in `src/lib/` (imported as `#lib/…`), plus `src/core/utils/`
 | `#lib/listener.js`         | `declareEventListener`, `removeOnChannelDelete`: forget a module's records of a deleted channel                      |
 | `#lib/log-throttle.js`     | `LogThrottle`: the same warning once, then at debug level                                                            |
 | `#lib/logger.js`           | `loggerMaker(name)`, the shared pino logger                                                                          |
+| `#lib/member-presence.js`  | `sweepStoredMembers`, `memberPresence`: stored members checked against who is still on a guild                       |
 | `#lib/mentions.js`         | `NO_MENTIONS`, `NO_MENTIONS_REPLY`                                                                                   |
 | `#lib/message-content.js`  | what a Components V2 message reads and shows: `componentsText`, `componentsMedia`                                    |
 | `#lib/moderation.js`       | `fetchMember` (null when gone), `isBanned`                                                                           |
