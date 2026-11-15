@@ -203,7 +203,10 @@ function fakeQuoted(
 function fakeSource(
   content: string,
   channels: Record<string, GuildBasedChannel>,
-  channel: GuildBasedChannel = fakeChannel({ id: "999" })
+  channel: GuildBasedChannel = fakeChannel({
+    id: "999",
+    permissions: [...READ, PermissionFlagsBits.SendMessages],
+  })
 ) {
   const reply = vi.fn(async () => ({}));
   const message = {
@@ -221,7 +224,7 @@ function fakeSource(
           return found;
         },
       },
-      members: { fetch: async () => member },
+      members: { me: { id: "bot" }, fetch: async () => member },
     },
     reply,
   } as unknown as Message<true>;
@@ -1004,6 +1007,19 @@ describe("quoteLinks", () => {
     reply.mockRejectedValueOnce(new Error("boom"));
     await expect(quoteLinks(message, fakeConfig())).rejects.toThrow("boom");
     expect(reply).toHaveBeenCalledOnce();
+  });
+
+  it("does not try to reply where it cannot post", async () => {
+    const fetchChannel = vi.fn();
+    const { message, reply } = fakeSource(
+      link("200", "300"),
+      { "200": fakeChannel({ messages: { "300": quoted } }) },
+      fakeChannel({ id: "999", permissions: READ })
+    );
+    message.guild.channels.fetch = fetchChannel;
+    await quoteLinks(message, fakeConfig());
+    expect(fetchChannel).not.toHaveBeenCalled();
+    expect(reply).not.toHaveBeenCalled();
   });
 
   it("stays silent when nothing can be quoted", async () => {
