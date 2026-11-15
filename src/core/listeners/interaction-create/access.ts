@@ -1,4 +1,5 @@
 import {
+  type AutocompleteInteraction,
   type ChatInputCommandInteraction,
   type ContextMenuCommandInteraction,
   MessageFlags,
@@ -28,6 +29,27 @@ export function commandAccess(
   return command.requiresAdmin ? "admin" : "everyone";
 }
 
+// Whether the member behind the interaction may use what declares `access`,
+// without answering: autocomplete cannot show a refusal.
+export function hasAccess(
+  interaction: Pick<
+    GuardedInteraction | AutocompleteInteraction,
+    "memberPermissions"
+  >,
+  access: InteractionAccess
+): boolean {
+  if (access === "everyone") {
+    return true;
+  }
+  return (
+    interaction.memberPermissions?.has(
+      access === "admin"
+        ? PermissionFlagsBits.Administrator
+        : access.permissions
+    ) ?? false
+  );
+}
+
 // Whether the member behind the interaction may use what declares `access`;
 // when not, replies with the ephemeral refusal and returns false.
 export async function checkAccess(
@@ -35,25 +57,10 @@ export async function checkAccess(
   access: InteractionAccess,
   t: TFunction
 ): Promise<boolean> {
-  if (access === "everyone") {
+  if (hasAccess(interaction, access)) {
     return true;
   }
-  if (access === "admin") {
-    if (
-      !interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)
-    ) {
-      logger.debug(
-        `Admin access refused | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
-      );
-      await interaction.reply({
-        content: t("admin.noPermission"),
-        flags: MessageFlags.Ephemeral,
-      });
-      return false;
-    }
-    return true;
-  }
-  if (!interaction.memberPermissions?.has(access.permissions)) {
+  if (typeof access === "object") {
     logger.debug(
       `Missing member permissions | permissions = ${access.permissions} | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
     );
@@ -61,7 +68,14 @@ export async function checkAccess(
       content: t("interaction.memberMissingPermissions"),
       flags: MessageFlags.Ephemeral,
     });
-    return false;
+  } else {
+    logger.debug(
+      `Admin access refused | guildId = ${interaction.guildId} | userId = ${interaction.user.id}`
+    );
+    await interaction.reply({
+      content: t("admin.noPermission"),
+      flags: MessageFlags.Ephemeral,
+    });
   }
-  return true;
+  return false;
 }

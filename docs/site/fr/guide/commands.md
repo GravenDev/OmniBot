@@ -43,14 +43,16 @@ interface Command {
     interaction: AutocompleteInteraction,
     config: ConfigProvider
   ) => Promise<void>;
+  requiresAdmin?: boolean;
 }
 ```
 
-| Champ      | Requis | Description                                                       |
-| ---------- | ------ | ----------------------------------------------------------------- |
-| `data`     | Oui    | Définition de la commande slash (nom, description, options)       |
-| `execute`  | Oui    | Appelé quand un utilisateur exécute la commande                   |
-| `complete` | Non    | Appelé quand un utilisateur tape dans une option à autocomplétion |
+| Champ           | Requis | Description                                                                                                                    |
+| --------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------ |
+| `data`          | Oui    | Définition de la commande slash (nom, description, options)                                                                    |
+| `execute`       | Oui    | Appelé quand un utilisateur exécute la commande                                                                                |
+| `complete`      | Non    | Appelé quand un utilisateur tape dans une option à autocomplétion                                                              |
+| `requiresAdmin` | Non    | Seuls les administrateurs peuvent exécuter la commande ou recevoir ses suggestions d'autocomplétion, vérifié par le dispatcher |
 
 ### Accès à la configuration
 
