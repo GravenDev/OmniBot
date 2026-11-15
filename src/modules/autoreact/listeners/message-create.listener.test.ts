@@ -8,7 +8,9 @@ const store = vi.hoisted(() => ({
 
 const logger = vi.hoisted(() => ({ debug: vi.fn(), warn: vi.fn() }));
 
-vi.mock("#modules/autoreact/services/store.js", () => ({ default: store }));
+vi.mock("#modules/autoreact/services/store.service.js", () => ({
+  default: store,
+}));
 vi.mock("#lib/logger.js", () => ({ loggerMaker: () => logger }));
 
 const { default: listener, resetPauses } =
