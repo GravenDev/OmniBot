@@ -25,7 +25,7 @@ import {
   parseMessageLinks,
   type Quote,
   quoteReply,
-} from "./quote.js";
+} from "#modules/message-quote/quote.js";
 
 const logger = loggerMaker("message-quote");
 

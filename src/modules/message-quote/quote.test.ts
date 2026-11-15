@@ -16,12 +16,8 @@ import {
   silenceLogs,
   textLength,
 } from "#lib/testing.js";
-import en from "#modules/message-quote/i18n/en.json" with { type: "json" };
-import {
-  alone,
-  fakeQuoted,
-  member,
-} from "#modules/message-quote/quote.fakes.js";
+import en from "./i18n/en.json" with { type: "json" };
+import { alone, fakeQuoted, member } from "./quote.fakes.js";
 import {
   ACCENT,
   MAX_QUOTES,

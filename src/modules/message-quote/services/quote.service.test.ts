@@ -22,7 +22,7 @@ import {
   fakeQuoted,
   member,
 } from "#modules/message-quote/quote.fakes.js";
-import { quoteReply } from "./quote.js";
+import { quoteReply } from "#modules/message-quote/quote.js";
 import quoteService from "./quote.service.js";
 
 const GUILD = "100";
