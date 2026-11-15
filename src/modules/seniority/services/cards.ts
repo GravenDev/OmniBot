@@ -1,3 +1,4 @@
+import type { Image } from "@napi-rs/canvas";
 import { AttachmentBuilder, type Guild, type GuildMember } from "discord.js";
 import {
   anniversaryYears,
@@ -14,11 +15,10 @@ import {
 import type { ConfigProvider } from "#lib/config.js";
 import { formatInteger } from "#lib/format.js";
 import type { TFunction } from "#lib/i18n.js";
-import { fetchAvatar, fetchImage } from "#lib/imaging.js";
 import { truncate } from "#lib/text.js";
 import { ACCENT, CONFETTI } from "../rendering/theme.js";
 import type { SeniorityConfigSchema } from "../seniority.config.js";
-import { seniorityStart } from "./overrides.service.js";
+import { seniorityStart } from "./overrides.js";
 
 type Config = ConfigProvider<SeniorityConfigSchema>;
 
@@ -131,11 +131,15 @@ function byYears(people: { years: number }[]): [number, number][] {
   return [...counts].sort(([a], [b]) => b - a);
 }
 
-/** The day's card of the members celebrated, longest-standing first. */
+/**
+ * The day's card of the members celebrated, longest-standing first, with
+ * their portraits: null past those drawn.
+ */
 export async function seniorityCard(
   config: Config,
   celebrated: readonly Celebrated[],
-  day: DayOfYear
+  day: DayOfYear,
+  avatars: readonly (Image | null)[]
 ): Promise<AttachmentBuilder> {
   const { card, alt } = membersCardText(
     config.t,
@@ -145,12 +149,6 @@ export async function seniorityCard(
       years,
     })),
     day
-  );
-  const avatars = await Promise.all(
-    celebrated.map(({ member }, index) =>
-      // Only the first ones are drawn.
-      index < SHOWN_PORTRAITS ? fetchAvatar(member, 256) : null
-    )
   );
   const image = await renderCelebrationImage(
     { ...card, avatars },
@@ -201,12 +199,13 @@ export function serverCardText(
   };
 }
 
-/** The server's anniversary card. */
+/** The server's anniversary card, with its icon. */
 export async function serverCard(
   guild: Guild,
   config: Config,
   members: Iterable<GuildMember>,
   years: number,
+  icon: Image | null,
   overrides: ReadonlyMap<string, Date> = new Map()
 ): Promise<AttachmentBuilder> {
   const { card, alt } = serverCardText(
@@ -214,7 +213,6 @@ export async function serverCard(
     config.locale,
     serverFacts(guild, config, members, years, overrides)
   );
-  const icon = await fetchImage(guild.iconURL({ extension: "png", size: 256 }));
   const image = await renderCelebrationImage(
     { ...card, avatars: [icon] },
     { loop: config.get("loopCard") }
