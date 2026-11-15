@@ -25,7 +25,7 @@ const store = vi.hoisted(() => ({
 const panel = vi.hoisted(() => ({ post: vi.fn(), refresh: vi.fn() }));
 
 vi.mock("#lib/database.js", () => ({ default: {} }));
-vi.mock("./store.js", () => ({ default: store }));
+vi.mock("./store.service.js", () => ({ default: store }));
 vi.mock("./panel.service.js", () => ({ default: panel }));
 
 const {
@@ -35,7 +35,7 @@ const {
   ownerMoved,
   reconcile,
   seatWaitingMembers,
-} = await import("./lifecycle.js");
+} = await import("./lifecycle.service.js");
 
 silenceLogs();
 

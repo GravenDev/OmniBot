@@ -7,8 +7,8 @@ import {
   redrawPanel,
   setAccess,
   withChannel,
-} from "#modules/temp-voice/services/actions.js";
-import { queue } from "#modules/temp-voice/services/lifecycle.js";
+} from "#modules/temp-voice/services/actions.service.js";
+import { queue } from "#modules/temp-voice/services/lifecycle.service.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
 import { outcomeText } from "#modules/temp-voice/views.js";
 

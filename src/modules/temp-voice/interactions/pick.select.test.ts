@@ -8,7 +8,7 @@ const actions = vi.hoisted(() => ({
 }));
 
 vi.mock("#lib/database.js", () => ({ default: {} }));
-vi.mock("#modules/temp-voice/services/actions.js", () => actions);
+vi.mock("#modules/temp-voice/services/actions.service.js", () => actions);
 
 const { default: handler } = await import("./pick.select.js");
 

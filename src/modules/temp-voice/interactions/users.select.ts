@@ -9,7 +9,7 @@ import {
   withChannel,
   type ActionContext,
   type Outcome,
-} from "#modules/temp-voice/services/actions.js";
+} from "#modules/temp-voice/services/actions.service.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
 import { notifyRow, outcomeText } from "#modules/temp-voice/views.js";
 

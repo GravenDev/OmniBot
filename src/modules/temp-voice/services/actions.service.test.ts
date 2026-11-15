@@ -15,11 +15,14 @@ const lifecycle = vi.hoisted(() => ({
 }));
 
 vi.mock("#lib/database.js", () => ({ default: {} }));
-vi.mock("./store.js", () => ({ default: store }));
+vi.mock("./store.service.js", () => ({ default: store }));
 vi.mock("./panel.service.js", () => ({ default: { refresh: vi.fn() } }));
-vi.mock("./lifecycle.js", () => ({ ...lifecycle, queue: new KeyedQueue() }));
+vi.mock("./lifecycle.service.js", () => ({
+  ...lifecycle,
+  queue: new KeyedQueue(),
+}));
 
-const actions = await import("./actions.js");
+const actions = await import("./actions.service.js");
 
 function fakeMember(
   id: string,

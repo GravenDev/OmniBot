@@ -31,7 +31,7 @@ import {
 import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
 import panelService from "./panel.service.js";
 import renames from "./renames.service.js";
-import store, { type Hub, type TempChannel } from "./store.js";
+import store, { type Hub, type TempChannel } from "./store.service.js";
 
 const logger = loggerMaker("temp-voice");
 

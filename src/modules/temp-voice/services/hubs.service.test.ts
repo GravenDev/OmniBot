@@ -9,10 +9,10 @@ const store = vi.hoisted(() => ({
 const permissions = vi.hoisted(() => ({ missingBotPermissionNames: vi.fn() }));
 
 vi.mock("#lib/database.js", () => ({ default: {} }));
-vi.mock("./store.js", () => ({ default: store }));
+vi.mock("./store.service.js", () => ({ default: store }));
 vi.mock("#lib/permissions.js", () => permissions);
 
-const { saveHub } = await import("./hubs.js");
+const { saveHub } = await import("./hubs.service.js");
 
 const context = { t: (key: string) => key, userId: "admin" };
 

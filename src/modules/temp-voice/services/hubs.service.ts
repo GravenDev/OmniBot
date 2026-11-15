@@ -8,7 +8,7 @@ import { loggerMaker } from "#lib/logger.js";
 import { missingBotPermissionNames } from "#lib/permissions.js";
 import { cleanName, parseUserLimit } from "#modules/temp-voice/naming.js";
 import { REQUIRED_PERMISSIONS } from "#modules/temp-voice/permissions.js";
-import store from "./store.js";
+import store from "./store.service.js";
 
 const logger = loggerMaker("temp-voice");
 

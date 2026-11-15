@@ -1,6 +1,6 @@
 import type { DMChannel, NonThreadGuildBasedChannel } from "discord.js";
 import { declareEventListener } from "#lib/listener.js";
-import { channelDeleted } from "#modules/temp-voice/services/lifecycle.js";
+import { channelDeleted } from "#modules/temp-voice/services/lifecycle.service.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
 
 export default declareEventListener<"channelDelete", TempVoiceConfigSchema>({

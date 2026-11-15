@@ -17,13 +17,13 @@ vi.mock("#core/services/module.service.js", () => ({
 vi.mock("#core/services/config.service.js", () => ({
   default: { getConfigForModuleIn: async () => ({ t: () => "" }) },
 }));
-vi.mock("./services/store.js", () => ({
+vi.mock("./services/store.service.js", () => ({
   default: {
     guildIds: mocks.guildIds,
     removeGuildChannels: mocks.removeGuildChannels,
   },
 }));
-vi.mock("./services/lifecycle.js", () => ({
+vi.mock("./services/lifecycle.service.js", () => ({
   reconcile: mocks.reconcile,
   seatWaitingMembers: mocks.seatWaitingMembers,
 }));

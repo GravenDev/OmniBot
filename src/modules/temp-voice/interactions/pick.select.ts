@@ -7,7 +7,7 @@ import {
   revoke,
   transfer,
   withChannel,
-} from "#modules/temp-voice/services/actions.js";
+} from "#modules/temp-voice/services/actions.service.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
 import { outcomeText } from "#modules/temp-voice/views.js";
 

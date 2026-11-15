@@ -4,8 +4,8 @@ import { forEachGuild } from "#lib/guild-loop.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
-import { reconcile, seatWaitingMembers } from "./services/lifecycle.js";
-import store from "./services/store.js";
+import { reconcile, seatWaitingMembers } from "./services/lifecycle.service.js";
+import store from "./services/store.service.js";
 import type { TempVoiceConfigSchema } from "./temp-voice.config.js";
 
 export const PREFERENCE_RETENTION_DAYS = 365;

@@ -3,7 +3,7 @@ import type { TFunction } from "#lib/i18n.js";
 import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
 import { panelMessage } from "#modules/temp-voice/panel.js";
-import store, { type TempChannel } from "./store.js";
+import store, { type TempChannel } from "./store.service.js";
 
 const logger = loggerMaker("temp-voice");
 

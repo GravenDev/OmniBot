@@ -4,7 +4,7 @@ import {
   type ConfigProvider,
   type ConfigSchema,
 } from "#lib/config.js";
-import { hubRecords } from "./services/hubs.js";
+import { hubRecords } from "./services/hubs.service.js";
 
 export const tempVoiceConfigSchema = {
   hubs: {

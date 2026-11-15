@@ -12,10 +12,10 @@ import {
   withChannel,
   type ActionContext,
   type Outcome,
-} from "#modules/temp-voice/services/actions.js";
-import { queue } from "#modules/temp-voice/services/lifecycle.js";
+} from "#modules/temp-voice/services/actions.service.js";
+import { queue } from "#modules/temp-voice/services/lifecycle.service.js";
 import panelService from "#modules/temp-voice/services/panel.service.js";
-import store from "#modules/temp-voice/services/store.js";
+import store from "#modules/temp-voice/services/store.service.js";
 import type {
   TempVoiceConfig,
   TempVoiceConfigSchema,

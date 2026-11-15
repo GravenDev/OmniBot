@@ -4,8 +4,8 @@ import {
   joinHub,
   memberLeft,
   ownerMoved,
-} from "#modules/temp-voice/services/lifecycle.js";
-import store from "#modules/temp-voice/services/store.js";
+} from "#modules/temp-voice/services/lifecycle.service.js";
+import store from "#modules/temp-voice/services/store.service.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
 
 export default declareEventListener<"voiceStateUpdate", TempVoiceConfigSchema>({

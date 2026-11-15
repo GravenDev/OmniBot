@@ -10,14 +10,14 @@ import { cleanName } from "#modules/temp-voice/naming.js";
 import { accessState } from "#modules/temp-voice/overwrites.js";
 import { isModerator, isProtected } from "#modules/temp-voice/permissions.js";
 import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
-import { applyAccess, queue, removeTempChannel } from "./lifecycle.js";
+import { applyAccess, queue, removeTempChannel } from "./lifecycle.service.js";
 import panelService from "./panel.service.js";
 import renames from "./renames.service.js";
 import store, {
   type ChannelState,
   type PreferenceChange,
   type TempChannel,
-} from "./store.js";
+} from "./store.service.js";
 
 const logger = loggerMaker("temp-voice");
 
