@@ -58,6 +58,25 @@ describe("fourHourGameModule.onLoad", () => {
     // Not `done`: a guild would otherwise wait for the slowest replay.
     expect(waitForStartup.mock.calls.at(-1)![0]).toBe(reserved);
   });
+
+  // Invited back, or back after a Discord outage or a new gateway session:
+  // the messages posted meanwhile are caught up, as after a downtime.
+  it("catches up a guild that comes back, whichever way", async () => {
+    const register = vi.fn();
+
+    await fourHourGameModule.onLoad?.(
+      {} as Client,
+      {
+        register,
+      } as unknown as Registry
+    );
+
+    const events = register.mock.calls.map(
+      ([declared]) => (declared as { eventType?: string }).eventType
+    );
+    expect(events).toContain("guildCreate");
+    expect(events).toContain("guildAvailable");
+  });
 });
 
 describe("fourHourGameModule.onInstall", () => {
