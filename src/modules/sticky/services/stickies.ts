@@ -5,7 +5,7 @@ import type {
   ChannelRecordSource,
 } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
-import { missingBotPermissions } from "#lib/permissions.js";
+import { missingBotPermissionNames } from "#lib/permissions.js";
 import poster from "./poster.js";
 import store from "./store.js";
 
@@ -40,19 +40,18 @@ export async function stick(
   if (!content) {
     return { ok: false, message: t("set.empty") };
   }
-  const missing = await missingBotPermissions(
+  const missing = await missingBotPermissionNames(
     guild,
     channel,
-    REQUIRED_PERMISSIONS
+    REQUIRED_PERMISSIONS,
+    t
   );
-  if (missing.length > 0) {
+  if (missing) {
     return {
       ok: false,
       message: t("set.missingPermissions", {
         channel: `<#${channel.id}>`,
-        permissions: missing
-          .map((permission) => t(`permission.${permission}`))
-          .join(", "),
+        permissions: missing,
       }),
     };
   }

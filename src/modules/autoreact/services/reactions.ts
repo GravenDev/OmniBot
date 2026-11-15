@@ -12,7 +12,7 @@ import {
   type ChannelRecordSource,
 } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
-import { missingBotPermissions } from "#lib/permissions.js";
+import { missingBotPermissionNames } from "#lib/permissions.js";
 import store from "#modules/autoreact/services/store.js";
 
 const logger = loggerMaker("autoreact");
@@ -53,19 +53,18 @@ export async function setReaction(
     return { ok: false, message: t("set.invalidEmoji", { emoji: value }) };
   }
 
-  const missing = await missingBotPermissions(
+  const missing = await missingBotPermissionNames(
     guild,
     channel,
-    REQUIRED_PERMISSIONS
+    REQUIRED_PERMISSIONS,
+    t
   );
-  if (missing.length > 0) {
+  if (missing) {
     return {
       ok: false,
       message: t("set.missingPermissions", {
         channel: `<#${channel.id}>`,
-        permissions: missing
-          .map((permission) => t(`permission.${permission}`))
-          .join(", "),
+        permissions: missing,
       }),
     };
   }

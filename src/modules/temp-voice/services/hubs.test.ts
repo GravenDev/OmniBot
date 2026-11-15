@@ -6,7 +6,7 @@ const store = vi.hoisted(() => ({
   saveHub: vi.fn(),
   removeHub: vi.fn(),
 }));
-const permissions = vi.hoisted(() => ({ missingBotPermissions: vi.fn() }));
+const permissions = vi.hoisted(() => ({ missingBotPermissionNames: vi.fn() }));
 
 vi.mock("#lib/database.js", () => ({ default: {} }));
 vi.mock("./store.js", () => ({ default: store }));
@@ -27,7 +27,7 @@ function guildWith(type = ChannelType.GuildVoice) {
 beforeEach(() => {
   vi.clearAllMocks();
   store.channel.mockResolvedValue(null);
-  permissions.missingBotPermissions.mockResolvedValue([]);
+  permissions.missingBotPermissionNames.mockResolvedValue(null);
 });
 
 describe("saveHub", () => {
@@ -70,7 +70,9 @@ describe("saveHub", () => {
       "hub.isTemporary"
     );
 
-    permissions.missingBotPermissions.mockResolvedValueOnce(["MoveMembers"]);
+    permissions.missingBotPermissionNames.mockResolvedValueOnce(
+      "permission.MoveMembers"
+    );
     expect((await saveHub(guildWith(), "hub", values, context)).message).toBe(
       "hub.missingPermissions"
     );

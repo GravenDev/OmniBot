@@ -6,7 +6,11 @@ import {
   type PermissionsString,
 } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
-import { canReplyWithFile, missingBotPermissions } from "./permissions.js";
+import {
+  canReplyWithFile,
+  missingBotPermissionNames,
+  missingBotPermissions,
+} from "./permissions.js";
 
 function messageIn(thread: boolean, granted: boolean | null) {
   const has = vi.fn(() => granted ?? false);
@@ -80,5 +84,41 @@ describe("missingBotPermissions", () => {
     expect(
       await missingBotPermissions(guild, channelGranting(null), required)
     ).toEqual(required);
+  });
+});
+
+describe("missingBotPermissionNames", () => {
+  const guild = { members: { me: {} } } as unknown as Guild;
+  const t = ((key: string) => `<${key}>`) as never;
+
+  function channelLacking(lacking: PermissionsString[]) {
+    return {
+      permissionsFor: () => ({
+        missing: (wanted: PermissionsString[]) =>
+          wanted.filter((permission) => lacking.includes(permission)),
+      }),
+    } as unknown as GuildBasedChannel;
+  }
+
+  it("names each missing permission with the module's keys", async () => {
+    expect(
+      await missingBotPermissionNames(
+        guild,
+        channelLacking(["SendMessages", "AddReactions"]),
+        ["ViewChannel", "SendMessages", "AddReactions"],
+        t
+      )
+    ).toBe("<permission.SendMessages>, <permission.AddReactions>");
+  });
+
+  it("is null when nothing is missing", async () => {
+    expect(
+      await missingBotPermissionNames(
+        guild,
+        channelLacking([]),
+        ["ViewChannel"],
+        t
+      )
+    ).toBeNull();
   });
 });
