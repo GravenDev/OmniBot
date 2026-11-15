@@ -27,7 +27,9 @@ vi.mock("#core/services/module.service.js", () => ({
   default: { getActivatedGuildIds: async () => ["guild"] },
 }));
 vi.mock("./services/sync.service.js", () => ({ default: { syncAll } }));
-vi.mock("./services/share-cards.js", () => ({ pruneCards }));
+vi.mock("./services/share-cards.service.js", () => ({
+  default: { pruneCards },
+}));
 vi.mock("./services/store.service.js", () => ({
   default: { pendingReminders },
 }));

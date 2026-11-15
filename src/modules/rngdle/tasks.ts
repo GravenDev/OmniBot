@@ -12,7 +12,7 @@ import { buildDailyMessage } from "./recap.js";
 import { REMINDER_HOUR_UTC, reminderMessages } from "./reminders.js";
 import type { RngdleConfigSchema } from "./rngdle.config.js";
 import api from "./services/api.service.js";
-import { pruneCards } from "./services/share-cards.js";
+import shareCards from "./services/share-cards.service.js";
 import store from "./services/store.service.js";
 import sync from "./services/sync.service.js";
 import { dailyLeaderboard, dailyRecap } from "./services/views.js";
@@ -169,7 +169,7 @@ export function rngdleMaintenanceTasks() {
       schedule: "0 2 * * *",
       // A night missed while the bot was down is caught up at start.
       runOnStart: true,
-      run: () => pruneCards(),
+      run: () => shareCards.pruneCards(),
     }),
   ];
 }

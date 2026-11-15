@@ -38,7 +38,7 @@ vi.mock("./sync.service.js", () => ({
   default: { refreshAccount: mocks.refreshAccount },
 }));
 
-import { answerShare, computeHighlights, pruneCards } from "./share-cards.js";
+import shareCards from "./share-cards.service.js";
 
 const ACCOUNT = { guildId: "g1", userId: "u1", username: "Alice" };
 const NOW = new Date("2026-10-22T12:00:00Z");
@@ -96,59 +96,14 @@ beforeEach(() => {
   mocks.refreshAccount.mockResolvedValue(undefined);
 });
 
-describe("computeHighlights", () => {
-  const today = roll("me", 5000);
-
-  it("celebrates a personal best above every previous roll", () => {
-    const highlights = computeHighlights(
-      t,
-      today,
-      [roll("me", 4000)],
-      [],
-      "fr"
-    );
-    expect(highlights.map((h) => h.text)).toEqual(["card.personalBest"]);
-  });
-
-  it("does not call the first roll a personal best", () => {
-    expect(computeHighlights(t, today, [], [], "fr")).toEqual([]);
-  });
-
-  it("ranks the roll among the other players of the day", () => {
-    const highlights = computeHighlights(
-      t,
-      today,
-      [],
-      [today, roll("a", 9000), roll("b", 100)],
-      "fr"
-    );
-    expect(highlights).toEqual([
-      expect.objectContaining({
-        icon: "🥈",
-        text: 'card.rank {"rank":2,"count":3}',
-      }),
-    ]);
-  });
-
-  it("compares with the average once there are enough rolls", () => {
-    const previous = [1000, 2000, 3000, 4000, 5000].map((score) =>
-      roll("me", score)
-    );
-    const below = computeHighlights(t, roll("me", 2000), previous, [], "fr");
-    expect(below.at(-1)?.text).toBe('card.vsAverage {"delta":"−1 000"}');
-    expect(
-      computeHighlights(t, today, previous.slice(1), [], "fr").map(
-        (h) => h.text
-      )
-    ).not.toContain(expect.stringContaining("vsAverage"));
-  });
-});
-
 describe("answerShare", () => {
   it("replies to a shared result with a card, without pinging nor notifying", async () => {
     mocks.fetchBadges.mockResolvedValue(CALCULATOR);
     const message = shareMessage();
-    await answerShare(message as never, configWith(SHARING) as never);
+    await shareCards.answerShare(
+      message as never,
+      configWith(SHARING) as never
+    );
 
     expect(mocks.store.claimCard).toHaveBeenCalledWith("g1", "u1", DAY);
     expect(message.reply).toHaveBeenCalledWith({
@@ -162,7 +117,10 @@ describe("answerShare", () => {
     mocks.fetchBadges.mockResolvedValue(CALCULATOR);
     mocks.store.claimCard.mockResolvedValue(false);
     const message = shareMessage();
-    await answerShare(message as never, configWith(SHARING) as never);
+    await shareCards.answerShare(
+      message as never,
+      configWith(SHARING) as never
+    );
 
     expect(message.reply).toHaveBeenCalled();
     expect(mocks.store.releaseCard).not.toHaveBeenCalled();
@@ -182,7 +140,10 @@ describe("answerShare", () => {
           : []
       );
       const message = shareMessage();
-      await answerShare(message as never, configWith(SHARING) as never);
+      await shareCards.answerShare(
+        message as never,
+        configWith(SHARING) as never
+      );
 
       expect(mocks.refreshAccount).not.toHaveBeenCalled();
       expect(mocks.fetchBadges).toHaveBeenCalledTimes(badgeRequests);
@@ -200,7 +161,7 @@ describe("answerShare", () => {
     );
     const altered =
       "RNGdle 🎲 111883\n\n🟧 ANOMALY • Top 1%\n\n🟧 🍀 Lucky\n\n41 731 EP";
-    await answerShare(
+    await shareCards.answerShare(
       shareMessage(altered) as never,
       configWith(SHARING) as never
     );
@@ -219,7 +180,7 @@ describe("answerShare", () => {
     mocks.store.hasCard.mockResolvedValue(true);
     const pasted =
       "RNGdle 🎲 111883\n\n🟧 ANOMALY • Top 1%\n\n🟧 🍀 Lucky\n\n41 731 EP";
-    await answerShare(
+    await shareCards.answerShare(
       shareMessage(pasted) as never,
       configWith(SHARING) as never
     );
@@ -237,7 +198,10 @@ describe("answerShare", () => {
   it("sends no request once an unlinked member has a card today", async () => {
     mocks.store.hasCard.mockResolvedValue(true);
     const message = shareMessage();
-    await answerShare(message as never, configWith(SHARING) as never);
+    await shareCards.answerShare(
+      message as never,
+      configWith(SHARING) as never
+    );
 
     expect(mocks.store.hasCard).toHaveBeenCalledWith("g1", "u1", DAY);
     expect(mocks.fetchBadges).not.toHaveBeenCalled();
@@ -251,7 +215,10 @@ describe("answerShare", () => {
       filter?.from && filter.userId ? [roll("u1", 500)] : []
     );
     const message = shareMessage();
-    await answerShare(message as never, configWith(SHARING) as never);
+    await shareCards.answerShare(
+      message as never,
+      configWith(SHARING) as never
+    );
 
     expect(mocks.store.hasCard).not.toHaveBeenCalled();
     expect(mocks.refreshAccount).not.toHaveBeenCalled();
@@ -269,13 +236,13 @@ describe("answerShare", () => {
     mocks.store.account.mockResolvedValue(ACCOUNT);
     mocks.refreshAccount.mockRejectedValue(new Error("rngdle.com is down"));
     const config = configWith(SHARING) as never;
-    await answerShare(shareMessage() as never, config);
+    await shareCards.answerShare(shareMessage() as never, config);
     vi.setSystemTime(clock + 9 * MINUTE);
-    await answerShare(shareMessage() as never, config);
+    await shareCards.answerShare(shareMessage() as never, config);
     expect(mocks.refreshAccount).toHaveBeenCalledTimes(1);
 
     vi.setSystemTime(clock + 10 * MINUTE);
-    await answerShare(shareMessage() as never, config);
+    await shareCards.answerShare(shareMessage() as never, config);
     expect(mocks.refreshAccount).toHaveBeenCalledTimes(2);
   });
 
@@ -284,7 +251,10 @@ describe("answerShare", () => {
     mocks.store.rolls.mockResolvedValue([
       roll("u1", 500, new Date("2026-10-21T23:00:00Z")),
     ]);
-    await answerShare(shareMessage() as never, configWith(SHARING) as never);
+    await shareCards.answerShare(
+      shareMessage() as never,
+      configWith(SHARING) as never
+    );
 
     expect(mocks.refreshAccount).toHaveBeenCalledWith(ACCOUNT);
   });
@@ -293,10 +263,10 @@ describe("answerShare", () => {
     mocks.store.account.mockResolvedValue(ACCOUNT);
     mocks.refreshAccount.mockRejectedValue(new Error("rngdle.com is down"));
     const config = configWith(SHARING) as never;
-    await answerShare(shareMessage() as never, config);
+    await shareCards.answerShare(shareMessage() as never, config);
     mocks.store.account.mockResolvedValue({ ...ACCOUNT, username: "Bob" });
     vi.setSystemTime(clock + 10 * 1000);
-    await answerShare(shareMessage() as never, config);
+    await shareCards.answerShare(shareMessage() as never, config);
 
     expect(mocks.refreshAccount).toHaveBeenCalledTimes(1);
   });
@@ -328,7 +298,7 @@ describe("answerShare", () => {
       { ...shareMessage(), author: { id: "u1", bot: true } },
     ],
   ])("ignores the message when %s", async (_, config, message) => {
-    await answerShare(message as never, config as never);
+    await shareCards.answerShare(message as never, config as never);
     expect(mocks.store.claimCard).not.toHaveBeenCalled();
     expect(message.reply).not.toHaveBeenCalled();
   });
@@ -339,7 +309,7 @@ describe("answerShare", () => {
     message.reply.mockRejectedValue(new Error("boom"));
 
     await expect(
-      answerShare(message as never, configWith(SHARING) as never)
+      shareCards.answerShare(message as never, configWith(SHARING) as never)
     ).rejects.toThrow("boom");
     expect(mocks.store.releaseCard).toHaveBeenCalledWith("g1", "u1", DAY);
   });
@@ -357,7 +327,10 @@ describe("answerShare", () => {
       mocks.store.rolls.mockImplementation(async (_guildId, filter) =>
         filter?.userId ? [{ ...roll("u1", 41731), number: 111883 }] : []
       );
-      await answerShare(shareMessage() as never, configWith(SHARING) as never);
+      await shareCards.answerShare(
+        shareMessage() as never,
+        configWith(SHARING) as never
+      );
 
       const [[data]] = mocks.render.mock.calls as unknown as [
         [{ subtitle: string }],
@@ -368,7 +341,10 @@ describe("answerShare", () => {
 
   it("leaves the highlights out for a member who is not linked", async () => {
     mocks.store.rolls.mockResolvedValue([roll("u1", 100)]);
-    await answerShare(shareMessage() as never, configWith(SHARING) as never);
+    await shareCards.answerShare(
+      shareMessage() as never,
+      configWith(SHARING) as never
+    );
 
     expect(mocks.store.rolls).not.toHaveBeenCalled();
     expect(mocks.render).toHaveBeenCalledWith(
@@ -386,7 +362,10 @@ describe("answerShare", () => {
           ? [{ ...roll("u1", 41731), number: 111883 }]
           : []
     );
-    await answerShare(shareMessage() as never, configWith(SHARING) as never);
+    await shareCards.answerShare(
+      shareMessage() as never,
+      configWith(SHARING) as never
+    );
 
     expect(mocks.render).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -404,7 +383,10 @@ describe("answerShare", () => {
         ? [{ ...roll("u1", 30000, lateNight), number: 111883 }]
         : []
     );
-    await answerShare(shareMessage() as never, configWith(SHARING) as never);
+    await shareCards.answerShare(
+      shareMessage() as never,
+      configWith(SHARING) as never
+    );
 
     expect(mocks.store.claimCard).toHaveBeenCalledWith(
       "g1",
@@ -423,7 +405,10 @@ describe("answerShare", () => {
       filter?.from && filter.userId ? [roll("u1", 500)] : []
     );
     const message = shareMessage();
-    await answerShare(message as never, configWith(SHARING) as never);
+    await shareCards.answerShare(
+      message as never,
+      configWith(SHARING) as never
+    );
 
     expect(mocks.store.claimCard).not.toHaveBeenCalled();
     expect(mocks.render).toHaveBeenCalledWith(
@@ -444,7 +429,10 @@ describe("answerShare", () => {
         : []
     );
     const message = shareMessage();
-    await answerShare(message as never, configWith(SHARING) as never);
+    await shareCards.answerShare(
+      message as never,
+      configWith(SHARING) as never
+    );
 
     expect(mocks.refreshAccount).toHaveBeenCalledWith(ACCOUNT);
     expect(message.reply).toHaveBeenCalled();
@@ -464,7 +452,10 @@ describe("answerShare", () => {
       mocks.refreshAccount.mockImplementation(refresh);
       mocks.store.account.mockResolvedValue(ACCOUNT);
       const message = shareMessage();
-      await answerShare(message as never, configWith(SHARING) as never);
+      await shareCards.answerShare(
+        message as never,
+        configWith(SHARING) as never
+      );
 
       expect(mocks.store.claimCard).not.toHaveBeenCalled();
       expect(message.reply).toHaveBeenCalled();
@@ -478,7 +469,7 @@ describe("answerShare", () => {
       const config = configWith(SHARING) as never;
       // Not linked yet: the calculator verifies the result, the day is claimed.
       mocks.fetchBadges.mockResolvedValue(CALCULATOR);
-      await answerShare(shareMessage() as never, config);
+      await shareCards.answerShare(shareMessage() as never, config);
       expect(mocks.store.claimCard).toHaveBeenCalledWith("g1", "u1", DAY);
 
       // Linked now: a new roll, recorded on rngdle.com but not downloaded yet.
@@ -496,7 +487,7 @@ describe("answerShare", () => {
       );
       mocks.render.mockClear();
       vi.setSystemTime(clock + minutesLater * MINUTE);
-      await answerShare(shareMessage(LINKED_SHARE) as never, config);
+      await shareCards.answerShare(shareMessage(LINKED_SHARE) as never, config);
 
       const [[data]] = mocks.render.mock.calls as unknown as [
         [{ subtitle: string; number: number }],
@@ -536,7 +527,7 @@ describe("answerShare", () => {
           ? [{ ...roll("u1", 52000), number: 222222 }]
           : []
       );
-      await answerShare(shareMessage() as never, config);
+      await shareCards.answerShare(shareMessage() as never, config);
       expect(mocks.refreshAccount).toHaveBeenCalledTimes(1);
 
       // Rolled logged in meanwhile: recorded on rngdle.com, not downloaded.
@@ -545,7 +536,7 @@ describe("answerShare", () => {
       });
       mocks.render.mockClear();
       vi.setSystemTime(clock + secondsLater * 1000);
-      await answerShare(shareMessage(LOGGED_IN) as never, config);
+      await shareCards.answerShare(shareMessage(LOGGED_IN) as never, config);
       const [[data]] = mocks.render.mock.calls as unknown as [
         [{ subtitle: string; number: number }],
       ];
@@ -571,9 +562,9 @@ describe("answerShare", () => {
           : []
       );
       // The roll made logged out, then the same by mistake 40 s later.
-      await answerShare(shareMessage() as never, config);
+      await shareCards.answerShare(shareMessage() as never, config);
       vi.setSystemTime(clock + 40 * 1000);
-      await answerShare(shareMessage() as never, config);
+      await shareCards.answerShare(shareMessage() as never, config);
       expect(mocks.refreshAccount).toHaveBeenCalledTimes(1);
 
       // Then the recorded one.
@@ -582,7 +573,7 @@ describe("answerShare", () => {
       });
       mocks.render.mockClear();
       vi.setSystemTime(clock + 60 * 1000);
-      await answerShare(
+      await shareCards.answerShare(
         shareMessage(
           "RNGdle 🎲 222222\n\n🟦 RARE • Top 12%\n\n52 000 EP"
         ) as never,
@@ -612,7 +603,7 @@ describe("answerShare", () => {
       const pasteAt = async (seconds: number) => {
         vi.setSystemTime(clock + seconds * 1000);
         const number = 300000 + seconds;
-        await answerShare(
+        await shareCards.answerShare(
           shareMessage(
             `RNGdle 🎲 ${number}\n\n🟦 RARE • Top 12%\n\n52 000 EP`
           ) as never,
@@ -634,7 +625,10 @@ describe("answerShare", () => {
   it("draws a result whose score does not match its number as pasted", async () => {
     mocks.fetchBadges.mockResolvedValue({ ...CALCULATOR, score: 41730 });
     const message = shareMessage();
-    await answerShare(message as never, configWith(SHARING) as never);
+    await shareCards.answerShare(
+      message as never,
+      configWith(SHARING) as never
+    );
 
     expect(mocks.store.claimCard).not.toHaveBeenCalled();
     expect(mocks.fetchBadges).toHaveBeenCalledTimes(1);
@@ -644,7 +638,10 @@ describe("answerShare", () => {
   it("accepts a result whose score matches the calculator", async () => {
     mocks.fetchBadges.mockResolvedValue(CALCULATOR);
     const message = shareMessage();
-    await answerShare(message as never, configWith(SHARING) as never);
+    await shareCards.answerShare(
+      message as never,
+      configWith(SHARING) as never
+    );
 
     expect(mocks.store.claimCard).toHaveBeenCalled();
     expect(message.reply).toHaveBeenCalled();
@@ -653,7 +650,7 @@ describe("answerShare", () => {
 
 describe("pruneCards", () => {
   it("keeps the cards of today and yesterday", async () => {
-    await pruneCards(NOW);
+    await shareCards.pruneCards(NOW);
 
     expect(mocks.store.pruneCardClaims).toHaveBeenCalledWith(
       new Date("2026-10-21T00:00:00Z")
