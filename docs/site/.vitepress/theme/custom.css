@@ -1,13 +1,16 @@
 /*
  * Colours of the OmniBot logo: navy background, cyan accents, warm white.
- * Every text colour is checked against its background for WCAG AA (4.5:1).
+ * Every text colour set here reads 4.5:1 (WCAG AA) or more on the surfaces it
+ * sits on, except the cyan "Bot" of the site's name, part of the logotype,
+ * which WCAG exempts. VitePress's own hint grey (--vp-c-text-3) stays as is.
  */
 :root {
   --omnibot-navy: #0b1429;
   --omnibot-cyan: #39d1e6;
   --omnibot-white: #faf5f1;
 
-  /* Light theme: navy leads, as the robot's head does; cyan stays an accent. */
+  /* Light theme: navy leads, as the robot's outline does; cyan stays an
+     accent. */
   --vp-c-bg: #ffffff;
   --vp-c-bg-alt: #f5f7fa;
   --vp-c-bg-soft: #eef2f7;
@@ -18,7 +21,8 @@
   --vp-c-text-1: var(--omnibot-navy);
   --vp-c-text-2: #4a5570;
 
-  /* Links: the cyan darkened to read 5:1 or more on every surface. */
+  /* Links and inline code: the cyan darkened to read 5.8:1 on the page, and
+     4.5:1 or more on the soft backgrounds, in tips and in inline code. */
   --vp-c-brand-1: #0b6e8c;
   --vp-c-brand-2: var(--omnibot-navy);
   --vp-c-brand-3: var(--omnibot-navy);
@@ -32,8 +36,9 @@
   --vp-button-brand-active-bg: #1a2642;
 
   --vp-home-hero-name-color: var(--vp-c-text-1);
-  /* "Bot" of the title: the logo's cyan reads 1.8:1 on white, this one 3.4:1
-     (enough for text this large). */
+  /* "Bot" of the site's name: the logo's cyan reads 1.8:1 on white, this one
+     3.4:1, the 3:1 of large text, kept in the 20px nav bar title too: it is
+     part of the logotype, which WCAG exempts from contrast. */
   --omnibot-wordmark-accent: #0e98ae;
   --vp-home-hero-image-background-image: radial-gradient(
     circle,
@@ -58,7 +63,6 @@
   --vp-c-brand-1: var(--omnibot-cyan);
   --vp-c-brand-2: #6addee;
   --vp-c-brand-3: var(--omnibot-cyan);
-  --vp-c-brand-soft: rgba(57, 209, 230, 0.16);
 
   --vp-button-brand-text: var(--omnibot-navy);
   --vp-button-brand-hover-text: var(--omnibot-navy);
