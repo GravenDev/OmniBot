@@ -2,11 +2,12 @@
 layout: home
 
 hero:
-  name: OmniBot
+  name: Omni<span class="accent">Bot</span>
   text: Modular Discord Bot
   tagline: Documentation for creating and extending the bot's functionality.
   image:
-    src: /logo.svg
+    light: /logo-light.svg
+    dark: /logo.svg
     alt: OmniBot
   actions:
     - theme: brand
