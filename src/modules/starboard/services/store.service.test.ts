@@ -15,7 +15,7 @@ vi.mock("#lib/database.js", () => ({
   Prisma: { DbNull: "DbNull" },
 }));
 
-const { default: store } = await import("./store.js");
+const { default: store } = await import("./store.service.js");
 
 beforeEach(() => {
   vi.clearAllMocks();

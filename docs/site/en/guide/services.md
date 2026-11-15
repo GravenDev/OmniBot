@@ -10,7 +10,7 @@ Pure functions (parsing, formatting, scoring rules, building a message from data
 
 There is no `domain/` or `business/` folder, and no layers on top: a module stays small, and what several modules share goes to `src/lib/`. When a module gathers many pure files (six or seven), group them in a folder named after their role, as `rendering/` does for images.
 
-The starboard shows the target: `eligibility.ts` (which messages may reach the board) and `view.ts` (the message posted on the board) are pure and belong at the root of `src/modules/starboard/`; `tally.ts` mixes both, its counting rules being pure while `tallyReactions` fetches the reactors from Discord, so it gets split; `starboard.service.ts` and `store.ts`, which read and write the database, stay in `services/`, the latter as `store.service.ts`. Today all of them sit in `services/`: like most existing modules, the starboard predates this rule. Apply it to new code, and when a change reworks a module.
+The starboard follows it: `eligibility.ts` (which messages may reach the board), `tally.ts` (counting the members who reacted) and `view.ts` (the message posted on the board) are pure and sit at the root of `src/modules/starboard/`; `services/` holds `reactions.service.ts`, which fetches the reactors from Discord for `tally.ts` to count, `store.service.ts`, which reads and writes the database, and `starboard.service.ts`, which ties them together behind a queue per message. Most other modules predate this rule: apply it to new code, and when a change reworks a module.
 
 ## Creating a Service
 

@@ -10,7 +10,7 @@ Les fonctions pures (analyse, mise en forme, règles de calcul, construction d'u
 
 Pas de dossier `domain/` ni `business/`, ni de couches par-dessus : un module reste petit, et ce que plusieurs modules partagent va dans `src/lib/`. Quand un module accumule beaucoup de fichiers purs (six ou sept), regroupez-les dans un dossier nommé d'après leur rôle, comme `rendering/` pour les images.
 
-Le starboard montre la cible : `eligibility.ts` (quels messages peuvent atteindre le tableau) et `view.ts` (le message posté sur le tableau) sont purs et ont leur place à la racine de `src/modules/starboard/` ; `tally.ts` mélange les deux, ses règles de décompte étant pures quand `tallyReactions` va chercher les auteurs des réactions sur Discord, et se découpe donc ; `starboard.service.ts` et `store.ts`, qui lisent et écrivent en base, restent dans `services/`, le second sous le nom `store.service.ts`. Aujourd'hui, tous sont dans `services/` : comme la plupart des modules existants, le starboard précède cette règle. Appliquez-la au nouveau code, et quand un changement retravaille un module.
+Le starboard la suit : `eligibility.ts` (quels messages peuvent atteindre le tableau), `tally.ts` (le décompte des membres qui ont réagi) et `view.ts` (le message posté sur le tableau) sont purs et se trouvent à la racine de `src/modules/starboard/` ; `services/` contient `reactions.service.ts`, qui va chercher les auteurs des réactions sur Discord pour que `tally.ts` les compte, `store.service.ts`, qui lit et écrit en base, et `starboard.service.ts`, qui les relie derrière une file par message. La plupart des autres modules précèdent cette règle : appliquez-la au nouveau code, et quand un changement retravaille un module.
 
 ## Créer un service
 
