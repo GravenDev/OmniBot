@@ -35,7 +35,7 @@ import {
 import type { SeniorityConfigSchema } from "#modules/seniority/seniority.config.js";
 import { overrides } from "./overrides.service.js";
 import portraits from "./portraits.service.js";
-import * as state from "./state.js";
+import * as state from "./state.service.js";
 
 const logger = loggerMaker("seniority");
 

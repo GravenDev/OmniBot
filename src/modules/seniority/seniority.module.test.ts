@@ -5,6 +5,7 @@ const clearGuild = vi.hoisted(() => vi.fn(async (_guildId: string) => {}));
 vi.mock("./services/overrides.service.js", () => ({
   clearGuild,
   remove: vi.fn(),
+  uninstallWarning: vi.fn(),
 }));
 vi.mock("./tasks.js", () => ({
   seniorityTasks: () => [],

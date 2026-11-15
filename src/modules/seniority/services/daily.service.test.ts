@@ -23,7 +23,7 @@ import en from "../i18n/en.json" with { type: "json" };
 import fr from "../i18n/fr.json" with { type: "json" };
 
 const state = vi.hoisted(() => ({ lastDay: vi.fn(), claimDay: vi.fn() }));
-vi.mock("./state.js", () => state);
+vi.mock("./state.service.js", () => state);
 const recomputed = vi.hoisted(() => ({
   overrides: vi.fn(async () => new Map<string, Date>()),
 }));
@@ -63,7 +63,7 @@ const portraits = vi.hoisted(() => ({
 }));
 vi.mock("./portraits.service.js", () => ({ default: portraits }));
 
-const { runAllGuildDays, runGuildDay } = await import("./daily.js");
+const { runAllGuildDays, runGuildDay } = await import("./daily.service.js");
 
 const module = { id: "seniority" } as unknown as Module<SeniorityConfigSchema>;
 
