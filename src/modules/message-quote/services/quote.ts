@@ -17,9 +17,11 @@ import type { ConfigProvider } from "#lib/config.js";
 import { COMPONENTS_TEXT_LIMIT } from "#lib/format.js";
 import { stripHiddenText } from "#lib/hidden-text.js";
 import type { TFunction } from "#lib/i18n.js";
+import { LogThrottle } from "#lib/log-throttle.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS_REPLY } from "#lib/mentions.js";
 import { forEachComponent } from "#lib/message-content.js";
+import { missingBotPermissions } from "#lib/permissions.js";
 import {
   type ReportOptions,
   reportedMessage,
@@ -32,6 +34,7 @@ import {
 import type { MessageQuoteConfigSchema } from "#modules/message-quote/message-quote.config.js";
 
 const logger = loggerMaker("message-quote");
+const warnings = new LogThrottle();
 
 export const MAX_QUOTES = 3;
 
@@ -200,6 +203,19 @@ export async function quoteLinks(
   if (isExcluded(message.channel, excludedIds)) {
     logger.debug(
       `Quote ignored | reason = excluded channel | guildId = ${message.guildId} | channelId = ${message.channelId}`
+    );
+    return;
+  }
+
+  const missing = await missingBotPermissions(message.guild, message.channel, [
+    "ViewChannel",
+    message.channel.isThread() ? "SendMessagesInThreads" : "SendMessages",
+    "ReadMessageHistory",
+  ]);
+  if (missing.length > 0) {
+    // Once an hour per channel: every link posted there would log it again.
+    logger[warnings.level(`permissions:${message.channelId}`)](
+      `Quote skipped | reason = missing channel permissions | guildId = ${message.guildId} | channelId = ${message.channelId} | missing = ${missing.join(",")}`
     );
     return;
   }
