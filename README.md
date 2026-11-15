@@ -10,10 +10,6 @@ The projects of the <code>GravenDev</code> organisation are used by the Discord 
 Most contributors are part of the staff, but members are welcome to contribute too.
 
 <p align="center">
-  <img src="https://img.shields.io/badge/State-In_development-orange?style=for-the-badge">
-  <img src="https://img.shields.io/github/issues/GravenDev/OmniBot?style=for-the-badge">
-  <img src="https://img.shields.io/github/issues-pr/GravenDev/OmniBot?style=for-the-badge">
-  <br/>
   <a href="https://github.com/GravenDev/OmniBot/actions/workflows/ci.yml?query=branch%3Amaster"><img alt="CI" src="https://img.shields.io/github/actions/workflow/status/GravenDev/OmniBot/ci.yml?branch=master&label=CI&style=for-the-badge"></a>
   <a href="https://sonarcloud.io/summary/new_code?id=GravenDev_OmniBot"><img alt="SonarCloud quality gate" src="https://img.shields.io/sonar/quality_gate/GravenDev_OmniBot?server=https%3A%2F%2Fsonarcloud.io&style=for-the-badge"></a>
   <a href="https://sonarcloud.io/component_measures?id=GravenDev_OmniBot&metric=coverage"><img alt="Coverage" src="https://img.shields.io/sonar/coverage/GravenDev_OmniBot?server=https%3A%2F%2Fsonarcloud.io&style=for-the-badge"></a>
