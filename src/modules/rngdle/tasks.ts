@@ -103,14 +103,14 @@ export function rngdleTasks(module: Module<RngdleConfigSchema>) {
     declareTask({
       id: "sync",
       schedule: "0 6 * * *",
-      run: () => sync.syncAll().then(() => undefined),
+      run: (client) => sync.syncAll(client).then(() => undefined),
     }),
     declareTask({
       id: "reminders",
       schedule: `0 ${REMINDER_HOUR_UTC} * * *`,
       async run(client) {
         await sync
-          .syncAll()
+          .syncAll(client)
           .catch((err: unknown) =>
             logger.warn({ err }, "Sync before the reminders failed")
           );
@@ -127,13 +127,13 @@ export function rngdleTasks(module: Module<RngdleConfigSchema>) {
       id: "score-table",
       schedule: "0 3 * * 1",
       runOnStart: true,
-      async run() {
+      async run(client) {
         const table = await fetchScoreTable();
         if (!table) {
           logger.warn("No usable score table on rngdle.com, keeping ours");
         } else if (await store.replaceScoreTable(table)) {
           logger.info("Score table changed, downloading every roll again");
-          await sync.syncAll(true);
+          await sync.syncAll(client, true);
         }
       },
     }),
@@ -142,7 +142,7 @@ export function rngdleTasks(module: Module<RngdleConfigSchema>) {
       schedule: "0 1 * * *",
       async run(client) {
         await sync
-          .syncAll()
+          .syncAll(client)
           .catch((err: unknown) =>
             logger.warn({ err }, "Sync before the daily leaderboard failed")
           );

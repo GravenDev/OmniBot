@@ -134,9 +134,11 @@ describe("reminders task", () => {
     pendingReminders.mockResolvedValue(["a", "b"]);
     mentionable.mockResolvedValue(["b"]);
 
-    await task("reminders").run(clientIn("guild"));
+    const client = clientIn("guild");
 
-    expect(syncAll).toHaveBeenCalledOnce();
+    await task("reminders").run(client);
+
+    expect(syncAll).toHaveBeenCalledExactlyOnceWith(client);
     expect(send).toHaveBeenCalledExactlyOnceWith({
       content: "remind.message",
       allowedMentions: { users: ["b"] },

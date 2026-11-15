@@ -1,13 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
-  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
   sleep: vi.fn((): Promise<void> => new Promise(() => {})),
   activated: vi.fn(async (_module: string): Promise<string[]> => []),
   accounts: vi.fn(),
   latestRollDate: vi.fn(),
   saveRolls: vi.fn(),
   fetchUserRolls: vi.fn(),
+  left: new Set<string>(),
 }));
 
 vi.mock("node:timers/promises", () => ({ setTimeout: mocks.sleep }));
@@ -27,6 +28,7 @@ vi.mock("./api.js", async (importOriginal) => ({
   fetchUserRolls: mocks.fetchUserRolls,
 }));
 
+import type { Client } from "discord.js";
 import { RngdleUserNotFoundError } from "./api.js";
 import sync, { FullSyncCooldownError } from "./sync.js";
 
@@ -40,6 +42,16 @@ function accountsOf(guildId: string, count: number) {
     username: `user${i}`,
   }));
 }
+
+// The bot is on every guild but those of `left`.
+const client = {
+  guilds: {
+    cache: {
+      get: (id: string) =>
+        mocks.left.has(id) ? undefined : { id, available: true },
+    },
+  },
+} as unknown as Client;
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
 
@@ -56,6 +68,7 @@ beforeEach(() => {
   mocks.saveRolls.mockReset().mockResolvedValue({ inserted: 1, updated: 2 });
   mocks.fetchUserRolls.mockReset().mockResolvedValue([]);
   mocks.activated.mockReset().mockResolvedValue([]);
+  mocks.left.clear();
 });
 
 afterEach(() => {
@@ -166,7 +179,7 @@ describe("syncAll", () => {
     const other = `${guildId}-b`;
     mocks.activated.mockResolvedValue([guildId, other]);
 
-    const report = await sync.syncAll();
+    const report = await sync.syncAll(client);
 
     expect(mocks.activated).toHaveBeenCalledWith("rngdle");
     expect(mocks.accounts.mock.calls.map(([id]) => id)).toEqual([
@@ -186,7 +199,7 @@ describe("syncAll", () => {
       return accountsOf(id, 2);
     });
 
-    await expect(sync.syncAll()).rejects.toThrow(
+    await expect(sync.syncAll(client)).rejects.toThrow(
       `Sync failed | guildIds = ${guildId}`
     );
 
@@ -199,6 +212,29 @@ describe("syncAll", () => {
       { err: expect.any(Error) },
       `Guild sync failed | guildId = ${guildId}`
     );
+  });
+  it("does not sync a guild the bot left", async () => {
+    const gone = `${guildId}-gone`;
+    mocks.activated.mockResolvedValue([gone, guildId]);
+    mocks.left.add(gone);
+
+    await sync.syncAll(client);
+
+    expect(mocks.accounts.mock.calls.map(([id]) => id)).toEqual([guildId]);
+  });
+  // The scores of a guild the bot left would otherwise stay those of the
+  // old table: a full sync runs once, when the table changes.
+  it("still downloads again the rolls of a guild the bot left on a full sync", async () => {
+    const gone = `${guildId}-gone`;
+    mocks.activated.mockResolvedValue([gone, guildId]);
+    mocks.left.add(gone);
+
+    await sync.syncAll(client, true);
+
+    expect(mocks.accounts.mock.calls.map(([id]) => id)).toEqual([
+      gone,
+      guildId,
+    ]);
   });
 });
 
