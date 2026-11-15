@@ -11,12 +11,12 @@ import { modules } from "#core/runtime.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
 import { errorMessageKey } from "#core/utils/error-message.js";
-import { requireAdmin, requirePermissions } from "#core/utils/require-admin.js";
 import { commandType } from "#lib/command.js";
 import { createT } from "#lib/i18n.js";
 import type { CompatibleInteraction } from "#lib/interaction.js";
 import { declareEventListener } from "#lib/listener.js";
 import logger from "#lib/logger.js";
+import { checkAccess, commandAccess } from "./interaction-create/access.js";
 
 function findCommand(commandName: string, type: ApplicationCommandType) {
   return [...modules, coreModule]
@@ -106,10 +106,14 @@ async function handleCommand(
     return;
   }
 
-  if (command.command.requiresAdmin) {
-    if (!(await requireAdmin(interaction, coreConfig.t))) {
-      return;
-    }
+  if (
+    !(await checkAccess(
+      interaction,
+      commandAccess(command.command),
+      coreConfig.t
+    ))
+  ) {
+    return;
   }
 
   const config = await configService.getConfigForModuleIn(
@@ -266,17 +270,8 @@ async function handleInteraction(interaction: CompatibleInteraction) {
     return;
   }
 
-  const access = handler.handler.access;
-  if (access === "admin") {
-    if (!(await requireAdmin(interaction, coreConfig.t))) {
-      return;
-    }
-  } else if (typeof access === "object") {
-    if (
-      !(await requirePermissions(interaction, access.permissions, coreConfig.t))
-    ) {
-      return;
-    }
+  if (!(await checkAccess(interaction, handler.handler.access, coreConfig.t))) {
+    return;
   }
 
   try {

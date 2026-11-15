@@ -5,7 +5,7 @@ import {
 } from "discord.js";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { silenceLogs } from "#lib/testing.js";
-import { requireAdmin, requirePermissions } from "./require-admin.js";
+import { checkAccess, commandAccess } from "./access.js";
 
 beforeAll(() => {
   silenceLogs();
@@ -25,13 +25,13 @@ function interactionWith(granted: bigint[] | null) {
   return { interaction, has, reply };
 }
 
-describe("requireAdmin", () => {
+describe("checkAccess, admin", () => {
   it("lets an administrator through without replying", async () => {
     const { interaction, has, reply } = interactionWith([
       PermissionFlagsBits.Administrator,
     ]);
 
-    expect(await requireAdmin(interaction, t)).toBe(true);
+    expect(await checkAccess(interaction, "admin", t)).toBe(true);
     expect(has).toHaveBeenCalledWith(PermissionFlagsBits.Administrator);
     expect(reply).not.toHaveBeenCalled();
   });
@@ -42,7 +42,7 @@ describe("requireAdmin", () => {
   ])("refuses %s with the admin message", async (_, granted) => {
     const { interaction, reply } = interactionWith(granted);
 
-    expect(await requireAdmin(interaction, t)).toBe(false);
+    expect(await checkAccess(interaction, "admin", t)).toBe(false);
     expect(reply).toHaveBeenCalledWith({
       content: "<admin.noPermission>",
       flags: MessageFlags.Ephemeral,
@@ -50,16 +50,16 @@ describe("requireAdmin", () => {
   });
 });
 
-describe("requirePermissions", () => {
+describe("checkAccess, permissions", () => {
   it("lets a member holding the permissions through", async () => {
     const { interaction, has, reply } = interactionWith([
       PermissionFlagsBits.ManageMessages,
     ]);
 
     expect(
-      await requirePermissions(
+      await checkAccess(
         interaction,
-        PermissionFlagsBits.ManageMessages,
+        { permissions: PermissionFlagsBits.ManageMessages },
         t
       )
     ).toBe(true);
@@ -74,9 +74,9 @@ describe("requirePermissions", () => {
     const { interaction, reply } = interactionWith(granted);
 
     expect(
-      await requirePermissions(
+      await checkAccess(
         interaction,
-        PermissionFlagsBits.ManageMessages,
+        { permissions: PermissionFlagsBits.ManageMessages },
         t
       )
     ).toBe(false);
@@ -84,5 +84,25 @@ describe("requirePermissions", () => {
       content: "<interaction.memberMissingPermissions>",
       flags: MessageFlags.Ephemeral,
     });
+  });
+});
+
+describe("checkAccess, everyone", () => {
+  it("lets anyone through without reading permissions nor replying", async () => {
+    const { interaction, has, reply } = interactionWith(null);
+
+    expect(await checkAccess(interaction, "everyone", t)).toBe(true);
+    expect(has).not.toHaveBeenCalled();
+    expect(reply).not.toHaveBeenCalled();
+  });
+});
+
+describe("commandAccess", () => {
+  it.each([
+    [true, "admin"],
+    [false, "everyone"],
+    [undefined, "everyone"],
+  ])("maps requiresAdmin %s to %s", (requiresAdmin, access) => {
+    expect(commandAccess({ requiresAdmin })).toBe(access);
   });
 });
