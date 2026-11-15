@@ -1,5 +1,5 @@
 import { PrismaPg } from "@prisma/adapter-pg";
-import { Prisma, PrismaClient } from "../generated/prisma/client.js";
+import { Prisma, PrismaClient } from "#generated/prisma/client.js";
 
 // Prisma 7 talks to Postgres through node-postgres, so the pool settings are
 // pg's: up to 10 connections. pg waits forever for a connection by default;
