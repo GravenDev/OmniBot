@@ -178,7 +178,7 @@
   "guild.welcome.dmPrefix": "(System channel unavailable) ",
 
   "reportedMessage.header": "{{author}} in {{channel}} · {{sentAt}}",
-  "reportedMessage.reply": "↪ Replying to {{author}}: {{excerpt}}",
+  "reportedMessage.reply": "↪ {{author}}: {{excerpt}}",
   "reportedMessage.forwarded": "↪ Forwarded message",
   "reportedMessage.sticker": "Sticker: {{name}}",
   "reportedMessage.moreFiles_one": "… and {{count}} more file",

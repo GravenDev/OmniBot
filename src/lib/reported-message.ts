@@ -19,14 +19,16 @@ import {
   componentsText,
   hiddenAttachments,
 } from "./message-content.js";
-import { quoteEachLine, truncate } from "./text.js";
+import { quoteEachLine, stripLineMarkup, truncate } from "./text.js";
 
 // The layout shared by the modules that report someone else's message in a
 // message of their own (the quotes, the starboard): a container with the
 // author, the channel and the date in small text above the message's text,
 // the author's avatar beside them, its media in a gallery, then a separator
 // and the module's own line beside a link to the message (above it, with the
-// module's buttons, when it has some).
+// module's buttons, when it has some). A message that replies to another
+// quotes it under the header, beside the avatar, and shows its own text
+// below, at full width.
 
 const GALLERY_LIMIT = 10;
 const EXTRAS_LIMIT = 1200;
@@ -47,7 +49,7 @@ export interface ReportOptions {
   footer: string;
   /** The module's buttons, after the link to the message. */
   buttons?: ButtonBuilder[];
-  /** The message it replies to, shown above it. */
+  /** The message it replies to, quoted under the header. */
   reply?: Message | null;
   /** The text the whole container may hold, its share of the message's. */
   textLimit?: number;
@@ -234,13 +236,17 @@ function authorOf(message: Message): string {
 
 function replyLine(reply: Message, t: TFunction): string {
   const excerpt = truncate(
-    textOf(bodyOf(reply).body).replace(/\s+/g, " ").trim(),
+    stripLineMarkup(textOf(bodyOf(reply).body))
+      .replace(/\s+/g, " ")
+      .trim(),
     REPLY_LIMIT
   );
-  return `-# ${t("reportedMessage.reply", {
-    author: authorOf(reply),
-    excerpt: excerpt || "…",
-  })}`;
+  return quoteEachLine(
+    `-# ${t("reportedMessage.reply", {
+      author: authorOf(reply),
+      excerpt: excerpt || "…",
+    })}`
+  );
 }
 
 /**
@@ -283,6 +289,29 @@ function addFooter(
   );
 }
 
+/**
+ * The small text above the message: author, channel and date, then whether
+ * it was forwarded and what it replies to.
+ */
+function headerOf(
+  message: Message<true>,
+  forwarded: boolean,
+  reply: Message | null,
+  t: TFunction
+): string {
+  return [
+    `-# ${t("reportedMessage.header", {
+      author: authorOf(message),
+      channel: `<#${message.channelId}>`,
+      sentAt: time(message.createdAt, TimestampStyles.RelativeTime),
+    })}`,
+    forwarded ? `-# ${t("reportedMessage.forwarded")}` : null,
+    reply ? replyLine(reply, t) : null,
+  ]
+    .filter((part): part is string => !!part)
+    .join("\n");
+}
+
 /** The container reporting `message`, with the module's line and buttons. */
 export function reportedMessage(
   message: Message<true>,
@@ -312,23 +341,7 @@ export function reportedMessage(
     container.setAccentColor(options.accent);
   }
 
-  const replied = options.reply ? replyLine(options.reply, t) : null;
-  if (replied) {
-    container.addTextDisplayComponents((display) =>
-      display.setContent(replied)
-    );
-  }
-
-  const header = [
-    `-# ${t("reportedMessage.header", {
-      author: authorOf(message),
-      channel: `<#${message.channelId}>`,
-      sentAt: time(message.createdAt, TimestampStyles.RelativeTime),
-    })}`,
-    forwarded ? `-# ${t("reportedMessage.forwarded")}` : null,
-  ]
-    .filter((part): part is string => !!part)
-    .join("\n");
+  const header = headerOf(message, forwarded, options.reply ?? null, t);
   const link = new ButtonBuilder()
     .setStyle(ButtonStyle.Link)
     .setURL(message.url)
@@ -341,12 +354,10 @@ export function reportedMessage(
       sum + ("label" in button.data ? (button.data.label?.length ?? 0) : 0),
     0
   );
-  const remaining =
-    textLimit -
-    labels -
-    (replied?.length ?? 0) -
-    header.length -
-    options.footer.length;
+  const remaining = textLimit - labels - header.length - options.footer.length;
+  // Under a reply, the text has a display of its own, at full width;
+  // otherwise it follows the header in the section, beside the avatar.
+  const textInSection = !options.reply;
   // The message's own text goes first: the extras get at most half of what
   // is left, or all of it when the message has no text.
   const withMedia = options.withMedia !== false;
@@ -370,7 +381,7 @@ export function reportedMessage(
   );
   const budget = Math.min(
     options.contentLimit ?? Infinity,
-    remaining - others.length - HEADER_GAP.length
+    remaining - others.length - (textInSection ? HEADER_GAP.length : 0)
   );
   const media = !withMedia
     ? []
@@ -378,17 +389,22 @@ export function reportedMessage(
   // Nothing to read nor to see: say so rather than show a bare header.
   const said =
     text || (others || media.length > 0 ? "" : (options.emptyText ?? ""));
-  const content =
-    said && budget >= 1
-      ? `${header}${HEADER_GAP}${truncate(said, budget)}`
-      : header;
+  const shownText = said && budget >= 1 ? truncate(said, budget) : "";
+  const sectionText =
+    shownText && textInSection ? `${header}${HEADER_GAP}${shownText}` : header;
+  const belowText = textInSection ? "" : shownText;
   const avatar =
     message.member?.displayAvatarURL() ?? message.author.displayAvatarURL();
   container.addSectionComponents((section) =>
     section
-      .addTextDisplayComponents((display) => display.setContent(content))
+      .addTextDisplayComponents((display) => display.setContent(sectionText))
       .setThumbnailAccessory((thumbnail) => thumbnail.setURL(avatar))
   );
+  if (belowText) {
+    container.addTextDisplayComponents((display) =>
+      display.setContent(belowText)
+    );
+  }
 
   if (others) {
     container.addTextDisplayComponents((display) => display.setContent(others));

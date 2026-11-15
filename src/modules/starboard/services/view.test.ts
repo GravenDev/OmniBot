@@ -337,9 +337,7 @@ describe("starboardMessage", () => {
 
     const { json } = render(fakeMessage(), reply);
 
-    expect(json).toContain(
-      "↪ Replying to <@other>: the question over two lines"
-    );
+    expect(json).toContain("> -# ↪ <@other>: the question over two lines");
   });
 
   it("shows the text of a reply laid out with components", () => {
@@ -351,7 +349,7 @@ describe("starboardMessage", () => {
 
     const { json } = render(fakeMessage(), reply);
 
-    expect(json).toContain("↪ Replying to <@other>: 🎂 happy birthday");
+    expect(json).toContain("> -# ↪ <@other>: 🎂 happy birthday");
   });
 
   it("shows the content of a forwarded message", () => {
