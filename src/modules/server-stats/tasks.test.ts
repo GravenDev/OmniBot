@@ -5,6 +5,11 @@ import type { ServerStatsConfigSchema } from "./server-stats.config.js";
 
 vi.mock("#core/runtime.js", () => ({ modules: [], client: {} }));
 
+const assets = vi.hoisted(() => ({
+  icon: null,
+  emojis: new Map(),
+  players: null,
+}));
 const mocks = vi.hoisted(() => ({
   getConfigForModuleIn: vi.fn(),
   getActivatedGuildIds: vi.fn(async () => ["guild-1"]),
@@ -32,6 +37,9 @@ vi.mock("./services/store.js", () => ({
 }));
 vi.mock("./services/report.js", () => ({
   renderReport: mocks.renderReport,
+}));
+vi.mock("./services/report-assets.service.js", () => ({
+  default: { fetch: async () => assets },
 }));
 
 const { postReport, serverStatsMaintenanceTasks, serverStatsTasks } =
@@ -96,16 +104,21 @@ describe("postReport", () => {
     await postReport(client, module, "guild-1", day);
 
     expect(mocks.dailyStats).toHaveBeenCalledWith("guild-1", day);
-    expect(mocks.renderReport).toHaveBeenCalledWith(guild, stats, {
-      day,
-      lastDay: day,
-      until: null,
-      insights: expect.any(Object),
-      comparedDays: 0,
-      showTopMembers: true,
-      t: expect.any(Function),
-      locale: "en",
-    });
+    expect(mocks.renderReport).toHaveBeenCalledWith(
+      guild,
+      stats,
+      {
+        day,
+        lastDay: day,
+        until: null,
+        insights: expect.any(Object),
+        comparedDays: 0,
+        showTopMembers: true,
+        t: expect.any(Function),
+        locale: "en",
+      },
+      assets
+    );
     const [message] = send.mock.calls[0] as unknown as [
       {
         content: string;
@@ -149,7 +162,8 @@ describe("postReport", () => {
     expect(mocks.renderReport).toHaveBeenCalledWith(
       guild,
       expect.anything(),
-      expect.objectContaining({ comparedDays: 1 })
+      expect.objectContaining({ comparedDays: 1 }),
+      assets
     );
     const [, , context] = mocks.renderReport.mock.calls[0] as unknown as [
       unknown,

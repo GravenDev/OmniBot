@@ -3,6 +3,7 @@ import type { TFunction } from "#lib/i18n.js";
 import { dayOf, RETENTION_DAYS } from "./day.js";
 import { compare, NO_INSIGHTS, previousDays } from "./insights.js";
 import type { Selection } from "./period.js";
+import reportAssets from "./report-assets.service.js";
 import { renderReport, type Report, type ReportContext } from "./report.js";
 import store, { TOP_SIZE, type DailyStats, type Totals } from "./store.js";
 
@@ -54,7 +55,7 @@ export async function statsReport(
       .slice(0, TOP_SIZE),
   };
   const going = to.getTime() === dayOf(now).getTime();
-  return renderReport(guild, stats, {
+  const context: ReportContext = {
     day: from,
     lastDay: to,
     until: going ? now : null,
@@ -64,5 +65,11 @@ export async function statsReport(
     showTopMembers,
     t,
     locale,
-  });
+  };
+  return renderReport(
+    guild,
+    stats,
+    context,
+    await reportAssets.fetch(guild, stats, showTopMembers)
+  );
 }
