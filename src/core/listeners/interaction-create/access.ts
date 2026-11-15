@@ -14,7 +14,8 @@ import { loggerMaker } from "#lib/logger.js";
 
 const logger = loggerMaker("core");
 
-type GuardedInteraction =
+// The interactions a member may be refused, with a reply.
+export type GuardedInteraction =
   | CompatibleInteraction
   | ChatInputCommandInteraction
   | ContextMenuCommandInteraction;
