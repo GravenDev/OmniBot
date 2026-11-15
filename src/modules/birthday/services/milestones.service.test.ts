@@ -15,7 +15,7 @@ const service = vi.hoisted(() => ({
 }));
 vi.mock("./birthday.service.js", () => ({ default: service }));
 
-const { checkMilestones } = await import("./milestones.js");
+const { checkMilestones } = await import("./milestones.service.js");
 
 function entries(count: number, shareFirst = false) {
   return Array.from({ length: count }, (_, index) => ({

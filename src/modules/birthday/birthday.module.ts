@@ -10,8 +10,7 @@ import { logFailure } from "./failures.js";
 import announceButton from "./interactions/announce.button.js";
 import guildMemberRemoveListener from "./listeners/guild-member-remove.listener.js";
 import birthdayService from "./services/birthday.service.js";
-import { dropBirthdayRole } from "./services/role.js";
-import { uninstallWarning } from "./services/uninstall.js";
+import { dropBirthdayRole } from "./services/role.service.js";
 import { birthdayMaintenanceTasks, birthdayTasks } from "./tasks.js";
 
 const logger = loggerMaker("birthday");
@@ -61,7 +60,8 @@ const birthdayModule = defineModule({
     logger.info(`Module uninstalled | guildId = ${guild.id}`);
   },
 
-  uninstallWarning,
+  uninstallWarning: (guildId, t) =>
+    birthdayService.uninstallWarning(guildId, t),
 
   maintenanceTasks: (): ScheduledTask[] =>
     birthdayMaintenanceTasks(birthdayModule.id),

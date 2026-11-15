@@ -54,7 +54,7 @@ vi.mock("#modules/birthday/rendering/birthday-calendar.js", () => ({
 }));
 vi.mock("#lib/imaging.js", () => ({ fetchAvatar: async () => null }));
 
-const { runAllGuildDays, runGuildDay } = await import("./daily.js");
+const { runAllGuildDays, runGuildDay } = await import("./daily.service.js");
 
 const module = { id: "birthday" } as unknown as Module<BirthdayConfigSchema>;
 

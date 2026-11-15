@@ -29,8 +29,8 @@ import birthdayService, {
   type BirthdayEntry,
 } from "#modules/birthday/services/birthday.service.js";
 import { resolveGroup } from "#modules/birthday/services/group.service.js";
-import { checkMilestones } from "#modules/birthday/services/milestones.js";
-import { dropBirthdayRole } from "#modules/birthday/services/role.js";
+import { checkMilestones } from "#modules/birthday/services/milestones.service.js";
+import { dropBirthdayRole } from "#modules/birthday/services/role.service.js";
 import { birthdayTwins } from "#modules/birthday/services/twins.service.js";
 import {
   birthdayStats,

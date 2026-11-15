@@ -1,5 +1,6 @@
 import type { DayOfYear } from "#lib/calendar.js";
 import prisma from "#lib/database.js";
+import type { TFunction } from "#lib/i18n.js";
 import { declareService, type Service } from "#lib/service.js";
 import type { Milestone } from "#modules/birthday/paradox.js";
 
@@ -46,6 +47,19 @@ class BirthdayService implements Service {
 
   async count(guildId: string): Promise<number> {
     return prisma.birthday.count({ where: { guildId } });
+  }
+
+  /**
+   * Disabling the module deletes the guild's birthdays, which only their
+   * members can register again: `/modules` asks for confirmation first,
+   * unless there is nothing to lose.
+   */
+  async uninstallWarning(
+    guildId: string,
+    t: TFunction
+  ): Promise<string | null> {
+    const count = await this.count(guildId);
+    return count === 0 ? null : t("uninstall.warning", { count });
   }
 
   /** Forgets everything the module stored for the guild. */

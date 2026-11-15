@@ -9,7 +9,7 @@ import {
   sheetNotice,
 } from "#modules/birthday/own-birthday.js";
 import birthdayService from "#modules/birthday/services/birthday.service.js";
-import { dropBirthdayRole } from "#modules/birthday/services/role.js";
+import { dropBirthdayRole } from "#modules/birthday/services/role.service.js";
 import { birthdayTwins } from "#modules/birthday/services/twins.service.js";
 
 const logger = loggerMaker("birthday");
