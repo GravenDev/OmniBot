@@ -7,7 +7,7 @@ packages:
 
 # One Prisma CLI version for the bot (generate, migrate dev) and the migrator.
 catalog:
-  prisma: 7.9.1
+  prisma: 7.10.1
 
 shellEmulator: true
 
@@ -30,6 +30,11 @@ trustPolicyExclude:
   # Maintenance release of the 5.x line published alongside 6.4.1 and 7.1.11,
   # with provenance but not the trusted publisher those used (vitepress dep).
   - vite@5.4.21
+  # Published by a token (prismabot) rather than the trusted publisher of
+  # 7.9.1, without provenance; same preinstall script, no new host contacted,
+  # and its query compilers byte-identical to those of @prisma/client@7.10.1,
+  # which has provenance.
+  - prisma@7.10.1
 
 allowBuilds:
   '@prisma/client': true
