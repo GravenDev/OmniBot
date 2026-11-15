@@ -3,7 +3,7 @@ import { initTestI18n, makeTestConfig, silenceLogs } from "#lib/testing.js";
 import { clashOfCodeConfigSchema } from "#modules/clash-of-code/clash-of-code.config.js";
 import type { SearchState } from "#modules/clash-of-code/history.js";
 import en from "#modules/clash-of-code/i18n/en.json" with { type: "json" };
-import type { ImportSummary } from "#modules/clash-of-code/services/channel-import.js";
+import type { ImportSummary } from "#modules/clash-of-code/services/channel-import.service.js";
 
 const mocks = vi.hoisted(() => ({
   searchChannelClashes: vi.fn(),
@@ -13,10 +13,10 @@ vi.mock("#modules/clash-of-code/services/history.service.js", () => ({
   default: { searchChannelClashes: mocks.searchChannelClashes },
 }));
 vi.mock(
-  "#modules/clash-of-code/services/channel-import.js",
+  "#modules/clash-of-code/services/channel-import.service.js",
   async (importOriginal) => ({
     ...(await importOriginal<
-      typeof import("#modules/clash-of-code/services/channel-import.js")
+      typeof import("#modules/clash-of-code/services/channel-import.service.js")
     >()),
     importClashes: mocks.importClashes,
   })

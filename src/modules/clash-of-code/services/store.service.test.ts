@@ -76,7 +76,7 @@ const db = vi.hoisted(() => {
 
 vi.mock("#lib/database.js", () => ({ default: db.prisma }));
 
-import store, { GameStatus } from "./store.js";
+import store, { GameStatus } from "./store.service.js";
 
 const GUILD = "guild-1";
 const OTHER_GUILD = "guild-2";

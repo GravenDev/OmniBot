@@ -6,7 +6,7 @@ import {
 } from "#modules/clash-of-code/api.js";
 import type { LinkedClash } from "#modules/clash-of-code/history.js";
 import codingame from "./codingame.service.js";
-import store from "./store.js";
+import store from "./store.service.js";
 
 const logger = loggerMaker("clash-of-code");
 

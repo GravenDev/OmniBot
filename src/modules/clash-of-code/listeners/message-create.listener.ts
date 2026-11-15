@@ -3,7 +3,7 @@ import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { ClashOfCodeConfigSchema } from "#modules/clash-of-code/clash-of-code.config.js";
 import { parseClashLinks } from "#modules/clash-of-code/links.js";
-import watcher from "#modules/clash-of-code/services/watcher.js";
+import watcher from "#modules/clash-of-code/services/watcher.service.js";
 
 const logger = loggerMaker("clash-of-code");
 

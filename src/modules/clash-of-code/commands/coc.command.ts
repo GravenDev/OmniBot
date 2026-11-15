@@ -13,7 +13,7 @@ import { NO_MENTIONS } from "#lib/mentions.js";
 import { CLASH_MODES, isClashMode } from "#modules/clash-of-code/api.js";
 import type { ClashOfCodeConfigSchema } from "#modules/clash-of-code/clash-of-code.config.js";
 import { leaderboardMessage } from "#modules/clash-of-code/interactions/leaderboard-page.button.js";
-import store from "#modules/clash-of-code/services/store.js";
+import store from "#modules/clash-of-code/services/store.service.js";
 import views, {
   type ViewContext,
 } from "#modules/clash-of-code/services/views.service.js";

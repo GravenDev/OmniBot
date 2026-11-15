@@ -8,7 +8,7 @@ Porter dans OmniBot le bot [GravenDev/CoC](https://github.com/GravenDev/CoC) (Ru
 
 ## Source de l'API
 
-`POST https://www.codingame.com/services/ClashOfCode/findClashReportInfoByHandle`, corps `["<handle>"]`, sans authentification. Elle répond `422` (`{"id":502,"message":"Clash not found"}`) pour une partie inconnue. Les avatars viennent de `https://static.codingame.com/servlet/fileservlet?id=<avatarId>&format=profile_avatar`. L'API n'est pas documentée : `services/api.ts` valide chaque champ et rejette une réponse inattendue.
+`POST https://www.codingame.com/services/ClashOfCode/findClashReportInfoByHandle`, corps `["<handle>"]`, sans authentification. Elle répond `422` (`{"id":502,"message":"Clash not found"}`) pour une partie inconnue. Les avatars viennent de `https://static.codingame.com/servlet/fileservlet?id=<avatarId>&format=profile_avatar`. L'API n'est pas documentée : `api.ts` valide chaque champ et rejette une réponse inattendue.
 
 ## Arborescence
 
@@ -20,13 +20,19 @@ src/modules/clash-of-code/
 ├── commands/                    # /coc (leaderboard, profile, link, unlink), /coc-admin (import, unlink)
 ├── interactions/                # pagination du classement
 ├── listeners/                   # détection des liens
+├── api.ts                       # rapport de partie CodinGame : types, validation (pur)
+├── history.ts                   # parties trouvées dans un salon (pur)
+├── links.ts                     # extraction des liens (pur)
+├── stats.ts                     # classement et profil (pur)
+├── views.ts                     # pagination, dessin des cartes à partir des données (pur)
 ├── services/
-│   ├── api.ts                   # client CodinGame
-│   ├── links.ts                 # extraction des liens (pur)
-│   ├── stats.ts                 # classement et profil (pur)
-│   ├── store.ts                 # accès Prisma, import transactionnel, liaison
-│   ├── views.ts                 # données + rendu
-│   └── watcher.ts               # suivi des parties en cours
+│   ├── avatars.service.ts       # icône du serveur, avatars CodinGame et Discord
+│   ├── channel-import.service.ts # import des parties trouvées dans un salon
+│   ├── codingame.service.ts     # client CodinGame
+│   ├── history.service.ts       # recherche Discord des liens d'un salon
+│   ├── store.service.ts         # accès Prisma, import transactionnel, liaison
+│   ├── views.service.ts         # base + avatars + dessin
+│   └── watcher.service.ts       # suivi des parties en cours
 ├── rendering/                   # image de résultat, thème, formats
 └── tasks.ts                     # reprise du suivi (au démarrage puis toutes les heures)
 ```

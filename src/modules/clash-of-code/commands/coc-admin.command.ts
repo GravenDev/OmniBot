@@ -28,10 +28,10 @@ import {
   type ImportSummary,
   importClashes,
   MAX_RATE_LIMIT_PAUSE_MS,
-} from "#modules/clash-of-code/services/channel-import.js";
+} from "#modules/clash-of-code/services/channel-import.service.js";
 import codingame from "#modules/clash-of-code/services/codingame.service.js";
 import history from "#modules/clash-of-code/services/history.service.js";
-import store from "#modules/clash-of-code/services/store.js";
+import store from "#modules/clash-of-code/services/store.service.js";
 import views from "#modules/clash-of-code/services/views.service.js";
 import { modeLabel } from "#modules/clash-of-code/views.js";
 

@@ -19,7 +19,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("./codingame.service.js", () => ({
   default: { fetchClashReport: mocks.fetchClashReport },
 }));
-vi.mock("./store.js", () => ({ default: mocks.store }));
+vi.mock("./store.service.js", () => ({ default: mocks.store }));
 vi.mock("./views.service.js", () => ({
   default: { resultImage: vi.fn(async () => Buffer.from("png")) },
 }));
@@ -46,7 +46,7 @@ import watcher, {
   MAX_FAILURES,
   POLL_INTERVAL_MS,
   WATCH_DURATION_MS,
-} from "./watcher.js";
+} from "./watcher.service.js";
 
 const HANDLE = "a".repeat(40);
 

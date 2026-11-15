@@ -15,7 +15,7 @@ import {
   standingsPage,
 } from "#modules/clash-of-code/views.js";
 import avatars from "./avatars.service.js";
-import store from "./store.js";
+import store from "./store.service.js";
 
 export interface ViewContext {
   client: Client;
