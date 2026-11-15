@@ -7,9 +7,11 @@ const store = vi.hoisted(() => ({
   list: vi.fn(),
 }));
 
-vi.mock("#modules/autoreact/services/store.js", () => ({ default: store }));
+vi.mock("#modules/autoreact/services/store.service.js", () => ({
+  default: store,
+}));
 
-const { parseEmoji, reactionRecords } = await import("./reactions.js");
+const { parseEmoji, reactionRecords } = await import("./reactions.service.js");
 
 const hype = { id: "111111111111111111", name: "hype", animated: false };
 

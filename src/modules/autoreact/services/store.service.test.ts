@@ -48,7 +48,7 @@ const db = vi.hoisted(() => {
 
 vi.mock("#lib/database.js", () => ({ default: db.prisma }));
 
-const { default: store } = await import("./store.js");
+const { default: store } = await import("./store.service.js");
 
 let guild = 0;
 let guildId: string;

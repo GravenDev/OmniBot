@@ -13,7 +13,7 @@ import {
 } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
 import { missingBotPermissionNames } from "#lib/permissions.js";
-import store from "#modules/autoreact/services/store.js";
+import store from "#modules/autoreact/services/store.service.js";
 
 const logger = loggerMaker("autoreact");
 

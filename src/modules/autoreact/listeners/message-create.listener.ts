@@ -2,7 +2,7 @@ import { RESTJSONErrorCodes, type Message } from "discord.js";
 import { apiErrorCode } from "#lib/discord-errors.js";
 import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
-import store from "#modules/autoreact/services/store.js";
+import store from "#modules/autoreact/services/store.service.js";
 
 const logger = loggerMaker("autoreact");
 

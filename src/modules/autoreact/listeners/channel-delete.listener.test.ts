@@ -5,7 +5,9 @@ const store = vi.hoisted(() => ({ remove: vi.fn() }));
 
 const logger = vi.hoisted(() => ({ info: vi.fn(), name: "" }));
 
-vi.mock("#modules/autoreact/services/store.js", () => ({ default: store }));
+vi.mock("#modules/autoreact/services/store.service.js", () => ({
+  default: store,
+}));
 vi.mock("#lib/logger.js", () => ({
   loggerMaker: (name: string) => {
     logger.name = name;
