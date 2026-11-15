@@ -28,7 +28,7 @@ vi.mock("#lib/logger.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("#lib/logger.js")>()),
   loggerMaker: () => mocks.logger,
 }));
-vi.mock("./store.js", () => ({ default: mocks.store }));
+vi.mock("./store.service.js", () => ({ default: mocks.store }));
 vi.mock("#modules/starboard/tally.js", () => mocks.tally);
 vi.mock("./reactions.service.js", () => ({ default: mocks.reactions }));
 vi.mock("#modules/starboard/view.js", () => ({ starboardMessage: mocks.view }));

@@ -21,7 +21,7 @@ import type { StarboardConfigSchema } from "#modules/starboard/starboard.config.
 import { type Tally, tallyOf, upperBound } from "#modules/starboard/tally.js";
 import { starboardMessage } from "#modules/starboard/view.js";
 import reactions from "./reactions.service.js";
-import store, { type StarboardEntry } from "./store.js";
+import store, { type StarboardEntry } from "./store.service.js";
 
 const logger = loggerMaker("starboard");
 
