@@ -1,6 +1,6 @@
 import { ChannelType } from "discord.js";
 import { ConfigType, type ConfigSchema } from "#lib/config.js";
-import { reactionRecords } from "./services/reactions.service.js";
+import reactionRecords from "./services/reactions.service.js";
 
 export const autoreactConfigSchema = {
   reactions: {
