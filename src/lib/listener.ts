@@ -1,6 +1,11 @@
-import type { ClientEvents } from "discord.js";
+import type {
+  ClientEvents,
+  DMChannel,
+  NonThreadGuildBasedChannel,
+} from "discord.js";
 import type { ConfigProvider, ConfigSchema } from "./config.js";
 import { DeclarationType, type Declared } from "./declared.js";
+import { loggerMaker } from "./logger.js";
 
 /**
  * Represents a listener
@@ -44,4 +49,33 @@ export function declareEventListener<
     type: DeclarationType.Listener,
     ...listener,
   };
+}
+
+/**
+ * A `channelDelete` listener that forgets what a module kept for a deleted
+ * channel: `remove` deletes it and returns how many records went, `what`
+ * names them in the log ("Sticky", "Auto-reaction"). Does nothing while the
+ * module is inactive in the guild.
+ */
+export function removeOnChannelDelete(
+  moduleName: string,
+  what: string,
+  remove: (guildId: string, channelId: string) => Promise<number>
+) {
+  const logger = loggerMaker(moduleName);
+  return declareEventListener<"channelDelete">({
+    eventType: "channelDelete",
+
+    async execute(channel: DMChannel | NonThreadGuildBasedChannel, config) {
+      if (!config || channel.isDMBased()) {
+        return;
+      }
+      const removed = await remove(channel.guildId, channel.id);
+      if (removed > 0) {
+        logger.info(
+          `${what} removed | reason = channel deleted | guildId = ${channel.guildId} | channelId = ${channel.id}`
+        );
+      }
+    },
+  });
 }
