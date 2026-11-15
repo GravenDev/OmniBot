@@ -1,6 +1,6 @@
 import { Collection, PermissionFlagsBits, type Guild } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
-import { DeleterFinder } from "./audit.js";
+import { DeleterFinder } from "./audit.service.js";
 
 const now = Date.parse("2026-10-14T20:00:00Z");
 
