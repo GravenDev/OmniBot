@@ -63,29 +63,38 @@ async function purgeGuild(
     closedBefore,
     reportedBefore
   )) {
-    const done = await reportService.withReport(guildId, id, async (report) => {
-      if (!isExpired(report, closedBefore, reportedBefore)) {
-        return false;
-      }
-      if (report.alertChannelId && report.alertMessageId) {
-        try {
-          const channel = await client.channels.fetch(report.alertChannelId);
-          if (channel?.isTextBased()) {
-            await channel.messages.edit(
-              report.alertMessageId,
-              purgedMessage(report.id, t)
+    const done = await reportService
+      .withReport(guildId, id, async (report) => {
+        if (!isExpired(report, closedBefore, reportedBefore)) {
+          return false;
+        }
+        if (report.alertChannelId && report.alertMessageId) {
+          try {
+            const channel = await client.channels.fetch(report.alertChannelId);
+            if (channel?.isTextBased()) {
+              await channel.messages.edit(
+                report.alertMessageId,
+                purgedMessage(report.id, t)
+              );
+            }
+          } catch (err) {
+            logger.debug(
+              { err },
+              `Alert not purged | guildId = ${guildId} | reportId = ${report.id} | channelId = ${report.alertChannelId}`
             );
           }
-        } catch (err) {
-          logger.debug(
-            { err },
-            `Alert not purged | guildId = ${guildId} | reportId = ${report.id} | channelId = ${report.alertChannelId}`
-          );
         }
-      }
-      await store.delete(report.id);
-      return true;
-    });
+        await store.delete(report.id);
+        return true;
+      })
+      .catch((err: unknown) => {
+        // The guild's other reports are still purged; this one tomorrow.
+        logger.error(
+          { err },
+          `Report not purged | guildId = ${guildId} | reportId = ${id}`
+        );
+        return false;
+      });
     if (done) {
       purged++;
     }
