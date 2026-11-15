@@ -2,7 +2,7 @@ import moduleService from "#core/services/module.service.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
 import type { SeniorityConfigSchema } from "./seniority.config.js";
-import { runAllGuildDays } from "./services/daily.js";
+import { runAllGuildDays } from "./services/daily.service.js";
 import { sweepDepartures } from "./services/overrides.service.js";
 
 export function seniorityTasks(module: Module<SeniorityConfigSchema>) {

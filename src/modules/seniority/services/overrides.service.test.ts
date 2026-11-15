@@ -15,6 +15,7 @@ const db = vi.hoisted(() => ({
   upsert: vi.fn(),
   updateMany: vi.fn(),
   deleteMany: vi.fn(),
+  count: vi.fn(),
 }));
 const allMembers = vi.hoisted(() => vi.fn());
 vi.mock("#lib/guild-members.js", () => ({ allMembers }));
@@ -23,7 +24,7 @@ vi.mock("#lib/database.js", () => ({
   default: { seniorityOverride: db },
 }));
 
-const { firstMessageDate, recompute, sweepDepartures } =
+const { firstMessageDate, recompute, sweepDepartures, uninstallWarning } =
   await import("./overrides.service.js");
 
 const JOINED = new Date("2024-06-01T10:00:00Z");
@@ -410,5 +411,23 @@ describe("sweepDepartures", () => {
     await sweepDepartures(client([], []), activeIn(["gone-guild"]), NOW);
     expect(db.deleteMany).not.toHaveBeenCalled();
     expect(db.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+describe("uninstallWarning", () => {
+  const t = (key: string, options?: Record<string, unknown>) =>
+    `${key} ${JSON.stringify(options)}`;
+
+  it("warns that the recomputed seniorities will be lost", async () => {
+    db.count.mockResolvedValueOnce(3);
+    expect(await uninstallWarning("g", t as never)).toBe(
+      'uninstall.warning {"count":3}'
+    );
+    expect(db.count).toHaveBeenCalledWith({ where: { guildId: "g" } });
+  });
+
+  it("says nothing when there is nothing to lose", async () => {
+    db.count.mockResolvedValueOnce(0);
+    expect(await uninstallWarning("g", t as never)).toBeNull();
   });
 });

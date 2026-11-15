@@ -4,6 +4,7 @@ import {
   searchGuildMessagesPage,
   SearchNotReadyError,
 } from "#lib/discord-polyfills/guild-message-search.js";
+import type { TFunction } from "#lib/i18n.js";
 import { loggerMaker } from "#lib/logger.js";
 import { sweepStoredMembers } from "#lib/member-presence.js";
 import { seniorityStart } from "#modules/seniority/overrides.js";
@@ -116,6 +117,21 @@ export async function remove(guildId: string, userId: string): Promise<void> {
 
 export async function count(guildId: string): Promise<number> {
   return prisma.seniorityOverride.count({ where: { guildId } });
+}
+
+/**
+ * Disabling the module deletes the recomputed seniorities, which an
+ * administrator must then recompute one member at a time: `/modules` asks
+ * for confirmation first, unless there is nothing to lose.
+ */
+export async function uninstallWarning(
+  guildId: string,
+  t: TFunction
+): Promise<string | null> {
+  const recomputed = await count(guildId);
+  return recomputed === 0
+    ? null
+    : t("uninstall.warning", { count: recomputed });
 }
 
 export async function clearGuild(guildId: string): Promise<void> {
