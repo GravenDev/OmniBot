@@ -21,8 +21,7 @@ import {
   ClashNotFoundError,
   ClashRateLimitedError,
 } from "#modules/clash-of-code/api.js";
-import {
-  importClashes,
+import channelImport, {
   MAX_RATE_LIMIT_PAUSE_MS,
   MAX_RATE_LIMIT_RETRIES,
   RATE_LIMIT_PAUSE_MS,
@@ -60,7 +59,7 @@ afterEach(() => {
 });
 
 async function run(clashes: ReturnType<typeof clash>[], advanceMs: number) {
-  const result = importClashes("g", clashes);
+  const result = channelImport.importClashes("g", clashes);
   await vi.advanceTimersByTimeAsync(advanceMs);
   return result;
 }
@@ -106,7 +105,7 @@ describe("importClashes", () => {
 
   it("spaces its requests to CodinGame", async () => {
     mocks.fetchClashReport.mockResolvedValue(report());
-    const result = importClashes("g", ["a", "b", "c"].map(clash));
+    const result = channelImport.importClashes("g", ["a", "b", "c"].map(clash));
     await vi.advanceTimersByTimeAsync(0);
     expect(mocks.fetchClashReport).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(REQUEST_SPACING_MS);
@@ -120,7 +119,7 @@ describe("importClashes", () => {
     mocks.fetchClashReport
       .mockRejectedValueOnce(new ClashRateLimitedError("a", 20_000))
       .mockResolvedValue(report());
-    const result = importClashes("g", [clash("a")]);
+    const result = channelImport.importClashes("g", [clash("a")]);
     await vi.advanceTimersByTimeAsync(19_000);
     expect(mocks.fetchClashReport).toHaveBeenCalledTimes(1);
     await vi.advanceTimersByTimeAsync(1_000);
@@ -145,7 +144,9 @@ describe("importClashes", () => {
   it("reports its progress after each game", async () => {
     mocks.fetchClashReport.mockResolvedValue(report());
     const onProgress = vi.fn();
-    const result = importClashes("g", ["a", "b"].map(clash), { onProgress });
+    const result = channelImport.importClashes("g", ["a", "b"].map(clash), {
+      onProgress,
+    });
     await vi.advanceTimersByTimeAsync(2 * REQUEST_SPACING_MS);
     await result;
     expect(onProgress).toHaveBeenCalledTimes(2);
@@ -159,7 +160,9 @@ describe("importClashes", () => {
       .mockRejectedValueOnce(new ClashRateLimitedError("a", 20_000))
       .mockResolvedValue(report());
     const onProgress = vi.fn();
-    const result = importClashes("g", [clash("a")], { onProgress });
+    const result = channelImport.importClashes("g", [clash("a")], {
+      onProgress,
+    });
     await vi.advanceTimersByTimeAsync(20_000);
     await result;
     expect(onProgress.mock.calls[0]![0]).toMatchObject({
@@ -181,9 +184,13 @@ describe("importClashes", () => {
 
   it("starts no game past its deadline", async () => {
     mocks.fetchClashReport.mockResolvedValue(report());
-    const result = importClashes("g", ["a", "b", "c", "d"].map(clash), {
-      deadline: Date.now() + REQUEST_SPACING_MS + 1,
-    });
+    const result = channelImport.importClashes(
+      "g",
+      ["a", "b", "c", "d"].map(clash),
+      {
+        deadline: Date.now() + REQUEST_SPACING_MS + 1,
+      }
+    );
     await vi.advanceTimersByTimeAsync(10 * REQUEST_SPACING_MS);
     await expect(result).resolves.toMatchObject({
       stopped: "time",
@@ -196,7 +203,7 @@ describe("importClashes", () => {
     mocks.fetchClashReport.mockRejectedValue(
       new ClashRateLimitedError("a", 20_000)
     );
-    const late = importClashes("g", [clash("a")], {
+    const late = channelImport.importClashes("g", [clash("a")], {
       deadline: Date.now() + 10_000,
     });
     await vi.advanceTimersByTimeAsync(REQUEST_SPACING_MS);
@@ -209,10 +216,14 @@ describe("importClashes", () => {
       return report();
     });
     const checked = new Set<string>();
-    const result = importClashes("g", ["a", "unknown", "c", "d"].map(clash), {
-      deadline: Date.now() + REQUEST_SPACING_MS + 1,
-      checked,
-    });
+    const result = channelImport.importClashes(
+      "g",
+      ["a", "unknown", "c", "d"].map(clash),
+      {
+        deadline: Date.now() + REQUEST_SPACING_MS + 1,
+        checked,
+      }
+    );
     await vi.advanceTimersByTimeAsync(10 * REQUEST_SPACING_MS);
     await expect(result).resolves.toMatchObject({ stopped: "time", done: 2 });
     expect([...checked]).toEqual(["a", "unknown"]);

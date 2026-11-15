@@ -18,7 +18,7 @@ vi.mock(
     ...(await importOriginal<
       typeof import("#modules/clash-of-code/services/channel-import.service.js")
     >()),
-    importClashes: mocks.importClashes,
+    default: { importClashes: mocks.importClashes },
   })
 );
 
