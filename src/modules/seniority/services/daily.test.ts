@@ -55,7 +55,7 @@ vi.mock("./cards.js", async (importOriginal) => ({
   ...cards,
 }));
 
-const { runGuildDay } = await import("./daily.js");
+const { runAllGuildDays, runGuildDay } = await import("./daily.js");
 
 const module = { id: "seniority" } as unknown as Module<SeniorityConfigSchema>;
 
@@ -88,6 +88,7 @@ function setup(values: Partial<ConfigData<SeniorityConfigSchema>> = {}) {
   ]);
   const guild = {
     id: "guild-1",
+    available: true,
     createdAt: new Date("2021-10-16T10:00:00Z"),
     memberCount: 5,
     members: { cache: members, fetch: vi.fn(async () => members) },
@@ -358,14 +359,6 @@ describe("runGuildDay", () => {
     expect(send).not.toHaveBeenCalled();
   });
 
-  it("skips a guild the bot left", async () => {
-    const { client, send } = setup();
-    client.guilds.cache.clear();
-    await runGuildDay(client, module, "guild-1", NINE_IN_PARIS);
-    expect(getConfigForModuleIn).not.toHaveBeenCalled();
-    expect(send).not.toHaveBeenCalled();
-  });
-
   it("still posts the server's anniversary when the members' fails", async () => {
     const { client, send } = setup();
     send.mockRejectedValueOnce(new Error("refused"));
@@ -400,5 +393,22 @@ describe("runGuildDay", () => {
     expect(
       messages.flatMap(({ allowedMentions }) => allowedMentions.users)
     ).toHaveLength(152);
+  });
+});
+
+describe("runAllGuildDays", () => {
+  it("skips a guild the bot left", async () => {
+    const { client, send } = setup();
+    client.guilds.cache.clear();
+    await runAllGuildDays(client, module, NINE_IN_PARIS);
+    expect(getConfigForModuleIn).not.toHaveBeenCalled();
+    expect(send).not.toHaveBeenCalled();
+  });
+
+  it("runs the day of each guild the bot is on", async () => {
+    const { client, send } = setup();
+    await runAllGuildDays(client, module, NINE_IN_PARIS);
+    expect(state.claimDay).toHaveBeenCalledWith("guild-1", "2026-10-16");
+    expect(send).toHaveBeenCalled();
   });
 });

@@ -17,6 +17,7 @@ import {
 } from "#lib/calendar.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { isGuildSetupError } from "#lib/discord-errors.js";
+import { forEachGuild } from "#lib/guild-loop.js";
 import { allMembers } from "#lib/guild-members.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
@@ -213,9 +214,6 @@ export async function runGuildDay(
   guildId: string,
   now: Date
 ): Promise<void> {
-  if (!client.guilds.cache.has(guildId)) {
-    return;
-  }
   const config = await configService.getConfigForModuleIn(module, guildId);
   const timeZone = config.get("timeZone");
   const day = dueDay(
@@ -278,9 +276,10 @@ export async function runAllGuildDays(
   module: Module<SeniorityConfigSchema>,
   now = new Date()
 ): Promise<void> {
-  for (const guildId of await moduleService.getActivatedGuildIds(module.id)) {
-    await runGuildDay(client, module, guildId, now).catch((err: unknown) =>
-      logger.error({ err }, `Failed to run the day | guildId = ${guildId}`)
-    );
-  }
+  await forEachGuild(
+    client,
+    await moduleService.getActivatedGuildIds(module.id),
+    (guild) => runGuildDay(client, module, guild.id, now),
+    { action: "run the day", logger }
+  );
 }
