@@ -252,6 +252,7 @@ export async function checkCommandsForVersionChange(
     `\tFound ${guildsToFix.length} guilds to update commands for module "${module.id}"`
   );
 
+  // In sequence: every install's REST client ignores the others' rate limits.
   for (const info of guildsToFix) {
     let guild: Guild;
     try {
