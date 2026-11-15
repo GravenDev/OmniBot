@@ -1,4 +1,4 @@
-import type { Client, Guild } from "discord.js";
+import { type Client, GatewayIntentBits, type Guild } from "discord.js";
 import { allMembers } from "./guild-members.js";
 import type { Logger } from "./logger.js";
 import { fetchMember } from "./moderation.js";
@@ -7,10 +7,13 @@ import { fetchMember } from "./moderation.js";
  * Who is still on the server, for a sweep of stored members: the whole member
  * list, fetched once and shared with the other modules, rather than one
  * request per stored member, which a large server can have by the thousand.
+ * A member missing from the list is still asked about before being said gone.
  * Member by member, asked to Discord rather than the cache, when the list
  * cannot be had (no members intent) or misses members, who may be absent from
- * it rather than gone. A Discord error other than an unknown member or user
- * goes to the caller: the member is neither present nor gone.
+ * it rather than gone. Without the intent, the list is not even asked for:
+ * Discord never answers, and discord.js would wait two minutes per guild for
+ * it. A Discord error other than an unknown member or user goes to the
+ * caller: the member is neither present nor gone.
  *
  * @param logger The caller's, so that the logs say which sweep fell back.
  */
@@ -18,19 +21,25 @@ export async function memberPresence(
   guild: Guild,
   logger: Logger
 ): Promise<(userId: string) => Promise<boolean>> {
-  try {
-    const members = await allMembers(guild);
-    if (members.size >= guild.memberCount) {
-      return async (userId) => members.has(userId);
-    }
-  } catch (err) {
-    logger.warn(
-      { err },
-      `Member list unavailable, asking member by member | guildId = ${guild.id}`
-    );
-  }
-  return async (userId) =>
+  const asked = async (userId: string) =>
     (await fetchMember(guild, userId, { force: true })) !== null;
+  if (guild.client.options.intents.has(GatewayIntentBits.GuildMembers)) {
+    try {
+      const members = await allMembers(guild);
+      if (members.size >= guild.memberCount) {
+        // The list is the member cache, which can keep a departure the bot
+        // missed, so that a short answer passes for complete: a member
+        // missing from it is asked about before being said gone.
+        return async (userId) => members.has(userId) || (await asked(userId));
+      }
+    } catch (err) {
+      logger.warn(
+        { err },
+        `Member list unavailable, asking member by member | guildId = ${guild.id}`
+      );
+    }
+  }
+  return asked;
 }
 
 export interface MemberSweep<Row> {
