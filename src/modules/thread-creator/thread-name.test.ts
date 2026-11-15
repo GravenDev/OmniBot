@@ -1,6 +1,6 @@
 import type { Message } from "discord.js";
 import { describe, expect, it } from "vitest";
-import service from "./thread-creator.service.js";
+import { generateThreadName } from "./thread-name.js";
 
 function fakeMessage(content: string, displayName: string): Message {
   return {
@@ -11,7 +11,7 @@ function fakeMessage(content: string, displayName: string): Message {
 
 describe("generateThreadName", () => {
   it("substitutes {messageAuthor}", () => {
-    const result = service.generateThreadName(
+    const result = generateThreadName(
       "Thread by {messageAuthor}",
       fakeMessage("hello", "Alice")
     );
@@ -19,7 +19,7 @@ describe("generateThreadName", () => {
   });
 
   it("substitutes {messageContent}", () => {
-    const result = service.generateThreadName(
+    const result = generateThreadName(
       "Re: {messageContent}",
       fakeMessage("my question", "Bob")
     );
@@ -28,7 +28,7 @@ describe("generateThreadName", () => {
 
   it("truncates messageContent to 50 chars before substitution", () => {
     const longContent = "a".repeat(80);
-    const result = service.generateThreadName(
+    const result = generateThreadName(
       "{messageContent}",
       fakeMessage(longContent, "Bob")
     );
@@ -36,7 +36,7 @@ describe("generateThreadName", () => {
   });
 
   it("truncates result to 100 chars (Discord limit)", () => {
-    const result = service.generateThreadName(
+    const result = generateThreadName(
       "{messageAuthor}",
       fakeMessage("x", "a".repeat(200))
     );
@@ -46,7 +46,7 @@ describe("generateThreadName", () => {
   it("does not treat $& in user content as a backreference", () => {
     // Without the escape fix, $& in the replacement string would expand to
     // the matched pattern ({messageContent}), yielding "{messageContent} is..."
-    const result = service.generateThreadName(
+    const result = generateThreadName(
       "{messageContent}",
       fakeMessage("$& is literal", "Bob")
     );
@@ -54,7 +54,7 @@ describe("generateThreadName", () => {
   });
 
   it("does not treat $1 in author name as a backreference", () => {
-    const result = service.generateThreadName(
+    const result = generateThreadName(
       "Thread by {messageAuthor}",
       fakeMessage("hi", "$1 user")
     );
@@ -62,7 +62,7 @@ describe("generateThreadName", () => {
   });
 
   it("does not treat $$ in content as a special sequence", () => {
-    const result = service.generateThreadName(
+    const result = generateThreadName(
       "{messageContent}",
       fakeMessage("cost is $$5", "Bob")
     );
