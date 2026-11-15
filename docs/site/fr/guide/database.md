@@ -17,8 +17,7 @@ src/
 │       └── modules.prisma     # Modèle ModuleActivation
 └── modules/
     └── mon-module/
-        └── models/
-            └── mon-modele.prisma  # Modèles spécifiques au module
+        └── mon-module.prisma      # Modèles spécifiques au module
 ```
 
 ### Configuration de base (`dbinfo.prisma`)
@@ -44,7 +43,7 @@ Le schéma ne contient aucune URL de connexion. Le CLI Prisma lit `DATABASE_URL`
 ### 1. Créer le fichier `.prisma`
 
 ```
-src/modules/mon-module/models/mon-modele.prisma
+src/modules/mon-module/mon-module.prisma
 ```
 
 ### 2. Définir votre modèle
@@ -148,9 +147,9 @@ Le client Prisma est un singleton exporté depuis `#lib/database.js`. Il est ini
 ## Bonnes pratiques
 
 - **Modèles du cœur** dans `src/core/models/`
-- **Modèles spécifiques aux modules** dans `src/modules/<module>/models/`
+- **Modèles spécifiques aux modules** dans `src/modules/<module>/<module>.prisma`, à la racine du module
 - Utilisez le **PascalCase** pour les noms de modèles et le **camelCase** pour les champs
-- Gardez les modèles ciblés — un fichier par entité logique ou petit groupe
+- Gardez chaque modèle centré sur une entité logique
 - Exécutez toujours `pnpm prisma:generate` après avoir modifié un fichier `.prisma`
 - Exécutez `pnpm prisma:migrate` en développement pour créer et appliquer les migrations
 

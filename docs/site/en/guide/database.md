@@ -17,8 +17,7 @@ src/
 │       └── modules.prisma     # ModuleActivation model
 └── modules/
     └── my-module/
-        └── models/
-            └── my-model.prisma  # Module-specific models
+        └── my-module.prisma     # Module-specific models
 ```
 
 ### Base Configuration (`dbinfo.prisma`)
@@ -44,7 +43,7 @@ The schema holds no connection URL. The Prisma CLI reads `DATABASE_URL` through 
 ### 1. Create the `.prisma` file
 
 ```
-src/modules/my-module/models/my-model.prisma
+src/modules/my-module/my-module.prisma
 ```
 
 ### 2. Define your model
@@ -148,9 +147,9 @@ The Prisma client is a singleton exported from `#lib/database.js`. It's initiali
 ## Best Practices
 
 - **Core models** go in `src/core/models/`
-- **Module-specific models** go in `src/modules/<module>/models/`
+- **Module-specific models** go in `src/modules/<module>/<module>.prisma`, at the root of the module
 - Use **PascalCase** for model names and **camelCase** for fields
-- Keep models focused — one file per logical entity or small group
+- Keep each model focused on one logical entity
 - Always run `pnpm prisma:generate` after changing any `.prisma` file
 - Run `pnpm prisma:migrate` in development to create and apply migrations
 

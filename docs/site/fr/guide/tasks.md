@@ -5,18 +5,27 @@ Un module peut exécuter du code à heure fixe (un rapport nocturne, une synchro
 ## Déclarer une tâche
 
 ```typescript
-// src/modules/my-module/tasks/cleanup.task.ts
+// src/modules/my-module/tasks.ts
 
+import moduleService from "#core/services/module.service.js";
+import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
+import type { MyModuleConfigSchema } from "./my-module.config.js";
 
-export default declareTask({
-  id: "cleanup",
-  schedule: "0 3 * * *", // tous les jours à 03:00 UTC
-  runOnStart: false,
-  async run(client) {
-    // client est le client Discord prêt
-  },
-});
+export function myModuleTasks(module: Module<MyModuleConfigSchema>) {
+  return [
+    declareTask({
+      id: "daily-report",
+      schedule: "0 3 * * *", // tous les jours à 03:00 UTC
+      runOnStart: false,
+      async run(client) {
+        // client est le client Discord prêt
+        const guildIds = await moduleService.getActivatedGuildIds(module.id);
+        // ...
+      },
+    }),
+  ];
+}
 ```
 
 | Champ        | Description                                                                              |
@@ -27,13 +36,19 @@ export default declareTask({
 | `runOnStart` | Exécute aussi la tâche une fois au démarrage du bot. Optionnel, `false` par défaut.      |
 | `run`        | Le travail à faire. Reçoit le client Discord prêt.                                       |
 
-Enregistrez la tâche dans le `onLoad` du module, comme les commandes et les écouteurs :
+Un module garde ses tâches dans un seul `tasks.ts`, à sa racine, exportées par une fonction qui les renvoie : elle reçoit le module quand les tâches en ont besoin (son id, sa configuration), rien sinon (`clashOfCodeTasks()`).
+
+Enregistrez-les dans le `onLoad` du module, comme les commandes et les écouteurs :
 
 ```typescript
 onLoad(_client, registry) {
-  registry.register(cleanupTask);
+  for (const task of myModuleTasks(myModule)) {
+    registry.register(task);
+  }
 },
 ```
+
+Les tâches qui purgent des données stockées ne s'enregistrent pas là : exportez-les du même `tasks.ts`, par une fonction à part quand le module a aussi d'autres tâches (`tempVoiceMaintenanceTasks()`), et renvoyez-les depuis `maintenanceTasks` du module, pour qu'elles tournent aussi pour un module écarté au démarrage (voir [Créer un module](./creating-a-module#cycles-de-vie)).
 
 ## Comportement
 
