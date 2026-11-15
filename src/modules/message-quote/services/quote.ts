@@ -23,6 +23,7 @@ import { NO_MENTIONS_REPLY } from "#lib/mentions.js";
 import { forEachComponent } from "#lib/message-content.js";
 import { missingBotPermissions } from "#lib/permissions.js";
 import {
+  repliedTo,
   type ReportOptions,
   reportedMessage,
   sendWithMediaFallback,
@@ -47,6 +48,12 @@ const LINK_PATTERN =
 export interface MessageLink {
   channelId: string;
   messageId: string;
+}
+
+/** A quoted message, and the one it replies to, quoted under its header. */
+export interface Quote {
+  message: Message<true>;
+  reply: Message | null;
 }
 
 export function parseMessageLinks(
@@ -148,7 +155,10 @@ export function quoteContainer(
   quoted: Message<true>,
   quoter: GuildMember,
   t: TFunction,
-  options: Pick<ReportOptions, "textLimit" | "buttons" | "withMedia"> = {}
+  options: Pick<
+    ReportOptions,
+    "reply" | "textLimit" | "buttons" | "withMedia"
+  > = {}
 ): ContainerBuilder {
   return reportedMessage(quoted, t, {
     accent: quoted.member?.displayColor || ACCENT,
@@ -163,7 +173,7 @@ export function quoteContainer(
  * limit; the last one carries the delete button, for the people involved.
  */
 export function quoteReply(
-  quotes: Message<true>[],
+  quotes: readonly Quote[],
   quoter: GuildMember,
   t: TFunction,
   withMedia = true
@@ -171,11 +181,12 @@ export function quoteReply(
   const textLimit = Math.floor(COMPONENTS_TEXT_LIMIT / quotes.length);
   const allowedUserIds = [
     quoter.id,
-    ...quotes.map((quoted) => quoted.author.id),
+    ...quotes.map(({ message }) => message.author.id),
   ];
   return {
-    components: quotes.map((quoted, index) =>
-      quoteContainer(quoted, quoter, t, {
+    components: quotes.map(({ message, reply }, index) =>
+      quoteContainer(message, quoter, t, {
+        reply,
         textLimit,
         withMedia,
         buttons:
@@ -232,9 +243,12 @@ export async function quoteLinks(
 
   const quotes = (
     await Promise.all(
-      links.map((link) => resolveQuote(message, member, link, excludedIds))
+      links.map(async (link): Promise<Quote | null> => {
+        const quoted = await resolveQuote(message, member, link, excludedIds);
+        return quoted && { message: quoted, reply: await repliedTo(quoted) };
+      })
     )
-  ).filter((quoted) => quoted !== null);
+  ).filter((quote) => quote !== null);
   if (quotes.length === 0) {
     logger.debug(
       `Quote ignored | reason = no quotable link | guildId = ${message.guildId} | channelId = ${message.channelId} | messageId = ${message.id} | links = ${links.length}`

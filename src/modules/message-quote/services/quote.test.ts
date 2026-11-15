@@ -5,6 +5,7 @@ import {
   ComponentType,
   DiscordAPIError,
   MessageFlags,
+  MessageType,
   PermissionFlagsBits,
   PermissionsBitField,
   RESTJSONErrorCodes,
@@ -110,6 +111,11 @@ const member = {
   displayName: "Quoter",
 } as unknown as GuildMember;
 
+/** A quote of a message that replies to none. */
+function alone(message: Message<true>) {
+  return { message, reply: null };
+}
+
 function fakeQuoted(
   options: {
     content?: string;
@@ -130,6 +136,8 @@ function fakeQuoted(
     buttonIds?: string[];
     /** A message laid out with components: no content, no attachments. */
     components?: unknown[];
+    /** A reply: how Discord gives the message it replies to. */
+    fetchReference?: () => Promise<unknown>;
   } = {}
 ) {
   const attachments = new Collection(
@@ -181,6 +189,11 @@ function fakeQuoted(
     channelId: "200",
     channel: { name: "general" },
     client: { user: { id: "bot" } },
+    type: options.fetchReference ? MessageType.Reply : MessageType.Default,
+    reference: options.fetchReference
+      ? { channelId: "200", messageId: "299" }
+      : null,
+    fetchReference: options.fetchReference,
     components: options.components
       ? options.components
       : options.buttonIds
@@ -485,7 +498,9 @@ describe("resolveQuote", () => {
   it("does not quote its own quotes, laid out with components", async () => {
     const ownQuote = fakeQuoted({
       authorId: "bot",
-      components: [quoteReply([quoted], member, t).components[0]!.toJSON()],
+      components: [
+        quoteReply([alone(quoted)], member, t).components[0]!.toJSON(),
+      ],
     });
     const { message } = fakeSource("", {
       "200": fakeChannel({ messages: { "300": ownQuote } }),
@@ -855,7 +870,7 @@ describe("quoteContainer", () => {
 describe("quoteReply", () => {
   it("gives each quote its container, and the last one the delete button", () => {
     const reply = quoteReply(
-      [fakeQuoted({ authorId: "2" }), fakeQuoted({ authorId: "2" })],
+      [fakeQuoted({ authorId: "2" }), fakeQuoted({ authorId: "2" })].map(alone),
       member,
       t
     );
@@ -895,8 +910,9 @@ describe("quoteReply", () => {
       image: { url: "https://cdn/e.png" },
     };
     const reply = quoteReply(
-      [1, 2, 3].map(() =>
-        fakeQuoted({
+      // Each one replies to a long message, quoted under its header.
+      [1, 2, 3].map(() => ({
+        message: fakeQuoted({
           content: "a".repeat(4000),
           attachments: [
             file("a.pdf"),
@@ -906,8 +922,9 @@ describe("quoteReply", () => {
             ...Array.from({ length: 12 }, (_, i) => image(`${i}.png`)),
           ],
           embeds: [embed, embed],
-        })
-      ),
+        }),
+        reply: fakeQuoted({ authorId: "3", content: "q".repeat(4000) }),
+      })),
       member,
       t
     );
@@ -920,7 +937,9 @@ describe("quoteReply", () => {
     );
     // Each one still shows a good part of its text.
     for (const container of reply.components) {
-      expect(JSON.stringify(container.toJSON())).toContain("a".repeat(300));
+      const json = JSON.stringify(container.toJSON());
+      expect(json).toContain("a".repeat(300));
+      expect(json).toContain("↪ <@3>: qqq");
     }
   });
 
@@ -936,7 +955,7 @@ describe("quoteReply", () => {
             },
           ],
         }),
-      ],
+      ].map(alone),
       member,
       t,
       false
@@ -949,6 +968,13 @@ describe("quoteReply", () => {
 
 describe("quoteLinks", () => {
   const quoted = fakeQuoted({ content: "hello" });
+
+  const sentJson = (reply: ReturnType<typeof vi.fn>) => {
+    const [payload] = reply.mock.calls[0] as unknown as [
+      { components: { toJSON(): unknown }[] },
+    ];
+    return JSON.stringify(payload.components.map((c) => c.toJSON()));
+  };
 
   it("replies with the quotes the member may read", async () => {
     const { message, reply } = fakeSource(
@@ -1004,6 +1030,67 @@ describe("quoteLinks", () => {
     expect(sent(0)).toContain("https://bad.example/i");
     expect(sent(1)).not.toContain("https://bad.example/i");
     expect(sent(1)).toContain("hello");
+  });
+
+  it("shows the message a quoted reply answers", async () => {
+    const question = fakeQuoted({ authorId: "3", content: "the question?" });
+    const answer = fakeQuoted({
+      content: "the answer",
+      fetchReference: async () => question,
+    });
+    const { message, reply } = fakeSource(link("200", "300"), {
+      "200": fakeChannel({ messages: { "300": answer } }),
+    });
+    await quoteLinks(message, fakeConfig());
+    expect(sentJson(reply)).toContain("> -# ↪ <@3>: the question?");
+    expect(sentJson(reply)).toContain("the answer");
+  });
+
+  it("quotes a reply without the message it answers once that is gone", async () => {
+    const answer = fakeQuoted({
+      content: "the answer",
+      fetchReference: async () => {
+        throw new Error("Unknown Message");
+      },
+    });
+    const { message, reply } = fakeSource(link("200", "300"), {
+      "200": fakeChannel({ messages: { "300": answer } }),
+    });
+    await quoteLinks(message, fakeConfig());
+    expect(reply).toHaveBeenCalledOnce();
+    expect(sentJson(reply)).toContain("the answer");
+    expect(sentJson(reply)).not.toContain("↪");
+  });
+
+  it("fetches the messages several quoted replies answer together", async () => {
+    // Each fetch waits for the other to start: in sequence, neither would end.
+    let started = 0;
+    let release!: () => void;
+    const bothStarted = new Promise<void>((resolve) => (release = resolve));
+    const answering = (authorId: string, content: string) =>
+      fakeQuoted({
+        content: `re: ${content}`,
+        fetchReference: async () => {
+          if (++started === 2) release();
+          await bothStarted;
+          return fakeQuoted({ authorId, content });
+        },
+      });
+    const { message, reply } = fakeSource(
+      `${link("200", "300")} ${link("200", "301")}`,
+      {
+        "200": fakeChannel({
+          messages: {
+            "300": answering("3", "first question"),
+            "301": answering("4", "second question"),
+          },
+        }),
+      }
+    );
+    await quoteLinks(message, fakeConfig());
+    const json = sentJson(reply);
+    expect(json).toContain("↪ <@3>: first question");
+    expect(json).toContain("↪ <@4>: second question");
   });
 
   it("does not retry another error", async () => {

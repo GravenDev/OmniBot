@@ -107,7 +107,7 @@ Shared code lives in `src/lib/` (imported as `#lib/…`), plus `src/core/utils/`
 | `#lib/preview.js`          | sample images for `pnpm render-preview`                                                                              |
 | `#lib/registry.js`         | a module's declarations                                                                                              |
 | `#lib/reply.js`            | `replyEphemeral`: answer only the member, by reply or follow-up                                                      |
-| `#lib/reported-message.js` | a message quoted elsewhere (message-quote, starboard): `reportedMessage`, `sendWithMediaFallback`                    |
+| `#lib/reported-message.js` | a message quoted elsewhere (message-quote, starboard): `reportedMessage`, `repliedTo`, `sendWithMediaFallback`       |
 | `#lib/revision-cache.js`   | `RevisionCache`, `RevisionCounter`: caches invalidated by key                                                        |
 | `#lib/service.js`          | `declareService`                                                                                                     |
 | `#lib/stat-card.js`        | stat cards: panels, trends, fitted text                                                                              |

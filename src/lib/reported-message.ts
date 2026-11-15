@@ -6,6 +6,7 @@ import {
   type Embed,
   escapeMarkdown,
   type Message,
+  MessageType,
   RESTJSONErrorCodes,
   StickerFormatType,
   time,
@@ -14,6 +15,7 @@ import {
 import { isApiError } from "./discord-errors.js";
 import { COMPONENTS_TEXT_LIMIT } from "./format.js";
 import type { TFunction } from "./i18n.js";
+import { loggerMaker } from "./logger.js";
 import {
   componentsMedia,
   componentsText,
@@ -29,6 +31,8 @@ import { quoteEachLine, stripLineMarkup, truncate } from "./text.js";
 // module's buttons, when it has some). A message that replies to another
 // quotes it under the header, beside the avatar, and shows its own text
 // below, at full width.
+
+const logger = loggerMaker("reported-message");
 
 const GALLERY_LIMIT = 10;
 const EXTRAS_LIMIT = 1200;
@@ -247,6 +251,43 @@ function replyLine(reply: Message, t: TFunction): string {
       excerpt: excerpt || "…",
     })}`
   );
+}
+
+/**
+ * Whether `channelId` is the message's channel or, in a thread, its parent's,
+ * where the thread's starter message sits: whoever reads a thread reads its
+ * parent, so the checks made on the message's channel hold there too.
+ */
+function isOwnChannel(message: Message, channelId: string | undefined) {
+  return (
+    channelId === message.channelId ||
+    (message.channel.isThread() && channelId === message.channel.parentId)
+  );
+}
+
+/**
+ * The message `message` replies to, for `ReportOptions.reply`; null when it
+ * replies to none, or when that one is gone or out of reach. It is never
+ * looked for outside the message's channel (see `isOwnChannel`).
+ */
+export async function repliedTo(message: Message): Promise<Message | null> {
+  try {
+    if (
+      message.type !== MessageType.Reply ||
+      !isOwnChannel(message, message.reference?.channelId)
+    ) {
+      return null;
+    }
+    return await message.fetchReference();
+  } catch (err) {
+    // Gone, or out of reach (the channel no longer cached): the report goes
+    // without it.
+    logger.debug(
+      { err },
+      `Replied-to message unavailable | channelId = ${message.channelId} | messageId = ${message.id}`
+    );
+    return null;
+  }
 }
 
 /**
