@@ -1,5 +1,7 @@
 import type { Client } from "discord.js";
 import configService from "#core/services/config.service.js";
+import { eachLimited } from "#lib/concurrency.js";
+import { GUILD_CONCURRENCY } from "#lib/guild-loop.js";
 import { createT } from "#lib/i18n.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
@@ -55,6 +57,7 @@ async function purgeGuild(
   const reportedBefore = new Date(now - MAX_RETENTION_SECONDS * 1000);
 
   let purged = 0;
+  // In sequence: alerts usually share one channel, and its rate limit.
   for (const { id } of await store.expired(
     guildId,
     closedBefore,
@@ -96,22 +99,28 @@ export function reportsTasks(module: Module<ReportsConfigSchema>) {
       id: "purge",
       schedule: "0 4 * * *",
       async run(client) {
-        for (const guildId of await store.guildIds()) {
-          await purgeGuild(client, module, guildId)
-            .then((count) => {
+        // A few guilds at once: each has its own reports, alerts and rate
+        // limits, and all of them together would drain the database's pool.
+        // Not only the guilds the bot is on: a left guild's reports expire too.
+        await eachLimited(
+          await store.guildIds(),
+          GUILD_CONCURRENCY,
+          async (guildId) => {
+            try {
+              const count = await purgeGuild(client, module, guildId);
               if (count > 0) {
                 logger.info(
                   `Reports purged | guildId = ${guildId} | count = ${count}`
                 );
               }
-            })
-            .catch((err: unknown) =>
+            } catch (err) {
               logger.error(
                 { err },
                 `Report purge failed | guildId = ${guildId}`
-              )
-            );
-        }
+              );
+            }
+          }
+        );
       },
     }),
   ];

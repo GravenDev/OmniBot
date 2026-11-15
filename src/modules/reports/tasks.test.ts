@@ -179,4 +179,46 @@ describe("reports purge task", () => {
 
     expect(mocks.expired).toHaveBeenCalledTimes(2);
   });
+
+  it("purges the guilds together, a slow one holding none back", async () => {
+    mocks.guildIds.mockResolvedValue(["slow", "fast"]);
+    let fastReached!: () => void;
+    const fast = new Promise<void>((resolve) => (fastReached = resolve));
+    mocks.expired.mockImplementation(async (guildId: string) => {
+      if (guildId === "slow") {
+        // Only once the other guild got there: in sequence, never.
+        await fast;
+      } else {
+        fastReached();
+      }
+      return [];
+    });
+
+    await runPurge();
+
+    expect(mocks.expired).toHaveBeenCalledTimes(2);
+  }, 1000);
+
+  it("purges a few guilds at once, never all of them together", async () => {
+    mocks.guildIds.mockResolvedValue(
+      Array.from({ length: 10 }, (_, i) => `g${i}`)
+    );
+    let running = 0;
+    let most = 0;
+    mocks.expired.mockImplementation(async () => {
+      most = Math.max(most, ++running);
+      // Timers are fake here: a few ticks let the other guilds start.
+      for (let tick = 0; tick < 10; tick++) {
+        await Promise.resolve();
+      }
+      running--;
+      return [];
+    });
+
+    await runPurge();
+
+    expect(mocks.expired).toHaveBeenCalledTimes(10);
+    expect(most).toBeGreaterThan(1);
+    expect(most).toBeLessThan(10);
+  });
 });
