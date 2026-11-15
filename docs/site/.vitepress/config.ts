@@ -60,8 +60,8 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: "Accueil", link: "/fr/" },
-          { text: "Guide", link: "/fr/guide/getting-started" },
           { text: "Utiliser le bot", link: "/fr/usage/" },
+          { text: "Développer", link: "/fr/guide/getting-started" },
         ],
         sidebar: {
           "/fr/usage/": [
@@ -266,9 +266,9 @@ export default defineConfig({
       description: "OmniBot modular Discord bot documentation",
       themeConfig: {
         nav: [
-          { text: "Guide", link: "/en/guide/getting-started" },
-          { text: "Using the bot", link: "/en/usage/" },
           { text: "Home", link: "/en/" },
+          { text: "Using the bot", link: "/en/usage/" },
+          { text: "Developers", link: "/en/guide/getting-started" },
         ],
         sidebar: {
           "/en/usage/": [
