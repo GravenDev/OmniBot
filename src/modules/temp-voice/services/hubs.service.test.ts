@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const store = vi.hoisted(() => ({
   channel: vi.fn(),
+  hubs: vi.fn(),
   saveHub: vi.fn(),
   removeHub: vi.fn(),
 }));
@@ -12,7 +13,7 @@ vi.mock("#lib/database.js", () => ({ default: {} }));
 vi.mock("./store.service.js", () => ({ default: store }));
 vi.mock("#lib/permissions.js", () => permissions);
 
-const { saveHub } = await import("./hubs.service.js");
+const { default: hubRecords } = await import("./hubs.service.js");
 
 const context = { t: (key: string) => key, userId: "admin" };
 
@@ -30,12 +31,11 @@ beforeEach(() => {
   permissions.missingBotPermissionNames.mockResolvedValue(null);
 });
 
-describe("saveHub", () => {
+describe("save", () => {
   it("saves a valid hub", async () => {
-    const outcome = await saveHub(
+    const outcome = await hubRecords.save(
       guildWith(),
-      "hub",
-      { name: " Salon de {user} ", limit: "5" },
+      { channelId: "hub", values: { name: " Salon de {user} ", limit: "5" } },
       context
     );
     expect(outcome.ok).toBe(true);
@@ -51,7 +51,9 @@ describe("saveHub", () => {
     [{ name: "x", limit: "abc" }, "hub.invalidLimit"],
     [{ name: "x".repeat(101), limit: "0" }, "hub.invalidName"],
   ])("rejects %o", async (values, message) => {
-    expect(await saveHub(guildWith(), "hub", values, context)).toEqual({
+    expect(
+      await hubRecords.save(guildWith(), { channelId: "hub", values }, context)
+    ).toEqual({
       ok: false,
       message,
     });
@@ -61,21 +63,96 @@ describe("saveHub", () => {
   it("rejects a text channel, a temporary channel and missing permissions", async () => {
     const values = { name: "x", limit: "0" };
     expect(
-      (await saveHub(guildWith(ChannelType.GuildText), "hub", values, context))
-        .message
+      (
+        await hubRecords.save(
+          guildWith(ChannelType.GuildText),
+          { channelId: "hub", values },
+          context
+        )
+      ).message
     ).toBe("hub.unknownChannel");
 
     store.channel.mockResolvedValueOnce({ channelId: "hub" });
-    expect((await saveHub(guildWith(), "hub", values, context)).message).toBe(
-      "hub.isTemporary"
-    );
+    expect(
+      (
+        await hubRecords.save(
+          guildWith(),
+          { channelId: "hub", values },
+          context
+        )
+      ).message
+    ).toBe("hub.isTemporary");
 
     permissions.missingBotPermissionNames.mockResolvedValueOnce(
       "permission.MoveMembers"
     );
-    expect((await saveHub(guildWith(), "hub", values, context)).message).toBe(
-      "hub.missingPermissions"
-    );
+    expect(
+      (
+        await hubRecords.save(
+          guildWith(),
+          { channelId: "hub", values },
+          context
+        )
+      ).message
+    ).toBe("hub.missingPermissions");
     expect(store.saveHub).not.toHaveBeenCalled();
+  });
+});
+
+describe("list", () => {
+  it("shows each hub's name template and limit as /config values", async () => {
+    store.hubs.mockResolvedValueOnce([
+      { channelId: "hub", nameTemplate: "Salon de {user}", userLimit: 0 },
+    ]);
+    expect(await hubRecords.list("g1")).toEqual([
+      { channelId: "hub", values: { name: "Salon de {user}", limit: "0" } },
+    ]);
+  });
+});
+
+describe("save, channel not cached", () => {
+  it("fetches it, and refuses one Discord does not know", async () => {
+    const guild = guildWith();
+    guild.channels.cache.clear();
+    guild.channels.fetch.mockRejectedValueOnce(new Error("Unknown Channel"));
+    expect(
+      await hubRecords.save(
+        guild,
+        { channelId: "hub", values: { name: "x", limit: "0" } },
+        context
+      )
+    ).toEqual({ ok: false, message: "hub.unknownChannel" });
+
+    guild.channels.fetch.mockResolvedValueOnce({
+      id: "hub",
+      type: ChannelType.GuildVoice,
+      parent: null,
+    });
+    expect(
+      (
+        await hubRecords.save(
+          guild,
+          { channelId: "hub", values: { name: "x", limit: "0" } },
+          context
+        )
+      ).ok
+    ).toBe(true);
+  });
+});
+
+describe("remove", () => {
+  it("removes a hub, or says there was none", async () => {
+    store.removeHub.mockResolvedValueOnce(true);
+    expect(await hubRecords.remove(guildWith(), "hub", context)).toEqual({
+      ok: true,
+      message: "hub.removed",
+    });
+    expect(store.removeHub).toHaveBeenCalledWith("g1", "hub");
+
+    store.removeHub.mockResolvedValueOnce(false);
+    expect(await hubRecords.remove(guildWith(), "hub", context)).toEqual({
+      ok: false,
+      message: "hub.none",
+    });
   });
 });
