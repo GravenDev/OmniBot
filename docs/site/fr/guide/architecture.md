@@ -140,13 +140,13 @@ Le système de configuration comporte plusieurs couches :
 
 ## Couche service
 
-Contrairement aux modules, **les services ne sont pas auto-découverts**. Ce sont de simples classes ou objets TypeScript étiquetés avec `declareService()`. Vous les importez directement là où vous en avez besoin :
+Contrairement aux modules, **les services ne sont pas auto-découverts**. Un service est une classe dont l'instance est déclarée avec `declareService()` et exportée par défaut (voir [Services](./services)). Vous importez cette instance directement là où vous en avez besoin :
 
 ```typescript
-import fileAttente from "../services/file-attente-creation.js";
+import threadCreatorService from "../services/thread-creator.service.js";
 ```
 
-Cela maintient la couche service simple et sans dépendances.
+Cela garde la couche service simple : ni conteneur, ni injection de dépendances.
 
 ## Auto-activation des écouteurs
 

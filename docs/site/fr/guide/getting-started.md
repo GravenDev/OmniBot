@@ -125,19 +125,19 @@ src/
 
 Les fichiers utilisent des suffixes pour identifier leur rôle :
 
-| Suffixe         | Rôle                                                     |
-| --------------- | -------------------------------------------------------- |
-| `*.module.ts`   | Définition du module (ex. `thread-creator.module.ts`)    |
-| `*.config.ts`   | Schéma de configuration (ex. `thread-creator.config.ts`) |
-| `*.command.ts`  | Commande slash (ex. `saluer.command.ts`)                 |
-| `*.listener.ts` | Écouteur d'événement (ex. `message-create.listener.ts`)  |
-| `*.button.ts`   | Gestionnaire d'interaction bouton                        |
-| `*.modal.ts`    | Gestionnaire de soumission de modale                     |
-| `*.select.ts`   | Gestionnaire de menu de sélection                        |
-| `*.service.ts`  | Service métier (ex. `file-attente.service.ts`)           |
-| `tasks.ts`      | Tâches planifiées, un seul fichier à la racine du module |
-| `*.prisma`      | Définition de modèle Prisma                              |
-| `i18n/*.json`   | Fichiers de traduction (ex. `en.json`, `fr.json`)        |
+| Suffixe         | Rôle                                                       |
+| --------------- | ---------------------------------------------------------- |
+| `*.module.ts`   | Définition du module (ex. `thread-creator.module.ts`)      |
+| `*.config.ts`   | Schéma de configuration (ex. `thread-creator.config.ts`)   |
+| `*.command.ts`  | Commande slash (ex. `saluer.command.ts`)                   |
+| `*.listener.ts` | Écouteur d'événement (ex. `message-create.listener.ts`)    |
+| `*.button.ts`   | Gestionnaire d'interaction bouton                          |
+| `*.modal.ts`    | Gestionnaire de soumission de modale                       |
+| `*.select.ts`   | Gestionnaire de menu de sélection                          |
+| `*.service.ts`  | Service avec état ou dépendances (ex. `config.service.ts`) |
+| `tasks.ts`      | Tâches planifiées, un seul fichier à la racine du module   |
+| `*.prisma`      | Définition de modèle Prisma                                |
+| `i18n/*.json`   | Fichiers de traduction (ex. `en.json`, `fr.json`)          |
 
 ---
 

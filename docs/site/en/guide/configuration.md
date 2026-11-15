@@ -309,6 +309,6 @@ This means common UI strings like `config.previous`, `config.next`, `modules.ena
 
 ## Next Steps
 
-- [Services](./services) for organizing business logic
+- [Services](./services) for sharing state and dependencies
 - [Database](./database) for advanced persistent data
 - [Commands](./commands) for creating slash commands

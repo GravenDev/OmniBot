@@ -125,4 +125,4 @@ Register it like any other listener.
 
 - [Configuration](./configuration) for managing module settings
 - [Database](./database) for persistent data storage
-- [Services](./services) for organizing business logic
+- [Services](./services) for sharing state and dependencies

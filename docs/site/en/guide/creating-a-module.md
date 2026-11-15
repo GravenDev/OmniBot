@@ -34,7 +34,8 @@ src/modules/my-module/
 │   ├── confirm.button.ts
 │   └── feedback.modal.ts
 ├── rendering/                   # Images and the module's accent, `theme.ts` (see Generating Images)
-├── services/                    # Business logic
+├── rules.ts                     # Pure rules and computations (see Services)
+├── services/                    # Code with state or dependencies (see Services)
 │   └── my-service.service.ts
 ├── tasks.ts                     # Scheduled tasks (optional)
 └── my-module.prisma             # Prisma models (optional)
@@ -256,7 +257,7 @@ Before your module reaches production guilds:
 
 ## Best Practices
 
-- **Keep `onLoad` lean** — register artifacts and log, move logic to services
+- **Keep `onLoad` lean** — register artifacts and log, move logic out (to services, or plain functions when it is pure)
 - **Use kebab-case** for module IDs and folder names
 - **Let lifecycle hooks fail** — an error thrown by `onInstall`/`onUninstall` cancels the operation; catch only what may fail without consequence
 - **Keep files organized** — one command, listener or handler per file, in its subdirectory; the tasks share one `tasks.ts`
@@ -268,5 +269,5 @@ Before your module reaches production guilds:
 - [Listeners](./listeners) — React to Discord events
 - [Interactions](./interactions) — Buttons, select menus, and modals
 - [Configuration](./configuration) — Declare a typed configuration schema
-- [Services](./services) — Organize business logic
+- [Services](./services) — Share state and dependencies
 - [Database](./database) — Persist data with Prisma
