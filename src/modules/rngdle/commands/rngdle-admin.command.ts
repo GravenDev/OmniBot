@@ -13,7 +13,7 @@ import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
-import { linkAccount } from "#modules/rngdle/services/linking.js";
+import linking from "#modules/rngdle/services/linking.service.js";
 import store from "#modules/rngdle/services/store.service.js";
 import sync, {
   FullSyncCooldownError,
@@ -43,7 +43,7 @@ async function register(interaction: Interaction, config: Config) {
   }
   await interaction.deferReply(ephemeral);
 
-  const outcome = await linkAccount(guildId, member.id, username);
+  const outcome = await linking.linkAccount(guildId, member.id, username);
   if (outcome.kind === "notFound" || outcome.kind === "unreachable") {
     await interaction.editReply(
       config.t(`admin.register.${outcome.kind}`, { username })

@@ -24,7 +24,7 @@ import { overallPageMessage } from "#modules/rngdle/interactions/overall-page.bu
 import { unlinkConfirmMessage } from "#modules/rngdle/interactions/unlink-confirm.button.js";
 import { reminderTimestamp } from "#modules/rngdle/reminders.js";
 import type { RngdleConfigSchema } from "#modules/rngdle/rngdle.config.js";
-import { linkOwnAccount } from "#modules/rngdle/services/linking.js";
+import linking from "#modules/rngdle/services/linking.service.js";
 import store from "#modules/rngdle/services/store.service.js";
 import sync from "#modules/rngdle/services/sync.service.js";
 import {
@@ -170,7 +170,7 @@ async function link(interaction: Interaction, config: Config) {
   }
   await interaction.deferReply(ephemeral);
 
-  const outcome = await linkOwnAccount(guildId, userId, username);
+  const outcome = await linking.linkOwnAccount(guildId, userId, username);
   switch (outcome.kind) {
     case "notFound":
     case "unreachable":

@@ -37,7 +37,9 @@ vi.mock("#modules/rngdle/services/sync.service.js", () => ({
   },
   FullSyncCooldownError,
 }));
-vi.mock("#modules/rngdle/services/linking.js", () => ({ linkAccount }));
+vi.mock("#modules/rngdle/services/linking.service.js", () => ({
+  default: { linkAccount },
+}));
 
 const { default: command } = await import("./rngdle-admin.command.js");
 

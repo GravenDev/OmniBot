@@ -36,8 +36,8 @@ vi.mock("#core/services/mention.service.js", () => ({
 vi.mock("#modules/rngdle/services/sync.service.js", () => ({
   default: { refreshIfStale: mocks.refreshIfStale },
 }));
-vi.mock("#modules/rngdle/services/linking.js", () => ({
-  linkOwnAccount: mocks.linkOwnAccount,
+vi.mock("#modules/rngdle/services/linking.service.js", () => ({
+  default: { linkOwnAccount: mocks.linkOwnAccount },
 }));
 vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
   ...(await importOriginal<object>()),

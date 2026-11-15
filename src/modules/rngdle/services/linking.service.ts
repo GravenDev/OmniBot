@@ -1,4 +1,5 @@
 import { loggerMaker } from "#lib/logger.js";
+import { declareService, type Service } from "#lib/service.js";
 import api, { RngdleUserNotFoundError } from "./api.service.js";
 import store, { type RegisterResult } from "./store.service.js";
 import sync from "./sync.service.js";
@@ -27,22 +28,6 @@ async function ownUsername(
   return current.username.toLowerCase() === username.toLowerCase()
     ? current.username
     : { kind: "alreadyLinked", username: current.username };
-}
-
-export function linkAccount(
-  guildId: string,
-  userId: string,
-  username: string
-): Promise<LinkOutcome> {
-  return link(guildId, userId, username, false) as Promise<LinkOutcome>;
-}
-
-export function linkOwnAccount(
-  guildId: string,
-  userId: string,
-  username: string
-): Promise<SelfLinkOutcome> {
-  return link(guildId, userId, username, true);
 }
 
 async function link(
@@ -101,3 +86,23 @@ async function link(
     return { kind, count: inserted };
   });
 }
+
+class RngdleLinking implements Service {
+  linkAccount(
+    guildId: string,
+    userId: string,
+    username: string
+  ): Promise<LinkOutcome> {
+    return link(guildId, userId, username, false) as Promise<LinkOutcome>;
+  }
+
+  linkOwnAccount(
+    guildId: string,
+    userId: string,
+    username: string
+  ): Promise<SelfLinkOutcome> {
+    return link(guildId, userId, username, true);
+  }
+}
+
+export default declareService(new RngdleLinking());
