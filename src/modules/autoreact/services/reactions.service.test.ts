@@ -7,11 +7,11 @@ const store = vi.hoisted(() => ({
   list: vi.fn(),
 }));
 
-vi.mock("#modules/autoreact/services/store.service.js", () => ({
+vi.mock("./store.service.js", () => ({
   default: store,
 }));
 
-const { parseEmoji, reactionRecords } = await import("./reactions.service.js");
+const { default: reactionRecords } = await import("./reactions.service.js");
 
 const hype = { id: "111111111111111111", name: "hype", animated: false };
 
@@ -72,17 +72,19 @@ beforeEach(() => {
 
 describe("parseEmoji", () => {
   it("accepts a Unicode emoji", async () => {
-    expect(await parseEmoji(fakeGuild(), " 👍 ")).toBe("👍");
+    expect(await reactionRecords.parseEmoji(fakeGuild(), " 👍 ")).toBe("👍");
   });
 
   it("resolves a fetched guild emoji by name", async () => {
     const guild = fakeGuild({ guildEmojis: [hype] });
-    expect(await parseEmoji(guild, "hype")).toBe(`<:hype:${hype.id}>`);
+    expect(await reactionRecords.parseEmoji(guild, "hype")).toBe(
+      `<:hype:${hype.id}>`
+    );
   });
 
   it("accepts a guild emoji missing from the client cache", async () => {
     const guild = fakeGuild({ guildEmojis: [hype] });
-    expect(await parseEmoji(guild, `<:hype:${hype.id}>`)).toBe(
+    expect(await reactionRecords.parseEmoji(guild, `<:hype:${hype.id}>`)).toBe(
       `<:hype:${hype.id}>`
     );
   });
@@ -90,17 +92,24 @@ describe("parseEmoji", () => {
   it("accepts an emoji from another server the bot is in", async () => {
     const id = "222222222222222222";
     const guild = fakeGuild({ clientEmojiIds: [id] });
-    expect(await parseEmoji(guild, `<:other:${id}>`)).toBe(`<:other:${id}>`);
+    expect(await reactionRecords.parseEmoji(guild, `<:other:${id}>`)).toBe(
+      `<:other:${id}>`
+    );
   });
 
   it("rejects a custom emoji the bot cannot use", async () => {
     expect(
-      await parseEmoji(fakeGuild(), "<:other:333333333333333333>")
+      await reactionRecords.parseEmoji(
+        fakeGuild(),
+        "<:other:333333333333333333>"
+      )
     ).toBeNull();
   });
 
   it("rejects text that is not an emoji", async () => {
-    expect(await parseEmoji(fakeGuild(), "hello world")).toBeNull();
+    expect(
+      await reactionRecords.parseEmoji(fakeGuild(), "hello world")
+    ).toBeNull();
   });
 });
 
