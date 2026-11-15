@@ -5,6 +5,8 @@ import { defineConfig } from "vitepress";
 const rawBase = process.env["DOCS_BASE"] ?? "/OmniBot/";
 const trimmed = rawBase.replace(/^\/+|\/+$/g, "");
 const base = trimmed ? `/${trimmed}/` : "/";
+// Where GitHub Pages publishes the site; DOCS_SITE_URL overrides it.
+const SITE_URL = process.env["DOCS_SITE_URL"] ?? "https://gravendev.github.io";
 
 export default defineConfig({
   base,
@@ -17,11 +19,28 @@ export default defineConfig({
   cleanUrls: true,
 
   head: [
-    ["link", { rel: "icon", type: "image/svg+xml", href: `${base}logo.svg` }],
+    [
+      "link",
+      { rel: "icon", type: "image/svg+xml", href: `${base}favicon.svg` },
+    ],
+    // The card shown when a link to the site is shared (Discord, social
+    // networks): its image needs an absolute URL.
+    ["meta", { property: "og:type", content: "website" }],
+    ["meta", { property: "og:site_name", content: "OmniBot" }],
+    [
+      "meta",
+      { property: "og:image", content: `${SITE_URL}${base}og-image.png` },
+    ],
+    ["meta", { property: "og:image:width", content: "1200" }],
+    ["meta", { property: "og:image:height", content: "630" }],
+    ["meta", { name: "twitter:card", content: "summary_large_image" }],
   ],
 
   themeConfig: {
-    logo: "/logo.svg",
+    // The robot's head is white on the dark theme, navy on the light one.
+    logo: { light: "/logo-light.svg", dark: "/logo.svg" },
+    // "Bot" in cyan, as on the home page and in the logo's wordmark.
+    siteTitle: 'Omni<span class="accent">Bot</span>',
     search: {
       provider: "local",
     },
