@@ -32,7 +32,7 @@ describe("reconcileActivatedVersions", () => {
     upsert.mockResolvedValue(undefined);
   });
 
-  it("bumps activatedVersion to the live version for every drifted guild", async () => {
+  it("bumps activatedVersion to the live version for every drifted guild in one write", async () => {
     findMany.mockResolvedValue([
       { guildId: "guild-a", activatedVersion: "1.0.0" },
       { guildId: "guild-b", activatedVersion: "1.5.0" },
@@ -40,31 +40,16 @@ describe("reconcileActivatedVersions", () => {
 
     await moduleService.reconcileActivatedVersions(module);
 
-    expect(upsert).toHaveBeenCalledTimes(2);
-    expect(upsert).toHaveBeenCalledWith({
+    expect(updateMany).toHaveBeenCalledOnce();
+    expect(updateMany).toHaveBeenCalledWith({
       where: {
-        moduleId_guildId: { moduleId: "thread-creator", guildId: "guild-a" },
-      },
-      create: {
         moduleId: "thread-creator",
-        guildId: "guild-a",
         activated: true,
-        activatedVersion: "2.0.0",
+        guildId: { in: ["guild-a", "guild-b"] },
       },
-      update: { activatedVersion: "2.0.0" },
+      data: { activatedVersion: "2.0.0" },
     });
-    expect(upsert).toHaveBeenCalledWith({
-      where: {
-        moduleId_guildId: { moduleId: "thread-creator", guildId: "guild-b" },
-      },
-      create: {
-        moduleId: "thread-creator",
-        guildId: "guild-b",
-        activated: true,
-        activatedVersion: "2.0.0",
-      },
-      update: { activatedVersion: "2.0.0" },
-    });
+    expect(upsert).not.toHaveBeenCalled();
   });
 
   it("only queries activated guilds whose version differs from the live one", async () => {
@@ -89,6 +74,7 @@ describe("reconcileActivatedVersions", () => {
     await moduleService.reconcileActivatedVersions(module);
 
     expect(upsert).not.toHaveBeenCalled();
+    expect(updateMany).not.toHaveBeenCalled();
   });
 });
 
