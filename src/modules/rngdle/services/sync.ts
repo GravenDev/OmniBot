@@ -1,6 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
 import type { Client } from "discord.js";
 import moduleService from "#core/services/module.service.js";
+import { eachLimited } from "#lib/concurrency.js";
 import { presentGuilds } from "#lib/guild-loop.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
@@ -155,32 +156,19 @@ class RngdleSync implements Service {
       updated: 0,
       failed: 0,
     };
-    const remaining = [...accounts];
-    const worker = async () => {
-      for (
-        let account = remaining.shift();
-        account;
-        account = remaining.shift()
-      ) {
-        try {
-          const saved = await this.syncAccount(account, full);
-          report.inserted += saved.inserted;
-          report.updated += saved.updated;
-        } catch (err) {
-          report.failed += 1;
-          logger.warn(
-            err instanceof RngdleUserNotFoundError ? {} : { err },
-            `Failed to sync RNGdle rolls | guildId = ${account.guildId} | userId = ${account.userId}`
-          );
-        }
+    await eachLimited(accounts, MAX_PARALLEL_FETCHES, async (account) => {
+      try {
+        const saved = await this.syncAccount(account, full);
+        report.inserted += saved.inserted;
+        report.updated += saved.updated;
+      } catch (err) {
+        report.failed += 1;
+        logger.warn(
+          err instanceof RngdleUserNotFoundError ? {} : { err },
+          `Failed to sync RNGdle rolls | guildId = ${account.guildId} | userId = ${account.userId}`
+        );
       }
-    };
-    await Promise.all(
-      Array.from(
-        { length: Math.min(MAX_PARALLEL_FETCHES, accounts.length) },
-        worker
-      )
-    );
+    });
     return report;
   }
 
