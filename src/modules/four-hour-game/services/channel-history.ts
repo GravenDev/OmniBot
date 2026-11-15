@@ -1,10 +1,5 @@
-import type { Message, TextBasedChannel } from "discord.js";
+import type { Message } from "discord.js";
 import type { ChannelMessage } from "./types.js";
-
-const HISTORY_DEPTH = 50;
-const PAGE_SIZE = 100;
-// A safety net: 5,000 messages, more than a day of a busy game channel.
-const MAX_PAGES = 50;
 
 export function isPlayerMessage(
   message: Pick<Message, "author" | "system">
@@ -12,7 +7,10 @@ export function isPlayerMessage(
   return !message.author.bot && !message.system;
 }
 
-function toChannelMessages(messages: Iterable<Message>): ChannelMessage[] {
+/** The player messages among `messages`, oldest first. */
+export function toChannelMessages(
+  messages: Iterable<Message>
+): ChannelMessage[] {
   return [...messages]
     .filter(isPlayerMessage)
     .sort((a, b) => a.createdTimestamp - b.createdTimestamp)
@@ -23,14 +21,7 @@ function toChannelMessages(messages: Iterable<Message>): ChannelMessage[] {
     }));
 }
 
-export async function fetchPlayerMessages(
-  channel: TextBasedChannel
-): Promise<ChannelMessage[]> {
-  const messages = await channel.messages.fetch({ limit: HISTORY_DEPTH });
-  return toChannelMessages(messages.values());
-}
-
-function oldestOf(messages: readonly Message[]): Message | undefined {
+export function oldestOf(messages: readonly Message[]): Message | undefined {
   return messages.reduce<Message | undefined>(
     (found, message) =>
       !found || message.createdTimestamp < found.createdTimestamp
@@ -38,40 +29,6 @@ function oldestOf(messages: readonly Message[]): Message | undefined {
         : found,
     undefined
   );
-}
-
-// The player messages posted since `since`, plus the one that was in place
-// then: pages back until a player message of that time or older is read (bot
-// messages, such as the bot's own announcements, cannot be in place), or
-// until the page limit.
-export async function fetchPlayerMessagesSince(
-  channel: TextBasedChannel,
-  since: Date
-): Promise<ChannelMessage[]> {
-  const read: Message[] = [];
-  let before: string | undefined;
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const batch = [
-      ...(
-        await channel.messages.fetch(
-          before ? { limit: PAGE_SIZE, before } : { limit: PAGE_SIZE }
-        )
-      ).values(),
-    ];
-    read.push(...batch);
-    if (
-      batch.length < PAGE_SIZE ||
-      batch.some(
-        (message) =>
-          isPlayerMessage(message) &&
-          message.createdTimestamp <= since.getTime()
-      )
-    ) {
-      break;
-    }
-    before = oldestOf(batch)!.id;
-  }
-  return toChannelMessages(read);
 }
 
 export function standingOf(
@@ -86,10 +43,4 @@ export function standingOf(
     standing = message;
   }
   return standing;
-}
-
-export async function fetchStandingMessage(
-  channel: TextBasedChannel
-): Promise<ChannelMessage | null> {
-  return standingOf(await fetchPlayerMessages(channel));
 }

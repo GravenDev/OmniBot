@@ -1,7 +1,7 @@
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
-import { fetchStandingMessage } from "./channel-history.js";
+import { fetchStandingMessage } from "./channel-history.service.js";
 import fourHourGameService from "./four-hour-game.service.js";
 
 const logger = loggerMaker("four-hour-game");

@@ -4,8 +4,8 @@ import { declareEventListener } from "#lib/listener.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
+import { closeDays } from "#modules/four-hour-game/services/daily.service.js";
 import { syncRound } from "#modules/four-hour-game/services/round-sync.js";
-import { closeDays } from "#modules/four-hour-game/tasks.js";
 
 const logger = loggerMaker("four-hour-game");
 

@@ -34,7 +34,7 @@ vi.mock("./four-hour-game.service.js", () => ({
   default: { syncRound: syncRoundInService },
 }));
 const announcePoint = vi.hoisted(() => vi.fn());
-vi.mock("./point-announcement.js", () => ({ announcePoint }));
+vi.mock("./point-announcement.service.js", () => ({ announcePoint }));
 
 const { syncAllRounds, syncRound } = await import("./round-sync.js");
 

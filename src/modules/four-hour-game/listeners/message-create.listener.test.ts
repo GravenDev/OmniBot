@@ -16,8 +16,10 @@ vi.mock("#modules/four-hour-game/services/four-hour-game.service.js", () => ({
 }));
 
 const { default: listener } = await import("./message-create.listener.js");
-const { announcePoint, buildPointEmbed } =
+const { buildPointEmbed } =
   await import("#modules/four-hour-game/services/point-announcement.js");
+const { announcePoint } =
+  await import("#modules/four-hour-game/services/point-announcement.service.js");
 
 beforeAll(async () => {
   silenceLogs();
