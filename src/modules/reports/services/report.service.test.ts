@@ -66,6 +66,11 @@ const db = vi.hoisted(() => {
         if (editedContent !== undefined) report.editedContent = editedContent;
       }
     ),
+    reportedAmong: vi.fn(async (guildId: string, ids: string[]) =>
+      reports
+        .filter((r) => r.guildId === guildId && ids.includes(r.messageId))
+        .map((r) => r.messageId)
+    ),
     authorHistory: vi.fn(async () => ({ total: 0, sanctioned: 0 })),
     delete: vi.fn(async (id: number) => {
       const index = reports.findIndex((r) => r.id === id);
@@ -358,6 +363,58 @@ describe("messageChanged", () => {
     await service.messageChanged(client, config, "g1", "m1", { deleted: true });
 
     expect(content).not.toHaveBeenCalled();
+    expect(db.store.setMessageState).toHaveBeenCalledWith(1, "deleted");
+  });
+});
+
+describe("messagesDeleted", () => {
+  it("looks the messages up in one query and marks only the reported ones", async () => {
+    const { client, config } = setup();
+    await service.report(client, config, snapshot, reporter("r1"), false);
+    db.store.byMessage.mockClear();
+
+    await service.messagesDeleted(client, config, "g1", ["m0", "m1", "m2"]);
+
+    expect(db.store.reportedAmong).toHaveBeenCalledOnce();
+    expect(db.store.byMessage).toHaveBeenCalledOnce();
+    expect(db.store.setMessageState).toHaveBeenCalledWith(1, "deleted");
+  });
+
+  it("marks deleted a message whose report was being filed", async () => {
+    const { client, config } = setup();
+
+    const filing = service.report(
+      client,
+      config,
+      snapshot,
+      reporter("r1"),
+      false
+    );
+    await service.messagesDeleted(client, config, "g1", ["m1"]);
+    await filing;
+
+    expect(db.store.setMessageState).toHaveBeenCalledWith(1, "deleted");
+  });
+
+  it("marks deleted a message reported while the query ran", async () => {
+    const { client, config } = setup();
+    let answer!: (ids: string[]) => void;
+    db.store.reportedAmong.mockImplementationOnce(
+      () => new Promise<string[]>((resolve) => (answer = resolve))
+    );
+
+    const deleting = service.messagesDeleted(client, config, "g1", ["m1"]);
+    const filing = service.report(
+      client,
+      config,
+      snapshot,
+      reporter("r1"),
+      false
+    );
+    // The query read before the report's row was written.
+    answer([]);
+    await Promise.all([deleting, filing]);
+
     expect(db.store.setMessageState).toHaveBeenCalledWith(1, "deleted");
   });
 });

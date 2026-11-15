@@ -112,6 +112,22 @@ class ReportStore implements Service {
     return row ? toReport(row) : null;
   }
 
+  /** The ids of `messageIds` reported and not yet deleted, in one query. */
+  async reportedAmong(
+    guildId: string,
+    messageIds: readonly string[]
+  ): Promise<string[]> {
+    const rows = await prisma.messageReport.findMany({
+      where: {
+        guildId,
+        messageId: { in: [...messageIds] },
+        messageState: { not: "deleted" },
+      },
+      select: { messageId: true },
+    });
+    return rows.map((row) => row.messageId);
+  }
+
   async byId(guildId: string, id: number): Promise<Report | null> {
     const row = await prisma.messageReport.findFirst({
       where: { id, guildId },

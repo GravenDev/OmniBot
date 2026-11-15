@@ -227,6 +227,42 @@ class ReportService implements Service {
     });
   }
 
+  /**
+   * `messageChanged` for the messages of a bulk deletion, in one query rather
+   * than one per message: only the reported ones, and those a report being
+   * filed holds, are looked at.
+   */
+  async messagesDeleted(
+    client: Client,
+    config: Config,
+    guildId: string,
+    messageIds: readonly string[]
+  ): Promise<void> {
+    // Read now: a report filed meanwhile is waited for, as one by one.
+    const busy: string[] = [];
+    const idle: string[] = [];
+    for (const id of messageIds) {
+      (this.queue.isBusy(`${guildId}:${id}`) ? busy : idle).push(id);
+    }
+    const reported = new Set(
+      idle.length > 0 ? await store.reportedAmong(guildId, idle) : []
+    );
+    // A report filed while the query ran may be missing from it: its queue,
+    // busy since, says so, and its turn comes once the report is written.
+    const changed = [
+      ...busy,
+      ...idle.filter(
+        (id) => reported.has(id) || this.queue.isBusy(`${guildId}:${id}`)
+      ),
+    ];
+    // In sequence: alerts usually share one channel, and its rate limit.
+    for (const messageId of changed) {
+      await this.messageChanged(client, config, guildId, messageId, {
+        deleted: true,
+      });
+    }
+  }
+
   async publish(
     client: Client,
     config: Config,
