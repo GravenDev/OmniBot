@@ -35,3 +35,14 @@ export function quoteEachLine(text: string): string {
     .map((line) => `> ${line}`)
     .join("\n");
 }
+
+// What starts a line of heading, small text or quote, stacked (`> -# `).
+const LINE_MARKUP = /^[ \t]*(?:(?:#{1,3}|-#|>{1,3})[ \t]+)+/gm;
+
+/**
+ * A text without what starts its headings, small text and quotes: once its
+ * lines are joined, or drawn on an image, those marks would show as typed.
+ */
+export function stripLineMarkup(text: string): string {
+  return text.replace(LINE_MARKUP, "");
+}

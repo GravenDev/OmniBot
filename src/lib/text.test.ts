@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { quoteEachLine, truncate } from "./text.js";
+import { quoteEachLine, stripLineMarkup, truncate } from "./text.js";
 
 describe("truncate", () => {
   it("keeps a short text", () => {
@@ -40,5 +40,21 @@ describe("quoteEachLine", () => {
 
   it("quotes a single line", () => {
     expect(quoteEachLine("only")).toBe("> only");
+  });
+});
+
+describe("stripLineMarkup", () => {
+  it("drops what starts a heading, small text or quote line, stacked or not", () => {
+    expect(
+      stripLineMarkup(
+        "# Big\n## Mid\n### Small\n-# tiny\n> said\n>>> block\n> -# both"
+      )
+    ).toBe("Big\nMid\nSmall\ntiny\nsaid\nblock\nboth");
+  });
+
+  it("keeps the same marks elsewhere, and list items", () => {
+    expect(stripLineMarkup("a # b > c\n- item\n#tag")).toBe(
+      "a # b > c\n- item\n#tag"
+    );
   });
 });
