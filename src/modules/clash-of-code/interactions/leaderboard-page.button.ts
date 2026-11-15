@@ -1,12 +1,10 @@
 import {
-  ActionRowBuilder,
   AttachmentBuilder,
-  ButtonBuilder,
-  ButtonStyle,
   MessageFlags,
   type ButtonInteraction,
 } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
+import { pageRow } from "#lib/pagination.js";
 import {
   isClashMode,
   type ClashMode,
@@ -20,14 +18,6 @@ const CUSTOM_ID = "coc-leaderboard";
 const ALL_MODES = "all";
 
 export type Visibility = "public" | "private";
-
-function pageButton(customId: string, label: string, disabled: boolean) {
-  return new ButtonBuilder()
-    .setCustomId(customId)
-    .setLabel(label)
-    .setStyle(ButtonStyle.Primary)
-    .setDisabled(disabled);
-}
 
 export async function leaderboardMessage(
   context: ViewContext,
@@ -57,25 +47,12 @@ export async function leaderboardMessage(
     components:
       result.pageCount > 1
         ? [
-            new ActionRowBuilder<ButtonBuilder>().addComponents(
-              pageButton(
-                id(result.page - 1),
-                context.t("config.previous"),
-                result.page <= 1
-              ),
-              pageButton(
-                id("indicator"),
-                context.t("leaderboard.page", {
-                  current: result.page,
-                  total: result.pageCount,
-                }),
-                true
-              ).setStyle(ButtonStyle.Success),
-              pageButton(
-                id(result.page + 1),
-                context.t("config.next"),
-                result.page >= result.pageCount
-              )
+            pageRow(
+              context.t,
+              id,
+              result.page,
+              result.pageCount,
+              "leaderboard.page"
             ),
           ]
         : [],
