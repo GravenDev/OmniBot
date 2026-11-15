@@ -257,7 +257,7 @@ Quand un membre poste un lien de partie (`https://www.codingame.com/clashofcode/
 - Seule une partie suivie avant sa fin compte : un lien vers une partie déjà terminée au moment où il est posté est ignoré, sans réaction, pour que personne ne puisse ajouter au classement n'importe quelle partie publique. Une partie passée s'ajoute avec `/coc-admin import`. Si CodinGame est injoignable au moment du lien, la partie est suivie quand même.
 - Une partie déjà enregistrée ou déjà suivie sur le serveur n'est pas suivie une deuxième fois.
 - Une partie terminée sans avoir commencé, inconnue de CodinGame, encore en cours après 2 heures ou injoignable 10 fois de suite est abandonnée : la réaction est retirée et rien n'est publié. Reposter son lien relance le suivi si la partie n'est pas encore terminée.
-- Une partie en cours de suivi est reprise après un redémarrage du bot.
+- Une partie en cours de suivi est reprise après un redémarrage du bot ; à ce moment-là, celles d'un serveur que le bot a quitté attendent son retour.
 - Si le module est désactivé pendant une partie, son résultat n'est pas publié.
 
 ### `/coc leaderboard [mode] [page]`

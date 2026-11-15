@@ -8,6 +8,7 @@ import {
 } from "discord.js";
 import configService from "#core/services/config.service.js";
 import moduleService from "#core/services/module.service.js";
+import { presentGuilds } from "#lib/guild-loop.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import type { Module } from "#lib/module.js";
@@ -105,10 +106,15 @@ class ClashWatcher {
 
   /** Picks up the games still watched, after a restart or a missed timer. */
   async resume(): Promise<number> {
-    if (!this.module) {
+    if (!this.module || !this.client) {
       return 0;
     }
-    const guildIds = await moduleService.getActivatedGuildIds(this.module.id);
+    // The games of a guild the bot left wait for its return.
+    const guildIds = presentGuilds(
+      this.client,
+      await moduleService.getActivatedGuildIds(this.module.id),
+      { action: "resume the clash watches", logger }
+    ).map((guild) => guild.id);
     const games = (await store.watchedGames(guildIds)).filter(
       (game) => !this.isWatching(game)
     );
