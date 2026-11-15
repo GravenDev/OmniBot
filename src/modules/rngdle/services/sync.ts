@@ -1,5 +1,7 @@
 import { setTimeout as sleep } from "node:timers/promises";
+import type { Client } from "discord.js";
 import moduleService from "#core/services/module.service.js";
+import { presentGuilds } from "#lib/guild-loop.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
@@ -50,15 +52,26 @@ class RngdleSync implements Service {
     return this.start(guildId, full);
   }
 
-  async syncAll(full = false): Promise<SyncReport> {
+  async syncAll(client: Client, full = false): Promise<SyncReport> {
     const total: SyncReport = {
       accounts: 0,
       inserted: 0,
       updated: 0,
       failed: 0,
     };
+    const activated = await moduleService.getActivatedGuildIds("rngdle");
+    // A full sync runs once, when the score table changes: a guild the bot
+    // left is downloaded again too, or its rolls would keep the old scores.
+    const guildIds = full
+      ? activated
+      : presentGuilds(client, activated, { action: "sync", logger }).map(
+          (guild) => guild.id
+        );
     const failed = new Map<string, unknown>();
-    for (const guildId of await moduleService.getActivatedGuildIds("rngdle")) {
+    for (const guildId of guildIds) {
+      // One guild after another: each already fetches up to
+      // MAX_PARALLEL_FETCHES accounts at once from rngdle.com, which guilds
+      // run together would multiply.
       try {
         const report = await this.start(guildId, full);
         logger.info(
