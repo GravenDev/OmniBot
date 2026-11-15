@@ -1,4 +1,5 @@
 import type { Message, TextBasedChannel } from "discord.js";
+import { declareService, type Service } from "#lib/service.js";
 import {
   isPlayerMessage,
   oldestOf,
@@ -12,49 +13,53 @@ const PAGE_SIZE = 100;
 // A safety net: 5,000 messages, more than a day of a busy game channel.
 const MAX_PAGES = 50;
 
-export async function fetchPlayerMessages(
-  channel: TextBasedChannel
-): Promise<ChannelMessage[]> {
-  const messages = await channel.messages.fetch({ limit: HISTORY_DEPTH });
-  return toChannelMessages(messages.values());
-}
-
-// The player messages posted since `since`, plus the one that was in place
-// then: pages back until a player message of that time or older is read (bot
-// messages, such as the bot's own announcements, cannot be in place), or
-// until the page limit.
-export async function fetchPlayerMessagesSince(
-  channel: TextBasedChannel,
-  since: Date
-): Promise<ChannelMessage[]> {
-  const read: Message[] = [];
-  let before: string | undefined;
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const batch = [
-      ...(
-        await channel.messages.fetch(
-          before ? { limit: PAGE_SIZE, before } : { limit: PAGE_SIZE }
-        )
-      ).values(),
-    ];
-    read.push(...batch);
-    if (
-      batch.length < PAGE_SIZE ||
-      batch.some(
-        (message) =>
-          isPlayerMessage(message) &&
-          message.createdTimestamp <= since.getTime()
-      )
-    ) {
-      break;
-    }
-    before = oldestOf(batch)!.id;
+class ChannelHistoryService implements Service {
+  async fetchPlayerMessages(
+    channel: TextBasedChannel
+  ): Promise<ChannelMessage[]> {
+    const messages = await channel.messages.fetch({ limit: HISTORY_DEPTH });
+    return toChannelMessages(messages.values());
   }
-  return toChannelMessages(read);
+
+  // The player messages posted since `since`, plus the one that was in place
+  // then: pages back until a player message of that time or older is read (bot
+  // messages, such as the bot's own announcements, cannot be in place), or
+  // until the page limit.
+  async fetchPlayerMessagesSince(
+    channel: TextBasedChannel,
+    since: Date
+  ): Promise<ChannelMessage[]> {
+    const read: Message[] = [];
+    let before: string | undefined;
+    for (let page = 0; page < MAX_PAGES; page++) {
+      const batch = [
+        ...(
+          await channel.messages.fetch(
+            before ? { limit: PAGE_SIZE, before } : { limit: PAGE_SIZE }
+          )
+        ).values(),
+      ];
+      read.push(...batch);
+      if (
+        batch.length < PAGE_SIZE ||
+        batch.some(
+          (message) =>
+            isPlayerMessage(message) &&
+            message.createdTimestamp <= since.getTime()
+        )
+      ) {
+        break;
+      }
+      before = oldestOf(batch)!.id;
+    }
+    return toChannelMessages(read);
+  }
+
+  async fetchStandingMessage(
+    channel: TextBasedChannel
+  ): Promise<ChannelMessage | null> {
+    return standingOf(await this.fetchPlayerMessages(channel));
+  }
 }
 
-export async function fetchStandingMessage(
-  channel: TextBasedChannel
-): Promise<ChannelMessage | null> {
-  return standingOf(await fetchPlayerMessages(channel));
-}
+export default declareService(new ChannelHistoryService());

@@ -15,7 +15,7 @@ const syncAllRounds = vi.hoisted(() =>
   }))
 );
 vi.mock("#modules/four-hour-game/services/round-sync.service.js", () => ({
-  syncAllRounds,
+  default: { syncAllRounds },
 }));
 
 const closeAllDays = vi.hoisted(() =>
@@ -24,7 +24,7 @@ const closeAllDays = vi.hoisted(() =>
   })
 );
 vi.mock("#modules/four-hour-game/services/daily.service.js", () => ({
-  closeAllDays,
+  default: { closeAllDays },
 }));
 vi.mock("#modules/four-hour-game/tasks.js", () => ({
   fourHourGameTasks: () => [],

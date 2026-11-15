@@ -4,7 +4,7 @@ import { loggerMaker } from "#lib/logger.js";
 import { isPlayerMessage } from "#modules/four-hour-game/channel-history.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
 import fourHourGameService from "#modules/four-hour-game/services/four-hour-game.service.js";
-import { announcePoint } from "#modules/four-hour-game/services/point-announcement.service.js";
+import pointAnnouncementService from "#modules/four-hour-game/services/point-announcement.service.js";
 
 const logger = loggerMaker("four-hour-game");
 
@@ -50,7 +50,11 @@ export default declareEventListener<"messageCreate", FourHourGameConfigSchema>({
         `Point awarded | guildId = ${message.guildId} | channelId = ${message.channelId} | messageId = ${message.id} | userId = ${result.winnerId} | score = ${result.score} | heldSeconds = ${result.heldSeconds}`
       );
 
-      await announcePoint(message.channel, result, config);
+      await pointAnnouncementService.announcePoint(
+        message.channel,
+        result,
+        config
+      );
     } catch (err) {
       logger.error(
         { err },

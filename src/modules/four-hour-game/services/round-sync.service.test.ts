@@ -34,9 +34,11 @@ vi.mock("./four-hour-game.service.js", () => ({
   default: { syncRound: syncRoundInService },
 }));
 const announcePoint = vi.hoisted(() => vi.fn());
-vi.mock("./point-announcement.service.js", () => ({ announcePoint }));
+vi.mock("./point-announcement.service.js", () => ({
+  default: { announcePoint },
+}));
 
-const { syncAllRounds, syncRound } = await import("./round-sync.service.js");
+const { default: roundSyncService } = await import("./round-sync.service.js");
 
 // The bot is on every guild but "gone".
 const client = {
@@ -71,7 +73,7 @@ describe("syncRound", () => {
   it("announces the caught-up points in order, as caught up", async () => {
     resyncLastMessage.mockResolvedValue([scored("alice"), scored("bob")]);
 
-    await syncRound(module, "guild");
+    await roundSyncService.syncRound(module, "guild");
 
     expect(announcePoint.mock.calls.map((call) => call[1].winnerId)).toEqual([
       "alice",
@@ -86,7 +88,7 @@ describe("syncRound", () => {
     resyncLastMessage.mockResolvedValue([scored("alice"), scored("bob")]);
     announcePoint.mockRejectedValueOnce(new Error("Missing Permissions"));
 
-    await syncRound(module, "guild");
+    await roundSyncService.syncRound(module, "guild");
 
     expect(announcePoint).toHaveBeenCalledTimes(2);
   });
@@ -94,7 +96,7 @@ describe("syncRound", () => {
   it("replays nothing without a delay, like the live game", async () => {
     delay = 0;
 
-    await syncRound(module, "guild");
+    await roundSyncService.syncRound(module, "guild");
 
     expect(resyncLastMessage).not.toHaveBeenCalled();
   });
@@ -107,7 +109,7 @@ describe("syncAllRounds", () => {
       .mockRejectedValueOnce(new Error("Unknown Channel"))
       .mockResolvedValueOnce([scored("alice")]);
 
-    await syncAllRounds(client, module).done;
+    await roundSyncService.syncAllRounds(client, module).done;
 
     expect(resyncLastMessage).toHaveBeenCalledTimes(2);
     expect(announcePoint).toHaveBeenCalledTimes(1);
@@ -117,7 +119,7 @@ describe("syncAllRounds", () => {
     getActivatedGuildIds.mockResolvedValue(["gone", "guild"]);
     resyncLastMessage.mockResolvedValue([]);
 
-    await syncAllRounds(client, module).done;
+    await roundSyncService.syncAllRounds(client, module).done;
 
     expect(syncRoundInService.mock.calls.map((call) => call[0])).toEqual([
       "guild",
@@ -128,7 +130,7 @@ describe("syncAllRounds", () => {
     getActivatedGuildIds.mockResolvedValue(["slow", "guild"]);
     resyncLastMessage.mockReturnValue(new Promise(() => {}));
 
-    await syncAllRounds(client, module).reserved;
+    await roundSyncService.syncAllRounds(client, module).reserved;
 
     expect(syncRoundInService.mock.calls.map((call) => call[0])).toEqual([
       "slow",

@@ -18,7 +18,7 @@ vi.mock("#modules/four-hour-game/services/four-hour-game.service.js", () => ({
 const { default: listener } = await import("./message-create.listener.js");
 const { buildPointEmbed } =
   await import("#modules/four-hour-game/point-announcement.js");
-const { announcePoint } =
+const { default: pointAnnouncementService } =
   await import("#modules/four-hour-game/services/point-announcement.service.js");
 
 beforeAll(async () => {
@@ -278,7 +278,7 @@ describe("announcePoint", () => {
       },
       send,
     };
-    await announcePoint(
+    await pointAnnouncementService.announcePoint(
       channel as never,
       { winnerId: "bob", score: 2, heldSeconds: 5 * 3600, heldSince },
       makeTestConfig("four-hour-game", fourHourGameConfigSchema, {}, "en"),

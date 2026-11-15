@@ -7,7 +7,7 @@ import type {
 } from "discord.js";
 import { declareEventListener } from "#lib/listener.js";
 import type { FourHourGameConfigSchema } from "#modules/four-hour-game/four-hour-game.config.js";
-import { handleGameDeletions } from "#modules/four-hour-game/services/deletions.service.js";
+import deletionsService from "#modules/four-hour-game/services/deletions.service.js";
 
 export default declareEventListener<
   "messageDeleteBulk",
@@ -20,8 +20,11 @@ export default declareEventListener<
     deletedFrom: GuildTextBasedChannel,
     config
   ) {
-    await handleGameDeletions(config, deletedFrom.guildId, deletedFrom.id, [
-      ...messages.keys(),
-    ]);
+    await deletionsService.handleGameDeletions(
+      config,
+      deletedFrom.guildId,
+      deletedFrom.id,
+      [...messages.keys()]
+    );
   },
 });
