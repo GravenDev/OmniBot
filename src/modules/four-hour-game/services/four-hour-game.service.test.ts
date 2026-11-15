@@ -227,14 +227,19 @@ vi.mock("#lib/database.js", () => ({
       async findMany({
         where,
       }: {
-        where: { guildId: string; day: { gt: string; lte: string } };
+        where: {
+          guildId: string;
+          day: { gt: string; lte: string } | { in: string[] };
+        };
       }) {
+        const { day } = where;
         return [...dailyBests.values()]
           .filter(
             (row) =>
               row.guildId === where.guildId &&
-              row.day > where.day.gt &&
-              row.day <= where.day.lte
+              ("in" in day
+                ? day.in.includes(row.day)
+                : row.day > day.gt && row.day <= day.lte)
           )
           .sort((a, b) => a.day.localeCompare(b.day))
           .map(({ day, userId, heldSeconds }) => ({
@@ -1491,6 +1496,80 @@ describe("FourHourGameService deletions and resync", () => {
     upsert.mockRestore();
   });
 
+  it("reads the best holds of every replayed day in one query", async () => {
+    closedDays.set("guild", "2026-10-13");
+    await service.handleMessage(
+      message("zed", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+    const findMany = vi.spyOn(prisma.fourHourGameDailyBest, "findMany");
+
+    await resync(
+      "guild",
+      "game",
+      history(
+        ["zed", paris("2026-10-14T08:00:00")],
+        ["alice", paris("2026-10-15T09:00:00")],
+        ["bob", paris("2026-10-16T12:00:00")]
+      ),
+      DELAY,
+      paris("2026-10-16T16:00:00")
+    );
+
+    const dayQueries = findMany.mock.calls.filter(
+      ([args]) => "in" in (args as { where: { day: object } }).where.day
+    );
+    expect(dayQueries).toHaveLength(1);
+    expect(dailyBests.get(key("guild", "2026-10-15"))).toMatchObject({
+      userId: "alice",
+    });
+    findMany.mockRestore();
+  });
+
+  it("waits for every day's write before letting the guild's next task run", async () => {
+    closedDays.set("guild", "2026-10-13");
+    await service.handleMessage(
+      message("zed", paris("2026-10-14T08:00:00")),
+      DELAY
+    );
+    let release!: () => void;
+    const upsert = vi
+      .spyOn(prisma.fourHourGameDailyBest, "upsert")
+      .mockRejectedValueOnce(new Error("database down"))
+      .mockImplementationOnce(
+        () =>
+          new Promise(
+            (resolve) => (release = () => resolve({} as never))
+          ) as never
+      );
+    let settled = false;
+
+    const replay = resync(
+      "guild",
+      "game",
+      history(
+        ["zed", paris("2026-10-14T08:00:00")],
+        ["alice", paris("2026-10-15T09:00:00")],
+        ["bob", paris("2026-10-16T12:00:00")]
+      ),
+      DELAY,
+      paris("2026-10-16T16:00:00")
+    ).then(
+      () => (settled = true),
+      () => (settled = true)
+    );
+    await vi.waitFor(() =>
+      expect(upsert.mock.calls.length).toBeGreaterThanOrEqual(2)
+    );
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    // The second day's write is still running: the replay must wait for it.
+    expect(settled).toBe(false);
+    release();
+    await replay;
+    upsert.mockRestore();
+  });
+
   it("does not score twice for a message back in place after the reply that scored is deleted", async () => {
     await service.handleMessage(message("alice", start), DELAY);
     await service.handleMessage(message("bob", at(5 * 3600)), DELAY);
@@ -1850,13 +1929,13 @@ describe("daily points", () => {
 
   it("still reports a 4h point when its daily hold cannot be recorded", async () => {
     await send("alice", "2026-10-14T08:00:00");
-    const findUnique = vi
-      .spyOn(prisma.fourHourGameDailyBest, "findUnique")
+    const findMany = vi
+      .spyOn(prisma.fourHourGameDailyBest, "findMany")
       .mockRejectedValueOnce(new Error("database down"));
 
     const result = await send("bob", "2026-10-14T13:00:00");
 
-    findUnique.mockRestore();
+    findMany.mockRestore();
     expect(result).toMatchObject({ kind: "point", winnerId: "alice" });
   });
 

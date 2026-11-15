@@ -218,8 +218,10 @@ class FourHourGameService implements Service {
       if (held) {
         await this.creditHolds(
           guildId,
-          held.authorId,
-          splitHold(held.sentAt, until, closedDay)
+          splitHold(held.sentAt, until, closedDay).map((hold) => ({
+            ...hold,
+            userId: held.authorId,
+          }))
         );
       }
     } catch (err) {
@@ -230,23 +232,39 @@ class FourHourGameService implements Service {
     }
   }
 
+  /** Keeps each day's longest hold: the credits must name distinct days. */
   private async creditHolds(
     guildId: string,
-    userId: string,
-    holds: readonly DayHold[]
+    credits: readonly (DayHold & { userId: string })[]
   ): Promise<void> {
-    for (const { day, seconds } of holds) {
-      const best = await prisma.fourHourGameDailyBest.findUnique({
-        where: { guildId_day: { guildId, day } },
-      });
-      if (best && best.heldSeconds >= seconds) {
-        continue;
-      }
-      await prisma.fourHourGameDailyBest.upsert({
-        where: { guildId_day: { guildId, day } },
-        create: { guildId, day, userId, heldSeconds: seconds },
-        update: { userId, heldSeconds: seconds },
-      });
+    if (credits.length === 0) {
+      return;
+    }
+    // One query for every day, rather than one per day.
+    const bests = await prisma.fourHourGameDailyBest.findMany({
+      where: { guildId, day: { in: credits.map(({ day }) => day) } },
+      select: { day: true, heldSeconds: true },
+    });
+    const held = new Map(bests.map((best) => [best.day, best.heldSeconds]));
+    // Together: each day is a row of its own. Every write is waited for, so
+    // that none outlives the guild's queue, then the first failure thrown.
+    const writes = await Promise.allSettled(
+      credits
+        .filter(({ day, seconds }) => {
+          const best = held.get(day);
+          return best === undefined || best < seconds;
+        })
+        .map(({ day, seconds, userId }) =>
+          prisma.fourHourGameDailyBest.upsert({
+            where: { guildId_day: { guildId, day } },
+            create: { guildId, day, userId, heldSeconds: seconds },
+            update: { userId, heldSeconds: seconds },
+          })
+        )
+    );
+    const failed = writes.find((write) => write.status === "rejected");
+    if (failed) {
+      throw failed.reason;
     }
   }
 
@@ -270,8 +288,10 @@ class FourHourGameService implements Service {
       if (live && live.channelId === channelId) {
         await this.creditHolds(
           guildId,
-          live.authorId,
-          splitHold(live.sentAt, startOfDay(today), closedDay)
+          splitHold(live.sentAt, startOfDay(today), closedDay).map((hold) => ({
+            ...hold,
+            userId: live.authorId,
+          }))
         );
       }
 
@@ -485,11 +505,13 @@ class FourHourGameService implements Service {
         }
       }
     }
-    for (const [day, { userId, seconds }] of bestOfDay) {
-      await this.creditHolds(guildId, userId, [{ day, seconds }]);
-    }
+    await this.creditHolds(
+      guildId,
+      [...bestOfDay].map(([day, best]) => ({ day, ...best }))
+    );
     const scored = await prisma.$transaction(async (tx) => {
       const written: ScoredPoint[] = [];
+      // In sequence: one interactive transaction runs one query at a time.
       for (const {
         winnerId,
         heldSeconds,
