@@ -16,7 +16,8 @@ const mocks = vi.hoisted(() => ({
     listForChannel: vi.fn(),
     removeForChannel: vi.fn(),
   },
-  tally: { tallyReactions: vi.fn(), upperBound: vi.fn() },
+  tally: { tallyOf: vi.fn(), upperBound: vi.fn() },
+  reactions: { reactors: vi.fn() },
   ineligibility: vi.fn(),
   leakage: vi.fn(),
   view: vi.fn(() => ({ rendered: true })),
@@ -29,6 +30,7 @@ vi.mock("#lib/logger.js", async (importOriginal) => ({
 }));
 vi.mock("./store.js", () => ({ default: mocks.store }));
 vi.mock("./tally.js", () => mocks.tally);
+vi.mock("./reactions.service.js", () => ({ default: mocks.reactions }));
 vi.mock("./view.js", () => ({ starboardMessage: mocks.view }));
 vi.mock("./eligibility.js", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./eligibility.js")>()),
@@ -80,6 +82,7 @@ function fakeMessage(channelId = "general", parentId: string | null = null) {
     id: "m1",
     guildId: "g1",
     channelId,
+    author: { id: "author" },
     channel: { isThread: () => parentId !== null, parentId },
     type: MessageType.Default,
     client,
@@ -122,7 +125,8 @@ beforeEach(() => {
   mocks.ineligibility.mockReturnValue(null);
   mocks.leakage.mockReturnValue(null);
   mocks.tally.upperBound.mockReturnValue(3);
-  mocks.tally.tallyReactions.mockResolvedValue({
+  mocks.reactions.reactors.mockResolvedValue([]);
+  mocks.tally.tallyOf.mockReturnValue({
     reactions: [{ emoji: "⭐", count: 3 }],
     total: 3,
   });
@@ -144,6 +148,17 @@ describe("refresh of a message not yet on the starboard", () => {
       ...entry,
       tally: { reactions: [{ emoji: "⭐", count: 3 }], total: 3 },
     });
+  });
+
+  it("counts the reactors read from Discord with the self-star setting", async () => {
+    const reactors = [{ emoji: "⭐", users: [{ id: "a", bot: false }] }];
+    mocks.reactions.reactors.mockResolvedValue(reactors);
+    const message = fakeMessage();
+
+    await starboard.refresh(message as never, config({ selfStar: true }));
+
+    expect(mocks.reactions.reactors).toHaveBeenCalledWith(message, ["⭐"]);
+    expect(mocks.tally.tallyOf).toHaveBeenCalledWith(reactors, "author", true);
   });
 
   it("records the parent of a message posted in a thread", async () => {
@@ -197,12 +212,12 @@ describe("refresh of a message not yet on the starboard", () => {
 
     await starboard.refresh(fakeMessage() as never, config());
 
-    expect(mocks.tally.tallyReactions).not.toHaveBeenCalled();
+    expect(mocks.reactions.reactors).not.toHaveBeenCalled();
     expect(board.send).not.toHaveBeenCalled();
   });
 
   it("does not repost it when too few different members count", async () => {
-    mocks.tally.tallyReactions.mockResolvedValue({
+    mocks.tally.tallyOf.mockReturnValue({
       reactions: [{ emoji: "⭐", count: 2 }],
       total: 2,
     });
@@ -321,7 +336,7 @@ describe("refresh of a message already on the starboard", () => {
   });
 
   it("keeps it below the threshold by default", async () => {
-    mocks.tally.tallyReactions.mockResolvedValue({ reactions: [], total: 0 });
+    mocks.tally.tallyOf.mockReturnValue({ reactions: [], total: 0 });
 
     await starboard.refresh(fakeMessage() as never, config());
 
@@ -330,7 +345,7 @@ describe("refresh of a message already on the starboard", () => {
   });
 
   it("removes it below the threshold when configured to", async () => {
-    mocks.tally.tallyReactions.mockResolvedValue({ reactions: [], total: 0 });
+    mocks.tally.tallyOf.mockReturnValue({ reactions: [], total: 0 });
 
     await starboard.refresh(
       fakeMessage() as never,
@@ -354,7 +369,7 @@ describe("refresh of a message already on the starboard", () => {
 
     await starboard.refresh(fakeMessage() as never, config());
 
-    expect(mocks.tally.tallyReactions).not.toHaveBeenCalled();
+    expect(mocks.reactions.reactors).not.toHaveBeenCalled();
     expect(starboardMessages.edit).not.toHaveBeenCalled();
   });
 
@@ -418,7 +433,7 @@ describe("refresh of a message already on the starboard", () => {
   });
 
   it("keeps a repost a moderator deleted meanwhile dismissed", async () => {
-    mocks.tally.tallyReactions.mockResolvedValue({ reactions: [], total: 0 });
+    mocks.tally.tallyOf.mockReturnValue({ reactions: [], total: 0 });
     starboardMessages.delete.mockRejectedValueOnce(apiError(10008));
 
     await starboard.refresh(
@@ -435,7 +450,7 @@ describe("refresh of a message already on the starboard", () => {
 
     await starboard.refreshContent(fakeMessage() as never, config());
 
-    expect(mocks.tally.tallyReactions).not.toHaveBeenCalled();
+    expect(mocks.reactions.reactors).not.toHaveBeenCalled();
     expect(mocks.view.mock.calls.at(-1)?.[2]).toBe(stored);
     expect(starboardMessages.edit).toHaveBeenCalled();
   });
@@ -467,7 +482,7 @@ describe("refresh of a message already on the starboard", () => {
   it("recounts an edit when no count is stored", async () => {
     await starboard.refreshContent(fakeMessage() as never, config());
 
-    expect(mocks.tally.tallyReactions).toHaveBeenCalled();
+    expect(mocks.reactions.reactors).toHaveBeenCalled();
   });
 
   it("logs instead of throwing when Discord refuses", async () => {
