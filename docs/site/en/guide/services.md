@@ -57,12 +57,12 @@ async execute(interaction) {
 
 The `thread-creator` module demonstrates a practical service pattern. Here's how it works:
 
-### ThreadCreationQueue (`services/thread-creation-queue.ts`)
+### ThreadCreationQueue (`services/thread-creation-queue.service.ts`)
 
 A per-guild FIFO queue with rate limiting for thread creation:
 
 ```typescript
-export class ThreadCreationQueue {
+export class ThreadCreationQueue implements Service {
   // Each guild has its own queue
   private readonly queues = new Map<string, ThreadJob[]>();
   private readonly recentCreations = new Map<string, number[]>();
@@ -77,9 +77,11 @@ export class ThreadCreationQueue {
     // Uses setTimeout to resume when the window frees up
   }
 }
+
+export default declareService(new ThreadCreationQueue());
 ```
 
-It is a plain class, not declared with `declareService`: `ThreadCreatorService` creates its only instance and is the one the module shares.
+The class is exported too, so that each test builds a fresh queue.
 
 Key characteristics:
 
@@ -94,27 +96,20 @@ Coordinates thread creation:
 
 ```typescript
 class ThreadCreatorService implements Service {
-  private readonly queue = new ThreadCreationQueue();
-
   scheduleThreadForMessage(
     message: Message,
     config: ConfigProvider<ThreadCreatorConfigSchema>
   ): void {
     // Check if message channel is in the configured channels
-    // Generate thread name from template
-    // Enqueue thread creation
-  }
-
-  generateThreadName(template: string, message: Message): string {
-    // Replace variables: {messageAuthor}, {messageContent}, {timestamp}
-    // Cap at 100 characters (Discord limit)
+    // Generate thread name from template (generateThreadName)
+    // Enqueue thread creation on the queue service
   }
 }
 ```
 
 The `ThreadCreatorService` is used by the `messageCreate` listener, which calls `scheduleThreadForMessage()` with the message and the module's config. The service handles channel checking, name generation, and queueing in one call.
 
-This module predates the rule above too: `generateThreadName` and `creationFailure` are pure and would move to a file at the module root, and the queue, which holds state, would live in `thread-creation-queue.service.ts`.
+The pure parts sit at the module root, as plain functions: `thread-name.ts` (`generateThreadName`, which replaces the variables `{messageAuthor}`, `{messageContent}` and `{timestamp}` and caps the name at Discord's 100 characters) and `creation-failures.ts` (`creationFailure`, which tells an expected refusal from Discord from a bug).
 
 ### Config Schema Integration
 

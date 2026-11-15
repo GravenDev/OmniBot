@@ -57,12 +57,12 @@ async execute(interaction) {
 
 Le module `thread-creator` illustre un modèle de service pratique. Voici son fonctionnement :
 
-### ThreadCreationQueue (`services/thread-creation-queue.ts`)
+### ThreadCreationQueue (`services/thread-creation-queue.service.ts`)
 
 Une file d'attente FIFO par serveur avec limitation de débit pour la création de fils :
 
 ```typescript
-export class ThreadCreationQueue {
+export class ThreadCreationQueue implements Service {
   // Chaque serveur a sa propre file
   private readonly queues = new Map<string, ThreadJob[]>();
   private readonly recentCreations = new Map<string, number[]>();
@@ -77,9 +77,11 @@ export class ThreadCreationQueue {
     // Utilise setTimeout pour reprendre quand la fenêtre se libère
   }
 }
+
+export default declareService(new ThreadCreationQueue());
 ```
 
-C'est une classe simple, sans `declareService` : `ThreadCreatorService` crée son unique instance, et c'est lui que le module partage.
+La classe est exportée aussi, pour que chaque test construise sa propre file.
 
 Caractéristiques clés :
 
@@ -94,27 +96,20 @@ Coordonne la création de fils :
 
 ```typescript
 class ThreadCreatorService implements Service {
-  private readonly queue = new ThreadCreationQueue();
-
   scheduleThreadForMessage(
     message: Message,
     config: ConfigProvider<ThreadCreatorConfigSchema>
   ): void {
     // Vérifier si le salon du message est dans les salons configurés
-    // Générer le nom du fil à partir du template
-    // Mettre en file d'attente la création du fil
-  }
-
-  generateThreadName(template: string, message: Message): string {
-    // Remplacer les variables : {messageAuthor}, {messageContent}, {timestamp}
-    // Limiter à 100 caractères (limite Discord)
+    // Générer le nom du fil à partir du template (generateThreadName)
+    // Mettre en file d'attente la création du fil (service de la file)
   }
 }
 ```
 
 Le `ThreadCreatorService` est utilisé par l'écouteur `messageCreate`, qui appelle `scheduleThreadForMessage()` avec le message et la configuration du module. Le service gère la vérification du salon, la génération du nom et la mise en file d'attente en un seul appel.
 
-Ce module précède lui aussi la règle ci-dessus : `generateThreadName` et `creationFailure` sont purs et iraient dans un fichier à la racine du module, et la file, qui porte un état, vivrait dans `thread-creation-queue.service.ts`.
+Les parties pures sont à la racine du module, en fonctions simples : `thread-name.ts` (`generateThreadName`, qui remplace les variables `{messageAuthor}`, `{messageContent}` et `{timestamp}` et limite le nom aux 100 caractères de Discord) et `creation-failures.ts` (`creationFailure`, qui distingue un refus attendu de Discord d'un bug).
 
 ### Intégration avec le schéma de configuration
 

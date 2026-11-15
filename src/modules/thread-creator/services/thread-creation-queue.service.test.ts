@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ThreadCreationQueue,
   type ThreadJob,
-} from "./thread-creation-queue.js";
+} from "./thread-creation-queue.service.js";
 
 const log = vi.hoisted(() => ({
   info: vi.fn(),

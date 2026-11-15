@@ -5,7 +5,7 @@ Priorité : basse
 
 ---
 
-> **Statut : implémenté.** File d'attente et multi-salons (#37) livrés : la classe `ThreadCreationQueue` (`services/thread-creation-queue.ts`) et le champ de config `channels` en `ListOf<CHANNEL>`. Voir « Implémentation » plus bas.
+> **Statut : implémenté.** File d'attente et multi-salons (#37) livrés : la classe `ThreadCreationQueue` (`services/thread-creation-queue.service.ts`) et le champ de config `channels` en `ListOf<CHANNEL>`. Voir « Implémentation » plus bas.
 
 ## Problème (avant)
 
@@ -42,6 +42,6 @@ Aucun changement de schéma de base nécessaire (file en mémoire). Depuis la v2
 
 ## Implémentation
 
-- `services/thread-creation-queue.ts` — `ThreadCreationQueue` : file FIFO par serveur, cadence ≤ 5 / 10 s, reprise par `setTimeout` quand la fenêtre est pleine, drain non réentrant (un seul `pump` par serveur). Erreur sur un job loggée sans bloquer la file.
+- `services/thread-creation-queue.service.ts` — `ThreadCreationQueue` : file FIFO par serveur, cadence ≤ 5 / 10 s, reprise par `setTimeout` quand la fenêtre est pleine, drain non réentrant (un seul `pump` par serveur). Erreur sur un job loggée sans bloquer la file.
 - `services/thread-creator.service.ts` — `scheduleThreadForMessage` : teste l'appartenance du salon à `channels`, génère le nom du fil, puis enfile le job.
-- Tests : `services/thread-creation-queue.test.ts` (FIFO sans drop sur plusieurs fenêtres, cadence ≤ 5/10 s, isolation par serveur, message de bienvenue) avec fake timers.
+- Tests : `services/thread-creation-queue.service.test.ts` (FIFO sans drop sur plusieurs fenêtres, cadence ≤ 5/10 s, isolation par serveur, message de bienvenue) avec fake timers.
