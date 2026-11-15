@@ -10,18 +10,18 @@ import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { repliedTo, sendWithMediaFallback } from "#lib/reported-message.js";
 import { declareService, type Service } from "#lib/service.js";
-import type { StarboardConfigSchema } from "#modules/starboard/starboard.config.js";
 import {
   type Ineligibility,
   ineligibility,
   leakage,
   starboardChannelOf,
   thresholdOf,
-} from "./eligibility.js";
+} from "#modules/starboard/eligibility.js";
+import type { StarboardConfigSchema } from "#modules/starboard/starboard.config.js";
+import { type Tally, tallyOf, upperBound } from "#modules/starboard/tally.js";
+import { starboardMessage } from "#modules/starboard/view.js";
 import reactions from "./reactions.service.js";
 import store, { type StarboardEntry } from "./store.js";
-import { type Tally, tallyOf, upperBound } from "./tally.js";
-import { starboardMessage } from "./view.js";
 
 const logger = loggerMaker("starboard");
 

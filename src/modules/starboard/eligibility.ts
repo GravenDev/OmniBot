@@ -6,7 +6,7 @@ import {
 } from "discord.js";
 import { excludedIdsOf, isExcluded, isNsfw } from "#lib/channel-audience.js";
 import type { ConfigProvider } from "#lib/config.js";
-import type { StarboardConfigSchema } from "#modules/starboard/starboard.config.js";
+import type { StarboardConfigSchema } from "./starboard.config.js";
 
 type Config = ConfigProvider<StarboardConfigSchema>;
 
