@@ -171,7 +171,7 @@ async function main(): Promise<void> {
     [`listeners/message.listener.ts`]: LISTENER_TS,
     [`i18n/en.json`]: I18N_EN,
     [`i18n/fr.json`]: I18N_FR,
-    [`models/${id}.prisma`]: MODEL_PRISMA,
+    [`${id}.prisma`]: MODEL_PRISMA,
     [`${id}.test.ts`]: TEST_TS,
   };
 
