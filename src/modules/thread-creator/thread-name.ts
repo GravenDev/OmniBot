@@ -6,7 +6,10 @@ import type { Message } from "discord.js";
 export function generateThreadName(template: string, message: Message): string {
   const variables = {
     messageAuthor: message.author.displayName || message.author.username,
-    messageContent: message.content.substring(0, 50).replace(/\n/g, " ").trim(),
+    messageContent: message.content
+      .substring(0, 50)
+      .replaceAll("\n", " ")
+      .trim(),
     timestamp: new Date().toLocaleString("fr-FR", {
       day: "2-digit",
       month: "2-digit",
@@ -17,9 +20,9 @@ export function generateThreadName(template: string, message: Message): string {
 
   let threadName = template;
   for (const [key, value] of Object.entries(variables)) {
-    // Escape $ to prevent backreference interpretation in the replacement string
-    const safeValue = value.replace(/\$/g, "$$$$");
-    threadName = threadName.replace(new RegExp(`\\{${key}\\}`, "g"), safeValue);
+    // A function, not a string: `$&` or `$1` in a name or a message stays
+    // as written instead of being read as a replacement pattern.
+    threadName = threadName.replaceAll(`{${key}}`, () => value);
   }
 
   // Limiter à 100 caractères (limite Discord)

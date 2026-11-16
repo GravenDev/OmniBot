@@ -123,9 +123,10 @@ export class ThreadCreationQueue implements Service {
       const level = isGuildSetupError(error)
         ? warnings.level(`welcome:${message.channelId}`)
         : "error";
+      const codePart = code === undefined ? "" : `code = ${code} | `;
       logger[level](
         { err: error },
-        `Thread created without its welcome message | ${code === undefined ? "" : `code = ${code} | `}${context}`
+        `Thread created without its welcome message | ${codePart}${context}`
       );
     }
   }

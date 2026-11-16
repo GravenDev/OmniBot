@@ -198,9 +198,23 @@ describe("creation failures in the log", () => {
     await vi.runAllTimersAsync();
     expect(log.error).toHaveBeenCalledWith(
       expect.anything(),
-      expect.stringContaining("Thread created without its welcome message")
+      expect.stringContaining(
+        `Thread created without its welcome message | code = ${RESTJSONErrorCodes.InvalidFormBodyOrContentType} | `
+      )
     );
     expect(log.warn).not.toHaveBeenCalled();
+  });
+
+  it("names no code for a welcome message lost without a Discord error", async () => {
+    send = vi.fn().mockRejectedValue(new Error("network"));
+    startThread = vi.fn().mockResolvedValue({ id: "thread", send });
+    const queue = new ThreadCreationQueue();
+    queue.enqueue("guild", job("msg", "welcome", "c-network"));
+    await vi.runAllTimersAsync();
+    const [, line] = log.error.mock.calls.at(-1)!;
+    expect(line).toMatch(
+      /^Thread created without its welcome message \| (?!code)/
+    );
   });
 
   it("warns when the new thread is deleted before its welcome message", async () => {
