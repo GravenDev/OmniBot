@@ -194,8 +194,8 @@ importers:
         specifier: 18.0.0
         version: 18.0.0(emojibase@18.0.0)
       i18next:
-        specifier: 26.7.1
-        version: 26.7.1(typescript@7.0.2)
+        specifier: 26.7.2
+        version: 26.7.2(typescript@7.0.2)
       pino:
         specifier: 10.4.0
         version: 10.4.0
@@ -3015,8 +3015,8 @@ packages:
     resolution: {integrity: sha512-eKCa6bwnJhvxj14kZk5NCPc6Hb6BdsU9DZcOnmQKSnO1VKrfV0zCvtttPZUsBvjmNDn8rpcJfpwSYnHBjc95MQ==}
     engines: {node: '>=18.18.0'}
 
-  i18next@26.7.1:
-    resolution: {integrity: sha512-cX+3RRVczel/V2kCMTACckSGSpqgtWYEA6beXNYVms7dOQiHojdPYHD26lT4IKimNeoGWrLvtPgjftbRvmZJVw==}
+  i18next@26.7.2:
+    resolution: {integrity: sha512-RsOY3BeaCDdkk52NeJSFAXELQ2rQXBO/tOub6L8ue2ICPfR/FRDWDOfEDg4xMPd1SqO5goVYQ6i72qWEUB/PPw==}
     peerDependencies:
       typescript: ^5 || ^6 || ^7
     peerDependenciesMeta:
@@ -6595,7 +6595,7 @@ snapshots:
 
   human-signals@8.0.1: {}
 
-  i18next@26.7.1(typescript@7.0.2):
+  i18next@26.7.2(typescript@7.0.2):
     optionalDependencies:
       typescript: 7.0.2
 
