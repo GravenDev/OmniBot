@@ -68,4 +68,29 @@ describe("generateThreadName", () => {
     );
     expect(result).toBe("cost is $$5");
   });
+  it("turns line breaks of the content into spaces", () => {
+    const result = generateThreadName(
+      "{messageContent}",
+      fakeMessage("first\nsecond\nthird", "Bob")
+    );
+    expect(result).toBe("first second third");
+  });
+
+  it("fills every occurrence of a placeholder", () => {
+    const result = generateThreadName(
+      "{messageAuthor} / {messageAuthor}",
+      fakeMessage("hi", "Alice")
+    );
+    expect(result).toBe("Alice / Alice");
+  });
+
+  it("keeps the placeholders the content writes, when already filled", () => {
+    // Substitution runs variable by variable: {messageAuthor} is filled
+    // before the content arrives, so the content's own copy stays.
+    const result = generateThreadName(
+      "{messageContent}",
+      fakeMessage("{messageAuthor} {messageContent}", "Alice")
+    );
+    expect(result).toBe("{messageAuthor} {messageContent}");
+  });
 });
