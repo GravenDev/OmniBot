@@ -15,7 +15,7 @@ runs:
     # a pull request's stay scoped to it: no tag or master run, such as the
     # mutation job that sends its report to the Stryker Dashboard, reads them.
     - name: Set up Node.js and pnpm
-      uses: jdx/mise-action@6612f0ef07ed2a736cd1e00a94a065522dd41195 # v5.2.5 # zizmor: ignore[cache-poisoning]
+      uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7 # zizmor: ignore[cache-poisoning]
       with:
         install_args: node pnpm
 
