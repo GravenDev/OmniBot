@@ -118,4 +118,18 @@ describe("stickyRecords", () => {
     expect(store.remove).toHaveBeenCalledWith("g1", "gone");
     expect(outcome.message).toContain("remove.done");
   });
+
+  it("says when the message could not be taken down", async () => {
+    poster.unstick.mockResolvedValue({ removed: true, leftover: true });
+    const outcome = await stickyRecords.remove(fakeGuild(), "c1", context);
+    expect(outcome.ok).toBe(true);
+    expect(outcome.message).toContain("remove.leftover");
+  });
+
+  it("says when there was no sticky to remove", async () => {
+    poster.unstick.mockResolvedValue({ removed: false, leftover: true });
+    const outcome = await stickyRecords.remove(fakeGuild(), "c1", context);
+    expect(outcome.ok).toBe(false);
+    expect(outcome.message).toContain("remove.none");
+  });
 });
