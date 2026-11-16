@@ -101,11 +101,10 @@ export class StickyRecords implements Service, ChannelRecordSource {
         `Sticky removed | guildId = ${guild.id} | channelId = ${channelId} | by = ${userId}`
       );
     }
-    const key = !removed
-      ? "remove.none"
-      : leftover
-        ? "remove.leftover"
-        : "remove.done";
+    let key = "remove.none";
+    if (removed) {
+      key = leftover ? "remove.leftover" : "remove.done";
+    }
     return { ok: removed, message: t(key, { channel: `<#${channelId}>` }) };
   }
 
