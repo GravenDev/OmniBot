@@ -2,6 +2,7 @@ import type { GuildMember, Message } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
 import { fetchMember, isBanned } from "#lib/moderation.js";
+import { declareService, type Service } from "#lib/service.js";
 import type { HoneypotConfigSchema } from "#modules/honeypot/honeypot.config.js";
 import {
   isExempt,
@@ -10,8 +11,8 @@ import {
   trapNameOf,
   type TrapResult,
 } from "#modules/honeypot/trap.js";
-import { recordCatch } from "./counter.service.js";
-import { logTrap } from "./log.service.js";
+import counter from "./counter.service.js";
+import log from "./log.service.js";
 
 type Config = ConfigProvider<HoneypotConfigSchema>;
 
@@ -22,21 +23,6 @@ const logger = loggerMaker("honeypot");
 interface Cooldown {
   timer: NodeJS.Timeout;
   deleteFollowUps: boolean;
-}
-
-const recent = new Map<string, Cooldown>();
-
-function startCooldown(key: string): Cooldown {
-  const timer = setTimeout(() => recent.delete(key), COOLDOWN_MS);
-  timer.unref();
-  const cooldown = { timer, deleteFollowUps: false };
-  recent.set(key, cooldown);
-  return cooldown;
-}
-
-function endCooldown(key: string): void {
-  clearTimeout(recent.get(key)?.timer);
-  recent.delete(key);
 }
 
 async function removeMessage(message: Message<true>): Promise<boolean> {
@@ -125,47 +111,64 @@ async function sanction(
     },
     "Honeypot triggered"
   );
-  await logTrap(message, config, result, purgeSeconds);
-  void recordCatch(message.guild, config);
+  await log.logTrap(message, config, result, purgeSeconds);
+  void counter.recordCatch(message.guild, config);
   return result;
 }
 
-export async function springTrap(
-  message: Message,
-  config: Config
-): Promise<void> {
-  if (
-    !message.inGuild() ||
-    message.author.bot ||
-    message.webhookId ||
-    message.system
-  ) {
-    return;
-  }
-  const trapIds = new Set(
-    (config.get("trapChannels") ?? []).map((channel) => channel.id)
-  );
-  if (!isTrap(message.channel, trapIds)) {
-    return;
-  }
-  const key = `${message.guildId}:${message.author.id}`;
-  const current = recent.get(key);
-  if (current) {
-    logger.debug(
-      `Trap follow-up ignored | reason = cooldown | guildId = ${message.guildId} | channelId = ${message.channelId} | userId = ${message.author.id} | deleted = ${current.deleteFollowUps}`
-    );
-    if (current.deleteFollowUps) {
-      await removeMessage(message);
+/** The trap: sanctions whoever posts in a trap channel, once per cooldown. */
+export class TrapService implements Service {
+  private readonly recent = new Map<string, Cooldown>();
+
+  async springTrap(message: Message, config: Config): Promise<void> {
+    if (
+      !message.inGuild() ||
+      message.author.bot ||
+      message.webhookId ||
+      message.system
+    ) {
+      return;
     }
-    return;
+    const trapIds = new Set(
+      (config.get("trapChannels") ?? []).map((channel) => channel.id)
+    );
+    if (!isTrap(message.channel, trapIds)) {
+      return;
+    }
+    const key = `${message.guildId}:${message.author.id}`;
+    const current = this.recent.get(key);
+    if (current) {
+      logger.debug(
+        `Trap follow-up ignored | reason = cooldown | guildId = ${message.guildId} | channelId = ${message.channelId} | userId = ${message.author.id} | deleted = ${current.deleteFollowUps}`
+      );
+      if (current.deleteFollowUps) {
+        await removeMessage(message);
+      }
+      return;
+    }
+    const cooldown = this.startCooldown(key);
+    try {
+      const result = await sanction(message, config);
+      cooldown.deleteFollowUps =
+        result?.outcome === "notBannable" || result?.outcome === "failed";
+    } catch (error) {
+      this.endCooldown(key);
+      throw error;
+    }
   }
-  const cooldown = startCooldown(key);
-  try {
-    const result = await sanction(message, config);
-    cooldown.deleteFollowUps =
-      result?.outcome === "notBannable" || result?.outcome === "failed";
-  } catch (error) {
-    endCooldown(key);
-    throw error;
+
+  private startCooldown(key: string): Cooldown {
+    const timer = setTimeout(() => this.recent.delete(key), COOLDOWN_MS);
+    timer.unref();
+    const cooldown = { timer, deleteFollowUps: false };
+    this.recent.set(key, cooldown);
+    return cooldown;
+  }
+
+  private endCooldown(key: string): void {
+    clearTimeout(this.recent.get(key)?.timer);
+    this.recent.delete(key);
   }
 }
+
+export default declareService(new TrapService());

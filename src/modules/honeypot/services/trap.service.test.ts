@@ -5,11 +5,11 @@ import { honeypotConfigSchema } from "#modules/honeypot/honeypot.config.js";
 import en from "#modules/honeypot/i18n/en.json" with { type: "json" };
 
 const log = vi.hoisted(() => ({ logTrap: vi.fn() }));
-vi.mock("./log.service.js", () => log);
+vi.mock("./log.service.js", () => ({ default: log }));
 const counter = vi.hoisted(() => ({ recordCatch: vi.fn() }));
-vi.mock("./counter.service.js", () => counter);
+vi.mock("./counter.service.js", () => ({ default: counter }));
 
-const { springTrap } = await import("./trap.service.js");
+const { default: trap } = await import("./trap.service.js");
 
 silenceLogs();
 
@@ -132,7 +132,7 @@ async function run(
   message: ReturnType<typeof fakeMessage>,
   values: Record<string, unknown> = {}
 ) {
-  await springTrap(message as unknown as Message, config(values));
+  await trap.springTrap(message as unknown as Message, config(values));
 }
 
 function expectLogged(
