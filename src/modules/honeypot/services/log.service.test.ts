@@ -1,9 +1,11 @@
 import { ChannelType, type Message } from "discord.js";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { initTestI18n, makeTestConfig } from "#lib/testing.js";
+import { initTestI18n, makeTestConfig, silenceLogs } from "#lib/testing.js";
 import { honeypotConfigSchema } from "#modules/honeypot/honeypot.config.js";
 import en from "#modules/honeypot/i18n/en.json" with { type: "json" };
-import { logTrap } from "./log.service.js";
+import log from "./log.service.js";
+
+silenceLogs();
 
 beforeAll(async () => {
   await initTestI18n("honeypot", { en });
@@ -46,7 +48,7 @@ describe("logTrap", () => {
     const config = makeTestConfig("honeypot", honeypotConfigSchema, {
       logChannel: channel,
     } as never);
-    await logTrap(fakeMessage("spam"), config, softbanned, 3600);
+    await log.logTrap(fakeMessage("spam"), config, softbanned, 3600);
     expect(channel.send).toHaveBeenCalledWith(
       expect.objectContaining({ allowedMentions: { parse: [] } })
     );
@@ -60,7 +62,7 @@ describe("logTrap", () => {
       logChannel: channel,
     } as never);
     const message = fakeMessage("secret", [], ChannelType.PrivateThread);
-    await logTrap(message, config, softbanned, 3600);
+    await log.logTrap(message, config, softbanned, 3600);
     const embed = channel.send.mock.calls[0]![0].embeds[0];
     expect(embed.data.description).toContain("> secret");
   });
@@ -70,7 +72,7 @@ describe("logTrap", () => {
     const config = makeTestConfig("honeypot", honeypotConfigSchema, {
       logChannel: channel,
     } as never);
-    await logTrap(fakeMessage("spam"), config, softbanned, 3600);
+    await log.logTrap(fakeMessage("spam"), config, softbanned, 3600);
     expect(channel.send).not.toHaveBeenCalled();
   });
 });

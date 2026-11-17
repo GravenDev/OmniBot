@@ -1,5 +1,5 @@
 import {
-  EmbedBuilder,
+  type EmbedBuilder,
   MessageFlags,
   PermissionFlagsBits,
   RESTJSONErrorCodes,
@@ -12,18 +12,13 @@ import { isApiError } from "#lib/discord-errors.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
+import { declareService, type Service } from "#lib/service.js";
 import { counterEmbed } from "#modules/honeypot/counter.js";
 import type { HoneypotConfigSchema } from "#modules/honeypot/honeypot.config.js";
 
 type Config = ConfigProvider<HoneypotConfigSchema>;
 
 const logger = loggerMaker("honeypot");
-
-const queue = new KeyedQueue();
-
-const pending = new Map<string, number>();
-
-const scheduled = new Set<string>();
 
 interface Counter {
   count: number;
@@ -107,66 +102,75 @@ function postableChannel(
   return channel;
 }
 
-async function flush(guild: Guild, config: Config): Promise<void> {
-  scheduled.delete(guild.id);
-  const catches = pending.get(guild.id) ?? 0;
-  if (catches === 0) {
-    return;
-  }
-  const lastAt = new Date();
-  const counter = await prisma.honeypotCounter.upsert({
-    where: { guildId: guild.id },
-    create: { guildId: guild.id, count: catches, lastAt },
-    update: { count: { increment: catches }, lastAt },
-  });
-  const left = (pending.get(guild.id) ?? 0) - catches;
-  if (left > 0) {
-    pending.set(guild.id, left);
-  } else {
-    pending.delete(guild.id);
-  }
-  const channel = postableChannel(guild, config);
-  if (!channel) {
-    if (
-      counter.messageId &&
-      counter.channelId !== config.get("counterChannel")?.id
-    ) {
-      await removeStale(guild, counter);
-      await saveMessage(guild, null, null);
+/** The message counting the members caught, kept up to date per guild. */
+export class CounterService implements Service {
+  private readonly queue = new KeyedQueue();
+  private readonly pending = new Map<string, number>();
+  private readonly scheduled = new Set<string>();
+
+  private async flush(guild: Guild, config: Config): Promise<void> {
+    this.scheduled.delete(guild.id);
+    const catches = this.pending.get(guild.id) ?? 0;
+    if (catches === 0) {
+      return;
     }
-    return;
+    const lastAt = new Date();
+    const counter = await prisma.honeypotCounter.upsert({
+      where: { guildId: guild.id },
+      create: { guildId: guild.id, count: catches, lastAt },
+      update: { count: { increment: catches }, lastAt },
+    });
+    const left = (this.pending.get(guild.id) ?? 0) - catches;
+    if (left > 0) {
+      this.pending.set(guild.id, left);
+    } else {
+      this.pending.delete(guild.id);
+    }
+    const channel = postableChannel(guild, config);
+    if (!channel) {
+      if (
+        counter.messageId &&
+        counter.channelId !== config.get("counterChannel")?.id
+      ) {
+        await removeStale(guild, counter);
+        await saveMessage(guild, null, null);
+      }
+      return;
+    }
+    const messageId = await postCounter(
+      channel,
+      counter,
+      counterEmbed(config.t, counter.count, lastAt)
+    );
+    if (messageId === counter.messageId && channel.id === counter.channelId) {
+      return;
+    }
+    try {
+      await saveMessage(guild, channel.id, messageId);
+    } catch (error) {
+      await channel.messages.delete(messageId).catch(() => undefined);
+      throw error;
+    }
+    if (counter.channelId !== channel.id) {
+      await removeStale(guild, counter);
+    }
   }
-  const messageId = await postCounter(
-    channel,
-    counter,
-    counterEmbed(config.t, counter.count, lastAt)
-  );
-  if (messageId === counter.messageId && channel.id === counter.channelId) {
-    return;
-  }
-  try {
-    await saveMessage(guild, channel.id, messageId);
-  } catch (error) {
-    await channel.messages.delete(messageId).catch(() => undefined);
-    throw error;
-  }
-  if (counter.channelId !== channel.id) {
-    await removeStale(guild, counter);
+
+  recordCatch(guild: Guild, config: Config): Promise<void> {
+    this.pending.set(guild.id, (this.pending.get(guild.id) ?? 0) + 1);
+    if (this.scheduled.has(guild.id)) {
+      return Promise.resolve();
+    }
+    this.scheduled.add(guild.id);
+    return this.queue
+      .run(guild.id, () => this.flush(guild, config))
+      .catch((error: unknown) => {
+        logger.warn(
+          { err: error, guildId: guild.id },
+          "Honeypot counter could not be updated"
+        );
+      });
   }
 }
 
-export function recordCatch(guild: Guild, config: Config): Promise<void> {
-  pending.set(guild.id, (pending.get(guild.id) ?? 0) + 1);
-  if (scheduled.has(guild.id)) {
-    return Promise.resolve();
-  }
-  scheduled.add(guild.id);
-  return queue
-    .run(guild.id, () => flush(guild, config))
-    .catch((error: unknown) => {
-      logger.warn(
-        { err: error, guildId: guild.id },
-        "Honeypot counter could not be updated"
-      );
-    });
-}
+export default declareService(new CounterService());

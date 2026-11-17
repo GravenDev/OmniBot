@@ -49,7 +49,7 @@ const db = vi.hoisted(() => {
 });
 vi.mock("#lib/database.js", () => ({ default: db.prisma }));
 
-const { recordCatch } = await import("./counter.service.js");
+const { default: counter } = await import("./counter.service.js");
 
 silenceLogs();
 
@@ -113,7 +113,7 @@ describe("recordCatch", () => {
     const channel = fakeChannel("counter");
     const guild = fakeGuild(channel);
 
-    await recordCatch(guild, config(channel));
+    await counter.recordCatch(guild, config(channel));
     expect(channel.send).toHaveBeenCalledOnce();
     expect(channel.send.mock.calls[0]![0].embeds[0].data.description).toContain(
       "**1** little bee"
@@ -121,7 +121,7 @@ describe("recordCatch", () => {
     const messageId = db.state.row!.messageId;
     expect(db.state.row).toMatchObject({ count: 1, channelId: "counter" });
 
-    await recordCatch(guild, config(channel));
+    await counter.recordCatch(guild, config(channel));
     expect(channel.send).toHaveBeenCalledOnce();
     expect(channel.messages.edit).toHaveBeenCalledWith(messageId, {
       embeds: [expect.anything()],
@@ -134,10 +134,10 @@ describe("recordCatch", () => {
   it("posts a new counter when the previous one was deleted", async () => {
     const channel = fakeChannel("counter");
     const guild = fakeGuild(channel);
-    await recordCatch(guild, config(channel));
+    await counter.recordCatch(guild, config(channel));
     channel.messages.edit.mockRejectedValueOnce(unknownMessage());
 
-    await recordCatch(guild, config(channel));
+    await counter.recordCatch(guild, config(channel));
     expect(channel.send).toHaveBeenCalledTimes(2);
     expect(db.state.row!.messageId).toBe(
       (await channel.send.mock.results[1]!.value).id
@@ -148,10 +148,10 @@ describe("recordCatch", () => {
     const before = fakeChannel("before");
     const after = fakeChannel("after");
     const guild = fakeGuild(before, after);
-    await recordCatch(guild, config(before));
+    await counter.recordCatch(guild, config(before));
     const oldId = db.state.row!.messageId;
 
-    await recordCatch(guild, config(after));
+    await counter.recordCatch(guild, config(after));
     expect(after.send).toHaveBeenCalledOnce();
     expect(before.messages.delete).toHaveBeenCalledWith(oldId);
     expect(db.state.row).toMatchObject({ count: 2, channelId: "after" });
@@ -160,12 +160,12 @@ describe("recordCatch", () => {
   it("updates once for a burst of catches", async () => {
     const channel = fakeChannel("counter");
     const guild = fakeGuild(channel);
-    await recordCatch(guild, config(channel));
+    await counter.recordCatch(guild, config(channel));
 
     await Promise.all([
-      recordCatch(guild, config(channel)),
-      recordCatch(guild, config(channel)),
-      recordCatch(guild, config(channel)),
+      counter.recordCatch(guild, config(channel)),
+      counter.recordCatch(guild, config(channel)),
+      counter.recordCatch(guild, config(channel)),
     ]);
     expect(db.state.row!.count).toBe(4);
     expect(channel.messages.edit.mock.calls.length).toBeLessThan(3);
@@ -178,7 +178,7 @@ describe("recordCatch", () => {
     const channel = fakeChannel("counter");
     db.state.failUpdate = true;
 
-    await recordCatch(fakeGuild(channel), config(channel));
+    await counter.recordCatch(fakeGuild(channel), config(channel));
     const sentId = (await channel.send.mock.results[0]!.value).id;
     expect(channel.messages.delete).toHaveBeenCalledWith(sentId);
     expect(db.state.row!.messageId).toBeNull();
@@ -187,10 +187,10 @@ describe("recordCatch", () => {
   it("removes the counter when its channel is unset", async () => {
     const channel = fakeChannel("counter");
     const guild = fakeGuild(channel);
-    await recordCatch(guild, config(channel));
+    await counter.recordCatch(guild, config(channel));
     const messageId = db.state.row!.messageId;
 
-    await recordCatch(guild, config());
+    await counter.recordCatch(guild, config());
     expect(channel.messages.delete).toHaveBeenCalledWith(messageId);
     expect(db.state.row).toMatchObject({
       count: 2,
@@ -200,14 +200,14 @@ describe("recordCatch", () => {
   });
 
   it("keeps counting while no counter channel is set", async () => {
-    await recordCatch(fakeGuild(), config());
-    await recordCatch(fakeGuild(), config());
+    await counter.recordCatch(fakeGuild(), config());
+    await counter.recordCatch(fakeGuild(), config());
     expect(db.state.row).toMatchObject({ count: 2, messageId: null });
   });
 
   it("posts nothing without the permissions it needs", async () => {
     const channel = fakeChannel("counter", { allowed: false });
-    await recordCatch(fakeGuild(channel), config(channel));
+    await counter.recordCatch(fakeGuild(channel), config(channel));
     expect(channel.send).not.toHaveBeenCalled();
     expect(db.state.row!.count).toBe(1);
   });
@@ -216,10 +216,10 @@ describe("recordCatch", () => {
     const before = fakeChannel("before");
     const after = fakeChannel("after", { allowed: false });
     const guild = fakeGuild(before, after);
-    await recordCatch(guild, config(before));
+    await counter.recordCatch(guild, config(before));
     const oldId = db.state.row!.messageId;
 
-    await recordCatch(guild, config(after));
+    await counter.recordCatch(guild, config(after));
     expect(after.send).not.toHaveBeenCalled();
     expect(before.messages.delete).toHaveBeenCalledWith(oldId);
     expect(db.state.row).toMatchObject({
@@ -232,12 +232,12 @@ describe("recordCatch", () => {
   it("keeps the counter while its channel lacks permissions, then edits it again", async () => {
     const channel = fakeChannel("counter");
     const guild = fakeGuild(channel);
-    await recordCatch(guild, config(channel));
+    await counter.recordCatch(guild, config(channel));
     const messageId = db.state.row!.messageId;
 
     let allowed = false;
     channel.permissionsFor = () => ({ has: () => allowed });
-    await recordCatch(guild, config(channel));
+    await counter.recordCatch(guild, config(channel));
     expect(channel.messages.delete).not.toHaveBeenCalled();
     expect(db.state.row).toMatchObject({
       count: 2,
@@ -246,7 +246,7 @@ describe("recordCatch", () => {
     });
 
     allowed = true;
-    await recordCatch(guild, config(channel));
+    await counter.recordCatch(guild, config(channel));
     expect(channel.send).toHaveBeenCalledOnce();
     expect(channel.messages.edit).toHaveBeenLastCalledWith(
       messageId,
@@ -259,12 +259,12 @@ describe("recordCatch", () => {
     db.state.fail = true;
     const channel = fakeChannel("counter");
     await expect(
-      recordCatch(fakeGuild(channel), config(channel))
+      counter.recordCatch(fakeGuild(channel), config(channel))
     ).resolves.toBeUndefined();
     expect(channel.send).not.toHaveBeenCalled();
 
     db.state.fail = false;
-    await recordCatch(fakeGuild(channel), config(channel));
+    await counter.recordCatch(fakeGuild(channel), config(channel));
     expect(db.state.row!.count).toBe(2);
   });
 });
