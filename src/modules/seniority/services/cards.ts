@@ -18,7 +18,7 @@ import { fetchAvatar, fetchImage } from "#lib/imaging.js";
 import { truncate } from "#lib/text.js";
 import { ACCENT, CONFETTI } from "../rendering/theme.js";
 import type { SeniorityConfigSchema } from "../seniority.config.js";
-import { seniorityStart } from "./overrides.js";
+import { seniorityStart } from "./overrides.service.js";
 
 type Config = ConfigProvider<SeniorityConfigSchema>;
 

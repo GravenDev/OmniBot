@@ -33,7 +33,7 @@ import {
   serverCard,
   serverFacts,
 } from "./cards.js";
-import { overrides } from "./overrides.js";
+import { overrides } from "./overrides.service.js";
 import * as state from "./state.js";
 
 const logger = loggerMaker("seniority");

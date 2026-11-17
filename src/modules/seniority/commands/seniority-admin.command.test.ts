@@ -7,7 +7,7 @@ import fr from "../i18n/fr.json" with { type: "json" };
 import { seniorityConfigSchema } from "../seniority.config.js";
 
 const overrides = vi.hoisted(() => ({ recompute: vi.fn() }));
-vi.mock("../services/overrides.js", () => overrides);
+vi.mock("../services/overrides.service.js", () => overrides);
 
 const { default: command } = await import("./seniority-admin.command.js");
 

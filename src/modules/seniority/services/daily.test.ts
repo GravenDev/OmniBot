@@ -27,8 +27,8 @@ vi.mock("./state.js", () => state);
 const recomputed = vi.hoisted(() => ({
   overrides: vi.fn(async () => new Map<string, Date>()),
 }));
-vi.mock("./overrides.js", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("./overrides.js")>()),
+vi.mock("./overrides.service.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./overrides.service.js")>()),
   ...recomputed,
 }));
 
