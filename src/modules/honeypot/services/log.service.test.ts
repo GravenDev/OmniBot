@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { initTestI18n, makeTestConfig } from "#lib/testing.js";
 import { honeypotConfigSchema } from "#modules/honeypot/honeypot.config.js";
 import en from "#modules/honeypot/i18n/en.json" with { type: "json" };
-import { logTrap } from "./log.js";
+import { logTrap } from "./log.service.js";
 
 beforeAll(async () => {
   await initTestI18n("honeypot", { en });

@@ -5,11 +5,11 @@ import { honeypotConfigSchema } from "#modules/honeypot/honeypot.config.js";
 import en from "#modules/honeypot/i18n/en.json" with { type: "json" };
 
 const log = vi.hoisted(() => ({ logTrap: vi.fn() }));
-vi.mock("./log.js", () => log);
+vi.mock("./log.service.js", () => log);
 const counter = vi.hoisted(() => ({ recordCatch: vi.fn() }));
-vi.mock("./counter.js", () => counter);
+vi.mock("./counter.service.js", () => counter);
 
-const { springTrap } = await import("./trap.js");
+const { springTrap } = await import("./trap.service.js");
 
 silenceLogs();
 
