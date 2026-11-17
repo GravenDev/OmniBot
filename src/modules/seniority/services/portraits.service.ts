@@ -11,7 +11,9 @@ class PortraitsService implements Service {
     return Promise.all(
       members.map((member, index) =>
         // Only the first ones are drawn.
-        index < SHOWN_PORTRAITS ? fetchAvatar(member, 256) : null
+        index < SHOWN_PORTRAITS
+          ? fetchAvatar(member, 256)
+          : Promise.resolve(null)
       )
     );
   }
