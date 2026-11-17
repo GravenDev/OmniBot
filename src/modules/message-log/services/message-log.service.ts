@@ -88,8 +88,14 @@ class MessageLogService implements Service {
       !isAuthoredByMember(before) ||
       before.content === after.content
     ) {
+      let reason = "not a member text change";
+      if (!config.get("logEdits")) {
+        reason = "edit logging disabled";
+      } else if (before.partial || after.partial) {
+        reason = "uncached message";
+      }
       logger.debug(
-        `Edit not logged | reason = ${!config.get("logEdits") ? "edit logging disabled" : before.partial || after.partial ? "uncached message" : "not a member text change"} | messageId = ${after.id} | channelId = ${after.channelId}`
+        `Edit not logged | reason = ${reason} | messageId = ${after.id} | channelId = ${after.channelId}`
       );
       return;
     }
