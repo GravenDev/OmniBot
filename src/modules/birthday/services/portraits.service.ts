@@ -1,7 +1,7 @@
 import type { Image } from "@napi-rs/canvas";
 import type { GuildMember } from "discord.js";
+import { firstAvatars } from "#lib/avatars.js";
 import { SHOWN_PORTRAITS } from "#lib/celebration-card.js";
-import { fetchAvatar } from "#lib/imaging.js";
 import { declareService, type Service } from "#lib/service.js";
 import { shownAvatars } from "#modules/birthday/rendering/birthday-calendar.js";
 
@@ -9,14 +9,7 @@ import { shownAvatars } from "#modules/birthday/rendering/birthday-calendar.js";
 class PortraitsService implements Service {
   /** The card's portraits, in the members' order: null past those drawn. */
   async ofMembers(members: readonly GuildMember[]): Promise<(Image | null)[]> {
-    return Promise.all(
-      members.map((member, index) =>
-        // Only the first ones are drawn.
-        index < SHOWN_PORTRAITS
-          ? fetchAvatar(member, 256)
-          : Promise.resolve(null)
-      )
-    );
+    return firstAvatars(members, SHOWN_PORTRAITS, 256);
   }
 
   /** The calendar's portraits, day by day: null past those a cell draws. */
@@ -24,16 +17,7 @@ class PortraitsService implements Service {
     days: readonly (readonly GuildMember[])[]
   ): Promise<(Image | null)[][]> {
     return Promise.all(
-      days.map((day) =>
-        Promise.all(
-          day.map((member, index) =>
-            // Only the first ones are drawn.
-            index < shownAvatars(day.length)
-              ? fetchAvatar(member, 64)
-              : Promise.resolve(null)
-          )
-        )
-      )
+      days.map((day) => firstAvatars(day, shownAvatars(day.length), 64))
     );
   }
 }

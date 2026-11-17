@@ -74,6 +74,7 @@ Shared code lives in `src/lib/` (imported as `#lib/…`), plus `src/core/utils/`
 
 | Import                     | What it gives                                                                                                          |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `#lib/avatars.js`          | `firstAvatars`: the first few members' avatars a picture draws, null for the others                                    |
 | `#lib/calendar.js`         | guild-local days and times: `localTime`, `dayKey`, `dueDay`, `upcoming`, `formatDate`, `addDays`, `anniversaryYears`   |
 | `#lib/celebration-card.js` | the festive card of birthday and seniority, confetti included                                                          |
 | `#lib/channel-audience.js` | channels and categories a config excludes: `isExcluded`, `excludedIdsOf`, `isNsfw`                                     |
