@@ -49,7 +49,7 @@ const db = vi.hoisted(() => {
 });
 vi.mock("#lib/database.js", () => ({ default: db.prisma }));
 
-const { counterEmbed, recordCatch } = await import("./counter.js");
+const { recordCatch } = await import("./counter.js");
 
 silenceLogs();
 
@@ -107,21 +107,6 @@ function config(counterChannel?: ReturnType<typeof fakeChannel>) {
     counterChannel,
   } as never);
 }
-
-const t = makeTestConfig("honeypot", honeypotConfigSchema).t;
-
-describe("counterEmbed", () => {
-  it("counts the bees, singular then plural", () => {
-    const lastAt = new Date("2026-10-31T12:00:00Z");
-    expect(counterEmbed(t, 1, lastAt).data.description).toBe(
-      "🐝 **1** little bee fell into the trap.\n" +
-        "Latest sweet tooth: <t:1793448000:R>"
-    );
-    expect(counterEmbed(t, 42, lastAt).data.description).toContain(
-      "**42** little bees fell into the trap."
-    );
-  });
-});
 
 describe("recordCatch", () => {
   it("posts the counter on the first catch, then edits it", async () => {

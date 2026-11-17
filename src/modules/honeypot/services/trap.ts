@@ -1,31 +1,19 @@
-import {
-  PermissionFlagsBits,
-  type GuildMember,
-  type GuildTextBasedChannel,
-  type Message,
-} from "discord.js";
+import type { GuildMember, Message } from "discord.js";
 import type { ConfigProvider } from "#lib/config.js";
 import { loggerMaker } from "#lib/logger.js";
+import { fetchMember, isBanned } from "#lib/moderation.js";
+import type { HoneypotConfigSchema } from "#modules/honeypot/honeypot.config.js";
 import {
-  fetchMember,
-  isBanned,
-  MAX_BAN_PURGE_SECONDS,
-} from "#lib/moderation.js";
-import {
-  honeypotConfigSchema,
-  type HoneypotConfigSchema,
-} from "#modules/honeypot/honeypot.config.js";
+  isExempt,
+  isTrap,
+  purgeSecondsOf,
+  trapNameOf,
+  type TrapResult,
+} from "#modules/honeypot/trap.js";
 import { recordCatch } from "./counter.js";
 import { logTrap } from "./log.js";
 
 type Config = ConfigProvider<HoneypotConfigSchema>;
-
-export type Outcome = "softbanned" | "notBannable" | "failed" | "stillBanned";
-
-export interface TrapResult {
-  outcome: Outcome;
-  messageKept: boolean;
-}
 
 const AUDIT_REASON_LIMIT = 512;
 const COOLDOWN_MS = 60_000;
@@ -38,38 +26,6 @@ interface Cooldown {
 
 const recent = new Map<string, Cooldown>();
 
-export function isTrap(
-  channel: GuildTextBasedChannel,
-  trapIds: ReadonlySet<string>
-): boolean {
-  if (trapIds.has(channel.id)) {
-    return true;
-  }
-  return (
-    channel.isThread() &&
-    channel.parentId !== null &&
-    trapIds.has(channel.parentId)
-  );
-}
-
-export function isExempt(
-  member: GuildMember,
-  channel: GuildTextBasedChannel,
-  exemptRoleIds: ReadonlySet<string>
-): boolean {
-  return (
-    member.guild.ownerId === member.id ||
-    channel.permissionsFor(member).has(PermissionFlagsBits.ManageMessages) ||
-    member.roles.cache.some((role) => exemptRoleIds.has(role.id))
-  );
-}
-
-export function purgeSecondsOf(config: Config): number {
-  const window =
-    config.get("purgeWindow") ?? honeypotConfigSchema.purgeWindow.defaultValue;
-  return Math.min(Math.max(Math.floor(window), 0), MAX_BAN_PURGE_SECONDS);
-}
-
 function startCooldown(key: string): Cooldown {
   const timer = setTimeout(() => recent.delete(key), COOLDOWN_MS);
   timer.unref();
@@ -81,12 +37,6 @@ function startCooldown(key: string): Cooldown {
 function endCooldown(key: string): void {
   clearTimeout(recent.get(key)?.timer);
   recent.delete(key);
-}
-
-function trapNameOf(channel: GuildTextBasedChannel): string {
-  return channel.isThread()
-    ? (channel.parent?.name ?? channel.name)
-    : channel.name;
 }
 
 async function removeMessage(message: Message<true>): Promise<boolean> {
