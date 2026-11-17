@@ -14,7 +14,7 @@ import { loggerMaker } from "#lib/logger.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import { fetchMember } from "#lib/moderation.js";
 import type { SeniorityConfigSchema } from "../seniority.config.js";
-import { recompute } from "../services/overrides.js";
+import { recompute } from "../services/overrides.service.js";
 
 const logger = loggerMaker("seniority");
 

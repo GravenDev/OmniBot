@@ -24,7 +24,7 @@ vi.mock("#lib/database.js", () => ({
 }));
 
 const { firstMessageDate, recompute, seniorityStart, sweepDepartures } =
-  await import("./overrides.js");
+  await import("./overrides.service.js");
 
 const JOINED = new Date("2024-06-01T10:00:00Z");
 const FIRST = "2020-03-15T08:30:00.000Z";

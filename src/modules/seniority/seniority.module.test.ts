@@ -2,7 +2,10 @@ import type { Client, Guild } from "discord.js";
 import { describe, expect, it, vi } from "vitest";
 
 const clearGuild = vi.hoisted(() => vi.fn(async (_guildId: string) => {}));
-vi.mock("./services/overrides.js", () => ({ clearGuild, remove: vi.fn() }));
+vi.mock("./services/overrides.service.js", () => ({
+  clearGuild,
+  remove: vi.fn(),
+}));
 vi.mock("./tasks.js", () => ({
   seniorityTasks: () => [],
   seniorityMaintenanceTasks: () => [],

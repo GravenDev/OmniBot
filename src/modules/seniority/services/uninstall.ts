@@ -1,5 +1,5 @@
 import type { TFunction } from "#lib/i18n.js";
-import { count } from "./overrides.js";
+import { count } from "./overrides.service.js";
 
 /**
  * Disabling the module deletes the recomputed seniorities, which an

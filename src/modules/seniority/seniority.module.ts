@@ -4,7 +4,7 @@ import { defineModule } from "#lib/module.js";
 import type { ScheduledTask } from "#lib/task.js";
 import seniorityAdminCommand from "./commands/seniority-admin.command.js";
 import { seniorityConfigSchema } from "./seniority.config.js";
-import { clearGuild, remove } from "./services/overrides.js";
+import { clearGuild, remove } from "./services/overrides.service.js";
 import { uninstallWarning } from "./services/uninstall.js";
 import { seniorityMaintenanceTasks, seniorityTasks } from "./tasks.js";
 
