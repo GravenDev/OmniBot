@@ -49,7 +49,7 @@ const db = vi.hoisted(() => {
 });
 vi.mock("#lib/database.js", () => ({ default: db.prisma }));
 
-const { recordCatch } = await import("./counter.js");
+const { recordCatch } = await import("./counter.service.js");
 
 silenceLogs();
 

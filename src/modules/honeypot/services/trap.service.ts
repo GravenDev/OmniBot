@@ -10,8 +10,8 @@ import {
   trapNameOf,
   type TrapResult,
 } from "#modules/honeypot/trap.js";
-import { recordCatch } from "./counter.js";
-import { logTrap } from "./log.js";
+import { recordCatch } from "./counter.service.js";
+import { logTrap } from "./log.service.js";
 
 type Config = ConfigProvider<HoneypotConfigSchema>;
 
