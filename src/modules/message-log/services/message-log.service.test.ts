@@ -12,6 +12,17 @@ import type { MessageLogConfigSchema } from "#modules/message-log/message-log.co
 import deleterFinder from "./audit.service.js";
 import messageLog from "./message-log.service.js";
 
+const logger = vi.hoisted(() => ({
+  debug: vi.fn(),
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+}));
+vi.mock("#lib/logger.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("#lib/logger.js")>()),
+  loggerMaker: () => logger,
+}));
+
 const t = (key: string) => key;
 
 function fakeSourceChannel(
@@ -340,6 +351,28 @@ describe("logEdit", () => {
     await edited({ channel: fakeSourceChannel("log") });
     expect(send).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["edit logging disabled", { logEdits: false }, {}, {}],
+    ["uncached message", {}, { partial: true }, {}],
+    ["uncached message", {}, {}, { partial: true }],
+    ["not a member text change", {}, { bot: true }, {}],
+    ["not a member text change", {}, { content: "b" }, {}],
+  ])(
+    "says why an edit is not logged: %s",
+    async (reason, options, before, after) => {
+      logger.debug.mockClear();
+      const { config } = fakeConfig(options);
+      await messageLog.logEdit(
+        fakeMessage({ content: "a", ...before }),
+        fakeMessage({ content: "b", ...after }),
+        config
+      );
+      expect(logger.debug).toHaveBeenCalledWith(
+        expect.stringContaining(`Edit not logged | reason = ${reason} |`)
+      );
+    }
+  );
 
   it("ignores edits when disabled", async () => {
     const { config, send } = fakeConfig({ logEdits: false });
