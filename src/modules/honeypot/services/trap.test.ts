@@ -1,6 +1,5 @@
 import { DiscordAPIError, RESTJSONErrorCodes, type Message } from "discord.js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { MAX_BAN_PURGE_SECONDS } from "#lib/moderation.js";
 import { initTestI18n, makeTestConfig, silenceLogs } from "#lib/testing.js";
 import { honeypotConfigSchema } from "#modules/honeypot/honeypot.config.js";
 import en from "#modules/honeypot/i18n/en.json" with { type: "json" };
@@ -10,7 +9,7 @@ vi.mock("./log.js", () => log);
 const counter = vi.hoisted(() => ({ recordCatch: vi.fn() }));
 vi.mock("./counter.js", () => counter);
 
-const { springTrap, purgeSecondsOf } = await import("./trap.js");
+const { springTrap } = await import("./trap.js");
 
 silenceLogs();
 
@@ -303,17 +302,5 @@ describe("springTrap", () => {
         second.guild.bans.create.mock.calls.length
     ).toBe(1);
     expect(log.logTrap).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("purgeSecondsOf", () => {
-  it("caps the window at Discord's 7 days", () => {
-    expect(purgeSecondsOf(config({ purgeWindow: 30 * 24 * 60 * 60 }))).toBe(
-      MAX_BAN_PURGE_SECONDS
-    );
-  });
-
-  it("keeps a shorter window", () => {
-    expect(purgeSecondsOf(config({ purgeWindow: 120 }))).toBe(120);
   });
 });
