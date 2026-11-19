@@ -31,11 +31,7 @@ class RoundSyncService implements Service {
       const channel = config.get("channel");
       const delaySeconds = config.get("delay");
       // Without a delay, the game is off: live messages are ignored too.
-      if (
-        !channel?.isTextBased() ||
-        channel.isDMBased() ||
-        !(delaySeconds > 0)
-      ) {
+      if (!channel?.isTextBased() || channel.isDMBased() || delaySeconds <= 0) {
         return null;
       }
       return {
