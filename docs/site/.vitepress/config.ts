@@ -11,6 +11,322 @@ const SITE_URL = (
   process.env["DOCS_SITE_URL"] ?? "https://gravendev.github.io"
 ).replace(/\/+$/, "");
 
+// The legal pages keep their address, which the bot's Discord application
+// may link to, and show the user guide's sidebar.
+const frUsageSidebar = [
+  {
+    text: "Tutoriel",
+    items: [
+      {
+        text: "Vos premiers pas",
+        link: "/fr/usage/tutorials/first-module",
+      },
+    ],
+  },
+  {
+    text: "Guides pratiques",
+    items: [
+      {
+        text: "Activer et configurer un module",
+        link: "/fr/usage/how-to/enable-module",
+      },
+      {
+        text: "Désactiver un module",
+        link: "/fr/usage/how-to/disable-module",
+      },
+      {
+        text: "Remettre des réglages par défaut",
+        link: "/fr/usage/how-to/reset-settings",
+      },
+      {
+        text: "Régler un module salon par salon",
+        link: "/fr/usage/how-to/channel-settings",
+      },
+      {
+        text: "Changer la langue du bot",
+        link: "/fr/usage/how-to/change-language",
+      },
+      {
+        text: "Ne plus être mentionné",
+        link: "/fr/usage/how-to/stop-pings",
+      },
+      {
+        text: "Supprimer ses données",
+        link: "/fr/usage/how-to/delete-data",
+      },
+      {
+        text: "Enregistrer son anniversaire",
+        link: "/fr/usage/how-to/set-birthday",
+      },
+      {
+        text: "Signaler un message",
+        link: "/fr/usage/how-to/report-message",
+      },
+      {
+        text: "Lier son compte RNGdle",
+        link: "/fr/usage/how-to/link-rngdle",
+      },
+      {
+        text: "Lier son compte Clash of Code",
+        link: "/fr/usage/how-to/link-clash-of-code",
+      },
+      {
+        text: "Créer et gérer son salon vocal temporaire",
+        link: "/fr/usage/how-to/temp-voice",
+      },
+    ],
+  },
+  {
+    text: "Référence",
+    items: [
+      { text: "Commandes du bot", link: "/fr/usage/reference/core" },
+      {
+        text: "Liste des modules",
+        link: "/fr/usage/reference/modules/",
+      },
+      {
+        text: "Ancienneté",
+        link: "/fr/usage/reference/modules/seniority",
+      },
+      {
+        text: "Anniversaires",
+        link: "/fr/usage/reference/modules/birthday",
+      },
+      {
+        text: "Citation de messages",
+        link: "/fr/usage/reference/modules/message-quote",
+      },
+      {
+        text: "Clash of Code",
+        link: "/fr/usage/reference/modules/clash-of-code",
+      },
+      {
+        text: "Création de fils",
+        link: "/fr/usage/reference/modules/thread-creator",
+      },
+      {
+        text: "Honeypot",
+        link: "/fr/usage/reference/modules/honeypot",
+      },
+      {
+        text: "Jeu des 4h",
+        link: "/fr/usage/reference/modules/four-hour-game",
+      },
+      {
+        text: "Journal des messages",
+        link: "/fr/usage/reference/modules/message-log",
+      },
+      { text: "LaTeX", link: "/fr/usage/reference/modules/latex" },
+      {
+        text: "Messages collants",
+        link: "/fr/usage/reference/modules/sticky",
+      },
+      {
+        text: "Réactions automatiques",
+        link: "/fr/usage/reference/modules/autoreact",
+      },
+      { text: "RNGdle", link: "/fr/usage/reference/modules/rngdle" },
+      {
+        text: "Salons vocaux temporaires",
+        link: "/fr/usage/reference/modules/temp-voice",
+      },
+      {
+        text: "Signalements",
+        link: "/fr/usage/reference/modules/reports",
+      },
+      {
+        text: "Starboard",
+        link: "/fr/usage/reference/modules/starboard",
+      },
+      {
+        text: "Statistiques du serveur",
+        link: "/fr/usage/reference/modules/server-stats",
+      },
+    ],
+  },
+  {
+    text: "Explications",
+    items: [
+      {
+        text: "Les modules, serveur par serveur",
+        link: "/fr/usage/explanation/modules",
+      },
+      {
+        text: "Les données gardées par le bot",
+        link: "/fr/usage/explanation/data",
+      },
+      {
+        text: "Les annonces et les mentions",
+        link: "/fr/usage/explanation/mentions",
+      },
+    ],
+  },
+  {
+    text: "Juridique",
+    items: [
+      { text: "Confidentialité", link: "/fr/legal/privacy" },
+      { text: "CGU", link: "/fr/legal/terms" },
+    ],
+  },
+];
+
+const enUsageSidebar = [
+  {
+    text: "Tutorial",
+    items: [
+      {
+        text: "Your first steps",
+        link: "/en/usage/tutorials/first-module",
+      },
+    ],
+  },
+  {
+    text: "How-to guides",
+    items: [
+      {
+        text: "Enable and configure a module",
+        link: "/en/usage/how-to/enable-module",
+      },
+      {
+        text: "Disable a module",
+        link: "/en/usage/how-to/disable-module",
+      },
+      {
+        text: "Reset settings to their default",
+        link: "/en/usage/how-to/reset-settings",
+      },
+      {
+        text: "Configure a module channel by channel",
+        link: "/en/usage/how-to/channel-settings",
+      },
+      {
+        text: "Change the bot's language",
+        link: "/en/usage/how-to/change-language",
+      },
+      {
+        text: "Stop being pinged",
+        link: "/en/usage/how-to/stop-pings",
+      },
+      {
+        text: "Delete your data",
+        link: "/en/usage/how-to/delete-data",
+      },
+      {
+        text: "Save your birthday",
+        link: "/en/usage/how-to/set-birthday",
+      },
+      {
+        text: "Report a message",
+        link: "/en/usage/how-to/report-message",
+      },
+      {
+        text: "Link your RNGdle account",
+        link: "/en/usage/how-to/link-rngdle",
+      },
+      {
+        text: "Link your Clash of Code account",
+        link: "/en/usage/how-to/link-clash-of-code",
+      },
+      {
+        text: "Create and manage your temporary voice channel",
+        link: "/en/usage/how-to/temp-voice",
+      },
+    ],
+  },
+  {
+    text: "Reference",
+    items: [
+      { text: "Bot commands", link: "/en/usage/reference/core" },
+      {
+        text: "List of modules",
+        link: "/en/usage/reference/modules/",
+      },
+      {
+        text: "4h Game",
+        link: "/en/usage/reference/modules/four-hour-game",
+      },
+      {
+        text: "Auto React",
+        link: "/en/usage/reference/modules/autoreact",
+      },
+      {
+        text: "Birthdays",
+        link: "/en/usage/reference/modules/birthday",
+      },
+      {
+        text: "Clash of Code",
+        link: "/en/usage/reference/modules/clash-of-code",
+      },
+      {
+        text: "Honeypot",
+        link: "/en/usage/reference/modules/honeypot",
+      },
+      { text: "LaTeX", link: "/en/usage/reference/modules/latex" },
+      {
+        text: "Member anniversaries",
+        link: "/en/usage/reference/modules/seniority",
+      },
+      {
+        text: "Message Log",
+        link: "/en/usage/reference/modules/message-log",
+      },
+      {
+        text: "Message Quote",
+        link: "/en/usage/reference/modules/message-quote",
+      },
+      {
+        text: "Reports",
+        link: "/en/usage/reference/modules/reports",
+      },
+      { text: "RNGdle", link: "/en/usage/reference/modules/rngdle" },
+      {
+        text: "Server Stats",
+        link: "/en/usage/reference/modules/server-stats",
+      },
+      {
+        text: "Starboard",
+        link: "/en/usage/reference/modules/starboard",
+      },
+      {
+        text: "Sticky Messages",
+        link: "/en/usage/reference/modules/sticky",
+      },
+      {
+        text: "Temporary Voice Channels",
+        link: "/en/usage/reference/modules/temp-voice",
+      },
+      {
+        text: "Thread Creator",
+        link: "/en/usage/reference/modules/thread-creator",
+      },
+    ],
+  },
+  {
+    text: "Explanation",
+    items: [
+      {
+        text: "Modules, server by server",
+        link: "/en/usage/explanation/modules",
+      },
+      {
+        text: "The data the bot keeps",
+        link: "/en/usage/explanation/data",
+      },
+      {
+        text: "Announcements and pings",
+        link: "/en/usage/explanation/mentions",
+      },
+    ],
+  },
+  {
+    text: "Legal",
+    items: [
+      { text: "Privacy", link: "/en/legal/privacy" },
+      { text: "Terms", link: "/en/legal/terms" },
+    ],
+  },
+];
+
 export default defineConfig({
   base,
 
@@ -60,9 +376,12 @@ export default defineConfig({
       themeConfig: {
         nav: [
           { text: "Accueil", link: "/fr/" },
-          { text: "Guide", link: "/fr/guide/getting-started" },
+          { text: "Utiliser le bot", link: "/fr/usage/" },
+          { text: "Développer", link: "/fr/guide/getting-started" },
         ],
         sidebar: {
+          "/fr/usage/": frUsageSidebar,
+          "/fr/legal/": frUsageSidebar,
           "/fr/guide/": [
             {
               text: "Guide",
@@ -83,13 +402,6 @@ export default defineConfig({
                 { text: "Images", link: "/fr/guide/images" },
                 { text: "Base de données", link: "/fr/guide/database" },
                 { text: "Contribuer", link: "/fr/guide/contributing" },
-              ],
-            },
-            {
-              text: "Juridique",
-              items: [
-                { text: "Confidentialité", link: "/fr/legal/privacy" },
-                { text: "CGU", link: "/fr/legal/terms" },
               ],
             },
           ],
@@ -116,10 +428,13 @@ export default defineConfig({
       description: "OmniBot modular Discord bot documentation",
       themeConfig: {
         nav: [
-          { text: "Guide", link: "/en/guide/getting-started" },
           { text: "Home", link: "/en/" },
+          { text: "Using the bot", link: "/en/usage/" },
+          { text: "Developers", link: "/en/guide/getting-started" },
         ],
         sidebar: {
+          "/en/usage/": enUsageSidebar,
+          "/en/legal/": enUsageSidebar,
           "/en/guide/": [
             {
               text: "Guide",
@@ -140,13 +455,6 @@ export default defineConfig({
                 { text: "Images", link: "/en/guide/images" },
                 { text: "Database", link: "/en/guide/database" },
                 { text: "Contributing", link: "/en/guide/contributing" },
-              ],
-            },
-            {
-              text: "Legal",
-              items: [
-                { text: "Privacy", link: "/en/legal/privacy" },
-                { text: "Terms", link: "/en/legal/terms" },
               ],
             },
           ],
