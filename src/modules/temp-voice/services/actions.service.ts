@@ -1,0 +1,524 @@
+import type { Guild, GuildMember, VoiceBasedChannel } from "discord.js";
+import { loggerMaker } from "#lib/logger.js";
+import { NO_MENTIONS } from "#lib/mentions.js";
+import { declareService, type Service } from "#lib/service.js";
+import {
+  accessMode,
+  modeFlags,
+  type AccessMode,
+} from "#modules/temp-voice/access-mode.js";
+import { cleanName } from "#modules/temp-voice/naming.js";
+import { accessState } from "#modules/temp-voice/overwrites.js";
+import { isModerator, isProtected } from "#modules/temp-voice/permissions.js";
+import type { TempVoiceConfig } from "#modules/temp-voice/temp-voice.config.js";
+import lifecycle from "./lifecycle.service.js";
+import panelService from "./panel.service.js";
+import renames from "./renames.service.js";
+import store, {
+  type ChannelState,
+  type PreferenceChange,
+  type TempChannel,
+} from "./store.service.js";
+
+const logger = loggerMaker("temp-voice");
+
+export const MAX_ACCESS_ENTRIES = 25;
+
+const RENAME_WAIT_MS = 5_000;
+const INVITE_COOLDOWN_MS = 10 * 60_000;
+const NOTICE_LIFETIME_MS = 15 * 60_000;
+
+export interface Outcome {
+  ok: boolean;
+  key: string;
+  params?: Record<string, string>;
+}
+
+export interface ActionContext {
+  guild: Guild;
+  channel: VoiceBasedChannel;
+  row: TempChannel;
+  actor: GuildMember;
+  config: TempVoiceConfig;
+}
+
+function done(key: string, params?: Record<string, string>): Outcome {
+  return params ? { ok: true, key, params } : { ok: true, key };
+}
+
+function fail(key: string, params?: Record<string, string>): Outcome {
+  return params ? { ok: false, key, params } : { ok: false, key };
+}
+
+function mentions(ids: string[]): string {
+  return ids.map((id) => `<@${id}>`).join(", ");
+}
+
+function isOwner(ctx: ActionContext): boolean {
+  return ctx.actor.id === ctx.row.ownerId;
+}
+
+function canManage(ctx: ActionContext): boolean {
+  return isOwner(ctx) || isModerator(ctx.actor, ctx.channel);
+}
+
+export interface Authorized {
+  channel: VoiceBasedChannel;
+  row: TempChannel;
+}
+
+function eligibleTargets(
+  ctx: ActionContext,
+  members: GuildMember[]
+): GuildMember[] {
+  return members.filter(
+    (member) => member.id !== ctx.row.ownerId && !member.user.bot
+  );
+}
+
+function inChannel(ctx: ActionContext, member: GuildMember): boolean {
+  return member.voice.channelId === ctx.channel.id;
+}
+
+async function disconnect(member: GuildMember): Promise<boolean> {
+  try {
+    await member.voice.disconnect();
+    return true;
+  } catch (err) {
+    logger.debug({ err }, `Member not disconnected | userId = ${member.id}`);
+    return false;
+  }
+}
+
+/** What the panel of a temporary channel does, checked against who asks. */
+class ActionsService implements Service {
+  /** The trusted members invited lately, per channel, so a DM is not sent twice. */
+  private readonly invited = new Set<string>();
+  /** The members a trust can still notify, by the interaction that offered it. */
+  private readonly notices = new Map<string, string[]>();
+
+  tempChannelOf(guild: Guild, channelId: string): VoiceBasedChannel | null {
+    const channel = guild.channels.cache.get(channelId);
+    return channel?.isVoiceBased() ? channel : null;
+  }
+
+  async authorize(
+    guild: Guild,
+    channelId: string,
+    actor: GuildMember
+  ): Promise<Authorized | Outcome> {
+    const channel = this.tempChannelOf(guild, channelId);
+    if (!channel) {
+      return fail("action.gone");
+    }
+    const row = await store.channel(channelId);
+    if (!row) {
+      return fail("action.notTemporary");
+    }
+    return actor.id === row.ownerId || isModerator(actor, channel)
+      ? { channel, row }
+      : fail("action.notOwner");
+  }
+
+  async redrawPanel(
+    guild: Guild,
+    channelId: string,
+    config: TempVoiceConfig
+  ): Promise<void> {
+    const channel = this.tempChannelOf(guild, channelId);
+    const row = channel ? await store.channel(channelId) : null;
+    if (channel && row) {
+      await panelService.refresh(channel, row, config.t);
+    }
+  }
+
+  withChannel(
+    guild: Guild,
+    channelId: string,
+    actor: GuildMember,
+    config: TempVoiceConfig,
+    action: (ctx: ActionContext) => Promise<Outcome>,
+    { ownerOnly = true } = {}
+  ): Promise<Outcome> {
+    return lifecycle.queue.run(channelId, async () => {
+      const channel = this.tempChannelOf(guild, channelId);
+      if (!channel) {
+        return fail("action.gone");
+      }
+      const row = await store.channel(channelId);
+      if (!row) {
+        return fail("action.notTemporary");
+      }
+      const ctx = { guild, channel, row, actor, config };
+      if (ownerOnly && !canManage(ctx)) {
+        return fail("action.notOwner");
+      }
+      return action(ctx);
+    });
+  }
+
+  private async commit(
+    ctx: ActionContext,
+    change: Partial<ChannelState>,
+    preference?: PreferenceChange
+  ): Promise<TempChannel | null> {
+    const next = { ...ctx.row, ...change };
+    await lifecycle.applyAccess(
+      ctx.channel,
+      ctx.row.hubId,
+      accessState(next),
+      accessState(ctx.row)
+    );
+    let updated: TempChannel | null;
+    try {
+      updated = await store.updateChannel(ctx.row.channelId, change);
+    } catch (err) {
+      await lifecycle
+        .applyAccess(
+          ctx.channel,
+          ctx.row.hubId,
+          accessState(ctx.row),
+          accessState(next)
+        )
+        .catch((rollbackErr: unknown) =>
+          logger.error(
+            { err: rollbackErr },
+            `Rollback failed | channelId = ${ctx.channel.id}`
+          )
+        );
+      throw err;
+    }
+    if (!updated) {
+      return null;
+    }
+    await panelService.refresh(ctx.channel, updated, ctx.config.t);
+    if (preference && isOwner(ctx)) {
+      await store.savePreference(ctx.guild.id, ctx.actor.id, preference);
+    }
+    ctx.row = updated;
+    return updated;
+  }
+
+  async rename(ctx: ActionContext, value: string): Promise<Outcome> {
+    const name = cleanName(value);
+    if (!name) {
+      return fail("rename.invalid");
+    }
+    const retryAt = renames.retryAt(ctx.channel.id);
+    if (retryAt !== null) {
+      return fail("rename.rateLimited", {
+        time: `<t:${Math.ceil(retryAt / 1000)}:R>`,
+      });
+    }
+    const channelId = ctx.channel.id;
+    const at = Date.now();
+    renames.record(channelId, at);
+    const renamed = ctx.channel.setName(name).then(
+      async () => {
+        if (isOwner(ctx)) {
+          await store.savePreference(ctx.guild.id, ctx.actor.id, { name });
+        }
+        lifecycle.queue
+          .run(channelId, async () => {
+            const row = await store.channel(channelId);
+            if (row) {
+              await panelService.refresh(ctx.channel, row, ctx.config.t);
+            }
+          })
+          .catch((err: unknown) =>
+            logger.debug(
+              { err },
+              `Panel not refreshed | channelId = ${channelId}`
+            )
+          );
+      },
+      (err: unknown) => {
+        renames.release(channelId, at);
+        throw err;
+      }
+    );
+    const settled = await Promise.race([
+      renamed.then(() => true),
+      new Promise<false>((resolve) =>
+        setTimeout(() => resolve(false), RENAME_WAIT_MS).unref()
+      ),
+    ]);
+    if (!settled) {
+      renamed.catch((err: unknown) =>
+        logger.warn({ err }, `Rename failed | channelId = ${channelId}`)
+      );
+      return done("rename.pending", { name });
+    }
+    return done("rename.done", { name });
+  }
+
+  async setLimit(ctx: ActionContext, userLimit: number): Promise<Outcome> {
+    await ctx.channel.setUserLimit(userLimit);
+    if (isOwner(ctx)) {
+      await store.savePreference(ctx.guild.id, ctx.actor.id, { userLimit });
+    }
+    await panelService.refresh(ctx.channel, ctx.row, ctx.config.t);
+    return done(userLimit > 0 ? "limit.done" : "limit.removed", {
+      limit: String(userLimit),
+    });
+  }
+
+  async setAccess(ctx: ActionContext, mode: AccessMode): Promise<Outcome> {
+    if (accessMode(ctx.row) === mode) {
+      return done(`mode.${mode}.done`);
+    }
+    const flags = modeFlags(mode);
+    await this.commit(ctx, flags, flags);
+    return done(`mode.${mode}.done`);
+  }
+
+  async edit(
+    ctx: ActionContext,
+    name: string,
+    userLimit: number
+  ): Promise<Outcome> {
+    const outcomes: Outcome[] = [];
+    if (cleanName(name) !== cleanName(ctx.channel.name)) {
+      outcomes.push(await this.rename(ctx, name));
+    }
+    if (userLimit !== ctx.channel.userLimit) {
+      outcomes.push(await this.setLimit(ctx, userLimit));
+    }
+    if (outcomes.length === 0) {
+      return done("edit.unchanged");
+    }
+    return {
+      ok: outcomes.every((outcome) => outcome.ok),
+      key: "edit.done",
+      params: {
+        details: outcomes
+          .map((outcome) => ctx.config.t(outcome.key, outcome.params))
+          .join("\n"),
+      },
+    };
+  }
+
+  private async rememberAccess(
+    ctx: ActionContext,
+    {
+      trust = [],
+      block = [],
+      clear = [],
+    }: { trust?: string[]; block?: string[]; clear?: string[] }
+  ): Promise<void> {
+    if (!isOwner(ctx)) {
+      return;
+    }
+    const preference = await store.preference(ctx.guild.id, ctx.actor.id);
+    const untrusted = new Set([...block, ...clear]);
+    const unblocked = new Set([...trust, ...clear]);
+    const trusted = [
+      ...new Set([
+        ...(preference?.trusted ?? []).filter((id) => !untrusted.has(id)),
+        ...trust,
+      ]),
+    ];
+    const blocked = [
+      ...new Set([
+        ...(preference?.blocked ?? []).filter((id) => !unblocked.has(id)),
+        ...block,
+      ]),
+    ];
+    const overflow = Math.max(
+      0,
+      trusted.length + blocked.length - MAX_ACCESS_ENTRIES
+    );
+    await store.savePreference(ctx.guild.id, ctx.actor.id, {
+      trusted: trusted.slice(Math.min(overflow, trusted.length)),
+      blocked: blocked.slice(Math.max(0, overflow - trusted.length)),
+    });
+  }
+
+  async trust(ctx: ActionContext, members: GuildMember[]): Promise<Outcome> {
+    const ids = eligibleTargets(ctx, members).map((member) => member.id);
+    if (ids.length === 0) {
+      return fail("trust.none");
+    }
+    const trusted = [...new Set([...ctx.row.trusted, ...ids])];
+    if (trusted.length + ctx.row.blocked.length > MAX_ACCESS_ENTRIES) {
+      return fail("access.full", { max: String(MAX_ACCESS_ENTRIES) });
+    }
+    const blocked = ctx.row.blocked.filter((id) => !ids.includes(id));
+    await this.commit(ctx, { trusted, blocked });
+    await this.rememberAccess(ctx, { trust: ids });
+    return done("trust.done", { users: mentions(ids) });
+  }
+
+  rememberNotice(token: string, ids: string[]): void {
+    this.notices.set(token, ids);
+    setTimeout(() => this.notices.delete(token), NOTICE_LIFETIME_MS).unref();
+  }
+
+  noticeMembers(guild: Guild, token: string): GuildMember[] {
+    return (this.notices.get(token) ?? [])
+      .map((id) => guild.members.cache.get(id))
+      .filter((member) => member !== undefined);
+  }
+
+  async notify(ctx: ActionContext, members: GuildMember[]): Promise<Outcome> {
+    const targets = members.filter((member) =>
+      ctx.row.trusted.includes(member.id)
+    );
+    if (targets.length === 0) {
+      return fail("notify.none");
+    }
+    const sent: string[] = [];
+    const failed: string[] = [];
+    for (const member of targets) {
+      const key = `${ctx.channel.id}:${member.id}`;
+      if (this.invited.has(key)) {
+        continue;
+      }
+      this.invited.add(key);
+      try {
+        await member.send({
+          content: ctx.config.t("notify.dm", {
+            user: ctx.actor.displayName,
+            guild: ctx.guild.name,
+            channel: ctx.channel.url,
+          }),
+          allowedMentions: NO_MENTIONS,
+        });
+        setTimeout(() => this.invited.delete(key), INVITE_COOLDOWN_MS).unref();
+        sent.push(member.id);
+      } catch {
+        this.invited.delete(key);
+        failed.push(member.id);
+      }
+    }
+    if (sent.length === 0 && failed.length === 0) {
+      return done("notify.already");
+    }
+    if (failed.length === 0) {
+      return done("notify.done", { users: mentions(sent) });
+    }
+    return sent.length === 0
+      ? fail("notify.failed", { failed: mentions(failed) })
+      : done("notify.partial", {
+          users: mentions(sent),
+          failed: mentions(failed),
+        });
+  }
+
+  async revoke(ctx: ActionContext, ids: string[]): Promise<Outcome> {
+    const targets = new Set(ids);
+    const trusted = ctx.row.trusted.filter((id) => !targets.has(id));
+    const blocked = ctx.row.blocked.filter((id) => !targets.has(id));
+    if (
+      trusted.length === ctx.row.trusted.length &&
+      blocked.length === ctx.row.blocked.length
+    ) {
+      return fail("revoke.none");
+    }
+    await this.commit(ctx, { trusted, blocked });
+    await this.rememberAccess(ctx, { clear: ids });
+    return done("revoke.done", { users: mentions(ids) });
+  }
+
+  async block(ctx: ActionContext, members: GuildMember[]): Promise<Outcome> {
+    const targets = eligibleTargets(ctx, members).filter(
+      (member) => member.id !== ctx.actor.id
+    );
+    const protectedOnes = targets.filter((member) =>
+      isProtected(member, ctx.channel)
+    );
+    const blockable = targets.filter(
+      (member) => !protectedOnes.includes(member)
+    );
+    if (blockable.length === 0) {
+      return fail(protectedOnes.length > 0 ? "block.protected" : "block.none");
+    }
+    const ids = blockable.map((member) => member.id);
+    const blocked = [...new Set([...ctx.row.blocked, ...ids])];
+    if (blocked.length + ctx.row.trusted.length > MAX_ACCESS_ENTRIES) {
+      return fail("access.full", { max: String(MAX_ACCESS_ENTRIES) });
+    }
+    const trusted = ctx.row.trusted.filter((id) => !ids.includes(id));
+    await this.commit(ctx, { trusted, blocked });
+    await this.rememberAccess(ctx, { block: ids });
+    for (const member of blockable) {
+      if (inChannel(ctx, member)) {
+        await disconnect(member);
+      }
+    }
+    return done("block.done", { users: mentions(ids) });
+  }
+
+  async kick(ctx: ActionContext, members: GuildMember[]): Promise<Outcome> {
+    const targets = eligibleTargets(ctx, members).filter(
+      (member) => member.id !== ctx.actor.id && inChannel(ctx, member)
+    );
+    const kickable = targets.filter(
+      (member) => !isProtected(member, ctx.channel)
+    );
+    if (kickable.length === 0) {
+      return fail(targets.length > 0 ? "kick.protected" : "kick.none");
+    }
+    const kicked: string[] = [];
+    for (const member of kickable) {
+      if (await disconnect(member)) {
+        kicked.push(member.id);
+      }
+    }
+    return kicked.length > 0
+      ? done("kick.done", { users: mentions(kicked) })
+      : fail("kick.failed");
+  }
+
+  private async changeOwner(
+    ctx: ActionContext,
+    member: GuildMember
+  ): Promise<void> {
+    const previous = ctx.row.ownerId;
+    const trusted = ctx.row.trusted.filter((id) => id !== member.id);
+    const blocked = ctx.row.blocked.filter((id) => id !== member.id);
+    await this.commit(ctx, { ownerId: member.id, trusted, blocked });
+    logger.info(
+      `Owner changed | channelId = ${ctx.channel.id} | from = ${previous} | to = ${member.id}`
+    );
+  }
+
+  async claim(ctx: ActionContext): Promise<Outcome> {
+    if (isOwner(ctx)) {
+      return fail("claim.alreadyOwner");
+    }
+    if (ctx.actor.voice.channelId !== ctx.channel.id) {
+      return fail("claim.notInChannel");
+    }
+    if (ctx.channel.members.has(ctx.row.ownerId)) {
+      return fail("claim.ownerPresent", { owner: `<@${ctx.row.ownerId}>` });
+    }
+    if (await store.ownedBy(ctx.guild.id, ctx.actor.id)) {
+      return fail("claim.ownsAnother");
+    }
+    await this.changeOwner(ctx, ctx.actor);
+    return done("claim.done");
+  }
+
+  async transfer(ctx: ActionContext, member: GuildMember): Promise<Outcome> {
+    if (member.id === ctx.row.ownerId || member.user.bot) {
+      return fail("transfer.invalid");
+    }
+    if (member.voice.channelId !== ctx.channel.id) {
+      return fail("transfer.notInChannel", { user: `<@${member.id}>` });
+    }
+    if (await store.ownedBy(ctx.guild.id, member.id)) {
+      return fail("transfer.ownsAnother", { user: `<@${member.id}>` });
+    }
+    await this.changeOwner(ctx, member);
+    return done("transfer.done", { user: `<@${member.id}>` });
+  }
+
+  async remove(ctx: ActionContext): Promise<Outcome> {
+    return (await lifecycle.removeTempChannel(ctx.channel, ctx.row, "owner"))
+      ? done("delete.done")
+      : fail("delete.failed");
+  }
+}
+
+export default declareService(new ActionsService());

@@ -1,11 +1,11 @@
 import { MessageFlags, type ModalSubmitInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
-import { edit, withChannel } from "#modules/temp-voice/services/actions.js";
-import { parseUserLimit } from "#modules/temp-voice/services/naming.js";
-import { MODAL_ID } from "#modules/temp-voice/services/panel.js";
-import { outcomeText } from "#modules/temp-voice/services/views.js";
+import { parseUserLimit } from "#modules/temp-voice/naming.js";
+import { MODAL_ID } from "#modules/temp-voice/panel.js";
+import actions from "#modules/temp-voice/services/actions.service.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
+import { outcomeText } from "#modules/temp-voice/views.js";
 
 export default declareInteractionHandler<
   ModalSubmitInteraction,
@@ -39,12 +39,12 @@ export default declareInteractionHandler<
     }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const outcome = await withChannel(
+    const outcome = await actions.withChannel(
       interaction.guild,
       channelId,
       interaction.member,
       config,
-      (ctx) => edit(ctx, name, userLimit)
+      (ctx) => actions.edit(ctx, name, userLimit)
     );
     await interaction.editReply({
       content: outcomeText(config.t, outcome),

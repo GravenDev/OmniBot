@@ -1,15 +1,10 @@
 import type { StringSelectMenuInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
-import {
-  kick,
-  revoke,
-  transfer,
-  withChannel,
-} from "#modules/temp-voice/services/actions.js";
-import { PICK_ID } from "#modules/temp-voice/services/panel.js";
-import { outcomeText } from "#modules/temp-voice/services/views.js";
+import { PICK_ID } from "#modules/temp-voice/panel.js";
+import actions from "#modules/temp-voice/services/actions.service.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
+import { outcomeText } from "#modules/temp-voice/views.js";
 
 export default declareInteractionHandler<
   StringSelectMenuInteraction,
@@ -29,24 +24,24 @@ export default declareInteractionHandler<
     }
     await interaction.deferUpdate();
     const { values } = interaction;
-    const outcome = await withChannel(
+    const outcome = await actions.withChannel(
       interaction.guild,
       channelId,
       interaction.member,
       config,
       (ctx) => {
         if (action === "untrust") {
-          return revoke(ctx, values);
+          return actions.revoke(ctx, values);
         }
         const members = values
           .map((id) => ctx.guild.members.cache.get(id))
           .filter((member) => member !== undefined);
         const [first] = members;
         if (action === "kick") {
-          return kick(ctx, members);
+          return actions.kick(ctx, members);
         }
         return first
-          ? transfer(ctx, first)
+          ? actions.transfer(ctx, first)
           : Promise.resolve({ ok: false, key: "select.noMember" });
       }
     );

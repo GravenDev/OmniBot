@@ -1,11 +1,7 @@
 import type { VoiceState } from "discord.js";
 import { declareEventListener } from "#lib/listener.js";
-import {
-  joinHub,
-  memberLeft,
-  ownerMoved,
-} from "#modules/temp-voice/services/lifecycle.js";
-import store from "#modules/temp-voice/services/store.js";
+import lifecycle from "#modules/temp-voice/services/lifecycle.service.js";
+import store from "#modules/temp-voice/services/store.service.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
 
 export default declareEventListener<"voiceStateUpdate", TempVoiceConfigSchema>({
@@ -18,7 +14,7 @@ export default declareEventListener<"voiceStateUpdate", TempVoiceConfigSchema>({
 
     const left = oldState.channel;
     if (left) {
-      await memberLeft(left, newState.id, config.t);
+      await lifecycle.memberLeft(left, newState.id, config.t);
     }
 
     const joined = newState.channel;
@@ -26,10 +22,10 @@ export default declareEventListener<"voiceStateUpdate", TempVoiceConfigSchema>({
     if (!joined || !member) {
       return;
     }
-    await ownerMoved(joined, member.id, config.t);
+    await lifecycle.ownerMoved(joined, member.id, config.t);
     const hub = await store.hub(newState.guild.id, joined.id);
     if (hub) {
-      await joinHub(member, joined, hub, config);
+      await lifecycle.joinHub(member, joined, hub, config);
     }
   },
 });
