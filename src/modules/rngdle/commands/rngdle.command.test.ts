@@ -23,7 +23,7 @@ vi.mock("#lib/logger.js", () => {
   const logger = { info: vi.fn(), warn: vi.fn() };
   return { loggerMaker: () => logger };
 });
-vi.mock("#modules/rngdle/services/store.js", () => ({
+vi.mock("#modules/rngdle/services/store.service.js", () => ({
   default: {
     account: mocks.account,
     accountByUsername: mocks.accountByUsername,
@@ -33,22 +33,27 @@ vi.mock("#modules/rngdle/services/store.js", () => ({
 vi.mock("#core/services/mention.service.js", () => ({
   default: { mentionable: mocks.mentionable },
 }));
-vi.mock("#modules/rngdle/services/sync.js", () => ({
+vi.mock("#modules/rngdle/services/sync.service.js", () => ({
   default: { refreshIfStale: mocks.refreshIfStale },
 }));
-vi.mock("#modules/rngdle/services/linking.js", () => ({
-  linkOwnAccount: mocks.linkOwnAccount,
+vi.mock("#modules/rngdle/services/linking.service.js", () => ({
+  default: { linkOwnAccount: mocks.linkOwnAccount },
 }));
-vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  dailyLeaderboard: mocks.dailyLeaderboard,
-  serverCard: mocks.serverCard,
-  profileCard: mocks.profileCard,
-  historyCard: mocks.historyCard,
-  timelineCard: mocks.timelineCard,
-  trendCard: mocks.trendCard,
-  overallPage: mocks.overallPage,
-}));
+vi.mock(
+  "#modules/rngdle/services/views.service.js",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    default: {
+      dailyLeaderboard: mocks.dailyLeaderboard,
+      serverCard: mocks.serverCard,
+      profileCard: mocks.profileCard,
+      historyCard: mocks.historyCard,
+      timelineCard: mocks.timelineCard,
+      trendCard: mocks.trendCard,
+      overallPage: mocks.overallPage,
+    },
+  })
+);
 
 const { default: command } = await import("./rngdle.command.js");
 

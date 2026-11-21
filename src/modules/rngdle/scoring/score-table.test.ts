@@ -6,7 +6,7 @@ import {
   isPlausibleTable,
   ScoreTable,
   type CompressedTable,
-} from "./scoring.js";
+} from "./score-table.js";
 
 function bigTable(size: number) {
   const entries = Array.from({ length: size }, (_, i) => {

@@ -10,7 +10,7 @@ import {
   renderStatCard,
   type StatBox,
 } from "#lib/stat-card.js";
-import { TIER_COLORS, TIER_ODDS } from "#modules/rngdle/services/scoring.js";
+import { TIER_COLORS, TIER_ODDS } from "#modules/rngdle/scoring/score-table.js";
 import { formatEp } from "./format.js";
 import { ACCENT } from "./theme.js";
 

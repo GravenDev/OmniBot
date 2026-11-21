@@ -5,14 +5,15 @@ import {
 } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { pageRow } from "#lib/pagination.js";
-import { DAY_MS } from "#modules/rngdle/services/days.js";
+import { DAY_MS } from "#modules/rngdle/days.js";
 import {
-  overallPage,
   parsePeriod,
   periodText,
   type Period,
+} from "#modules/rngdle/periods.js";
+import views, {
   type ViewContext,
-} from "#modules/rngdle/services/views.js";
+} from "#modules/rngdle/services/views.service.js";
 
 const CUSTOM_ID = "rngdle-overall";
 
@@ -26,7 +27,7 @@ export async function overallPageMessage(
   period: Period = "all",
   now: Date = new Date()
 ) {
-  const result = await overallPage(context, page, callerId, period, now);
+  const result = await views.overallPage(context, page, callerId, period, now);
   if (!result) {
     return {
       content: context.t(

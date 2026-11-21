@@ -1,12 +1,3 @@
-import { loggerMaker } from "#lib/logger.js";
-
-const logger = loggerMaker("rngdle");
-
-const BADGES_URL = "https://rng.cubityfir.st/api";
-const USER_AGENT = "OmniBot (+https://github.com/GravenDev/OmniBot)";
-const REQUEST_TIMEOUT_MS = 5_000;
-const CACHE_SIZE = 500;
-
 export interface RollBadge {
   id: string;
   label: string;
@@ -21,8 +12,6 @@ export interface RollBadges {
   score: number;
   badges: RollBadge[];
 }
-
-const cache = new Map<number, Promise<RollBadges>>();
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -70,41 +59,4 @@ export function parseRollBadges(
     score: body["totalEP"],
     badges: badges as RollBadge[],
   };
-}
-
-async function requestRollBadges(number: number): Promise<RollBadges> {
-  const response = await fetch(`${BADGES_URL}?n=${number}`, {
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-    headers: { "User-Agent": USER_AGENT },
-  });
-  if (!response.ok) {
-    throw new Error(`HTTP ${response.status}`);
-  }
-  const badges = parseRollBadges(number, await response.json());
-  if (!badges) {
-    throw new Error("Unexpected response");
-  }
-  return badges;
-}
-
-export async function fetchRollBadges(
-  number: number
-): Promise<RollBadges | null> {
-  let badges = cache.get(number);
-  if (!badges) {
-    badges = requestRollBadges(number);
-    cache.set(number, badges);
-    if (cache.size > CACHE_SIZE) {
-      cache.delete(cache.keys().next().value!);
-    }
-  }
-  try {
-    return await badges;
-  } catch (err) {
-    if (cache.get(number) === badges) {
-      cache.delete(number);
-      logger.warn({ err }, `Could not fetch the badges | number = ${number}`);
-    }
-    return null;
-  }
 }

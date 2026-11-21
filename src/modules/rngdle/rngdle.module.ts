@@ -9,7 +9,7 @@ import overallPageButton from "./interactions/overall-page.button.js";
 import unlinkConfirmButton from "./interactions/unlink-confirm.button.js";
 import messageCreateListener from "./listeners/message-create.listener.js";
 import { rngdleConfigSchema } from "./rngdle.config.js";
-import store from "./services/store.js";
+import store from "./services/store.service.js";
 import { rngdleMaintenanceTasks, rngdleTasks } from "./tasks.js";
 
 const logger = loggerMaker("rngdle");

@@ -6,16 +6,16 @@ import { forEachGuild } from "#lib/guild-loop.js";
 import { loggerMaker } from "#lib/logger.js";
 import type { Module } from "#lib/module.js";
 import { declareTask } from "#lib/task.js";
+import { startOfUtcDay } from "./days.js";
 import { navigationRow } from "./interactions/navigation.button.js";
+import { buildDailyMessage } from "./recap.js";
+import { REMINDER_HOUR_UTC, reminderMessages } from "./reminders.js";
 import type { RngdleConfigSchema } from "./rngdle.config.js";
-import { fetchScoreTable } from "./services/api.js";
-import { startOfUtcDay } from "./services/days.js";
-import { buildDailyMessage } from "./services/recap.js";
-import { REMINDER_HOUR_UTC, reminderMessages } from "./services/reminders.js";
-import { pruneCards } from "./services/share-cards.js";
-import store from "./services/store.js";
-import sync from "./services/sync.js";
-import { dailyLeaderboard, dailyRecap } from "./services/views.js";
+import api from "./services/api.service.js";
+import shareCards from "./services/share-cards.service.js";
+import store from "./services/store.service.js";
+import sync from "./services/sync.service.js";
+import views from "./services/views.service.js";
 
 const logger = loggerMaker("rngdle");
 
@@ -33,7 +33,7 @@ async function postDailyLeaderboard(
     return;
   }
 
-  const board = await dailyLeaderboard(
+  const board = await views.dailyLeaderboard(
     { client, guildId, t: config.t, locale: config.locale },
     1
   );
@@ -43,7 +43,7 @@ async function postDailyLeaderboard(
     );
     return;
   }
-  const recap = await dailyRecap(guildId, 1).catch((err: unknown) => {
+  const recap = await views.dailyRecap(guildId, 1).catch((err: unknown) => {
     logger.warn(
       { err },
       `Failed to compute the daily recap | guildId = ${guildId}`
@@ -128,7 +128,7 @@ export function rngdleTasks(module: Module<RngdleConfigSchema>) {
       schedule: "0 3 * * 1",
       runOnStart: true,
       async run(client) {
-        const table = await fetchScoreTable();
+        const table = await api.fetchScoreTable();
         if (!table) {
           logger.warn("No usable score table on rngdle.com, keeping ours");
         } else if (await store.replaceScoreTable(table)) {
@@ -169,7 +169,7 @@ export function rngdleMaintenanceTasks() {
       schedule: "0 2 * * *",
       // A night missed while the bot was down is caught up at start.
       runOnStart: true,
-      run: () => pruneCards(),
+      run: () => shareCards.pruneCards(),
     }),
   ];
 }

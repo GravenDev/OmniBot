@@ -12,20 +12,25 @@ const mocks = vi.hoisted(() => ({
   refreshIfStale: vi.fn(),
 }));
 
-vi.mock("#modules/rngdle/services/store.js", () => ({
+vi.mock("#modules/rngdle/services/store.service.js", () => ({
   default: { account: mocks.account },
 }));
-vi.mock("#modules/rngdle/services/sync.js", () => ({
+vi.mock("#modules/rngdle/services/sync.service.js", () => ({
   default: { refreshIfStale: mocks.refreshIfStale },
 }));
-vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  profileCard: mocks.profileCard,
-  historyCard: mocks.historyCard,
-  timelineCard: mocks.timelineCard,
-  trendCard: mocks.trendCard,
-  overallPage: mocks.overallPage,
-}));
+vi.mock(
+  "#modules/rngdle/services/views.service.js",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    default: {
+      profileCard: mocks.profileCard,
+      historyCard: mocks.historyCard,
+      timelineCard: mocks.timelineCard,
+      trendCard: mocks.trendCard,
+      overallPage: mocks.overallPage,
+    },
+  })
+);
 
 const { default: handler, navigationRow } =
   await import("./navigation.button.js");

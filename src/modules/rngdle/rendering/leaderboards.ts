@@ -19,7 +19,7 @@ import {
 import {
   TIER_COLORS,
   type TierOrError,
-} from "#modules/rngdle/services/scoring.js";
+} from "#modules/rngdle/scoring/score-table.js";
 import { formatCompact, formatEp, formatIndex } from "./format.js";
 import {
   drawDelta,

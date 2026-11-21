@@ -23,17 +23,22 @@ src/modules/rngdle/
 │   └── rngdle-admin.command.ts # register, delete, show, refresh, clear
 ├── interactions/
 │   └── overall-page.button.ts  # pagination de leaderboard-all
+├── days.ts                     # jours UTC
+├── periods.ts                  # périodes du classement, mois des frises
+├── recap.ts                    # récap du jour
+├── reminders.ts                # rappels
+├── share-cards.ts              # contenu de la carte d'un résultat collé
+├── parsing/                    # lecture des réponses de rngdle.com, du calculateur et des résultats collés
+├── scoring/                    # table des percentiles, paliers, statistiques, duels
 ├── services/
-│   ├── api.ts                  # client rngdle.com (validation, nouvelles tentatives)
-│   ├── scoring.ts              # table des percentiles, paliers (pur)
-│   ├── stats.ts                # agrégats profil / serveur (pur)
-│   ├── store.ts                # persistance : comptes, tirages, table
-│   ├── sync.ts                 # synchronisation, file par serveur
-│   └── views.ts                # données des images, résolution Discord, cache
-└── rendering/
-    ├── format.ts               # formatage des nombres
-    ├── leaderboards.ts         # classements du jour et général
-    └── cards.ts                # profil et statistiques du serveur
+│   ├── api.service.ts          # client rngdle.com (nouvelles tentatives)
+│   ├── badges.service.ts       # badges d'un tirage auprès du calculateur, en cache
+│   ├── linking.service.ts      # liaison d'un compte
+│   ├── share-cards.service.ts  # vérification et réponse à un résultat collé
+│   ├── store.service.ts        # persistance : comptes, tirages, table
+│   ├── sync.service.ts         # synchronisation, file par serveur
+│   └── views.service.ts        # lectures, résolution Discord, cache, assemblage des images
+└── rendering/                  # images, et leurs textes (labels.ts)
 ```
 
 Briques partagées avec les autres modules : `#lib/task.ts` (tâches planifiées), `#lib/keyed-queue.ts` (file par clé), `#lib/revision-cache.ts` (cache invalidé par révision), `#lib/imaging.ts`, `#lib/table.ts` et `#lib/stat-card.ts` (rendu, décrit dans le guide « Générer des images » ; le tableau est aussi utilisé par le jeu des 4h).

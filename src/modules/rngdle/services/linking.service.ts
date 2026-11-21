@@ -1,7 +1,8 @@
 import { loggerMaker } from "#lib/logger.js";
-import { fetchUserRolls, RngdleUserNotFoundError } from "./api.js";
-import store, { type RegisterResult } from "./store.js";
-import sync from "./sync.js";
+import { declareService, type Service } from "#lib/service.js";
+import api, { RngdleUserNotFoundError } from "./api.service.js";
+import store, { type RegisterResult } from "./store.service.js";
+import sync from "./sync.service.js";
 
 const logger = loggerMaker("rngdle");
 
@@ -29,22 +30,6 @@ async function ownUsername(
     : { kind: "alreadyLinked", username: current.username };
 }
 
-export function linkAccount(
-  guildId: string,
-  userId: string,
-  username: string
-): Promise<LinkOutcome> {
-  return link(guildId, userId, username, false) as Promise<LinkOutcome>;
-}
-
-export function linkOwnAccount(
-  guildId: string,
-  userId: string,
-  username: string
-): Promise<SelfLinkOutcome> {
-  return link(guildId, userId, username, true);
-}
-
 async function link(
   guildId: string,
   userId: string,
@@ -68,7 +53,7 @@ async function link(
 
   let rolls;
   try {
-    rolls = await fetchUserRolls(username, since);
+    rolls = await api.fetchUserRolls(username, since);
   } catch (err) {
     if (err instanceof RngdleUserNotFoundError) {
       return { kind: "notFound" };
@@ -101,3 +86,23 @@ async function link(
     return { kind, count: inserted };
   });
 }
+
+class RngdleLinking implements Service {
+  linkAccount(
+    guildId: string,
+    userId: string,
+    username: string
+  ): Promise<LinkOutcome> {
+    return link(guildId, userId, username, false) as Promise<LinkOutcome>;
+  }
+
+  linkOwnAccount(
+    guildId: string,
+    userId: string,
+    username: string
+  ): Promise<SelfLinkOutcome> {
+    return link(guildId, userId, username, true);
+  }
+}
+
+export default declareService(new RngdleLinking());

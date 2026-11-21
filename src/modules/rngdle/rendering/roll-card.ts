@@ -17,7 +17,7 @@ import {
   TIER_COLORS,
   type Tier,
   type TierOrError,
-} from "#modules/rngdle/services/scoring.js";
+} from "#modules/rngdle/scoring/score-table.js";
 import {} from "./format.js";
 import { ACCENT } from "./theme.js";
 

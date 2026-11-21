@@ -14,7 +14,7 @@ import {
   formatPercent,
   TIER_COLORS,
   type TierOrError,
-} from "#modules/rngdle/services/scoring.js";
+} from "#modules/rngdle/scoring/score-table.js";
 import { formatCompact } from "./format.js";
 
 const ASSETS = new URL("../assets/", import.meta.url);

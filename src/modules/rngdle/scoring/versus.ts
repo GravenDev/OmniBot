@@ -1,5 +1,5 @@
-import { utcDayNumber } from "./days.js";
-import type { StoredRoll } from "./store.js";
+import { utcDayNumber } from "#modules/rngdle/days.js";
+import type { StoredRoll } from "#modules/rngdle/services/store.service.js";
 
 export type Side = "left" | "right";
 export type Winner = Side | "tie";

@@ -1,20 +1,25 @@
 import type { ButtonInteraction } from "discord.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConfigProvider } from "#lib/config.js";
-import type { ViewContext } from "#modules/rngdle/services/views.js";
+import type { ViewContext } from "#modules/rngdle/services/views.service.js";
 
 const mocks = vi.hoisted(() => ({
   overallPage: vi.fn(),
 }));
 
-vi.mock("#modules/rngdle/services/views.js", async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  overallPage: mocks.overallPage,
-}));
+vi.mock(
+  "#modules/rngdle/services/views.service.js",
+  async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    default: {
+      overallPage: mocks.overallPage,
+    },
+  })
+);
 
 const { default: handler, overallPageMessage } =
   await import("./overall-page.button.js");
-const { periodText } = await import("#modules/rngdle/services/views.js");
+const { periodText } = await import("#modules/rngdle/periods.js");
 
 const t = ((key: string, options?: Record<string, unknown>) =>
   options ? `${key} ${JSON.stringify(options)}` : key) as ViewContext["t"];

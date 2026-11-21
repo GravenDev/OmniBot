@@ -9,17 +9,13 @@ import {
 import type { TFunction } from "#lib/i18n.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { pageRow } from "#lib/pagination.js";
-import { DAY_MS } from "#modules/rngdle/services/days.js";
-import store, { type Account } from "#modules/rngdle/services/store.js";
-import sync from "#modules/rngdle/services/sync.js";
-import {
-  historyCard,
-  profileCard,
-  timelineCard,
+import { DAY_MS } from "#modules/rngdle/days.js";
+import store, { type Account } from "#modules/rngdle/services/store.service.js";
+import sync from "#modules/rngdle/services/sync.service.js";
+import views, {
   TREND_DEFAULT_DAYS,
-  trendCard,
   type ViewContext,
-} from "#modules/rngdle/services/views.js";
+} from "#modules/rngdle/services/views.service.js";
 import { overallPageMessage, type Visibility } from "./overall-page.button.js";
 
 const CUSTOM_ID = "rngdle-nav";
@@ -62,7 +58,7 @@ export async function profileMessage(
   if (!account) {
     return notRegistered(context, self);
   }
-  const image = await profileCard(context, account);
+  const image = await views.profileCard(context, account);
   return image
     ? {
         files: [
@@ -91,7 +87,7 @@ export async function historyMessage(
   if (!account) {
     return notRegistered(context, self);
   }
-  const result = await historyCard(context, account, count, now, page);
+  const result = await views.historyCard(context, account, count, now, page);
   if (!result) {
     return {
       content: context.t("profile.noRolls", { username: account.username }),
@@ -131,7 +127,7 @@ export async function timelineMessage(
   if (!account) {
     return notRegistered(context, self);
   }
-  const image = await timelineCard(context, account);
+  const image = await views.timelineCard(context, account);
   return image
     ? {
         files: [
@@ -155,7 +151,7 @@ export async function trendMessage(
   if (!account) {
     return notRegistered(context, self);
   }
-  const image = await trendCard(context, account, days);
+  const image = await views.trendCard(context, account, days);
   return image
     ? {
         files: [

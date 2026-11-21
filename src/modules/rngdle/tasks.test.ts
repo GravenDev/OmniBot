@@ -26,9 +26,13 @@ vi.mock("#core/services/mention.service.js", () => ({
 vi.mock("#core/services/module.service.js", () => ({
   default: { getActivatedGuildIds: async () => ["guild"] },
 }));
-vi.mock("./services/sync.js", () => ({ default: { syncAll } }));
-vi.mock("./services/share-cards.js", () => ({ pruneCards }));
-vi.mock("./services/store.js", () => ({ default: { pendingReminders } }));
+vi.mock("./services/sync.service.js", () => ({ default: { syncAll } }));
+vi.mock("./services/share-cards.service.js", () => ({
+  default: { pruneCards },
+}));
+vi.mock("./services/store.service.js", () => ({
+  default: { pendingReminders },
+}));
 vi.mock("#lib/logger.js", () => {
   const logger = {
     info: vi.fn(),
@@ -38,17 +42,19 @@ vi.mock("#lib/logger.js", () => {
   };
   return { loggerMaker: () => logger };
 });
-vi.mock("./services/views.js", () => ({
-  dailyLeaderboard: async () => ({
-    image: Buffer.from("png"),
-    winnerIds: ["winner"],
-  }),
-  dailyRecap: async () => ({
-    participants: 4,
-    rarest: null,
-    worst: null,
-    streaks: [],
-  }),
+vi.mock("./services/views.service.js", () => ({
+  default: {
+    dailyLeaderboard: async () => ({
+      image: Buffer.from("png"),
+      winnerIds: ["winner"],
+    }),
+    dailyRecap: async () => ({
+      participants: 4,
+      rarest: null,
+      worst: null,
+      streaks: [],
+    }),
+  },
 }));
 
 const { rngdleMaintenanceTasks, rngdleTasks } = await import("./tasks.js");

@@ -5,7 +5,7 @@ import { drawCellText, drawTable, tableHeight } from "#lib/table.js";
 import {
   TIER_COLORS,
   type TierOrError,
-} from "#modules/rngdle/services/scoring.js";
+} from "#modules/rngdle/scoring/score-table.js";
 import { formatCompact, formatEp } from "./format.js";
 import { drawPlacement, drawRollNumber, loadPlacementIcons } from "./table.js";
 import { ACCENT } from "./theme.js";

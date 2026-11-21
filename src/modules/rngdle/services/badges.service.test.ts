@@ -5,7 +5,7 @@ vi.mock("#lib/logger.js", () => {
   return { loggerMaker: () => logger };
 });
 
-import { fetchRollBadges, parseRollBadges } from "./badges.js";
+import rollBadges from "./badges.service.js";
 
 const BADGE = {
   id: "CONTIGUOUS_BOAT",
@@ -20,35 +20,6 @@ function body(number: number) {
   return { number, totalEP: 41731, count: 1, badges: [BADGE] };
 }
 
-describe("parseRollBadges", () => {
-  it("reads the badges of a number", () => {
-    expect(parseRollBadges(111883, body(111883))).toEqual({
-      number: 111883,
-      score: 41731,
-      badges: [
-        {
-          id: "CONTIGUOUS_BOAT",
-          label: "Contiguous Full House",
-          emoji: "🏰",
-          ep: 30111,
-          rarity: "Rare",
-          probability: 0.3321,
-        },
-      ],
-    });
-  });
-
-  it("refuses the answer for another number", () => {
-    expect(parseRollBadges(111884, body(111883))).toBeNull();
-  });
-
-  it("refuses a malformed badge", () => {
-    expect(
-      parseRollBadges(111883, { ...body(111883), badges: [{ id: "X" }] })
-    ).toBeNull();
-  });
-});
-
 describe("fetchRollBadges", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -58,8 +29,8 @@ describe("fetchRollBadges", () => {
     const fetch = vi.fn(async () => Response.json(body(4242)));
     vi.stubGlobal("fetch", fetch);
 
-    await fetchRollBadges(4242);
-    const badges = await fetchRollBadges(4242);
+    await rollBadges.fetchRollBadges(4242);
+    const badges = await rollBadges.fetchRollBadges(4242);
 
     expect(badges?.badges).toHaveLength(1);
     expect(fetch).toHaveBeenCalledTimes(1);
@@ -73,8 +44,8 @@ describe("fetchRollBadges", () => {
     vi.stubGlobal("fetch", fetch);
 
     const [first, second] = await Promise.all([
-      fetchRollBadges(5151),
-      fetchRollBadges(5151),
+      rollBadges.fetchRollBadges(5151),
+      rollBadges.fetchRollBadges(5151),
     ]);
 
     expect(first).toEqual(second);
@@ -85,8 +56,8 @@ describe("fetchRollBadges", () => {
     const fetch = vi.fn(async () => new Response("", { status: 503 }));
     vi.stubGlobal("fetch", fetch);
 
-    expect(await fetchRollBadges(777)).toBeNull();
-    expect(await fetchRollBadges(777)).toBeNull();
+    expect(await rollBadges.fetchRollBadges(777)).toBeNull();
+    expect(await rollBadges.fetchRollBadges(777)).toBeNull();
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 });

@@ -11,10 +11,10 @@ vi.mock("#lib/logger.js", () => {
   const logger = { info: vi.fn(), warn: vi.fn() };
   return { loggerMaker: () => logger };
 });
-vi.mock("#modules/rngdle/services/store.js", () => ({
+vi.mock("#modules/rngdle/services/store.service.js", () => ({
   default: { account: mocks.account, unregister: mocks.unregister },
 }));
-vi.mock("#modules/rngdle/services/sync.js", () => ({
+vi.mock("#modules/rngdle/services/sync.service.js", () => ({
   default: {
     exclusive: async (_guildId: string, task: () => Promise<unknown>) => {
       mocks.order.push("queue");

@@ -6,9 +6,9 @@ import { presentGuilds } from "#lib/guild-loop.js";
 import { KeyedQueue } from "#lib/keyed-queue.js";
 import { loggerMaker } from "#lib/logger.js";
 import { declareService, type Service } from "#lib/service.js";
-import { fetchUserRolls, RngdleUserNotFoundError } from "./api.js";
-import { startOfUtcDay } from "./days.js";
-import store, { type Account } from "./store.js";
+import { startOfUtcDay } from "#modules/rngdle/days.js";
+import api, { RngdleUserNotFoundError } from "./api.service.js";
+import store, { type Account } from "./store.service.js";
 
 const logger = loggerMaker("rngdle");
 
@@ -181,7 +181,7 @@ class RngdleSync implements Service {
     }
     return store.saveRolls(
       account,
-      await fetchUserRolls(account.username, latest)
+      await api.fetchUserRolls(account.username, latest)
     );
   }
 }
