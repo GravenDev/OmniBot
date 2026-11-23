@@ -37,7 +37,7 @@
     "@napi-rs/canvas": "1.1.0",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
-    "croner": "11.0.0",
+    "croner": "11.0.1",
     "discord.js": "14.28.1",
     "emojibase-data": "18.0.0",
     "i18next": "26.7.2",
