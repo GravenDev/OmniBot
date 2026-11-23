@@ -10,7 +10,7 @@
 # Alpine keeps the runtime small. Prisma 7 has no native query engine any more
 # (the client goes through node-postgres), so only the migrator carries a
 # platform-specific binary: the schema engine, fetched for musl at install.
-ARG NODE_IMAGE=node:26.13.0-alpine@sha256:8996bb5821d62a8fd9bb27c1cb07462f3fdce6e47d640c6a881ead0b064ce216
+ARG NODE_IMAGE=node:26.13.1-alpine@sha256:6bd9ab43c0ec0190ca7b2d193906cb8b7edf6e7f4afa43ddeccd6452710bffb5
 
 # --- base: pnpm, shared by every stage ------------------------------------
 FROM ${NODE_IMAGE} AS base
