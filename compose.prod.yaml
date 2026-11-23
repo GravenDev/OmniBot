@@ -28,7 +28,7 @@ x-logging: &default-logging
 services:
   # PostgreSQL is reachable only from the internal network: no published port.
   postgres:
-    image: postgres:17.11-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
+    image: postgres:17.11-alpine@sha256:e5d2edd28b1f8d40a0a6c0c9cdc545b19b56a0d5d88f94bc11a97d970d4700d0
     # Pinned by digest, so the image on the host is either this exact one or
     # absent: no need to ask Docker Hub again on every redeploy, which counts
     # against its pull rate limit. A digest bumped by Renovate is absent, so it
