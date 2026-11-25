@@ -1,8 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("#lib/database.js", () => ({ default: {} }));
-
-const { panelMessage } = await import("./panel.js");
+import { describe, expect, it } from "vitest";
+import { panelMessage } from "./panel.js";
 
 const t = (key: string) => key;
 

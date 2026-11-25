@@ -1,16 +1,12 @@
 import { MessageFlags, type StringSelectMenuInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
-import { isAccessMode } from "#modules/temp-voice/services/access-mode.js";
-import {
-  redrawPanel,
-  setAccess,
-  withChannel,
-} from "#modules/temp-voice/services/actions.js";
-import { queue } from "#modules/temp-voice/services/lifecycle.js";
-import { ACCESS_ID } from "#modules/temp-voice/services/panel.js";
-import { outcomeText } from "#modules/temp-voice/services/views.js";
+import { isAccessMode } from "#modules/temp-voice/access-mode.js";
+import { ACCESS_ID } from "#modules/temp-voice/panel.js";
+import actions from "#modules/temp-voice/services/actions.service.js";
+import lifecycle from "#modules/temp-voice/services/lifecycle.service.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
+import { outcomeText } from "#modules/temp-voice/views.js";
 
 export default declareInteractionHandler<
   StringSelectMenuInteraction,
@@ -26,20 +22,22 @@ export default declareInteractionHandler<
       return;
     }
     const redraw = () =>
-      queue.run(channelId, () =>
-        redrawPanel(interaction.guild, channelId, config)
+      lifecycle.queue.run(channelId, () =>
+        actions.redrawPanel(interaction.guild, channelId, config)
       );
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const outcome = await withChannel(
-      interaction.guild,
-      channelId,
-      interaction.member,
-      config,
-      (ctx) => setAccess(ctx, mode)
-    ).catch(async (err: unknown) => {
-      await redraw();
-      throw err;
-    });
+    const outcome = await actions
+      .withChannel(
+        interaction.guild,
+        channelId,
+        interaction.member,
+        config,
+        (ctx) => actions.setAccess(ctx, mode)
+      )
+      .catch(async (err: unknown) => {
+        await redraw();
+        throw err;
+      });
     if (!outcome.ok) {
       await redraw();
     }

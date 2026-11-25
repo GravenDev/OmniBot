@@ -17,15 +17,17 @@ vi.mock("#core/services/module.service.js", () => ({
 vi.mock("#core/services/config.service.js", () => ({
   default: { getConfigForModuleIn: async () => ({ t: () => "" }) },
 }));
-vi.mock("./services/store.js", () => ({
+vi.mock("./services/store.service.js", () => ({
   default: {
     guildIds: mocks.guildIds,
     removeGuildChannels: mocks.removeGuildChannels,
   },
 }));
-vi.mock("./services/lifecycle.js", () => ({
-  reconcile: mocks.reconcile,
-  seatWaitingMembers: mocks.seatWaitingMembers,
+vi.mock("./services/lifecycle.service.js", () => ({
+  default: {
+    reconcile: mocks.reconcile,
+    seatWaitingMembers: mocks.seatWaitingMembers,
+  },
 }));
 
 const { tempVoiceTasks } = await import("./tasks.js");

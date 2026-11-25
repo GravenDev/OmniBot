@@ -1,35 +1,25 @@
 import { MessageFlags, type ButtonInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
-import {
-  authorize,
-  claim,
-  noticeMembers,
-  notify,
-  remove,
-  tempChannelOf,
-  withChannel,
+import { isPanelAction, PANEL_ID } from "#modules/temp-voice/panel.js";
+import actions, {
   type ActionContext,
   type Outcome,
-} from "#modules/temp-voice/services/actions.js";
-import { queue } from "#modules/temp-voice/services/lifecycle.js";
-import {
-  isPanelAction,
-  PANEL_ID,
-  postPanel,
-} from "#modules/temp-voice/services/panel.js";
-import store from "#modules/temp-voice/services/store.js";
+} from "#modules/temp-voice/services/actions.service.js";
+import lifecycle from "#modules/temp-voice/services/lifecycle.service.js";
+import panelService from "#modules/temp-voice/services/panel.service.js";
+import store from "#modules/temp-voice/services/store.service.js";
+import type {
+  TempVoiceConfig,
+  TempVoiceConfigSchema,
+} from "#modules/temp-voice/temp-voice.config.js";
 import {
   deleteConfirmation,
   editModal,
   membersSheet,
   outcomeText,
   transferSelect,
-} from "#modules/temp-voice/services/views.js";
-import type {
-  TempVoiceConfig,
-  TempVoiceConfigSchema,
-} from "#modules/temp-voice/temp-voice.config.js";
+} from "#modules/temp-voice/views.js";
 
 const ephemeral = { flags: MessageFlags.Ephemeral } as const;
 
@@ -39,13 +29,13 @@ async function replaceOutdatedPanel(
   config: TempVoiceConfig
 ): Promise<void> {
   await interaction.deferReply(ephemeral);
-  const key = await queue.run(channelId, async () => {
-    const channel = tempChannelOf(interaction.guild, channelId);
+  const key = await lifecycle.queue.run(channelId, async () => {
+    const channel = actions.tempChannelOf(interaction.guild, channelId);
     const row = channel ? await store.channel(channelId) : null;
     if (!channel || row?.panelMessageId !== interaction.message.id) {
       return "panel.stale";
     }
-    if (!(await postPanel(channel, row, config.t))) {
+    if (!(await panelService.post(channel, row, config.t))) {
       return "panel.notReplaced";
     }
     await interaction.message.delete().catch(() => undefined);
@@ -83,12 +73,12 @@ export default declareInteractionHandler<
     switch (action) {
       case "claim": {
         await interaction.deferReply(ephemeral);
-        const outcome = await withChannel(
+        const outcome = await actions.withChannel(
           guild,
           channelId,
           actor,
           config,
-          claim,
+          (ctx) => actions.claim(ctx),
           { ownerOnly: false }
         );
         await interaction.editReply(answer(outcome)).catch(() => undefined);
@@ -96,19 +86,19 @@ export default declareInteractionHandler<
       }
       case "deleteConfirm": {
         await interaction.deferUpdate();
-        const outcome = await withChannel(
+        const outcome = await actions.withChannel(
           guild,
           channelId,
           actor,
           config,
-          remove
+          (ctx) => actions.remove(ctx)
         );
         await interaction.editReply(answer(outcome)).catch(() => undefined);
         return;
       }
       case "notify": {
         await interaction.deferUpdate();
-        const members = noticeMembers(guild, token ?? "");
+        const members = actions.noticeMembers(guild, token ?? "");
         if (members.length === 0) {
           await interaction.editReply(
             answer({ ok: false, key: "notify.expired" })
@@ -116,7 +106,7 @@ export default declareInteractionHandler<
           return;
         }
         const checked: { ctx?: ActionContext } = {};
-        const refused = await withChannel(
+        const refused = await actions.withChannel(
           guild,
           channelId,
           actor,
@@ -127,7 +117,9 @@ export default declareInteractionHandler<
           }
         );
         await interaction.editReply(
-          answer(checked.ctx ? await notify(checked.ctx, members) : refused)
+          answer(
+            checked.ctx ? await actions.notify(checked.ctx, members) : refused
+          )
         );
         return;
       }
@@ -141,7 +133,7 @@ export default declareInteractionHandler<
         break;
     }
 
-    const authorized = await authorize(guild, channelId, actor);
+    const authorized = await actions.authorize(guild, channelId, actor);
     if ("key" in authorized) {
       await interaction.reply({
         content: outcomeText(t, authorized),

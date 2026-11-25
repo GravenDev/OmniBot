@@ -1,17 +1,13 @@
 import type { GuildMember, UserSelectMenuInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
-import {
-  block,
-  rememberNotice,
-  trust,
-  withChannel,
+import { USERS_ID } from "#modules/temp-voice/panel.js";
+import actions, {
   type ActionContext,
   type Outcome,
-} from "#modules/temp-voice/services/actions.js";
-import { USERS_ID } from "#modules/temp-voice/services/panel.js";
-import { notifyRow, outcomeText } from "#modules/temp-voice/services/views.js";
+} from "#modules/temp-voice/services/actions.service.js";
 import type { TempVoiceConfigSchema } from "#modules/temp-voice/temp-voice.config.js";
+import { notifyRow, outcomeText } from "#modules/temp-voice/views.js";
 
 const none: Outcome = { ok: false, key: "select.noMember" };
 
@@ -19,8 +15,8 @@ const ACTIONS: Record<
   string,
   (ctx: ActionContext, members: GuildMember[]) => Promise<Outcome>
 > = {
-  trust,
-  block,
+  trust: (ctx, members) => actions.trust(ctx, members),
+  block: (ctx, members) => actions.block(ctx, members),
 };
 
 export default declareInteractionHandler<
@@ -49,7 +45,7 @@ export default declareInteractionHandler<
     const outcome =
       members.length === 0
         ? none
-        : await withChannel(
+        : await actions.withChannel(
             interaction.guild,
             channelId,
             interaction.member,
@@ -63,7 +59,7 @@ export default declareInteractionHandler<
           );
     const offerNotice = action === "trust" && outcome.ok && added.length > 0;
     if (offerNotice) {
-      rememberNotice(interaction.id, added);
+      actions.rememberNotice(interaction.id, added);
     }
     await interaction.editReply({
       content: outcomeText(config.t, outcome),

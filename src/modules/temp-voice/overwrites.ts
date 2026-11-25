@@ -1,4 +1,10 @@
-import { OverwriteType, PermissionFlagsBits } from "discord.js";
+import {
+  OverwriteType,
+  PermissionFlagsBits,
+  PermissionsBitField,
+  type PermissionOverwriteOptions,
+  type PermissionOverwrites,
+} from "discord.js";
 
 export interface Overwrite {
   id: string;
@@ -183,4 +189,39 @@ export function overwriteChanges(
     }
   }
   return changes;
+}
+
+/** The access fields of a temporary channel's row, without the rest of the row. */
+export function accessState(row: AccessState): AccessState {
+  return {
+    ownerId: row.ownerId,
+    locked: row.locked,
+    hidden: row.hidden,
+    trusted: row.trusted,
+    blocked: row.blocked,
+  };
+}
+
+/** An overwrite read from Discord, as plain data. */
+export function toOverwrite(overwrite: PermissionOverwrites): Overwrite {
+  return {
+    id: overwrite.id,
+    type: overwrite.type,
+    allow: overwrite.allow.bitfield,
+    deny: overwrite.deny.bitfield,
+  };
+}
+
+/** An overwrite as the options Discord takes to write it. */
+export function overwriteOptions(
+  overwrite: Overwrite
+): PermissionOverwriteOptions {
+  const options: PermissionOverwriteOptions = {};
+  for (const name of new PermissionsBitField(overwrite.allow).toArray()) {
+    options[name] = true;
+  }
+  for (const name of new PermissionsBitField(overwrite.deny).toArray()) {
+    options[name] = false;
+  }
+  return options;
 }

@@ -12,28 +12,17 @@ const store = vi.hoisted(() => ({
 const lifecycle = vi.hoisted(() => ({
   applyAccess: vi.fn(),
   removeTempChannel: vi.fn(),
-  accessState: (row: any) => ({
-    ownerId: row.ownerId,
-    locked: row.locked,
-    hidden: row.hidden,
-    trusted: row.trusted,
-    blocked: row.blocked,
-  }),
 }));
 
 vi.mock("#lib/database.js", () => ({ default: {} }));
-vi.mock("./store.js", () => ({ default: store }));
-vi.mock("./panel.js", () => ({ refreshPanel: vi.fn() }));
-vi.mock("./lifecycle.js", async () => {
-  const { RenameLimiter } = await import("./naming.js");
-  return {
-    ...lifecycle,
-    queue: new KeyedQueue(),
-    renames: new RenameLimiter(),
-  };
-});
+vi.mock("./store.service.js", () => ({ default: store }));
+vi.mock("./panel.service.js", () => ({ default: { refresh: vi.fn() } }));
+vi.mock("./lifecycle.service.js", () => ({
+  default: { ...lifecycle, queue: new KeyedQueue() },
+}));
 
-const actions = await import("./actions.js");
+const { default: actions, MAX_ACCESS_ENTRIES } =
+  await import("./actions.service.js");
 
 function fakeMember(
   id: string,
@@ -216,7 +205,7 @@ describe("trust", () => {
   it("caps the access lists", async () => {
     const owner = fakeMember("owner");
     const trusted = Array.from(
-      { length: actions.MAX_ACCESS_ENTRIES },
+      { length: MAX_ACCESS_ENTRIES },
       (_, i) => `u${i}`
     );
     expect(
@@ -387,5 +376,137 @@ describe("rename", () => {
       key: "rename.rateLimited",
     });
     expect(context.channel.setName).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("revoke", () => {
+  it("removes members from both lists, and forgets them in the preferences", async () => {
+    store.preference.mockResolvedValue({ trusted: ["a"], blocked: ["b"] });
+    const owner = fakeMember("owner");
+    const context = ctx(owner, [], { trusted: ["a", "c"], blocked: ["b"] });
+    expect(await actions.revoke(context, ["a", "b"])).toEqual({
+      ok: true,
+      key: "revoke.done",
+      params: { users: "<@a>, <@b>" },
+    });
+    expect(store.updateChannel).toHaveBeenCalledWith("c1", {
+      trusted: ["c"],
+      blocked: [],
+    });
+    expect(store.savePreference).toHaveBeenCalledWith("g1", "owner", {
+      trusted: [],
+      blocked: [],
+    });
+  });
+
+  it("changes nothing for members on neither list", async () => {
+    const context = ctx(fakeMember("owner"), [], { trusted: ["a"] });
+    expect(await actions.revoke(context, ["z"])).toEqual({
+      ok: false,
+      key: "revoke.none",
+    });
+    expect(store.updateChannel).not.toHaveBeenCalled();
+  });
+});
+
+describe("kick", () => {
+  it("disconnects present members, sparing moderators and those elsewhere", async () => {
+    const owner = fakeMember("owner");
+    const guest = fakeMember("guest", { voiceChannelId: "c1" });
+    const away = fakeMember("away", { voiceChannelId: "c2" });
+    const mod = fakeMember("mod", {
+      voiceChannelId: "c1",
+      permissions: PermissionFlagsBits.MoveMembers,
+    });
+    expect(await actions.kick(ctx(owner), [guest, away, mod])).toEqual({
+      ok: true,
+      key: "kick.done",
+      params: { users: "<@guest>" },
+    });
+    expect(guest.voice.disconnect).toHaveBeenCalled();
+    expect(away.voice.disconnect).not.toHaveBeenCalled();
+    expect(mod.voice.disconnect).not.toHaveBeenCalled();
+
+    expect(await actions.kick(ctx(owner), [mod])).toMatchObject({
+      ok: false,
+      key: "kick.protected",
+    });
+    expect(await actions.kick(ctx(owner), [away])).toMatchObject({
+      ok: false,
+      key: "kick.none",
+    });
+  });
+
+  it("reports a disconnection Discord refused", async () => {
+    const guest = fakeMember("guest", { voiceChannelId: "c1" });
+    guest.voice.disconnect.mockRejectedValueOnce(new Error("Missing Access"));
+    expect(await actions.kick(ctx(fakeMember("owner")), [guest])).toEqual({
+      ok: false,
+      key: "kick.failed",
+    });
+  });
+});
+
+describe("transfer", () => {
+  it("hands the channel to a present member, out of the access lists", async () => {
+    const guest = fakeMember("guest", { voiceChannelId: "c1" });
+    const context = ctx(fakeMember("owner"), [], {
+      trusted: ["guest", "other"],
+    });
+    expect(await actions.transfer(context, guest)).toEqual({
+      ok: true,
+      key: "transfer.done",
+      params: { user: "<@guest>" },
+    });
+    expect(store.updateChannel).toHaveBeenCalledWith("c1", {
+      ownerId: "guest",
+      trusted: ["other"],
+      blocked: [],
+    });
+  });
+
+  it("refuses the owner, a bot, an absent member and one owning a channel", async () => {
+    const context = ctx(fakeMember("owner"));
+    expect(await actions.transfer(context, fakeMember("owner"))).toMatchObject({
+      key: "transfer.invalid",
+    });
+    expect(
+      await actions.transfer(
+        context,
+        fakeMember("bot", { voiceChannelId: "c1", bot: true })
+      )
+    ).toMatchObject({ key: "transfer.invalid" });
+    expect(await actions.transfer(context, fakeMember("away"))).toMatchObject({
+      key: "transfer.notInChannel",
+    });
+    store.ownedBy.mockResolvedValueOnce(row({ channelId: "c2" }));
+    expect(
+      await actions.transfer(
+        context,
+        fakeMember("guest", { voiceChannelId: "c1" })
+      )
+    ).toMatchObject({ key: "transfer.ownsAnother" });
+    expect(store.updateChannel).not.toHaveBeenCalled();
+  });
+});
+
+describe("remove", () => {
+  it("deletes the channel on the owner's behalf, or says it failed", async () => {
+    const context = ctx(fakeMember("owner"));
+    lifecycle.removeTempChannel.mockResolvedValueOnce(true);
+    expect(await actions.remove(context)).toEqual({
+      ok: true,
+      key: "delete.done",
+    });
+    expect(lifecycle.removeTempChannel).toHaveBeenCalledWith(
+      context.channel,
+      context.row,
+      "owner"
+    );
+    lifecycle.removeTempChannel.mockResolvedValueOnce(false);
+    expect(await actions.remove(context)).toEqual({
+      ok: false,
+      key: "delete.failed",
+    });
   });
 });
