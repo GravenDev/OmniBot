@@ -37,12 +37,15 @@
     "@napi-rs/canvas": "1.1.0",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
+    "chessops": "0.15.1",
     "croner": "11.0.1",
     "discord.js": "14.28.1",
     "emojibase-data": "18.0.0",
     "i18next": "26.7.2",
     "pino": "10.4.0",
-    "sharp": "0.35.5"
+    "sharp": "0.35.5",
+    "stockfish": "19.0.1",
+    "wintrchess": "1.2.12"
   },
   "devDependencies": {
     "@commitlint/cli": "21.2.4",

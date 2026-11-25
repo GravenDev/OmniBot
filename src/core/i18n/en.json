@@ -155,6 +155,9 @@
   "modules.clash-of-code.name": "Clash of Code",
   "modules.clash-of-code.description": "Follows the Clash of Code games whose link is posted, posts their results and keeps a wins leaderboard.",
 
+  "modules.chess.name": "Chess",
+  "modules.chess.description": "Lists recent Lichess and Chess.com games, draws an image board and analyses games with rating badges and a report.",
+
   "modules.starboard.name": "Starboard",
   "modules.starboard.description": "Reposts the messages that get enough reactions in a dedicated channel, and keeps their count up to date.",
 

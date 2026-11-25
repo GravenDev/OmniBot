@@ -155,6 +155,9 @@
   "modules.clash-of-code.name": "Clash of Code",
   "modules.clash-of-code.description": "Suit les parties de Clash of Code dont le lien est posté, publie leur résultat et tient un classement des victoires.",
 
+  "modules.chess.name": "Échecs",
+  "modules.chess.description": "Liste les parties récentes de Lichess et Chess.com, affiche un échiquier en image et analyse les parties avec des badges de notation et un rapport.",
+
   "modules.starboard.name": "Starboard",
   "modules.starboard.description": "Reposte dans un salon dédié les messages qui reçoivent assez de réactions, et tient leur compteur à jour.",
 

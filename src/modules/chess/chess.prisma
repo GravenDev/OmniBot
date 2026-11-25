@@ -1,0 +1,27 @@
+model ChessLiveGame {
+  id          String   @id @default(cuid())
+  /// "lichess" or "chesscom": the source of the live feed.
+  source      String
+  gameId      String
+  url         String
+  /// The public message this watch edits when a move is played.
+  guildId     String
+  channelId   String
+  messageId   String
+  ownerId     String
+  white       String
+  black       String
+  timeControl String   @default("")
+  /// A followed username stays at the bottom of the board.
+  flipped     Boolean  @default(false)
+  /// UCI moves, space separated, as published by the live feed.
+  moves       String   @default("")
+  /// Starting FEN of a "From Position" game, null for a standard board.
+  startFen    String?
+  finished    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([guildId, channelId, messageId])
+  @@index([finished])
+}
