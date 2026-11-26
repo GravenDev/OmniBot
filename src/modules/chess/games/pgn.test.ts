@@ -1,3 +1,4 @@
+import { parseSquare } from "chessops";
 import { describe, expect, it } from "vitest";
 import { dateFromHeaders, parseGame, resultFromTag } from "./pgn.js";
 
@@ -86,5 +87,45 @@ describe("PGN parsing", () => {
       )
     ).toEqual(new Date("2026-11-24T00:00:00Z"));
     expect(dateFromHeaders(new Map())).toBeNull();
+  });
+
+  it.each([
+    ["Atomic", "atomic"],
+    ["Three-check", "3check"],
+    ["King of the Hill", "kingofthehill"],
+    ["Antichess", "antichess"],
+  ])("reads a %s game with its own rules, for the board", (variant, rules) => {
+    const pgn = `[Event "Rated game"]\n[Variant "${variant}"]\n[Result "1-0"]\n\n1. e4 e5 2. Nf3 1-0`;
+    const parsed = parseGame(pgn);
+    expect(parsed?.steps).toHaveLength(3);
+    expect(parsed?.variant).toBe(rules);
+  });
+
+  it.each(["Standard", "From Position", "Chess960"])(
+    "reads a %s game as standard chess",
+    (variant) => {
+      const pgn = `[Event "Rated game"]\n[Variant "${variant}"]\n[Result "1-0"]\n\n1. e4 e5 1-0`;
+      const parsed = parseGame(pgn);
+      expect(parsed?.steps).toHaveLength(2);
+      expect(parsed?.variant).toBe("chess");
+    }
+  );
+
+  it("plays an Atomic capture by Atomic rules: the pieces around explode", () => {
+    const parsed = parseGame(
+      '[Variant "Atomic"]\n[Result "*"]\n\n1. Nf3 d5 2. Ne5 Nf6 3. Nxf7 *'
+    );
+    const board = parsed!.positions.at(-1)!.board;
+    // The capturing knight, the f8 bishop and the f6 knight are gone; the
+    // pawns next to the capture stay, as Atomic rules say.
+    expect(board.get(parseSquare("f7")!)).toBeUndefined();
+    expect(board.get(parseSquare("f8")!)).toBeUndefined();
+    expect(board.get(parseSquare("f6")!)).toBeUndefined();
+    expect(board.get(parseSquare("g7")!)?.role).toBe("pawn");
+  });
+
+  it("leaves out a variant chessops does not know", () => {
+    const pgn = `[Event "Rated game"]\n[Variant "Fog of War"]\n[Result "1-0"]\n\n1. e4 e5 1-0`;
+    expect(parseGame(pgn)).toBeNull();
   });
 });

@@ -29,7 +29,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("#lib/reply.js", () => ({ replyEphemeral: mocks.replyEphemeral }));
-vi.mock("../analysis/run.js", () => ({ runAnalysis: mocks.runAnalysis }));
+vi.mock("../analysis/run.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../analysis/run.js")>()),
+  runAnalysis: mocks.runAnalysis,
+}));
 vi.mock("../commands/chess.command.js", () => ({
   PGN_FIELD_IDS: ["chess-pgn-0", "chess-pgn-1"],
 }));

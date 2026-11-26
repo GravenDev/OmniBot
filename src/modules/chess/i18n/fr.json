@@ -4,11 +4,14 @@
   "error.url": "Cette URL ne mène à aucune partie lisible.",
   "error.pgn": "Ce PGN est invalide.",
   "error.analysis": "L'analyse a échoué ou a dépassé le temps imparti.",
+  "error.busy": "Une de tes analyses est déjà en cours : attends qu'elle se termine.",
+  "error.queueFull": "Trop d'analyses sont en cours : réessaie dans quelques minutes.",
+  "error.rateLimited": "Le site limite les requêtes du bot pour l'instant : réessaie dans une minute.",
+  "error.variant": "L'analyse ne gère que les échecs classiques (Chess960 compris) : cette variante peut seulement être affichée.",
   "error.expired": "Cette session a expiré. Relance la commande /chess.",
   "error.notOwner": "Seul {{user}} peut utiliser ces boutons.",
   "error.invalid": "Cette action n'est plus valide. Relance la commande /chess.",
   "error.side": "Choisis le camp à afficher dans le rapport.",
-  "error.misconfigured": "Le module Échecs est désactivé : emojis manquants.",
 
   "pgn.title": "Coller une partie PGN",
   "pgn.field": "PGN {{index}}",
@@ -70,5 +73,15 @@
   "speed.blitz": "Blitz",
   "speed.courte": "Courte",
   "speed.rapide": "Rapide",
-  "speed.classique": "Classique"
+  "speed.classique": "Classique",
+  "live.missingPermissions": "Je ne peux pas suivre une partie dans ce salon : il me manque {{permissions}}.",
+  "live.stop": "Arrêter le suivi",
+  "live.stopped": "Suivi arrêté",
+  "live.stopNotAllowed": "Seul le membre qui a lancé ce suivi, ou un membre qui gère les messages, peut l'arrêter.",
+  "live.limitMember": "Tu suis déjà {{count}} parties : arrête un de tes suivis avant d'en lancer un autre.",
+  "live.limitGuild": "Ce serveur suit déjà {{count}} parties : attends qu'une se termine ou arrête un suivi.",
+
+  "permission.ViewChannel": "Voir le salon",
+  "permission.ReadMessageHistory": "Voir les anciens messages",
+  "permission.AttachFiles": "Joindre des fichiers"
 }

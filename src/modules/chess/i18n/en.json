@@ -4,11 +4,14 @@
   "error.url": "This URL does not point to a readable game.",
   "error.pgn": "This PGN is invalid.",
   "error.analysis": "Analysis failed or timed out.",
+  "error.busy": "One of your analyses is already running: wait for it to finish.",
+  "error.queueFull": "Too many analyses are running: try again in a few minutes.",
+  "error.rateLimited": "The site is limiting the bot's requests for now: try again in a minute.",
+  "error.variant": "The analysis only handles standard chess (Chess960 included): this variant can only be shown.",
   "error.expired": "This session expired. Run /chess again.",
   "error.notOwner": "Only {{user}} can use these buttons.",
   "error.invalid": "This action is no longer valid. Run /chess again.",
   "error.side": "Choose the side to show in the report.",
-  "error.misconfigured": "The Chess module is disabled: missing emojis.",
 
   "pgn.title": "Paste a game PGN",
   "pgn.field": "PGN {{index}}",
@@ -70,5 +73,15 @@
   "speed.blitz": "Blitz",
   "speed.courte": "Short",
   "speed.rapide": "Rapid",
-  "speed.classique": "Classical"
+  "speed.classique": "Classical",
+  "live.missingPermissions": "I cannot follow a game in this channel: I am missing {{permissions}}.",
+  "live.stop": "Stop following",
+  "live.stopped": "Following stopped",
+  "live.stopNotAllowed": "Only the member who started this watch, or a member who manages messages, can stop it.",
+  "live.limitMember": "You already follow {{count}} games: stop one of your watches before starting another.",
+  "live.limitGuild": "This server already follows {{count}} games: wait for one to end or stop a watch.",
+
+  "permission.ViewChannel": "View Channel",
+  "permission.ReadMessageHistory": "Read Message History",
+  "permission.AttachFiles": "Attach Files"
 }

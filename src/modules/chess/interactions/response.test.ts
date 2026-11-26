@@ -6,6 +6,7 @@ import {
   deferWithEphemeralStatus,
   finishButtonStatus,
   respondToButton,
+  startDirectFlow,
 } from "./response.js";
 
 const ephemeral: ChessMessage = {
@@ -98,5 +99,45 @@ describe("button responses", () => {
     await finishButtonStatus(flow, fake as never, publicMessage);
     expect(fake.webhook.deleteMessage).toHaveBeenCalledWith("status-id");
     expect(fake.followUp).toHaveBeenLastCalledWith(publicMessage);
+  });
+});
+
+describe("startDirectFlow", () => {
+  // discord.js answers `reply()` with an InteractionResponse whose id is the
+  // interaction's own id, not the posted message's: Discord refuses it.
+  function modal() {
+    const unknownMessage = async (id: string) => {
+      if (id === "interaction-id") throw new Error("Unknown Message");
+    };
+    return {
+      id: "interaction-id",
+      reply: vi.fn(async () => ({ id: "interaction-id" })),
+      deleteReply: vi.fn(async () => undefined),
+      editReply: vi.fn(async () => undefined),
+      followUp: vi.fn(async () => ({ id: "result-id" })),
+      webhook: {
+        editMessage: vi.fn(unknownMessage),
+        deleteMessage: vi.fn(unknownMessage),
+      },
+    };
+  }
+
+  it("replaces the status with the public result", async () => {
+    const fake = modal();
+    const flow = await startDirectFlow(fake as never, ephemeral);
+    await flow.complete(publicMessage);
+
+    expect(fake.deleteReply).toHaveBeenCalledTimes(1);
+    expect(fake.followUp).toHaveBeenCalledWith(publicMessage);
+  });
+
+  it("turns the status into the error", async () => {
+    const fake = modal();
+    const flow = await startDirectFlow(fake as never, ephemeral);
+    await flow.fail(ephemeral);
+
+    expect(fake.editReply).toHaveBeenCalledWith(
+      expect.objectContaining({ flags: MessageFlags.IsComponentsV2 })
+    );
   });
 });

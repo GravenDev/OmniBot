@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import type { TFunction } from "#lib/i18n.js";
-import { setRatingEmojis } from "./emojis.js";
 import { parseGame } from "./games/pgn.js";
 import { RATING_ORDER, playerSide } from "./ratings.js";
+import ratingEmojis from "./services/rating-emojis.service.js";
 import type { ChessSession, GameAnalysis, GameSummary } from "./types.js";
 import {
   EPHEMERAL_FLAGS,
@@ -23,7 +23,7 @@ vi.mock("./rendering/board.js", () => ({
 const t: TFunction = (key, options) =>
   `${key}${options ? ` ${JSON.stringify(options)}` : ""}`;
 
-setRatingEmojis(
+ratingEmojis.set(
   Object.fromEntries(
     RATING_ORDER.map((rating) => [rating, `:${rating}:`])
   ) as never
@@ -202,6 +202,27 @@ describe("chess message views", () => {
       "chess-action:session-id:board ♟️ viewer.game true",
       "chess-action:session-id:analyse 🔍 viewer.analyse false",
       "chess-action:session-id:report 📊 viewer.report false",
+    ]);
+  });
+
+  it("disables analyse and report for a variant, which Stockfish cannot rate", async () => {
+    const base = session();
+    const message = await boardMessage(
+      session({ parsed: { ...base.parsed!, variant: "atomic" } }),
+      t
+    );
+    const actions = message.components[1]?.toJSON() as ReturnType<
+      typeof JSON.parse
+    >;
+    expect(
+      actions.components.map(
+        (button: { custom_id: string; disabled: boolean }) =>
+          `${button.custom_id} ${button.disabled}`
+      )
+    ).toEqual([
+      "chess-action:session-id:board true",
+      "chess-action:session-id:analyse true",
+      "chess-action:session-id:report true",
     ]);
   });
 

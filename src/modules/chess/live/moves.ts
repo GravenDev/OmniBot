@@ -48,7 +48,8 @@ export function gameFromUci(
     positions.push(position.clone());
   }
 
-  return { headers, positions, steps, result: "unknown" };
+  // Live watches only follow standard games: the feeds refuse variants.
+  return { headers, variant: "chess", positions, steps, result: "unknown" };
 }
 
 const PROMOTIONS: Record<string, string> = {

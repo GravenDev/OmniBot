@@ -1,13 +1,12 @@
-import { parsePgn } from "chessops/pgn";
+import { parsePgn, parseVariant } from "chessops/pgn";
 import {
   chesscomTimeControl,
   fetchChesscomCurrentGames,
-  fetchJson,
-  fetchText,
   gameSummaryFromPgn,
   parseGameUrl,
 } from "../games/fetch.js";
 import { resultFromTag } from "../games/pgn.js";
+import requests from "../services/site-requests.service.js";
 import type { GameResult } from "../types.js";
 import { sanToUci } from "./moves.js";
 import { decodeTcn } from "./tcn.js";
@@ -55,7 +54,7 @@ export async function findLichessGame(
   username: string
 ): Promise<LiveSnapshot | null> {
   const data = object(
-    await fetchJson(
+    await requests.json(
       `https://lichess.org/api/user/${encodeURIComponent(username)}/current-game?v=${Date.now()}`
     )
   );
@@ -72,7 +71,7 @@ export async function lichessGameById(
   id: string,
   url: string
 ): Promise<LiveSnapshot | null> {
-  const pgn = await fetchText(
+  const pgn = await requests.text(
     `https://lichess.org/game/export/${encodeURIComponent(id)}?v=${Date.now()}`,
     { Accept: "application/x-chess-pgn" }
   );
@@ -132,7 +131,7 @@ export async function chesscomGameById(
   url: string
 ): Promise<LiveSnapshot | null> {
   const data = object(
-    await fetchJson(
+    await requests.json(
       `https://www.chess.com/callback/${callbackKind(url)}/game/${id}?v=${Date.now()}`
     )
   );
@@ -142,6 +141,11 @@ export async function chesscomGameById(
   const black = text(headers?.["Black"]);
   const moves = decodeTcn(text(game?.["moveList"]) ?? "");
   if (!white || !black || !moves) return null;
+  // The board replays the moves with the standard rules, from the game's own
+  // start for Chess960: another variant would not replay.
+  if (parseVariant(text(headers?.["Variant"]) ?? undefined) !== "chess") {
+    return null;
+  }
   const rawControl = text(headers?.["TimeControl"]) ?? "";
   return {
     source: "chesscom",
@@ -151,6 +155,7 @@ export async function chesscomGameById(
     black,
     timeControl: chesscomTimeControl(rawControl),
     moves,
+    startFen: text(headers?.["FEN"]) ?? undefined,
     finished: game?.["isFinished"] === true,
     result: resultFromTag(text(headers?.["Result"]) ?? undefined),
   };

@@ -18,10 +18,10 @@ vi.mock("../interactions/response.js", () => ({
   respondToButton: mocks.respondToButton,
   editButtonMessage: mocks.editButtonMessage,
 }));
-vi.mock("./store.service.js", () => ({
+vi.mock("../services/live-store.service.js", () => ({
   default: { get: mocks.storeGet },
 }));
-vi.mock("./snapshot.service.js", () => ({
+vi.mock("../services/live-snapshots.service.js", () => ({
   default: { create: mocks.snapshotsCreate, get: mocks.snapshotsGet },
 }));
 vi.mock("./views.js", () => ({ liveMessage: mocks.liveMessage }));

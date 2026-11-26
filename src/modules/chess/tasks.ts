@@ -1,11 +1,16 @@
 import { loggerMaker } from "#lib/logger.js";
 import { declareTask } from "#lib/task.js";
-import watcher from "./live/watcher.service.js";
+import ratingEmojis from "./services/rating-emojis.service.js";
 import store from "./services/session.service.js";
+import watcher from "./services/watcher.service.js";
 
 const logger = loggerMaker("chess");
 
-export function chessMaintenanceTasks() {
+/**
+ * Registered from `onLoad`: neither task purges stored data (sessions live in
+ * memory, watches are resumed), and resuming needs the watcher attached.
+ */
+export function chessTasks() {
   return [
     declareTask({
       id: "chess-session-sweep",
@@ -26,6 +31,13 @@ export function chessMaintenanceTasks() {
         if (resumed > 0) {
           logger.info(`Chess watches resumed | count = ${resumed}`);
         }
+      },
+    }),
+    declareTask({
+      id: "chess-emojis-retry",
+      schedule: "30 * * * *",
+      async run(client) {
+        await ratingEmojis.ensure(client);
       },
     }),
   ];

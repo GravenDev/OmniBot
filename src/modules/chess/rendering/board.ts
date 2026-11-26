@@ -13,11 +13,12 @@ import { ratingAsset } from "../ratings.js";
 import type { ParsedGame } from "../types.js";
 
 // The board frame comes from the module's own assets, which are 1088 wide with
-// a 32 coordinate border and 128 squares. The image is rendered at 4096 px: a
-// 4K board costs little server-side and reads sharp when a member zooms or
-// prints it. All geometry is that frame's, scaled.
+// a 32 coordinate border and 128 squares. The image is rendered at 1024 px:
+// Discord shows it a few hundred pixels wide, and a 4096 px board took ~360 ms
+// of CPU per render, for every navigation click and every live move. All
+// geometry is that frame's, scaled.
 const SOURCE_SIZE = 1088;
-const BOARD_SIZE = 4096;
+const BOARD_SIZE = 1024;
 const SCALE = BOARD_SIZE / SOURCE_SIZE;
 export const COORD = 32 * SCALE;
 export const SQUARE = 128 * SCALE;
@@ -248,7 +249,7 @@ export async function renderBoard(
     );
   }
 
-  // 300 dpi in the PNG header: the extra size pays off when a member prints
-  // or zooms the board.
-  return ctx.canvas.toBuffer("image/png", { resolution: 300 });
+  // Encoded on the canvas thread pool: `toBuffer` would hold the event loop
+  // (and every other module's interactions) for the whole encoding.
+  return ctx.canvas.encode("png");
 }

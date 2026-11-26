@@ -2,7 +2,7 @@ import type { ButtonInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { loggerMaker } from "#lib/logger.js";
 import { replyEphemeral } from "#lib/reply.js";
-import { runAnalysis } from "../analysis/run.js";
+import { analysisErrorKey, runAnalysis } from "../analysis/run.js";
 import store from "../services/session.service.js";
 import type { ChessView } from "../types.js";
 import { chessView, errorMessage, withNotice } from "../views.js";
@@ -82,7 +82,7 @@ export default declareInteractionHandler<ButtonInteraction>({
       await runAnalysis(session);
     } catch (error) {
       logger.error({ err: error }, "Chess analysis failed from viewer");
-      await edit(withNotice(current, config.t("error.analysis")));
+      await edit(withNotice(current, config.t(analysisErrorKey(error))));
       return;
     }
 

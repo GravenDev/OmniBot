@@ -2,14 +2,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TFunction } from "#lib/i18n.js";
 import { PUBLIC_FLAGS } from "../views.js";
 import type { LiveSnapshot } from "./sources.js";
-import { startWatchFlow } from "./watch.js";
+import { startWatchFlow, watchRefusal } from "./watch.js";
 
 const watch = vi.hoisted(() => vi.fn());
 const track = vi.hoisted(() => vi.fn());
 const liveMessage = vi.hoisted(() => vi.fn());
+const missingNames = vi.hoisted(() => vi.fn());
 
-vi.mock("./store.service.js", () => ({ default: { watch } }));
-vi.mock("./watcher.service.js", () => ({ default: { track } }));
+vi.mock("#lib/permissions.js", () => ({
+  missingBotPermissionNames: missingNames,
+}));
+
+const countActive = vi.hoisted(() => vi.fn());
+
+vi.mock("../services/live-store.service.js", () => ({
+  default: { watch, countActive },
+}));
+vi.mock("../services/watcher.service.js", () => ({ default: { track } }));
 vi.mock("./views.js", () => ({ liveMessage }));
 
 const t = ((key: string) => key) as TFunction;
@@ -39,6 +48,7 @@ function context(send = vi.fn(async () => ({ id: "public-message" }))) {
 beforeEach(() => {
   vi.clearAllMocks();
   watch.mockImplementation(async (game) => ({ ...game }));
+  countActive.mockResolvedValue(0);
   liveMessage.mockResolvedValue({
     components: [],
     flags: PUBLIC_FLAGS,
@@ -93,5 +103,69 @@ describe("shared watch flow", () => {
     expect(watch).toHaveBeenCalledWith(
       expect.objectContaining({ flipped: true })
     );
+  });
+});
+
+describe("watchRefusal", () => {
+  const channel = { isDMBased: () => false };
+  const guild = { id: "guild" };
+
+  it("lets a watch start where the bot can read and edit its message", async () => {
+    missingNames.mockResolvedValue(null);
+    expect(
+      await watchRefusal(
+        { guild, channel, guildId: "guild", user: { id: "owner" } } as never,
+        t
+      )
+    ).toBeNull();
+    expect(missingNames).toHaveBeenCalledWith(
+      guild,
+      channel,
+      ["ViewChannel", "ReadMessageHistory", "AttachFiles"],
+      t
+    );
+  });
+
+  it("names the permissions the watcher would lack to edit the board", async () => {
+    missingNames.mockResolvedValue("permission.ReadMessageHistory");
+    expect(
+      await watchRefusal(
+        { guild, channel, guildId: "guild", user: { id: "owner" } } as never,
+        t
+      )
+    ).toBe("live.missingPermissions");
+  });
+
+  it("refuses outside a guild channel", async () => {
+    expect(await watchRefusal({ guild: null, channel } as never, t)).toBe(
+      "error.invalid"
+    );
+  });
+
+  const asked = {
+    guild,
+    channel,
+    guildId: "guild",
+    user: { id: "owner" },
+  } as never;
+
+  it("refuses a fourth watch of the same member", async () => {
+    missingNames.mockResolvedValue(null);
+    countActive.mockImplementation(async (where: { ownerId?: string }) =>
+      where.ownerId ? 3 : 3
+    );
+    expect(await watchRefusal(asked, t)).toBe("live.limitMember");
+    expect(countActive).toHaveBeenCalledWith({
+      guildId: "guild",
+      ownerId: "owner",
+    });
+  });
+
+  it("refuses an eleventh watch on the same server", async () => {
+    missingNames.mockResolvedValue(null);
+    countActive.mockImplementation(async (where: { ownerId?: string }) =>
+      where.ownerId ? 0 : 10
+    );
+    expect(await watchRefusal(asked, t)).toBe("live.limitGuild");
   });
 });

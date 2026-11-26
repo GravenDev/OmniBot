@@ -117,4 +117,38 @@ describe("live board view", () => {
     expect(drawJson).toContain("**🤝 live.result.draw**");
     expect(drawJson).toContain('"accent_color":16753920');
   });
+
+  it("offers to stop the watch on the public message only", async () => {
+    const json = (message: Awaited<ReturnType<typeof liveMessage>>) =>
+      JSON.stringify(message.components.map((part) => part.toJSON()));
+
+    expect(json(await liveMessage(game, t, 3, false))).toContain(
+      "chess-live-stop:watch-id"
+    );
+    expect(json(await liveMessage(game, t, 3, true))).not.toContain(
+      "chess-live-stop"
+    );
+    expect(
+      json(
+        await liveMessage(
+          { ...game, finished: true, result: "white" },
+          t,
+          3,
+          false
+        )
+      )
+    ).not.toContain("chess-live-stop");
+  });
+
+  it("shows a stopped watch without its buttons", async () => {
+    const stopped = JSON.stringify(
+      (await liveMessage(game, t, 3, false, true)).components.map((part) =>
+        part.toJSON()
+      )
+    );
+    expect(stopped).toContain("live.stopped");
+    expect(stopped).not.toContain("chess-live:");
+    expect(stopped).not.toContain("chess-live-stop");
+    expect(stopped).not.toContain("live.started");
+  });
 });

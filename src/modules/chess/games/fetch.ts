@@ -1,3 +1,6 @@
+import requests, {
+  RateLimitedError,
+} from "../services/site-requests.service.js";
 import { speedOf } from "../speed.js";
 import type { ChessSource, GameSummary } from "../types.js";
 import { dateFromHeaders, parseGame } from "./pgn.js";
@@ -5,8 +8,6 @@ import { dateFromHeaders, parseGame } from "./pgn.js";
 export const GAME_WINDOW_DAYS = 30;
 export const MAX_GAMES = 50;
 
-const REQUEST_TIMEOUT_MS = 15_000;
-const USER_AGENT = "OmniBot https://github.com/RedsTom/OmniBot";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 interface ChesscomGame {
@@ -46,30 +47,6 @@ function headerFromPgn(pgn: string, name: string): string | null {
     pgn
   );
   return match?.[1] ?? null;
-}
-
-export async function fetchText(
-  url: string,
-  headers?: Record<string, string>
-): Promise<string> {
-  const init: RequestInit = { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) };
-  if (headers) init.headers = { "User-Agent": USER_AGENT, ...headers };
-  const response = await fetch(url, init);
-  if (!response.ok) {
-    throw new Error(
-      `Request to ${url} failed: ${response.status} ${response.statusText}`.trim()
-    );
-  }
-  return response.text();
-}
-
-export async function fetchJson(url: string): Promise<unknown> {
-  return JSON.parse(
-    await fetchText(url, {
-      Accept: "application/json",
-      "User-Agent": USER_AGENT,
-    })
-  ) as unknown;
 }
 
 /** Builds the summary of one game, reusing the header parsing of `pgn.ts`. */
@@ -164,7 +141,7 @@ export async function fetchLichessGames(
   const until = Date.now();
   const since = until - GAME_WINDOW_DAYS * DAY_MS;
   const url = `https://lichess.org/api/games/user/${encodeURIComponent(username)}?max=${MAX_GAMES}&since=${since}&until=${until}&ongoing=true`;
-  const text = await fetchText(url, {
+  const text = await requests.text(url, {
     Accept: "application/x-chess-pgn",
   });
 
@@ -300,7 +277,7 @@ function chesscomCurrentGamesUrl(username: string): string {
 export async function fetchChesscomCurrentGames(
   username: string
 ): Promise<GameSummary[]> {
-  const data = asObject(await fetchJson(chesscomCurrentGamesUrl(username)));
+  const data = asObject(await requests.json(chesscomCurrentGamesUrl(username)));
   const games = Array.isArray(data?.["games"]) ? data["games"] : [];
   return games.flatMap((value) => {
     const game = asObject(value);
@@ -333,22 +310,37 @@ export async function fetchChesscomGames(
   const until = Date.now();
   const since = until - GAME_WINDOW_DAYS * DAY_MS;
   const indexUrl = `https://api.chess.com/pub/player/${encodeURIComponent(username)}/games/archives`;
-  const archives = archivesFromIndex(await fetchJson(indexUrl));
+  const archives = archivesFromIndex(await requests.json(indexUrl));
   const selected = intersectingArchives(archives, since, until);
   // Ongoing daily games are not in the archives. A failure here must not hide
   // the finished games the archives did return.
-  const current = fetchChesscomCurrentGames(username).catch(() => []);
+  const current = fetchChesscomCurrentGames(username).catch((err: unknown) => {
+    // Except a rate limit: the list would claim the player has no game.
+    if (err instanceof RateLimitedError) throw err;
+    return [];
+  });
 
-  // The month archives are independent: request them at once, ignoring the
-  // months that failed rather than losing the whole window.
+  // The month archives are independent (the requests still go one at a
+  // time): a month that failed is left out rather than losing the window. A
+  // rate limit is not: the site would refuse every later month too, and the
+  // list would silently miss a whole period.
   const results = await Promise.allSettled(
     selected.map(async (url) => {
-      const body = await fetchJson(url);
+      const body = await requests.json(url);
       return body && typeof body === "object" && "games" in body
         ? body.games
         : [];
     })
   );
+  const limited = results.find(
+    (result) =>
+      result.status === "rejected" && result.reason instanceof RateLimitedError
+  );
+  if (limited?.status === "rejected") {
+    // `current` may have failed the same way: handle it before throwing.
+    await current.catch(() => undefined);
+    throw limited.reason;
+  }
   const entries = summariesFromArchives(results, since, until);
 
   // The games still running come first: they are the ones worth watching.
@@ -438,7 +430,7 @@ async function fetchChesscomPgn(
   id: string
 ): Promise<ImportedPgn> {
   const callbackUrl = `https://www.chess.com/callback/${kind}/game/${id}`;
-  const callback = asObject(await fetchJson(callbackUrl));
+  const callback = asObject(await requests.json(callbackUrl));
   const details = asObject(callback?.["game"]);
   const headers = asObject(details?.["pgnHeaders"]);
   const white = stringAt(headers, "White")?.toLowerCase();
@@ -467,7 +459,7 @@ async function fetchChesscomPgn(
   const archiveUrl = `https://api.chess.com/pub/player/${encodeURIComponent(
     white
   )}/games/${year}/${month}`;
-  const archive = asObject(await fetchJson(archiveUrl));
+  const archive = asObject(await requests.json(archiveUrl));
   const games: unknown[] = Array.isArray(archive?.["games"])
     ? (archive["games"] as unknown[])
     : [];
@@ -494,7 +486,7 @@ export async function fetchGameFromUrl(url: string): Promise<GameSummary> {
   const imported: ImportedPgn =
     game.source === "lichess"
       ? {
-          pgn: await fetchText(
+          pgn: await requests.text(
             `https://lichess.org/game/export/${encodeURIComponent(game.id)}`,
             { Accept: "application/x-chess-pgn" }
           ),

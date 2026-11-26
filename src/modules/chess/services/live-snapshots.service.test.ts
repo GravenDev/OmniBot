@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import snapshots from "./snapshot.service.js";
-import type { LiveGame } from "./types.js";
+import type { LiveGame } from "../live/types.js";
+import snapshots from "./live-snapshots.service.js";
 
 const game: LiveGame = {
   id: "watch-id",

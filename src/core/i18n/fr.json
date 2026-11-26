@@ -156,7 +156,7 @@
   "modules.clash-of-code.description": "Suit les parties de Clash of Code dont le lien est posté, publie leur résultat et tient un classement des victoires.",
 
   "modules.chess.name": "Échecs",
-  "modules.chess.description": "Liste les parties récentes de Lichess et Chess.com, affiche un échiquier en image et analyse les parties avec des badges de notation et un rapport.",
+  "modules.chess.description": "Liste les parties récentes de Lichess et Chess.com, suit les parties en cours, affiche un échiquier en image et analyse les parties avec des badges de notation et un rapport.",
 
   "modules.starboard.name": "Starboard",
   "modules.starboard.description": "Reposte dans un salon dédié les messages qui reçoivent assez de réactions, et tient leur compteur à jour.",
@@ -170,7 +170,7 @@
   "pings.enabled": "Le bot vous mentionnera de nouveau dans ses annonces sur ce serveur.",
   "pings.disabled": "Le bot ne vous mentionnera plus dans ses annonces sur ce serveur. Votre nom y reste affiché.",
 
-  "privacy.confirm": "Cela supprime les données que le bot garde sur vous sur ce serveur : vos statistiques d'activité, votre score au jeu des 4h, votre compte et vos tirages RNGdle, le lien vers votre joueur Clash of Code, votre anniversaire, votre ancienneté recalculée et votre préférence de mention. C'est irréversible.\n-# Les signalements restent aux modérateurs jusqu'à leur purge.",
+  "privacy.confirm": "Cela supprime les données que le bot garde sur vous sur ce serveur : vos statistiques d'activité, votre score au jeu des 4h, votre compte et vos tirages RNGdle, le lien vers votre joueur Clash of Code, votre anniversaire, votre ancienneté recalculée, votre préférence de mention et les parties d'échecs que vous suivez. C'est irréversible.\n-# Les signalements restent aux modérateurs jusqu'à leur purge.",
   "privacy.confirmButton": "Supprimer mes données",
   "privacy.deleted": "Vos données sur ce serveur ont été supprimées.",
   "privacy.failed": "Une partie de vos données n'a pas pu être supprimée. Réessayez dans un instant.",

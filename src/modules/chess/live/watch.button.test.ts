@@ -5,6 +5,8 @@ const mocks = vi.hoisted(() => ({
   ownedSession: vi.fn(),
   gameFromUrl: vi.fn(),
   startWatchFlow: vi.fn(),
+  watchRefusal: vi.fn(),
+  replyEphemeral: vi.fn(),
   errorMessage: vi.fn((_t: unknown, key: string) => ({ marker: key })),
 }));
 
@@ -21,7 +23,11 @@ vi.mock("#lib/logger.js", () => ({
   }),
 }));
 vi.mock("./sources.js", () => ({ gameFromUrl: mocks.gameFromUrl }));
-vi.mock("./watch.js", () => ({ startWatchFlow: mocks.startWatchFlow }));
+vi.mock("./watch.js", () => ({
+  startWatchFlow: mocks.startWatchFlow,
+  watchRefusal: mocks.watchRefusal,
+}));
+vi.mock("#lib/reply.js", () => ({ replyEphemeral: mocks.replyEphemeral }));
 
 import watchButton from "./watch.button.js";
 
@@ -79,6 +85,7 @@ beforeEach(() => {
   mocks.ownedSession.mockResolvedValue(session);
   mocks.gameFromUrl.mockResolvedValue(snapshot);
   mocks.startWatchFlow.mockResolvedValue(undefined);
+  mocks.watchRefusal.mockResolvedValue(null);
 });
 
 describe("list watch button", () => {
@@ -134,5 +141,19 @@ describe("list watch button", () => {
     await watchButton.execute(event as never, ["session", "0"], config);
 
     expect(event.followUp).toHaveBeenCalledWith({ marker: "error.url" });
+  });
+
+  it("refuses before publishing where the watcher could not edit the board", async () => {
+    const event = interaction();
+    mocks.watchRefusal.mockResolvedValue("live.missingPermissions");
+
+    await watchButton.execute(event as never, ["session", "0"], config);
+
+    expect(mocks.replyEphemeral).toHaveBeenCalledWith(
+      event,
+      "live.missingPermissions"
+    );
+    expect(event.deferUpdate).not.toHaveBeenCalled();
+    expect(mocks.startWatchFlow).not.toHaveBeenCalled();
   });
 });

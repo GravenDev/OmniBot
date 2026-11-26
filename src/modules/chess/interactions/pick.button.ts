@@ -1,9 +1,9 @@
 import type { ButtonInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { loggerMaker } from "#lib/logger.js";
-import { runAnalysis } from "../analysis/run.js";
+import { analysisErrorKey, runAnalysis } from "../analysis/run.js";
 import { analysingMessage, chessView, errorMessage } from "../views.js";
-import { ownedSession, selectGame } from "./common.js";
+import { openGame, ownedSession } from "./common.js";
 import {
   deferWithEphemeralStatus,
   finishButtonStatus,
@@ -19,11 +19,11 @@ export default declareInteractionHandler<ButtonInteraction>({
   check: (interaction): interaction is ButtonInteraction =>
     interaction.isButton(),
   async execute(interaction, [sessionId, rawIndex], config) {
-    const session = await ownedSession(interaction, sessionId!, config.t);
-    if (!session) return;
+    const list = await ownedSession(interaction, sessionId!, config.t);
+    if (!list) return;
 
-    const parsed = selectGame(session, Number(rawIndex));
-    if (!parsed) {
+    const session = openGame(list, Number(rawIndex));
+    if (!session) {
       await interaction.reply(errorMessage(config.t, "error.pgn"));
       return;
     }
@@ -50,7 +50,7 @@ export default declareInteractionHandler<ButtonInteraction>({
       await updateEphemeralStatus(
         interaction,
         flow,
-        errorMessage(config.t, "error.analysis")
+        errorMessage(config.t, analysisErrorKey(error))
       );
       return;
     }

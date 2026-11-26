@@ -5,8 +5,8 @@ import {
   editButtonMessage,
   respondToButton,
 } from "../interactions/response.js";
-import snapshots from "./snapshot.service.js";
-import store from "./store.service.js";
+import snapshots from "../services/live-snapshots.service.js";
+import store from "../services/live-store.service.js";
 import { livePly, type LiveAction } from "./types.js";
 import { liveMessage } from "./views.js";
 

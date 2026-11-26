@@ -1,18 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { LiveGame } from "./types.js";
+import type { LiveGame } from "../live/types.js";
 
 const upsert = vi.hoisted(() => vi.fn());
 const update = vi.hoisted(() => vi.fn());
+const updateMany = vi.hoisted(() => vi.fn(async () => ({ count: 1 })));
 const del = vi.hoisted(() => vi.fn());
+const deleteMany = vi.hoisted(() => vi.fn(async () => ({ count: 0 })));
 const findUnique = vi.hoisted(() => vi.fn());
 const findMany = vi.hoisted(() => vi.fn());
+const count = vi.hoisted(() => vi.fn(async () => 2));
 vi.mock("#lib/database.js", () => ({
   default: {
-    chessLiveGame: { upsert, update, delete: del, findUnique, findMany },
+    chessLiveGame: {
+      upsert,
+      update,
+      updateMany,
+      delete: del,
+      deleteMany,
+      findUnique,
+      findMany,
+      count,
+    },
   },
 }));
 
-const { default: store } = await import("./store.service.js");
+const { default: store } = await import("./live-store.service.js");
 
 const row = {
   id: "watch-id",
@@ -131,14 +143,17 @@ describe("live game store", () => {
   });
 
   it("only updates moves for ongoing games and deletes finished ones", async () => {
-    await store.setMoves("watch-id", ["d2d4", "e7e5"]);
-    expect(update).toHaveBeenCalledWith({
+    expect(await store.setMoves("watch-id", ["d2d4", "e7e5"])).toBe(true);
+    expect(updateMany).toHaveBeenCalledWith({
       where: { id: "watch-id" },
       data: { moves: "d2d4 e7e5" },
     });
 
+    // A watch already removed (by a second poll or a deleted channel) is not
+    // an error: deleteMany does not throw P2025 like delete.
     await store.unwatch("watch-id");
-    expect(del).toHaveBeenCalledWith({ where: { id: "watch-id" } });
+    expect(deleteMany).toHaveBeenCalledWith({ where: { id: "watch-id" } });
+    expect(del).not.toHaveBeenCalled();
   });
 
   it("reads a watch and returns null when it is gone", async () => {
@@ -164,5 +179,44 @@ describe("live game store", () => {
       where: { finished: false, guildId: { in: ["guild", "other"] } },
       orderBy: { createdAt: "desc" },
     });
+  });
+
+  it("removes every watch of a deleted channel and returns their ids", async () => {
+    findMany.mockResolvedValueOnce([{ id: "a" }, { id: "b" }]);
+    expect(await store.removeChannel("guild", "channel")).toEqual(["a", "b"]);
+    expect(deleteMany).toHaveBeenCalledWith({
+      where: { id: { in: ["a", "b"] } },
+    });
+  });
+
+  it("removes a member's watches on a guild, for /privacy delete", async () => {
+    findMany.mockResolvedValueOnce([{ id: "a" }]);
+    expect(await store.removeMember("guild", "owner")).toEqual(["a"]);
+    expect(findMany).toHaveBeenLastCalledWith({
+      where: { guildId: "guild", ownerId: "owner" },
+      select: { id: true },
+    });
+    expect(deleteMany).toHaveBeenCalledWith({ where: { id: { in: ["a"] } } });
+  });
+
+  it("removes every watch of a guild when the module is disabled", async () => {
+    findMany.mockResolvedValueOnce([{ id: "a" }, { id: "b" }]);
+    expect(await store.removeGuild("guild")).toEqual(["a", "b"]);
+    expect(findMany).toHaveBeenLastCalledWith({
+      where: { guildId: "guild" },
+      select: { id: true },
+    });
+  });
+
+  it("counts the watches still running for a member or a guild", async () => {
+    expect(await store.countActive({ guildId: "guild", ownerId: "o" })).toBe(2);
+    expect(count).toHaveBeenCalledWith({
+      where: { guildId: "guild", ownerId: "o", finished: false },
+    });
+  });
+
+  it("says when the moves had no watch left to update", async () => {
+    updateMany.mockResolvedValueOnce({ count: 0 });
+    expect(await store.setMoves("stopped", ["d2d4"])).toBe(false);
   });
 });

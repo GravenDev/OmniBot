@@ -1,10 +1,12 @@
 import type { ButtonInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { loggerMaker } from "#lib/logger.js";
+import { replyEphemeral } from "#lib/reply.js";
 import { ownedSession } from "../interactions/common.js";
+import { RateLimitedError } from "../services/site-requests.service.js";
 import { errorMessage } from "../views.js";
 import { gameFromUrl } from "./sources.js";
-import { startWatchFlow } from "./watch.js";
+import { startWatchFlow, watchRefusal } from "./watch.js";
 
 const logger = loggerMaker("chess");
 
@@ -29,6 +31,12 @@ export default declareInteractionHandler<ButtonInteraction>({
       return;
     }
 
+    const refusal = await watchRefusal(interaction, config.t);
+    if (refusal) {
+      await replyEphemeral(interaction, refusal);
+      return;
+    }
+
     // The list stays as it is; the watch itself is published in the channel.
     await interaction.deferUpdate();
     try {
@@ -47,7 +55,12 @@ export default declareInteractionHandler<ButtonInteraction>({
       });
     } catch (error) {
       logger.error({ err: error }, "Chess watch from list failed");
-      await interaction.followUp(errorMessage(config.t, "error.url"));
+      await interaction.followUp(
+        errorMessage(
+          config.t,
+          error instanceof RateLimitedError ? "error.rateLimited" : "error.url"
+        )
+      );
     }
   },
 });

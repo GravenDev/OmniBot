@@ -3,9 +3,11 @@ import type { ParsedGame } from "../types.js";
 
 const mocks = vi.hoisted(() => {
   const toBuffer = vi.fn(async () => Buffer.from("png"));
+  const encode = vi.fn(async () => Buffer.from("png"));
   const canvas = {
     getContext: vi.fn(),
     toBuffer,
+    encode,
   };
   const context = {
     canvas,
@@ -21,6 +23,7 @@ const mocks = vi.hoisted(() => {
   return {
     context,
     toBuffer,
+    encode,
     canvas,
     createCanvas: vi.fn(),
     loadImage: vi.fn(async () => ({ image: true })),
@@ -63,20 +66,25 @@ describe("renderBoard", () => {
     const image = await renderBoard(game, 0, false);
 
     expect(image).toEqual(Buffer.from("png"));
-    expect(mocks.createCanvas).toHaveBeenCalledWith(4096, 4096);
+    // Discord shows a board a few hundred pixels wide: 1024 keeps it sharp.
+    expect(mocks.createCanvas).toHaveBeenCalledWith(1024, 1024);
     expect(mocks.context.drawImage).toHaveBeenCalledTimes(33); // frame + 32 pieces
     expect(mocks.context.fillRect).toHaveBeenCalledTimes(3); // background + two borders
     expect(mocks.context.save).not.toHaveBeenCalled();
-    expect(mocks.toBuffer).toHaveBeenCalledWith("image/png", {
-      resolution: 300,
-    });
+    // Encoded on the canvas thread pool: a synchronous toBuffer would hold
+    // the event loop for the whole encoding.
+    expect(mocks.encode).toHaveBeenCalledWith("png");
+    expect(mocks.toBuffer).not.toHaveBeenCalledWith(
+      "image/png",
+      expect.anything()
+    );
   });
 
   it("rotates the frame, highlights the last move and adds a rating badge", async () => {
     await renderBoard(game, 1, true, "best");
 
     expect(mocks.context.save).toHaveBeenCalledOnce();
-    expect(mocks.context.translate).toHaveBeenCalledWith(2048, 2048);
+    expect(mocks.context.translate).toHaveBeenCalledWith(512, 512);
     expect(mocks.context.rotate).toHaveBeenCalledWith(Math.PI);
     expect(mocks.context.restore).toHaveBeenCalledOnce();
     // Two highlighted squares plus the last move's badge.

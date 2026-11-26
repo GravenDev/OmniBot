@@ -1,9 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  fetchChesscomCurrentGames,
-  fetchJson,
-  fetchText,
-} from "../games/fetch.js";
+import { fetchChesscomCurrentGames } from "../games/fetch.js";
 import type { GameSummary } from "../types.js";
 import {
   chesscomGameById,
@@ -15,14 +11,15 @@ vi.mock("../games/fetch.js", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../games/fetch.js")>();
   return {
     ...actual,
-    fetchJson: vi.fn(),
-    fetchText: vi.fn(),
     fetchChesscomCurrentGames: vi.fn(),
   };
 });
+const json = vi.hoisted(() => vi.fn());
+const text = vi.hoisted(() => vi.fn());
+vi.mock("../services/site-requests.service.js", () => ({
+  default: { json, text },
+}));
 
-const json = vi.mocked(fetchJson);
-const text = vi.mocked(fetchText);
 const currentGames = vi.mocked(fetchChesscomCurrentGames);
 
 function pgn(fen?: string): string {
@@ -176,5 +173,49 @@ describe("live sources", () => {
     );
 
     expect(snapshot).toMatchObject({ finished: true, result: "black" });
+  });
+
+  it("replays a Chess960 Chess.com game from its starting FEN", async () => {
+    const fen = "bnrqkrnb/pppppppp/8/8/8/8/PPPPPPPP/BNRQKRNB w KQkq - 0 1";
+    json.mockResolvedValue({
+      game: {
+        isFinished: false,
+        moveList: "gv",
+        pgnHeaders: {
+          White: "Alice",
+          Black: "Bob",
+          TimeControl: "600",
+          Variant: "Chess960",
+          SetUp: "1",
+          FEN: fen,
+        },
+      },
+    });
+
+    const snapshot = await chesscomGameById(
+      "1",
+      "https://www.chess.com/game/live/1"
+    );
+
+    expect(snapshot?.startFen).toBe(fen);
+  });
+
+  it("leaves out a Chess.com variant the board cannot replay", async () => {
+    json.mockResolvedValue({
+      game: {
+        isFinished: false,
+        moveList: "gv",
+        pgnHeaders: {
+          White: "Alice",
+          Black: "Bob",
+          TimeControl: "600",
+          Variant: "King of the Hill",
+        },
+      },
+    });
+
+    expect(
+      await chesscomGameById("1", "https://www.chess.com/game/live/1")
+    ).toBeNull();
   });
 });

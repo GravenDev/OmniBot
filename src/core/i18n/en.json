@@ -156,7 +156,7 @@
   "modules.clash-of-code.description": "Follows the Clash of Code games whose link is posted, posts their results and keeps a wins leaderboard.",
 
   "modules.chess.name": "Chess",
-  "modules.chess.description": "Lists recent Lichess and Chess.com games, draws an image board and analyses games with rating badges and a report.",
+  "modules.chess.description": "Lists recent Lichess and Chess.com games, follows games in progress, draws an image board and analyses games with rating badges and a report.",
 
   "modules.starboard.name": "Starboard",
   "modules.starboard.description": "Reposts the messages that get enough reactions in a dedicated channel, and keeps their count up to date.",
@@ -170,7 +170,7 @@
   "pings.enabled": "The bot will ping you again in its announcements on this server.",
   "pings.disabled": "The bot will no longer ping you in its announcements on this server. Your name still appears in them.",
 
-  "privacy.confirm": "This deletes the data the bot keeps about you on this server: your activity statistics, your 4-hour game score, your RNGdle account and rolls, the link to your Clash of Code player, your birthday, your recomputed seniority, and your mention preference. It cannot be undone.\n-# Reports stay with the moderators until they are purged.",
+  "privacy.confirm": "This deletes the data the bot keeps about you on this server: your activity statistics, your 4-hour game score, your RNGdle account and rolls, the link to your Clash of Code player, your birthday, your recomputed seniority, your mention preference, and the chess games you follow. It cannot be undone.\n-# Reports stay with the moderators until they are purged.",
   "privacy.confirmButton": "Delete my data",
   "privacy.deleted": "Your data on this server has been deleted.",
   "privacy.failed": "Some of your data could not be deleted. Try again in a moment.",

@@ -54,14 +54,30 @@ function navRow(game: LiveGame, ply: number, ephemeral: boolean) {
   );
 }
 
-/** The site link stays available on the public watch and on private copies. */
-function siteRow(game: LiveGame, t: TFunction) {
-  return new ActionRowBuilder<ButtonBuilder>().addComponents(
+export function liveStopId(game: LiveGame): string {
+  return `chess-live-stop:${game.id}`;
+}
+
+/**
+ * The site link stays available on the public watch and on private copies;
+ * a watch still running also offers to stop it.
+ */
+function siteRow(game: LiveGame, t: TFunction, stoppable: boolean) {
+  const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
     new ButtonBuilder()
       .setLabel(t("live.site"))
       .setStyle(ButtonStyle.Link)
       .setURL(game.url)
   );
+  if (stoppable) {
+    row.addComponents(
+      new ButtonBuilder()
+        .setCustomId(liveStopId(game))
+        .setLabel(t("live.stop"))
+        .setStyle(ButtonStyle.Danger)
+    );
+  }
+  return row;
 }
 
 /**
@@ -73,7 +89,8 @@ export async function liveMessage(
   game: LiveGame,
   t: TFunction,
   ply = game.ply,
-  ephemeral = true
+  ephemeral = true,
+  stopped = false
 ): Promise<ChessMessage> {
   const headers = game.startFen
     ? new Map([["FEN", game.startFen]])
@@ -82,6 +99,7 @@ export async function liveMessage(
     headers: new Map<string, string>(),
     positions: [],
     steps: [],
+    variant: "chess" as const,
     result: "unknown" as const,
   };
   const name = `live-${game.id}.png`;
@@ -118,8 +136,11 @@ export async function liveMessage(
       .addTextDisplayComponents((text) => text.setContent(moves));
   }
 
+  // A finished or stopped watch is gone from the database: its buttons would
+  // only answer that the session expired.
+  const over = game.finished || stopped;
   const components: ChessMessage["components"] = [
-    game.finished
+    over
       ? container
       : container.addActionRowComponents(navRow(game, current, ephemeral)),
   ];
@@ -127,7 +148,9 @@ export async function liveMessage(
     // Only the public watch follows the game. A private copy is a snapshot the
     // member browses, so it carries no live status to go stale.
     let status = `**${t("live.started")}**`;
-    if (game.finished) {
+    if (stopped) {
+      status = `## ${t("live.stopped")}`;
+    } else if (game.finished) {
       const result = t(`live.result.${game.result}`);
       status = [
         `## ${t("live.finished")}`,
@@ -140,7 +163,7 @@ export async function liveMessage(
         .addTextDisplayComponents((text) => text.setContent(status))
     );
   }
-  components.push(siteRow(game, t));
+  components.push(siteRow(game, t, !ephemeral && !over));
 
   return {
     components,

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { declareService, type Service } from "#lib/service.js";
-import type { LiveGame } from "./types.js";
+import type { LiveGame } from "../live/types.js";
 
 const TTL_MS = 60 * 60 * 1000;
 

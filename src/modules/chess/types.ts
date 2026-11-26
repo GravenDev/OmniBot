@@ -1,3 +1,4 @@
+import type { Rules } from "chessops";
 import type { Chess, NormalMove, Square } from "chessops";
 import type { Classification } from "wintrchess/classify";
 import type { Evaluation } from "wintrchess/engine";
@@ -43,6 +44,8 @@ export interface Step {
 
 export interface ParsedGame {
   headers: Map<string, string>;
+  /** chessops' rules: "chess" for standard games, Chess960 included. */
+  variant: Rules;
   positions: Chess[];
   steps: Step[];
   result: GameResult;

@@ -13,9 +13,9 @@ import { getWinPercent } from "wintrchess/engine";
 import type { TFunction } from "#lib/i18n.js";
 import { NO_MENTIONS } from "#lib/mentions.js";
 import { pageRow } from "#lib/pagination.js";
-import { ratingEmoji } from "./emojis.js";
 import { OUTCOME_EMOJI, playerSide } from "./ratings.js";
 import { renderBoard } from "./rendering/board.js";
+import ratingEmojis from "./services/rating-emojis.service.js";
 import { formatTimeControl, speedOf } from "./speed.js";
 import type {
   ChessSession,
@@ -272,6 +272,7 @@ function boardRow(session: ChessSession) {
  * disabled, not removed.
  */
 function actionsRow(session: ChessSession, t: TFunction, current: ChessView) {
+  const analysable = (session.parsed?.variant ?? "chess") === "chess";
   const actions = [
     { id: "board", emoji: ACTION_EMOJIS.board, label: t("viewer.game") },
     { id: "analyse", emoji: ACTION_EMOJIS.analyse, label: t("viewer.analyse") },
@@ -283,7 +284,11 @@ function actionsRow(session: ChessSession, t: TFunction, current: ChessView) {
         .setCustomId(`chess-action:${session.id}:${action.id}`)
         .setLabel(`${action.emoji} ${action.label}`)
         .setStyle(ButtonStyle.Secondary)
-        .setDisabled(action.id === current)
+        .setDisabled(
+          action.id === current ||
+            // Both read the engine's ratings, which a variant cannot have.
+            (action.id !== "board" && !analysable)
+        )
     )
   );
 }
@@ -369,7 +374,7 @@ function analysisReadout(
   let move = t("analyse.start");
   if (san) {
     let prefix = "";
-    if (rating) prefix = `${ratingEmoji(rating)} `;
+    if (rating) prefix = `${ratingEmojis.get(rating)} `;
     move = `${prefix}${escapeMarkdown(san)}`;
   }
   return [
@@ -469,7 +474,7 @@ export function reportMessage(
   const lines = counts.length
     ? counts.map((count) => {
         const label = t(`rating.${count.rating}`);
-        return `${ratingEmoji(count.rating)} ${label} · ${count.count}`;
+        return `${ratingEmojis.get(count.rating)} ${label} · ${count.count}`;
       })
     : [t("report.empty")];
 

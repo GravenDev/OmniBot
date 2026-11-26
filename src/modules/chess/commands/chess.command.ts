@@ -21,8 +21,9 @@ import {
   fetchLichessGames,
 } from "../games/fetch.js";
 import { gameFromUrl, gameFromUsername } from "../live/sources.js";
-import { startWatchFlow } from "../live/watch.js";
+import { startWatchFlow, watchRefusal } from "../live/watch.js";
 import store from "../services/session.service.js";
+import { RateLimitedError } from "../services/site-requests.service.js";
 import type { ChessMode, ChessSide, GameSummary } from "../types.js";
 import { editable, errorMessage } from "../views.js";
 
@@ -229,6 +230,12 @@ function pgnModal(mode: ChessMode, side: ChessSide, locale: string) {
   return modal;
 }
 
+/** A busy site is not a wrong URL or an unknown player. */
+function fetchErrorKey(error: unknown, subcommand: string): string {
+  if (error instanceof RateLimitedError) return "error.rateLimited";
+  return subcommand === "url" ? "error.url" : "error.user";
+}
+
 async function fetchGames(
   subcommand: string,
   interaction: ChatInputCommandInteraction
@@ -264,6 +271,12 @@ async function startWatch(
     return;
   }
 
+  const refusal = await watchRefusal(interaction, config.t);
+  if (refusal) {
+    await replyEphemeral(interaction, refusal);
+    return;
+  }
+
   const requestedPlayer =
     subcommand === "url"
       ? undefined
@@ -296,12 +309,7 @@ async function startWatch(
   } catch (error) {
     logger.error({ err: error }, "Chess live watch failed");
     await interaction.editReply(
-      editable(
-        errorMessage(
-          config.t,
-          subcommand === "url" ? "error.url" : "error.user"
-        )
-      )
+      editable(errorMessage(config.t, fetchErrorKey(error, subcommand)))
     );
   }
 }
@@ -361,12 +369,7 @@ export default declareCommand<{}>({
     } catch (error) {
       logger.error({ err: error }, "Chess game fetch failed");
       await interaction.editReply(
-        editable(
-          errorMessage(
-            config.t,
-            subcommand === "url" ? "error.url" : "error.user"
-          )
-        )
+        editable(errorMessage(config.t, fetchErrorKey(error, subcommand)))
       );
     }
   },

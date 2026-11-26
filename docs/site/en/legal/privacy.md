@@ -52,6 +52,7 @@ This copy lets moderators review the message even if its author edits or deletes
 - **4-hour game**: each player's score, the history of their points (time held and date), the best time of each day, and the last message of the game channel (channel, message and author IDs, time sent).
 - **RNGdle**: the RNGdle username a member links to their Discord account, their rolls downloaded from rngdle.com (number, score, badge count and date), their daily reminder subscription, and for each day whether they already got their verified card.
 - **Clash of Code**: for each game whose link is posted, its CodinGame identifier, its mode, its start date and the channel and message IDs of the link; for each player, their CodinGame ID, nickname and avatar ID, and the Discord ID of the member who linked their account to it; for each participation, the rank, score, time, character count and language.
+- **Chess**: for each game followed live, its source (Lichess or Chess.com), its identifier and link, both players' usernames, its time control, its starting position and the moves played, the IDs of the guild, channel and message showing it, and the Discord ID of the member who started the watch. Games listed or analysed with `/chess view` are only kept in memory, with the ID of the member who asked for them, for at most one hour after their last action.
 
 ### Automatic Reactions
 
@@ -107,12 +108,13 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 
 ## Data Retention
 
-- **Module configuration and activation**: kept as long as the bot is on the guild. When the bot leaves a guild (kick or removal), they are deliberately kept so everything is restored automatically if the bot is re-invited. Disabling a module deletes neither its configuration nor its data, except for recomputed seniority and birthdays: they remain subject to the periods below.
+- **Module configuration and activation**: kept as long as the bot is on the guild. When the bot leaves a guild (kick or removal), they are deliberately kept so everything is restored automatically if the bot is re-invited. Disabling a module deletes neither its configuration nor its data, except for recomputed seniority, birthdays and chess watches: they remain subject to the periods below.
 - **Reports**: a report is deleted, message copy included, 30 days after the message was last reported at the latest, whether it is closed or not. Each guild's administrators can shorten this period for closed reports. The deletion happens even when the module is disabled or the bot has left the guild.
 - **Activity statistics**: counters are deleted after a year, a period that cannot be changed. The date tracking started is kept with no time limit.
 - **RNGdle**: rolls, username and reminder subscription are kept until the member unlinks with `/rngdle unlink`, or an administrator unlinks them. The record of a claimed card is deleted two days later.
 - **4-hour game**: scores and point history are kept until an administrator deletes the player's score.
 - **Clash of Code**: games, players and their results are kept with no time limit, for the leaderboard's history. The link to a Discord account is removed when the member unlinks with `/coc unlink`, or an administrator unlinks them.
+- **Chess**: a watch is deleted when the game ends, when the member who started it or a member who manages messages stops it, when its channel is deleted, when the bot notices at the next move that its message was deleted or that it lost access to it, after about two hours during which the game or the message stays unreachable, when the member who started it uses `/privacy delete`, and when the module is disabled on the guild.
 - **Mention preference and automatic reactions**: kept until the member, or an administrator, removes them.
 - **Honeypot counter**: kept with no time limit, even when the module is disabled or the bot leaves the guild, like the configuration.
 - **Sticky messages**: kept until an administrator removes them in `/config`, or the channel is deleted.
@@ -121,20 +123,22 @@ Data is stored in a PostgreSQL database managed by the bot instance operator. Th
 - **Recomputed seniority**: kept for a year after the bot notices the member left the guild (checked daily, or when the bot restarts after an outage), so that it still holds if they come back within the year, then deleted; if the bot leaves the guild, it stays stored until the bot comes back, like the configuration; deleted by `/privacy delete` (an administrator can recompute it again afterwards) and when the module is disabled on the guild, unlike the data of other modules. A member who has left the guild can no longer run `/privacy delete`: they ask the instance operator to delete it.
 - **Birthdays**: permanently deleted when the member removes them (`/birthday remove` or `/privacy delete`), leaves the guild, or when the module is disabled on the guild, like recomputed seniority and unlike the data of other modules. If the bot leaves the guild, they stay stored, like the configuration, until it comes back. `/birthday show` shows what is kept.
 
-Any member can delete the data the bot keeps about them on a guild themselves, at any time, with the `/privacy delete` command: their activity statistics, their game data (4-hour game, RNGdle, Clash of Code link), their birthday, their recomputed seniority and their mention preference. Reports are not part of it: they stay with the moderators until they are deleted automatically. For any other deletion request, contact the instance operator.
+Any member can delete the data the bot keeps about them on a guild themselves, at any time, with the `/privacy delete` command: their activity statistics, their game data (4-hour game, RNGdle, Clash of Code link, chess watches), their birthday, their recomputed seniority and their mention preference. Reports are not part of it: they stay with the moderators until they are deleted automatically. For any other deletion request, contact the instance operator.
 
 ## Data Sharing
 
 OmniBot does not sell the collected data or share it with any third party. It does not use it for advertising, marketing analytics or to train artificial intelligence models.
 
-The bot contacts four external services:
+The bot contacts six external services:
 
 - **the Discord API**, which receives data as part of normal bot operation (sending messages, responding to interactions, registering commands);
 - **rngdle.com**, for the RNGdle module: the bot sends it the linked RNGdle usernames to download their rolls, and fetches the site's score table;
 - **rng.cubityfir.st**, for the RNGdle module: the bot sends it a roll number to get the list of its badges; for an unlinked member, that number is the one of the result they pasted;
-- **codingame.com**, for the Clash of Code module: the bot sends it a game identifier, taken from the posted link, to get its result, and fetches the players' avatars from static.codingame.com.
+- **codingame.com**, for the Clash of Code module: the bot sends it a game identifier, taken from the posted link, to get its result, and fetches the players' avatars from static.codingame.com;
+- **lichess.org**, for the Chess module: the bot sends it the Lichess username or game link given to `/chess`, to list a player's recent games, import one or follow a game in progress;
+- **chess.com** (api.chess.com and www.chess.com), for the Chess module: likewise with a Chess.com username or link.
 
-No Discord identifier or message text is sent to rngdle.com, rng.cubityfir.st or codingame.com: only a game identifier and a roll number can come from a message.
+No Discord identifier or message text is sent to rngdle.com, rng.cubityfir.st or codingame.com: only a game identifier and a roll number can come from a message. Lichess and Chess.com only receive the usernames and links given to `/chess`; a pasted PGN is analysed on the instance and sent to no service.
 
 ## Open Source
 

@@ -56,3 +56,24 @@ export function selectGame(
   });
   return parsed;
 }
+
+/**
+ * Opens a game of a list on a session of its own. Every published board keeps
+ * its game: picking another one from the same list opens another session
+ * instead of swapping the game under a board already posted.
+ */
+export function openGame(
+  list: ChessSession,
+  index: number
+): ChessSession | null {
+  const game = list.games[index];
+  if (!game) return null;
+  const board = store.create(
+    list.ownerId,
+    list.mode,
+    list.side,
+    [game],
+    list.requestedPlayer
+  );
+  return selectGame(board, 0) ? board : null;
+}

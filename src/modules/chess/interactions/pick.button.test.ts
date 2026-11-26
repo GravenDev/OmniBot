@@ -6,7 +6,7 @@ silenceLogs();
 
 const mocks = vi.hoisted(() => ({
   ownedSession: vi.fn(),
-  selectGame: vi.fn(),
+  openGame: vi.fn(),
   runAnalysis: vi.fn(async () => undefined),
   analysingMessage: vi.fn(() => ({ marker: "analysing" })),
   chessView: vi.fn(async () => ({ marker: "board" })),
@@ -17,7 +17,10 @@ const mocks = vi.hoisted(() => ({
   updateEphemeralStatus: vi.fn(async () => undefined),
 }));
 
-vi.mock("../analysis/run.js", () => ({ runAnalysis: mocks.runAnalysis }));
+vi.mock("../analysis/run.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../analysis/run.js")>()),
+  runAnalysis: mocks.runAnalysis,
+}));
 vi.mock("../views.js", () => ({
   analysingMessage: mocks.analysingMessage,
   chessView: mocks.chessView,
@@ -25,7 +28,7 @@ vi.mock("../views.js", () => ({
 }));
 vi.mock("./common.js", () => ({
   ownedSession: mocks.ownedSession,
-  selectGame: mocks.selectGame,
+  openGame: mocks.openGame,
 }));
 vi.mock("./response.js", () => ({
   deferWithEphemeralStatus: mocks.deferWithEphemeralStatus,
@@ -60,13 +63,17 @@ function session(overrides: Partial<ChessSession> = {}): ChessSession {
 describe("chess game pick button", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.selectGame.mockReturnValue({ steps: [] });
+    mocks.openGame.mockImplementation((list: ChessSession) => ({
+      ...list,
+      id: "board-id",
+      parsed: { steps: [] },
+    }));
   });
 
   it("refuses a game that cannot be parsed", async () => {
     const current = session();
     mocks.ownedSession.mockResolvedValue(current);
-    mocks.selectGame.mockReturnValue(null);
+    mocks.openGame.mockReturnValue(null);
 
     await pick.execute(interaction, ["session-id", "0"], config);
 
@@ -109,11 +116,14 @@ describe("chess game pick button", () => {
 
     await pick.execute(interaction, ["session-id", "1"], config);
 
-    expect(mocks.selectGame).toHaveBeenCalledWith(current, 1);
+    expect(mocks.openGame).toHaveBeenCalledWith(current, 1);
     expect(mocks.deferWithEphemeralStatus).toHaveBeenCalledWith(interaction, {
       marker: "analysing",
     });
-    expect(mocks.runAnalysis).toHaveBeenCalledWith(current);
+    // The analysis runs on the board's own session, never on the list's.
+    expect(mocks.runAnalysis).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "board-id" })
+    );
     expect(mocks.finishButtonStatus).toHaveBeenCalledWith(
       { statusId: "status-id" },
       interaction,
@@ -149,6 +159,20 @@ describe("chess game pick button", () => {
 
     await pick.execute(interaction, ["session-id", "0"], config);
 
-    expect(mocks.selectGame).not.toHaveBeenCalled();
+    expect(mocks.openGame).not.toHaveBeenCalled();
+  });
+
+  it("tells a member whose other analysis still runs to wait", async () => {
+    const { AnalysisBusyError } =
+      await import("../services/engines.service.js");
+    mocks.ownedSession.mockResolvedValue(session());
+    mocks.runAnalysis.mockRejectedValueOnce(new AnalysisBusyError());
+
+    await pick.execute(interaction, ["session-id", "0"], config);
+
+    expect(mocks.errorMessage).toHaveBeenLastCalledWith(
+      expect.anything(),
+      "error.busy"
+    );
   });
 });

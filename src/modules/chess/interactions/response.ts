@@ -139,14 +139,17 @@ export async function startDirectFlow(
   complete(result: ChessMessage): Promise<void>;
   fail(error: ChessMessage): Promise<void>;
 }> {
-  const statusMessage = await interaction.reply(status);
+  // `reply()` resolves to an InteractionResponse whose id is the
+  // interaction's, not the status message's: address the original response
+  // itself instead of an id Discord would answer with Unknown Message.
+  await interaction.reply(status);
   return {
     async complete(result) {
-      await deleteEphemeral(interaction, statusMessage.id);
+      await interaction.deleteReply();
       await interaction.followUp(result);
     },
     async fail(error) {
-      await editEphemeral(interaction, statusMessage.id, error);
+      await interaction.editReply(editable(error));
     },
   };
 }

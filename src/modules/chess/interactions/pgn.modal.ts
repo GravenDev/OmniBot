@@ -3,7 +3,7 @@ import { type ModalSubmitInteraction } from "discord.js";
 import { declareInteractionHandler } from "#lib/interaction.js";
 import { loggerMaker } from "#lib/logger.js";
 import { replyEphemeral } from "#lib/reply.js";
-import { runAnalysis } from "../analysis/run.js";
+import { analysisErrorKey, runAnalysis } from "../analysis/run.js";
 import { PGN_FIELD_IDS } from "../commands/chess.command.js";
 import { gameSummaryFromPgn } from "../games/fetch.js";
 import store from "../services/session.service.js";
@@ -68,7 +68,7 @@ export default declareInteractionHandler<ModalSubmitInteraction>({
         await runAnalysis(session);
       } catch (error) {
         logger.error({ err: error }, "Chess analysis failed on PGN game");
-        await flow.fail(errorMessage(config.t, "error.analysis"));
+        await flow.fail(errorMessage(config.t, analysisErrorKey(error)));
         return;
       }
 

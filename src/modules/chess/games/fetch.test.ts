@@ -140,7 +140,7 @@ describe("fetchLichessGames", () => {
     );
     expect(init.headers).toMatchObject({
       Accept: "application/x-chess-pgn",
-      "User-Agent": "OmniBot https://github.com/RedsTom/OmniBot",
+      "User-Agent": "OmniBot (+https://github.com/GravenDev/OmniBot)",
     });
     expect(init.signal).toBeInstanceOf(AbortSignal);
   });

@@ -39,7 +39,10 @@ vi.mock("./response.js", () => ({
   beginButtonEdit: mocks.beginButtonEdit,
   respondToButton: mocks.respondToButton,
 }));
-vi.mock("../analysis/run.js", () => ({ runAnalysis: mocks.runAnalysis }));
+vi.mock("../analysis/run.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../analysis/run.js")>()),
+  runAnalysis: mocks.runAnalysis,
+}));
 
 import action from "./action.button.js";
 

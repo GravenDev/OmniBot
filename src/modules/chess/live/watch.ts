@@ -1,11 +1,16 @@
 import { randomUUID } from "node:crypto";
+import type {
+  ButtonInteraction,
+  ChatInputCommandInteraction,
+} from "discord.js";
 import type { TFunction } from "#lib/i18n.js";
+import { missingBotPermissionNames } from "#lib/permissions.js";
+import liveStore from "../services/live-store.service.js";
+import watcher from "../services/watcher.service.js";
 import { editable, type ChessEditMessage } from "../views.js";
 import type { LiveSnapshot } from "./sources.js";
-import liveStore from "./store.service.js";
 import type { LiveGame } from "./types.js";
 import { liveMessage } from "./views.js";
-import watcher from "./watcher.service.js";
 
 export interface WatchContext {
   guildId: string;
@@ -64,4 +69,50 @@ export async function startWatchFlow(
     const stored = await liveStore.watch({ ...game, messageId: posted.id });
     watcher.track(stored);
   }
+}
+
+/**
+ * Each watch polls a chess site every few seconds for as long as the game
+ * lasts (days, for a correspondence game): a member and a server may only
+ * follow so many at once.
+ */
+export const MAX_WATCHES_PER_MEMBER = 3;
+export const MAX_WATCHES_PER_GUILD = 10;
+
+/**
+ * Why a watch cannot start here, or null. The watcher edits the public
+ * message long after the interaction token has expired: it needs to see the
+ * channel, fetch its own message there and attach the redrawn board, or the
+ * board would freeze.
+ */
+export async function watchRefusal(
+  interaction: Pick<
+    ChatInputCommandInteraction | ButtonInteraction,
+    "guild" | "guildId" | "channel" | "user"
+  >,
+  t: TFunction
+): Promise<string | null> {
+  const { guild, guildId, channel, user } = interaction;
+  if (!guild || !guildId || !channel || channel.isDMBased()) {
+    return t("error.invalid");
+  }
+  const missing = await missingBotPermissionNames(
+    guild,
+    channel,
+    ["ViewChannel", "ReadMessageHistory", "AttachFiles"],
+    t
+  );
+  if (missing) return t("live.missingPermissions", { permissions: missing });
+
+  const [mine, guildTotal] = await Promise.all([
+    liveStore.countActive({ guildId, ownerId: user.id }),
+    liveStore.countActive({ guildId }),
+  ]);
+  if (mine >= MAX_WATCHES_PER_MEMBER) {
+    return t("live.limitMember", { count: MAX_WATCHES_PER_MEMBER });
+  }
+  if (guildTotal >= MAX_WATCHES_PER_GUILD) {
+    return t("live.limitGuild", { count: MAX_WATCHES_PER_GUILD });
+  }
+  return null;
 }

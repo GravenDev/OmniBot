@@ -1,6 +1,6 @@
 import type { Chess, NormalMove } from "chessops";
 import { makeFen } from "chessops/fen";
-import { parsePgn, startingPosition } from "chessops/pgn";
+import { parsePgn, parseVariant, startingPosition } from "chessops/pgn";
 import { makeSanAndPlay, parseSan } from "chessops/san";
 import type { GameResult, ParsedGame, Step } from "../types.js";
 
@@ -31,6 +31,11 @@ export function parseGame(pgn: string): ParsedGame | null {
   try {
     const game = parsePgn(pgn)[0];
     if (!game) return null;
+    // A variant is replayed with its own rules, for the board; Chess960 and
+    // "From Position" games are standard chess from another start. Only the
+    // analysis, which Stockfish runs with the standard rules, refuses them.
+    const variant = parseVariant(game.headers.get("Variant"));
+    if (!variant) return null;
 
     const position = startingPosition(game.headers).unwrap() as Chess;
     const positions: Chess[] = [position.clone()];
@@ -66,6 +71,7 @@ export function parseGame(pgn: string): ParsedGame | null {
     if (game.headers.size === 0 && steps.length === 0) return null;
     return {
       headers: game.headers,
+      variant,
       positions,
       steps,
       result: resultFromTag(game.headers.get("Result")),

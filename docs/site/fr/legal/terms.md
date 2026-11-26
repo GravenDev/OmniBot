@@ -59,6 +59,8 @@ Vous devez :
 - Conserver la même licence
 - Documenter les modifications effectuées
 
+Le module Échecs utilise la bibliothèque [wintrchess](https://github.com/wintrcat/wintrchess-lib), sous licence GNU AGPL v3 (`AGPL-3.0-only`). Une instance qui intègre ce module, même désactivé sur tous ses serveurs, doit donc permettre à ses utilisateurs, y compris ceux qui ne s'en servent que via Discord, d'obtenir le code source de la version qu'elle fait tourner. Le code d'OmniBot est disponible sur [github.com/GravenDev/OmniBot](https://github.com/GravenDev/OmniBot).
+
 Voir le fichier [LICENSE](https://github.com/GravenDev/OmniBot/blob/master/LICENSE) pour les termes complets.
 
 ## 7. Modifications des conditions

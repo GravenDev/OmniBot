@@ -62,7 +62,8 @@ Le bot répond, en message visible du membre seul, par la liste de ce qui sera s
 - le lien vers son joueur Clash of Code : le joueur et ses résultats, venus de CodinGame, restent au classement ;
 - son anniversaire ;
 - son ancienneté recalculée (`/seniority-admin recompute`) ;
-- sa préférence `/pings`.
+- sa préférence `/pings` ;
+- les parties d'échecs dont il a lancé le suivi.
 
 Les signalements ne sont pas touchés : ils restent aux modérateurs jusqu'à leur purge. Si une suppression échoue, les autres ont quand même lieu et le message invite à réessayer.
 
@@ -289,6 +290,41 @@ Lie votre compte Discord à un joueur CodinGame déjà vu dans une partie du ser
 | `channels` | Liste de salons | Salons (et leurs fils) où les liens de partie sont suivis. Vide par défaut : tous les salons sont suivis. |
 
 Le module lit le contenu des messages : l'intent privilégié _Message Content_ doit être activé sur le bot.
+
+## Module Échecs
+
+Affiche les parties de [Lichess](https://lichess.org) et de [Chess.com](https://www.chess.com) sur un échiquier en image, les analyse avec Stockfish (badges de notation coup par coup, rapport de précision) et suit en direct les parties en cours. Le module n'a pas de configuration.
+
+Au démarrage, le bot crée les emojis d'application des badges qui lui manquent, à partir des images du module. S'il ne peut ni les trouver ni les créer, les badges s'affichent en texte (`!!`, `?!`, `??`…) et le bot réessaie toutes les heures ; le journal nomme les emojis absents.
+
+Les variantes (Atomic, Three-check, Roi de la colline…) s'affichent sur l'échiquier avec leurs propres règles, mais ni l'analyse ni le rapport ne leur sont ouverts : Stockfish les noterait avec les règles classiques. Chess960 et les parties à position de départ personnalisée sont des échecs classiques et s'analysent normalement. Le suivi en direct ne prend que les échecs classiques.
+
+### `/chess view lichess <username> [mode]` et `/chess view chesscom <username> [mode]`
+
+Liste, visible de vous seul, les parties du joueur des 30 derniers jours (50 au plus, 5 par page) ; sur Chess.com, ses parties par correspondance en cours viennent en tête. Le bouton **Voir** d'une partie la publie dans le salon, sur un échiquier où le joueur demandé est en bas ; une partie en cours affiche à la place **Regarder**, qui lance son suivi en direct (voir `/chess watch`). `mode` choisit ce qui s'ouvre : l'échiquier (par défaut), l'analyse coup par coup ou le rapport du joueur.
+
+### `/chess view url <url> [mode] [side]` et `/chess view pgn [mode] [side]`
+
+Ouvre une seule partie, à partir de son lien Lichess ou Chess.com, ou d'un PGN collé dans un formulaire (jusqu'à 5 champs de 4000 caractères). Le résultat est publié dans le salon. `side` choisit le camp du rapport ; il est obligatoire avec `mode: report`. Un PGN collé est analysé sur l'instance et n'est ni envoyé à un service externe ni enregistré.
+
+### Échiquier, analyse et rapport
+
+Sous l'échiquier publié, les flèches parcourent la partie coup par coup et ⟲ retourne le plateau. Les boutons **Partie**, **Analyse** et **Rapport** passent d'une vue à l'autre ; l'analyse affiche, pour chaque coup, son badge (brillant, meilleur, imprécision, gaffe…) et l'évaluation de la position, le rapport la précision du camp et le nombre de coups par badge, avec un bouton pour lire l'autre camp.
+
+- Seul le membre qui a lancé la commande peut utiliser ces boutons ; ils expirent une heure après la dernière action.
+- Chaque échiquier publié garde sa partie : en choisir une autre dans la liste en publie un nouveau.
+- L'analyse d'une partie prend jusqu'à 3 minutes. L'instance en mène au plus 2 à la fois, les suivantes attendent leur tour ; au-delà de 4 analyses en attente, la demande est refusée et le membre est invité à réessayer quelques minutes plus tard. Un membre dont une analyse est en cours doit attendre qu'elle se termine pour en lancer une autre.
+
+### `/chess watch lichess <username>`, `/chess watch chesscom <username>` et `/chess watch url <url>`
+
+Publie dans le salon la partie en cours d'un joueur, ou celle d'un lien, et la met à jour à chaque coup joué, jusqu'à afficher le résultat. Sur Chess.com, seules les parties par correspondance se trouvent par pseudo ; une partie en direct se suit par son lien.
+
+- Le bot relève la partie toutes les 5 secondes en bullet et en blitz, toutes les 10 secondes en partie courte ou rapide, toutes les 30 secondes au-delà ; sur Chess.com, au plus toutes les 15 secondes. Une seule requête à la fois part vers chaque site ; si un site demande de ralentir, le bot attend le temps qu'il indique (une minute par défaut).
+- Les flèches du message public ouvrent une copie visible de vous seul, que vous parcourez sans déplacer le plateau des autres.
+- **Arrêter le suivi** fige le message ; seuls le membre qui a lancé le suivi et les membres qui peuvent gérer les messages y ont accès.
+- Un membre suit au plus 3 parties à la fois, un serveur 10.
+- Le bot doit pouvoir voir le salon, en lire les anciens messages et y joindre des fichiers, pour redessiner son message après l'expiration de la commande : sinon il refuse le suivi en nommant la permission manquante.
+- Le suivi s'arrête aussi quand son salon est supprimé, quand le membre qui l'a lancé supprime ses données (`/privacy delete`) et quand le module est désactivé. Le bot s'aperçoit qu'un message a été supprimé, qu'il a perdu l'accès au salon ou que le fil a été archivé au coup suivant, et arrête alors le suivi ; d'ici là, le suivi compte dans les limites. Il abandonne aussi une partie que le site ne montre plus, ou un message qu'il ne parvient plus à modifier, après environ deux heures d'échecs. Un suivi reprend après un redémarrage du bot.
 
 ---
 

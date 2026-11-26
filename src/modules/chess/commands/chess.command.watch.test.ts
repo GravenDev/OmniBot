@@ -8,7 +8,13 @@ const watch = vi.hoisted(() => vi.fn());
 const gameFromUsername = vi.hoisted(() => vi.fn());
 const liveMessage = vi.hoisted(() => vi.fn());
 
-vi.mock("#lib/reply.js", () => ({ replyEphemeral: vi.fn() }));
+const replyEphemeral = vi.hoisted(() => vi.fn());
+const missingNames = vi.hoisted(() => vi.fn());
+
+vi.mock("#lib/reply.js", () => ({ replyEphemeral }));
+vi.mock("#lib/permissions.js", () => ({
+  missingBotPermissionNames: missingNames,
+}));
 vi.mock("../flows.js", () => ({ startListFlow: vi.fn() }));
 vi.mock("../games/fetch.js", () => ({
   fetchChesscomGames: vi.fn(),
@@ -19,11 +25,17 @@ vi.mock("../live/sources.js", () => ({
   gameFromUrl: vi.fn(),
   gameFromUsername,
 }));
-vi.mock("../live/store.service.js", () => ({
-  default: { watch, get: vi.fn(), active: vi.fn(), setMoves: vi.fn() },
+vi.mock("../services/live-store.service.js", () => ({
+  default: {
+    watch,
+    get: vi.fn(),
+    active: vi.fn(),
+    setMoves: vi.fn(),
+    countActive: vi.fn(async () => 0),
+  },
 }));
 vi.mock("../live/views.js", () => ({ liveMessage, liveNavId: vi.fn() }));
-vi.mock("../live/watcher.service.js", () => ({
+vi.mock("../services/watcher.service.js", () => ({
   default: { track, attach: vi.fn(), resume: vi.fn() },
 }));
 vi.mock("../services/session.service.js", () => ({ default: {} }));
@@ -52,6 +64,8 @@ function interaction() {
     },
     guildId: "guild",
     channelId: "channel",
+    guild: { id: "guild" },
+    channel: { isDMBased: () => false },
     user: { id: "owner" },
     deferReply,
     editReply,
@@ -63,6 +77,7 @@ const config = { t: (key: string) => key, locale: "fr" };
 beforeEach(() => {
   vi.clearAllMocks();
   deferReply.mockResolvedValue(undefined);
+  missingNames.mockResolvedValue(null);
   editReply.mockResolvedValue({ id: "public-message" });
   gameFromUsername.mockResolvedValue(snapshot);
   liveMessage.mockResolvedValue({
@@ -93,5 +108,31 @@ describe("/chess watch response", () => {
       expect.objectContaining({ messageId: "public-message" })
     );
     expect(track).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses, privately, a channel where the board could not be updated", async () => {
+    missingNames.mockResolvedValue("permission.ReadMessageHistory");
+    const event = interaction();
+
+    await chessCommand.execute(event as never, config as never);
+
+    expect(replyEphemeral).toHaveBeenCalledWith(
+      event,
+      "live.missingPermissions"
+    );
+    expect(deferReply).not.toHaveBeenCalled();
+    expect(watch).not.toHaveBeenCalled();
+  });
+
+  it("tells the member the site is busy rather than blaming the player", async () => {
+    const { RateLimitedError } =
+      await import("../services/site-requests.service.js");
+    gameFromUsername.mockRejectedValueOnce(new RateLimitedError(30_000));
+
+    await chessCommand.execute(interaction() as never, config as never);
+
+    expect(JSON.stringify(editReply.mock.calls.at(-1))).toContain(
+      "error.rateLimited"
+    );
   });
 });
