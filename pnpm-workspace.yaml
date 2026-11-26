@@ -37,6 +37,7 @@ trustPolicyExclude:
   - prisma@7.10.1
 
 allowBuilds:
+  '@openrouter/sdk': false
   '@prisma/client': true
   '@prisma/engines': true
   esbuild: false

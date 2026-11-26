@@ -2,6 +2,7 @@ import {
   MessageFlags,
   type CommandInteraction,
   type MessageComponentInteraction,
+  type MessageMentionOptions,
   type ModalSubmitInteraction,
 } from "discord.js";
 
@@ -12,9 +13,14 @@ export async function replyEphemeral(
     | CommandInteraction
     | MessageComponentInteraction
     | ModalSubmitInteraction,
-  content: string
+  content: string,
+  allowedMentions?: MessageMentionOptions
 ): Promise<void> {
-  const payload = { content, flags: MessageFlags.Ephemeral } as const;
+  const payload = {
+    content,
+    flags: MessageFlags.Ephemeral,
+    ...(allowedMentions ? { allowedMentions } : {}),
+  } as const;
   if (interaction.replied || interaction.deferred) {
     await interaction.followUp(payload);
   } else {

@@ -59,6 +59,8 @@ You must:
 - Keep the same license
 - Document changes made
 
+The Chess module uses the [wintrchess](https://github.com/wintrcat/wintrchess-lib) library, licensed under the GNU AGPL v3 (`AGPL-3.0-only`). An instance that includes this module, even disabled on all its servers, must therefore let its users, including those who only use it through Discord, obtain the source code of the version it runs. OmniBot's code is available at [github.com/GravenDev/OmniBot](https://github.com/GravenDev/OmniBot).
+
 See the [LICENSE](https://github.com/GravenDev/OmniBot/blob/master/LICENSE) file for the full terms.
 
 ## 7. Changes to Terms

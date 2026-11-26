@@ -52,6 +52,7 @@ Cette copie permet aux modérateurs de juger le message même si son auteur le m
 - **Jeu des 4h** : le score de chaque joueur, l'historique de ses points (temps tenu et date), le meilleur temps de chaque journée, et le dernier message du salon de jeu (ID du salon, du message et de son auteur, heure d'envoi).
 - **RNGdle** : le pseudo RNGdle qu'un membre lie à son compte Discord, ses tirages téléchargés depuis rngdle.com (numéro, score, nombre de badges et date), son inscription au rappel quotidien, et pour chaque jour le fait qu'il a déjà obtenu sa carte vérifiée.
 - **Clash of Code** : pour chaque partie dont le lien est posté, son identifiant CodinGame, son mode, sa date de début et l'ID du salon et du message du lien ; pour chaque joueur, son ID, son pseudo et l'ID de son avatar CodinGame, et l'ID Discord du membre qui y a lié son compte ; pour chaque participation, le rang, le score, le temps, le nombre de caractères et le langage.
+- **Échecs** : pour chaque partie suivie en direct, sa source (Lichess ou Chess.com), son identifiant et son lien, les pseudos des deux joueurs, sa cadence, sa position de départ et les coups joués, l'ID du serveur, du salon et du message qui l'affiche, et l'ID Discord du membre qui a lancé le suivi. Les parties listées ou analysées avec `/chess view` ne sont gardées qu'en mémoire, avec l'ID du membre qui les a demandées, une heure au plus après sa dernière action.
 
 ### Réactions automatiques
 
@@ -107,12 +108,13 @@ Les données sont stockées dans une base de données PostgreSQL gérée par l'o
 
 ## Conservation des données
 
-- **Configuration et activation des modules** : conservées tant que le bot est sur le serveur. Quand le bot quitte un serveur (kick ou retrait), elles sont volontairement conservées afin que tout soit restauré automatiquement si le bot est réinvité. Désactiver un module ne supprime ni sa configuration ni ses données, sauf l'ancienneté recalculée et les anniversaires : elles restent soumises aux durées ci-dessous.
+- **Configuration et activation des modules** : conservées tant que le bot est sur le serveur. Quand le bot quitte un serveur (kick ou retrait), elles sont volontairement conservées afin que tout soit restauré automatiquement si le bot est réinvité. Désactiver un module ne supprime ni sa configuration ni ses données, sauf l'ancienneté recalculée, les anniversaires et les suivis d'échecs : elles restent soumises aux durées ci-dessous.
 - **Signalements** : un signalement est supprimé, copie du message comprise, au plus tard 30 jours après le dernier signalement du message, qu'il soit clos ou non. Les administrateurs de chaque serveur peuvent raccourcir ce délai pour les signalements clos. La suppression a lieu même si le module est désactivé ou que le bot a quitté le serveur.
 - **Statistiques d'activité** : les compteurs sont supprimés au bout d'un an, un délai qui ne se change pas. La date de début du suivi est conservée sans limite de durée.
 - **RNGdle** : les tirages, le pseudo et l'inscription au rappel sont conservés jusqu'à ce que le membre se délie avec `/rngdle unlink`, ou qu'un administrateur le délie. L'indication de carte obtenue est supprimée le surlendemain.
 - **Jeu des 4h** : les scores et l'historique des points sont conservés jusqu'à ce qu'un administrateur supprime le score du joueur.
 - **Clash of Code** : les parties, les joueurs et leurs résultats sont conservés sans limite de durée, pour l'historique du classement. La liaison à un compte Discord est retirée quand le membre se délie avec `/coc unlink`, ou qu'un administrateur le délie.
+- **Échecs** : un suivi est supprimé à la fin de la partie, quand le membre qui l'a lancé ou un membre qui gère les messages l'arrête, quand son salon est supprimé, quand le bot constate, au coup suivant, que son message a été supprimé ou qu'il n'y a plus accès, après environ deux heures pendant lesquelles la partie ou le message reste inaccessible, quand le membre qui l'a lancé utilise `/privacy delete`, et quand le module est désactivé sur le serveur.
 - **Préférence de mention et réactions automatiques** : conservées jusqu'à ce que le membre, ou un administrateur, les retire.
 - **Compteur du Honeypot** : conservé sans limite de durée, même quand le module est désactivé ou que le bot quitte le serveur, comme la configuration.
 - **Messages collants** : conservés jusqu'à ce qu'un administrateur les retire dans `/config`, ou que le salon soit supprimé.
@@ -121,20 +123,22 @@ Les données sont stockées dans une base de données PostgreSQL gérée par l'o
 - **Ancienneté recalculée** : conservée un an après que le bot a constaté le départ du membre (vérifié chaque jour, ou à son redémarrage après une panne), pour rester juste s'il revient dans l'année, puis supprimée ; si le bot quitte le serveur, elle reste enregistrée jusqu'à son retour, comme la configuration ; supprimée par `/privacy delete` (un administrateur peut la recalculer ensuite) et quand le module est désactivé sur le serveur, contrairement aux données des autres modules. Un membre qui a quitté le serveur ne peut plus lancer `/privacy delete` : il en demande la suppression à l'opérateur de l'instance.
 - **Anniversaires** : supprimés définitivement quand le membre les retire (`/birthday remove` ou `/privacy delete`), quand il quitte le serveur, ou quand le module est désactivé sur le serveur, comme l'ancienneté recalculée et contrairement aux données des autres modules. Si le bot quitte le serveur, ils restent enregistrés, comme la configuration, jusqu'à son retour. `/birthday show` affiche ce qui est conservé.
 
-Chaque membre peut supprimer lui-même, à tout moment, les données que le bot garde sur lui sur un serveur, avec la commande `/privacy delete` : ses statistiques d'activité, ses données de jeu (jeu des 4h, RNGdle, liaison Clash of Code), son anniversaire, son ancienneté recalculée et sa préférence de mention. Les signalements n'en font pas partie : ils restent aux modérateurs jusqu'à leur suppression automatique. Pour toute autre demande de suppression, contactez l'opérateur de l'instance.
+Chaque membre peut supprimer lui-même, à tout moment, les données que le bot garde sur lui sur un serveur, avec la commande `/privacy delete` : ses statistiques d'activité, ses données de jeu (jeu des 4h, RNGdle, liaison Clash of Code, suivis d'échecs), son anniversaire, son ancienneté recalculée et sa préférence de mention. Les signalements n'en font pas partie : ils restent aux modérateurs jusqu'à leur suppression automatique. Pour toute autre demande de suppression, contactez l'opérateur de l'instance.
 
 ## Partage des données
 
 OmniBot ne vend pas les données collectées et ne les partage avec aucun tiers. Il ne s'en sert pas pour de la publicité, de l'analyse marketing ni pour entraîner des modèles d'intelligence artificielle.
 
-Le bot contacte quatre services externes :
+Le bot contacte six services externes :
 
 - **l'API Discord**, qui reçoit des données dans le cadre du fonctionnement normal du bot (envoi de messages, réponse aux interactions, enregistrement des commandes) ;
 - **rngdle.com**, pour le module RNGdle : le bot y envoie les pseudos RNGdle liés, pour télécharger les tirages, et récupère la table des scores du site ;
 - **rng.cubityfir.st**, pour le module RNGdle : le bot y envoie le numéro d'un tirage, pour obtenir la liste de ses badges ; pour un membre non lié, ce numéro est celui du résultat qu'il a collé ;
-- **codingame.com**, pour le module Clash of Code : le bot y envoie l'identifiant d'une partie, tiré du lien posté, pour en obtenir le résultat, et récupère les avatars des joueurs sur static.codingame.com.
+- **codingame.com**, pour le module Clash of Code : le bot y envoie l'identifiant d'une partie, tiré du lien posté, pour en obtenir le résultat, et récupère les avatars des joueurs sur static.codingame.com ;
+- **lichess.org**, pour le module Échecs : le bot y envoie le pseudo Lichess ou le lien de partie saisi dans `/chess`, pour lister les parties récentes d'un joueur, en importer une ou suivre une partie en cours ;
+- **chess.com** (api.chess.com et www.chess.com), pour le module Échecs : de même avec un pseudo ou un lien Chess.com.
 
-Aucun identifiant Discord ni texte de message n'est envoyé à rngdle.com, à rng.cubityfir.st ni à codingame.com : seuls l'identifiant d'une partie et le numéro d'un tirage peuvent provenir d'un message.
+Aucun identifiant Discord ni texte de message n'est envoyé à rngdle.com, à rng.cubityfir.st ni à codingame.com : seuls l'identifiant d'une partie et le numéro d'un tirage peuvent provenir d'un message. Lichess et Chess.com ne reçoivent que les pseudos et les liens saisis dans `/chess` ; un PGN collé est analysé sur l'instance, sans être envoyé à aucun service.
 
 ## Open Source
 

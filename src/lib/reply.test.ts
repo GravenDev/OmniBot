@@ -33,4 +33,19 @@ describe("replyEphemeral", () => {
     expect(fake.followUp).toHaveBeenCalledWith(payload);
     expect(fake.reply).not.toHaveBeenCalled();
   });
+
+  it("forwards the allowed mentions when the caller supplies them", async () => {
+    const fake = interaction({});
+    const mentions = { parse: [], repliedUser: false };
+    await replyEphemeral(
+      fake as unknown as RepliableInteraction,
+      "hello",
+      mentions
+    );
+
+    expect(fake.reply).toHaveBeenCalledWith({
+      ...payload,
+      allowedMentions: mentions,
+    });
+  });
 });
