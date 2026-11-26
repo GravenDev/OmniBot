@@ -1,4 +1,4 @@
-import { setTimeout as sleep } from "node:timers/promises";
+import { fetchWithRetry } from "#lib/http.js";
 import { loggerMaker } from "#lib/logger.js";
 import {
   compressScoreTable,
@@ -10,11 +10,7 @@ import {
 const logger = loggerMaker("rngdle");
 
 const SITE_URL = "https://www.rngdle.com";
-const USER_AGENT = "OmniBot (+https://github.com/GravenDev/OmniBot)";
 const REQUEST_TIMEOUT_MS = 30_000;
-const MAX_ATTEMPTS = 3;
-const MAX_RETRY_DELAY_MS = 30_000;
-const RETRYABLE_STATUSES = new Set([429, 500, 502, 503, 504]);
 const FIRST_PAGE_SIZE = 10;
 const PAGE_SIZE = 100;
 const MAX_PAGES = 100;
@@ -35,30 +31,18 @@ export class RngdleUserNotFoundError extends Error {
 
 export class RngdleApiError extends Error {}
 
-function retryDelayMs(response: Response, attempt: number): number {
-  const retryAfter = Number(response.headers.get("retry-after"));
-  const delay =
-    Number.isFinite(retryAfter) && retryAfter > 0
-      ? retryAfter * 1000
-      : 1000 * 2 ** (attempt - 1);
-  return Math.min(delay, MAX_RETRY_DELAY_MS);
-}
-
-async function request(url: string): Promise<Response> {
-  for (let attempt = 1; ; attempt++) {
-    const response = await fetch(url, {
-      signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      headers: { "User-Agent": USER_AGENT },
-    });
-    if (!RETRYABLE_STATUSES.has(response.status) || attempt >= MAX_ATTEMPTS) {
-      return response;
+function request(url: string): Promise<Response> {
+  return fetchWithRetry(
+    url,
+    {},
+    {
+      timeoutMs: REQUEST_TIMEOUT_MS,
+      onRetry: (status, attempt, delayMs) =>
+        logger.debug(
+          `RNGdle request retried | status = ${status} | attempt = ${attempt} | delayMs = ${delayMs}`
+        ),
     }
-    const delayMs = retryDelayMs(response, attempt);
-    logger.debug(
-      `RNGdle request retried | status = ${response.status} | attempt = ${attempt} | delayMs = ${delayMs}`
-    );
-    await sleep(delayMs);
-  }
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

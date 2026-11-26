@@ -94,6 +94,7 @@ Shared code lives in `src/lib/` (imported as `#lib/…`), plus `src/core/utils/`
 | `#lib/guild-members.js`    | `allMembers`, `loadAllMembers`: a whole guild's members, shared between modules                                        |
 | `#lib/guild-loop.js`       | `forEachGuild`, `presentGuilds`: a task over a list of guilds (a module's activated ones), skipping those the bot left |
 | `#lib/hidden-text.js`      | `stripHiddenText`: drop code and spoilers before reading links                                                         |
+| `#lib/http.js`             | `fetchWithRetry` (429 and 5xx retried after `Retry-After`), `retryAfterMs`, `USER_AGENT` for other sites               |
 | `#lib/i18n.js`             | `createT`, `TFunction`                                                                                                 |
 | `#lib/imaging.js`          | canvas basics: fonts, palette, avatars, portraits, centred text                                                        |
 | `#lib/interaction.js`      | `declareInteractionHandler` for buttons, menus and modals, with who may use them                                       |
