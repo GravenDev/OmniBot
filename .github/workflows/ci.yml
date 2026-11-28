@@ -99,7 +99,7 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
       - name: Set up git-cliff
-        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
         with:
           install_args: git-cliff
           cache: false
@@ -193,7 +193,7 @@ jobs:
       # `any`. --ignore-scripts, and nothing of the project is run, so no
       # package code executes in the job that holds the token.
       - name: Set up Node.js and pnpm
-        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
         with:
           install_args: node pnpm
           cache: false
@@ -236,7 +236,7 @@ jobs:
     steps:
       - *checkout
       - name: Set up osv-scanner
-        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
         with:
           install_args: osv-scanner
           cache: false
@@ -468,7 +468,7 @@ jobs:
 
       # osv-scanner at the version the malware job runs, pinned in .mise.toml.
       - name: Set up Node.js, git-cliff and osv-scanner
-        uses: jdx/mise-action@b44d12e7d0d8ee7461bb893e1b1993500433185b # v5.2.7
+        uses: jdx/mise-action@924e7c586e33d7d4bae9c14e26c5d22e2beb6e78 # v5.3.0
         with:
           install_args: node git-cliff osv-scanner
           cache: false
